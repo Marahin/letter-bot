@@ -44,6 +44,8 @@ TBD
 ## Credits
 Letter-bot is one of many tools prototyped by (and for) [TibiaLoot.com](https://tibialoot.com)  
 
-Author: @[marahin](https://github.com/marahin)
+Author: [marahin](https://github.com/marahin)
 
-Contributors: -
+Contributors: 
+
+* [patryk-fuhrman](https://github.com/patryk-fuhrman)
