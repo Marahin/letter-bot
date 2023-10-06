@@ -3,8 +3,6 @@
 Letter is a Discord bot for reserving respawns in [Tibia](https://tibia.com). It registers slash commands allowing users to manage their respawn bookings.  
 Currently used by servers with over 3k members.
 
-First open source tool from TibiaLoot.com ecosystem.
-
 [See screenshots](#screenshots)
 
 [LICENSE](LICENSE)
@@ -44,6 +42,7 @@ TBD
 ![summary list](docs/sample_summary_list.png)
 
 ## Credits
+Letter-bot is one of many tools prototyped by (and for) [TibiaLoot.com](https://tibialoot.com)  
 
 Author: @[marahin](https://github.com/marahin)
 
