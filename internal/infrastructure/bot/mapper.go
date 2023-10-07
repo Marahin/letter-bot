@@ -3,7 +3,6 @@ package bot
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/sirupsen/logrus"
@@ -20,7 +19,7 @@ func MapChannel(input *discordgo.Channel) *discord.Channel {
 	}
 }
 
-func MapRole(input *discordgo.Role) *discord.Role {
+func mapRole(input *discordgo.Role) *discord.Role {
 	return &discord.Role{
 		ID:          input.ID,
 		Name:        input.Name,
@@ -32,7 +31,7 @@ func MapRoles(input []*discordgo.Role) []*discord.Role {
 	roles := make([]*discord.Role, len(input))
 
 	for i, role := range input {
-		roles[i] = MapRole(role)
+		roles[i] = mapRole(role)
 	}
 
 	return roles
@@ -123,18 +122,4 @@ func MapUnbookAutocompleteChoices(input []*reservation.ReservationWithSpot) []*d
 			Value: strconv.FormatInt(i.Reservation.ID, 10),
 		}
 	})
-}
-
-func MapAuthorWithUsernameToAuthorText(input string) string {
-	start := strings.LastIndex(input, "(")
-	end := strings.Index(input, ")")
-
-	username := strings.TrimSpace(input[start+1 : end])
-	nick := strings.TrimSpace(input[:start])
-
-	if len(nick) == 0 {
-		return username
-	}
-
-	return nick
 }
