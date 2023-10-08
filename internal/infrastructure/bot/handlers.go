@@ -122,6 +122,7 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 			response.EndAt.Format("2006-01-02 15:04"),
 		))
 	}
+	haveWeOverbooked := err == nil
 
 	if len(response.ConflictingReservations) > 0 {
 		message.WriteString("Following reservations are conflicting")
@@ -132,9 +133,10 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 
 		for _, res := range response.ConflictingReservations {
 			var author string
-			if err == nil { // If there was no error, we overbooked reservations - lets notify
-				author = fmt.Sprintf("<@!%s>", res.AuthorDiscordID)
-			} else { // We did not overbook, lets not mention their authors
+			switch haveWeOverbooked { // We notify users on overbooks only
+			case true:
+				author = fmt.Sprintf("<@!%s>", res.AuthorDiscordID) // Mention user profile by ID
+			case false:
 				member, err = b.GetMember(guild, res.AuthorDiscordID)
 				if err == nil {
 					author = member.Nick

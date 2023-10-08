@@ -26,7 +26,7 @@ func reduceAllAuthorReservationsByLongestPerSpot(reservations []*reservation.Res
 			"-7", "",
 			"-8", "",
 		)
-		spotNameWithoutLevelOrSide := replacer.Replace(r.Spot.Name)
+		spotNameWithoutLevelOrSide := strings.TrimSpace(replacer.Replace(r.Spot.Name))
 
 		for i, re := range reducedReservations {
 			// Spot is already present in one of reservations; add time to it

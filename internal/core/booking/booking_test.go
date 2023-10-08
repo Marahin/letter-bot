@@ -344,3 +344,71 @@ func TestBookFailOnUnknownSpot(t *testing.T) {
 	assert.NotNil(err)
 	assert.Empty(res)
 }
+
+// https://github.com/Marahin/letter-bot/issues/3
+func TestBookOnPotatoMultizoneCase(t *testing.T) {
+	// given
+	assert := assert.New(t)
+	guild := &discord.Guild{
+		ID:   "test-id",
+		Name: "test-guild-name",
+	}
+	member := &discord.Member{
+		ID:       "test-member",
+		Nick:     "test-nick",
+		Username: "test-username",
+	}
+	spotInput := &spot.Spot{
+		Name:      "Prison -3",
+		ID:        3,
+		CreatedAt: time.Now(),
+	}
+	existingReservations := []*reservation.ReservationWithSpot{
+		{
+			Reservation: reservation.Reservation{
+				Author:          member.Username,
+				CreatedAt:       time.Now(),
+				StartAt:         time.Now(),
+				EndAt:           time.Now().Add((1 * time.Hour) + (43 * time.Minute)),
+				SpotID:          1,
+				GuildID:         guild.ID,
+				AuthorDiscordID: member.ID,
+			},
+			Spot: reservation.Spot{
+				ID:   1,
+				Name: "Brachio",
+			},
+		},
+		{
+			Reservation: reservation.Reservation{
+				Author:          member.Username,
+				CreatedAt:       time.Now(),
+				StartAt:         time.Now(),
+				EndAt:           time.Now().Add(1 * time.Hour),
+				SpotID:          2,
+				GuildID:         guild.ID,
+				AuthorDiscordID: member.ID,
+			},
+			Spot: reservation.Spot{
+				ID:   2,
+				Name: "Prison -2",
+			},
+		},
+	}
+	startAt := time.Now().Add(1 * time.Minute)
+	endAt := startAt.Add(2 * time.Hour)
+	spotService := new(MockSpotRepo)
+	spotService.On("SelectAllSpots", ContextMock).Return([]*spot.Spot{spotInput}, nil)
+	reservationService := new(MockReservationRepo)
+	reservationService.On("SelectOverlappingReservations", ContextMock, spotInput.Name, startAt, endAt, guild.ID).Return([]*reservation.Reservation{}, nil)
+	reservationService.On("SelectUpcomingMemberReservationsWithSpots", ContextMock, guild, member).Return(existingReservations, nil)
+	reservationService.On("CreateAndDeleteConflicting", ContextMock, member, guild, []*reservation.Reservation{}, spotInput.ID, startAt, endAt).Return([]*reservation.Reservation{}, nil)
+	adapter := NewAdapter(spotService, reservationService)
+
+	// when
+	res, err := adapter.Book(member, guild, spotInput.Name, startAt, endAt, false, false)
+
+	// assert
+	assert.Nil(err)
+	assert.NotNil(res)
+}
