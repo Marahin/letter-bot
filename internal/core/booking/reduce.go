@@ -31,7 +31,7 @@ func reduceAllAuthorReservationsByLongestPerSpot(reservations []*reservation.Res
 		for i, re := range reducedReservations {
 			// Spot is already present in one of reservations; add time to it
 			if strings.Contains(re.Spot.Name, spotNameWithoutLevelOrSide) {
-				if !re.StartAt.Equal(r.StartAt) || !re.EndAt.Equal(r.EndAt) {
+				if !(re.StartAt.Equal(r.StartAt) && re.EndAt.Equal(r.EndAt)) {
 					var firstOne *reservation.ReservationWithSpot
 					var lastOne *reservation.ReservationWithSpot
 
@@ -77,6 +77,8 @@ func reduceAllAuthorReservationsByLongestPerSpot(reservations []*reservation.Res
 							reducedReservations = append(reducedReservations, r)
 						}
 					}
+				} else {
+					break
 				}
 			} else {
 				if i == len(reducedReservations)-1 {

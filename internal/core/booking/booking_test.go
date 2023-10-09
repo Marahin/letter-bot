@@ -363,28 +363,17 @@ func TestBookOnPotatoMultizoneCase(t *testing.T) {
 		ID:        3,
 		CreatedAt: time.Now(),
 	}
+	timeNow := time.Now()
+	currentYear := timeNow.Year()
+	currentMonth := timeNow.Month()
+	currentDay := timeNow.Day()
 	existingReservations := []*reservation.ReservationWithSpot{
 		{
 			Reservation: reservation.Reservation{
 				Author:          member.Username,
-				CreatedAt:       time.Now(),
-				StartAt:         time.Now(),
-				EndAt:           time.Now().Add((1 * time.Hour) + (43 * time.Minute)),
-				SpotID:          1,
-				GuildID:         guild.ID,
-				AuthorDiscordID: member.ID,
-			},
-			Spot: reservation.Spot{
-				ID:   1,
-				Name: "Brachio",
-			},
-		},
-		{
-			Reservation: reservation.Reservation{
-				Author:          member.Username,
-				CreatedAt:       time.Now(),
-				StartAt:         time.Now(),
-				EndAt:           time.Now().Add(1 * time.Hour),
+				CreatedAt:       timeNow,
+				StartAt:         time.Date(currentYear, currentMonth, currentDay, 16, 0, 0, 0, time.UTC),
+				EndAt:           time.Date(currentYear, currentMonth, currentDay, 17, 0, 0, 0, time.UTC),
 				SpotID:          2,
 				GuildID:         guild.ID,
 				AuthorDiscordID: member.ID,
@@ -394,9 +383,24 @@ func TestBookOnPotatoMultizoneCase(t *testing.T) {
 				Name: "Prison -2",
 			},
 		},
+		{
+			Reservation: reservation.Reservation{
+				Author:          member.Username,
+				CreatedAt:       timeNow,
+				StartAt:         time.Date(currentYear, currentMonth, currentDay, 21, 1, 0, 0, time.UTC),
+				EndAt:           time.Date(currentYear, currentMonth, currentDay, 22, 44, 0, 0, time.UTC),
+				SpotID:          1,
+				GuildID:         guild.ID,
+				AuthorDiscordID: member.ID,
+			},
+			Spot: reservation.Spot{
+				ID:   1,
+				Name: "Brachio",
+			},
+		},
 	}
-	startAt := time.Now().Add(1 * time.Minute)
-	endAt := startAt.Add(2 * time.Hour)
+	startAt := time.Date(currentYear, currentMonth, currentDay, 16, 0, 0, 0, time.UTC)
+	endAt := time.Date(currentYear, currentMonth, currentDay, 17, 0, 0, 0, time.UTC)
 	spotService := new(MockSpotRepo)
 	spotService.On("SelectAllSpots", ContextMock).Return([]*spot.Spot{spotInput}, nil)
 	reservationService := new(MockReservationRepo)
