@@ -3,7 +3,7 @@ RUN apk update && apk add ca-certificates && apk add tzdata && apk add git && ap
 WORKDIR /build
 COPY . .
 RUN git config --global --add safe.directory /build
-RUN CGO_ENABLED=0 GOOS=linux make build
+RUN make install-dependencies && CGO_ENABLED=0 GOOS=linux make build-only
 
 FROM scratch AS final
 COPY --from=build /usr/share/zoneinfo /usr/share/zoneinfo
