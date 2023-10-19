@@ -1,6 +1,7 @@
 package summary
 
 import (
+	"spot-assistant/internal/common/test/mocks"
 	"spot-assistant/internal/core/dto/reservation"
 	"testing"
 	"time"
@@ -11,7 +12,7 @@ import (
 func TestMapReservation(t *testing.T) {
 	// Given
 	assert := assert.New(t)
-	chartSrvMock := new(MockChartAdapter)
+	chartSrvMock := new(mocks.MockChartAdapter)
 	adapter := NewAdapter(chartSrvMock)
 	input := &reservation.Reservation{
 		Author:  "test author",
@@ -32,7 +33,7 @@ func TestMapReservation(t *testing.T) {
 func TestMapReservations(t *testing.T) {
 	// Given
 	assert := assert.New(t)
-	chartSrvMock := new(MockChartAdapter)
+	chartSrvMock := new(mocks.MockChartAdapter)
 	adapter := NewAdapter(chartSrvMock)
 	input := []*reservation.Reservation{
 		{

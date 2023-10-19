@@ -2,13 +2,16 @@ package bot
 
 import (
 	"fmt"
-	"spot-assistant/internal/core/dto/book"
-	"spot-assistant/util"
 	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/sirupsen/logrus"
+
+	"spot-assistant/internal/common/collections"
+	stringsHelper "spot-assistant/internal/common/strings"
+	"spot-assistant/internal/core/dto/book"
+	"spot-assistant/internal/core/dto/summary"
 )
 
 // System events
@@ -49,7 +52,7 @@ func (b *Bot) Tick() {
 func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 	b.log.Debug("Book")
 	tNow := time.Now()
-	gID, err := util.StrToInt64(i.GuildID)
+	gID, err := stringsHelper.StrToInt64(i.GuildID)
 	if err != nil {
 		return err
 	}
@@ -68,14 +71,14 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 		return fmt.Errorf("Book command requires 3 arguments")
 	}
 
-	startAt, err := time.Parse(util.DC_TIME_FORMAT, i.ApplicationCommandData().Options[1].StringValue())
+	startAt, err := time.Parse(stringsHelper.DC_TIME_FORMAT, i.ApplicationCommandData().Options[1].StringValue())
 	if err != nil {
 		return err
 	}
 	startAt = time.Date(
 		tNow.Year(), tNow.Month(), tNow.Day(), startAt.Hour(), startAt.Minute(), 0, 0, tNow.Location())
 
-	endAt, err := time.Parse(util.DC_TIME_FORMAT, i.ApplicationCommandData().Options[2].StringValue())
+	endAt, err := time.Parse(stringsHelper.DC_TIME_FORMAT, i.ApplicationCommandData().Options[2].StringValue())
 	if err != nil {
 		return err
 	}
@@ -165,7 +168,7 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 }
 
 func (b *Bot) BookAutocomplete(i *discordgo.InteractionCreate) error {
-	selectedOption, index := util.PoorMansFind(i.ApplicationCommandData().Options,
+	selectedOption, index := collections.PoorMansFind(i.ApplicationCommandData().Options,
 		func(o *discordgo.ApplicationCommandInteractionDataOption) bool {
 			return o.Focused
 		})
@@ -192,12 +195,12 @@ func (b *Bot) Unbook(i *discordgo.InteractionCreate) error {
 		return fmt.Errorf("you must select a reservation to unbook")
 	}
 
-	reservationId, err := util.StrToInt64(i.ApplicationCommandData().Options[0].StringValue())
+	reservationId, err := stringsHelper.StrToInt64(i.ApplicationCommandData().Options[0].StringValue())
 	if err != nil {
 		return fmt.Errorf("could not parse reservation id: %v", reservationId)
 	}
 
-	gID, err := util.StrToInt64(i.GuildID)
+	gID, err := stringsHelper.StrToInt64(i.GuildID)
 	if err != nil {
 		return fmt.Errorf("could not parse guild id: %v", i.GuildID)
 	}
@@ -217,22 +220,21 @@ func (b *Bot) Unbook(i *discordgo.InteractionCreate) error {
 	}
 
 	_, err = b.mgr.SessionForGuild(gID).FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
-		Content: fmt.Sprintf("%s (%s - %s) reservation has been cancelled.", res.Spot.Name, res.StartAt.Format(util.DC_LONG_TIME_FORMAT), res.EndAt.Format(util.DC_LONG_TIME_FORMAT)),
+		Content: fmt.Sprintf("%s (%s - %s) reservation has been cancelled.", res.Spot.Name, res.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), res.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT)),
 	})
 	return err
 }
 
 func (b *Bot) UnbookAutocomplete(i *discordgo.InteractionCreate) error {
-	selectedOption, index := util.PoorMansFind(i.ApplicationCommandData().Options,
+	selectedOption, index := collections.PoorMansFind(i.ApplicationCommandData().Options,
 		func(o *discordgo.ApplicationCommandInteractionDataOption) bool {
 			return o.Focused
 		})
 	if index == -1 {
 		return fmt.Errorf("none of the options were selected for autocompletion")
 	}
-	fieldType := book.UnbookAutocompleteFocus(index)
 
-	gID, err := util.StrToInt64(i.GuildID)
+	gID, err := stringsHelper.StrToInt64(i.GuildID)
 	if err != nil {
 		return err
 	}
@@ -245,7 +247,6 @@ func (b *Bot) UnbookAutocomplete(i *discordgo.InteractionCreate) error {
 	request := book.UnbookAutocompleteRequest{
 		Guild:  guild,
 		Member: MapMember(i.Member),
-		Field:  fieldType,
 		Value:  selectedOption.StringValue(),
 	}
 
@@ -255,8 +256,33 @@ func (b *Bot) UnbookAutocomplete(i *discordgo.InteractionCreate) error {
 	}
 
 	responseData := &discordgo.InteractionResponseData{
-		Choices: MapUnbookAutocompleteChoices(response.Choices),
+		Choices: MapReservationWithSpotArrToChoice(response.Choices),
 	}
 
 	return b.interactionRespond(i, responseData, discordgo.InteractionApplicationCommandAutocompleteResult)
+}
+
+func (b *Bot) PrivateSummary(i *discordgo.InteractionCreate) error {
+	b.log.Info("PrivateSummary")
+
+	gID, err := stringsHelper.StrToInt64(i.GuildID)
+	if err != nil {
+		return err
+	}
+
+	uID, err := stringsHelper.StrToInt64(i.Member.User.ID)
+	if err != nil {
+		return err
+	}
+
+	err = b.eventHandler.OnPrivateSummary(b, summary.PrivateSummaryRequest{
+		GuildID: gID,
+		UserID:  uID,
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = b.mgr.SessionForGuild(gID).FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{Content: "Check your DM!"})
+	return err
 }

@@ -8,15 +8,16 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	"spot-assistant/internal/common/collections"
+	"spot-assistant/internal/common/test/mocks"
 	"spot-assistant/internal/core/dto/reservation"
 	dto "spot-assistant/internal/core/dto/summary"
-	"spot-assistant/util"
 )
 
 func TestBaseSummary(t *testing.T) {
 	// given
 	assert := assert.New(t)
-	mockChartAdapter := new(MockChartAdapter)
+	mockChartAdapter := new(mocks.MockChartAdapter)
 	adapter := NewAdapter(mockChartAdapter)
 
 	// when
@@ -33,7 +34,7 @@ func TestBaseSummary(t *testing.T) {
 func TestPrepareSummary(t *testing.T) {
 	// given
 	assert := assert.New(t)
-	mockChartAdapter := new(MockChartAdapter)
+	mockChartAdapter := new(mocks.MockChartAdapter)
 	adapter := NewAdapter(mockChartAdapter)
 	input := []*reservation.ReservationWithSpot{
 		{
@@ -70,10 +71,10 @@ func TestPrepareSummary(t *testing.T) {
 	spotsToReservations := adapter.mapToSpotsToReservations(input)
 	spotsToCounts := adapter.mapToSpotsToCounts(spotsToReservations)
 	lvs := adapter.mapToLegendValues(spotsToCounts)
-	legend := util.PoorMansMap(lvs, func(lv dto.LegendValue) string {
+	legend := collections.PoorMansMap(lvs, func(lv dto.LegendValue) string {
 		return lv.Legend
 	})
-	values := util.PoorMansMap(lvs, func(lv dto.LegendValue) float64 {
+	values := collections.PoorMansMap(lvs, func(lv dto.LegendValue) float64 {
 		return lv.Value
 	})
 
@@ -115,7 +116,7 @@ func TestPrepareSummary(t *testing.T) {
 func TestPrepareSummaryTruncated(t *testing.T) {
 	// given
 	assert := assert.New(t)
-	mockChartAdapter := new(MockChartAdapter)
+	mockChartAdapter := new(mocks.MockChartAdapter)
 	adapter := NewAdapter(mockChartAdapter)
 
 	input := []*reservation.ReservationWithSpot{}
@@ -150,10 +151,10 @@ func TestPrepareSummaryTruncated(t *testing.T) {
 	// assert
 	assert.Nil(err)
 	assert.NotNil(summary)
-	legendValuePtrs := util.PoorMansMap(summary.LegendValues, func(lv dto.LegendValue) *dto.LegendValue {
+	legendValuePtrs := collections.PoorMansMap(summary.LegendValues, func(lv dto.LegendValue) *dto.LegendValue {
 		return &lv
 	})
-	otherEntry, index := util.PoorMansFind(legendValuePtrs, func(lv *dto.LegendValue) bool {
+	otherEntry, index := collections.PoorMansFind(legendValuePtrs, func(lv *dto.LegendValue) bool {
 		return lv.Legend == "Other"
 	})
 	assert.NotNil(otherEntry)

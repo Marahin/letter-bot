@@ -4,8 +4,8 @@ import (
 	"math"
 	"sort"
 
+	"spot-assistant/internal/common/collections"
 	dto "spot-assistant/internal/core/dto/summary"
-	"spot-assistant/util"
 )
 
 // MAX_CHART_RESPAWNS defines the amount of respawns isolated on the chart.
@@ -66,10 +66,10 @@ func (a *Adapter) mapToLegendValues(m map[string]float64) []dto.LegendValue {
 // NewChart a chart image and an optional error generated for
 // a set of dto.LegendValue s.
 func (a *Adapter) newChart(lvs []dto.LegendValue) (ChartImage, error) {
-	values := util.PoorMansMap(lvs, func(lv dto.LegendValue) float64 {
+	values := collections.PoorMansMap(lvs, func(lv dto.LegendValue) float64 {
 		return lv.Value
 	})
-	legend := util.PoorMansMap(lvs, func(lv dto.LegendValue) string {
+	legend := collections.PoorMansMap(lvs, func(lv dto.LegendValue) string {
 		return lv.Legend
 	})
 

@@ -1,11 +1,14 @@
 package bot
 
 import (
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/stretchr/testify/assert"
+
+	"spot-assistant/internal/core/dto/reservation"
 )
 
 func TestMapChannel(t *testing.T) {
@@ -240,4 +243,75 @@ func TestMapMessage(t *testing.T) {
 	assert.Equal(msg.Timestamp, res.Timestamp)
 	assert.Equal(msg.EditedTimestamp, res.EditedTimestamp)
 	assert.NotNil(res.Member)
+}
+
+func TestMapFooter(t *testing.T) {
+	// given
+	assert := assert.New(t)
+	input := "test footer"
+
+	// when
+	res := MapFooter(input)
+
+	// assert
+	assert.NotNil(res)
+	assert.Equal(input, res.Text)
+}
+
+func TestMapStringToChoice(t *testing.T) {
+	// given
+	assert := assert.New(t)
+	input := "test-choice"
+
+	// when
+	res := MapStringToChoice(input)
+
+	// assert
+	assert.NotNil(res)
+	assert.Equal(input, res.Name)
+	assert.Equal(input, res.Value)
+}
+
+func TestMapStringArrToChoice(t *testing.T) {
+	// given
+	assert := assert.New(t)
+	input := []string{"test-choice-1", "test-choice-2"}
+
+	// when
+	res := MapStringArrToChoice(input)
+
+	// assert
+	assert.Len(res, len(input))
+	for index, choice := range res {
+		assert.Equal(input[index], choice.Name)
+		assert.Equal(input[index], choice.Value)
+	}
+}
+
+func TestMapReservationWithSpotArrToChoice(t *testing.T) {
+	// given
+	assert := assert.New(t)
+	startAt := time.Date(2023, 8, 10, 16, 0, 0, 0, time.Now().Location())
+	endAt := time.Date(2023, 8, 10, 18, 0, 0, 0, time.Now().Location())
+	input := []*reservation.ReservationWithSpot{
+		{
+			Reservation: reservation.Reservation{
+				ID:      1,
+				StartAt: startAt,
+				EndAt:   endAt,
+			},
+			Spot: reservation.Spot{
+				Name: "test-spot",
+			},
+		},
+	}
+
+	// when
+	res := MapReservationWithSpotArrToChoice(input)
+
+	// assert
+	assert.Len(res, len(input))
+	result := res[0]
+	assert.Equal("2023-08-10 16:00 - 2023-08-10 18:00 test-spot", result.Name)
+	assert.Equal(strconv.FormatInt(input[0].Reservation.ID, 10), result.Value)
 }

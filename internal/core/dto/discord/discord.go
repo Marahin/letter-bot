@@ -4,6 +4,25 @@ import (
 	"time"
 )
 
+// ChannelType is the type of a Channel
+type ChannelType int
+
+// Block contains known ChannelType values
+const (
+	ChannelTypeGuildText          ChannelType = 0
+	ChannelTypeDM                 ChannelType = 1
+	ChannelTypeGuildVoice         ChannelType = 2
+	ChannelTypeGroupDM            ChannelType = 3
+	ChannelTypeGuildCategory      ChannelType = 4
+	ChannelTypeGuildNews          ChannelType = 5
+	ChannelTypeGuildStore         ChannelType = 6
+	ChannelTypeGuildNewsThread    ChannelType = 10
+	ChannelTypeGuildPublicThread  ChannelType = 11
+	ChannelTypeGuildPrivateThread ChannelType = 12
+	ChannelTypeGuildStageVoice    ChannelType = 13
+	ChannelTypeGuildForum         ChannelType = 15
+)
+
 type Guild struct {
 	ID    string
 	Name  string
@@ -19,6 +38,7 @@ type Role struct {
 type Channel struct {
 	ID   string
 	Name string
+	Type ChannelType
 }
 
 // A User stores all data for an individual Discord user.

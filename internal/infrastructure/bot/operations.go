@@ -13,9 +13,10 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/sirupsen/logrus"
 
+	"spot-assistant/internal/common/collections"
+	stringsHelper "spot-assistant/internal/common/strings"
 	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/summary"
-	"spot-assistant/util"
 )
 
 // Starts internal ticker, that will trigger bot's emission
@@ -43,7 +44,7 @@ func (b *Bot) ticker() {
 }
 
 func (b *Bot) ChannelMessages(g *discord.Guild, ch *discord.Channel, limit int) ([]*discord.Message, error) {
-	gID, err := util.StrToInt64(g.ID)
+	gID, err := stringsHelper.StrToInt64(g.ID)
 	if err != nil {
 		return []*discord.Message{}, err
 	}
@@ -57,7 +58,7 @@ func (b *Bot) ChannelMessages(g *discord.Guild, ch *discord.Channel, limit int) 
 }
 
 func (b *Bot) CleanChannel(g *discord.Guild, channel *discord.Channel) error {
-	gID, err := util.StrToInt64(g.ID)
+	gID, err := stringsHelper.StrToInt64(g.ID)
 	if err != nil {
 		return err
 	}
@@ -67,7 +68,7 @@ func (b *Bot) CleanChannel(g *discord.Guild, channel *discord.Channel) error {
 		return err
 	}
 
-	messageIds := util.PoorMansMap(messages, func(msg *discord.Message) string {
+	messageIds := collections.PoorMansMap(messages, func(msg *discord.Message) string {
 		return msg.ID
 	})
 
@@ -203,15 +204,22 @@ func (b *Bot) SendLetterMessage(guild *discord.Guild, channel *discord.Channel, 
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	// Grab a session for this guild
-	gId, err := util.StrToInt64(guild.ID)
-	if err != nil {
-		return fmt.Errorf("could not parse guild ID: %w", err)
+	// dcSession := b.mgr.SessionForGuild(gId)
+	var dcSession *discordgo.Session
+	if channel.Type == discord.ChannelTypeDM {
+		dcSession = b.mgr.SessionForDM()
+	} else {
+		// Grab a session for this guild
+		gID, err := stringsHelper.StrToInt64(guild.ID)
+		if err != nil {
+			return fmt.Errorf("could not parse guild ID: %w", err)
+		}
+
+		dcSession = b.mgr.SessionForGuild(gID)
 	}
-	dcSession := b.mgr.SessionForGuild(gId)
 
 	// Transfrom into lines of text describing reservation
-	fields := util.PoorMansMap(sum.Ledger, func(el summary.LedgerEntry) *discordgo.MessageEmbedField {
+	fields := collections.PoorMansMap(sum.Ledger, func(el summary.LedgerEntry) *discordgo.MessageEmbedField {
 		writtenReservations := strings.Builder{}
 
 		for _, booking := range el.Bookings {
@@ -234,24 +242,25 @@ func (b *Bot) SendLetterMessage(guild *discord.Guild, channel *discord.Channel, 
 			Inline: true,
 		}
 	})
-
 	footer := MapFooter(sum.Footer)
 
 	// Discord seems to have a limit of embeds per message
 	// this means we should limit ourselves to send maximum 20 embeds
 	// per message; and continue sending messages until we're done
 	batchLimit := int(math.Min(13.0, float64(len(fields))))
-	batches := util.PoorMansPartition(fields, batchLimit)
-	embeds := util.PoorMansMap(batches, func(batch []*discordgo.MessageEmbedField) *discordgo.MessageEmbed {
+	batches := collections.PoorMansPartition(fields, batchLimit)
+	embeds := collections.PoorMansMap(batches, func(batch []*discordgo.MessageEmbedField) *discordgo.MessageEmbed {
 		return b.newEmbed(sum.Title, sum.URL, sum.Description, batch, footer)
 	})
 
-	err = b.CleanChannel(guild, channel)
-	if err != nil {
-		return err
+	if channel.Type != discord.ChannelTypeDM {
+		err := b.CleanChannel(guild, channel)
+		if err != nil {
+			return err
+		}
 	}
 
-	_, err = dcSession.ChannelFileSend(channel.ID, "spots.png", bytes.NewReader(sum.Chart))
+	_, err := dcSession.ChannelFileSend(channel.ID, "spots.png", bytes.NewReader(sum.Chart))
 	if err != nil {
 		return err
 	}
@@ -273,7 +282,7 @@ func (b *Bot) SendLetterMessage(guild *discord.Guild, channel *discord.Channel, 
 }
 
 func (b *Bot) GetMember(guild *discord.Guild, memberID string) (*discord.Member, error) {
-	gID, err := util.StrToInt64(guild.ID)
+	gID, err := stringsHelper.StrToInt64(guild.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -287,7 +296,7 @@ func (b *Bot) GetMember(guild *discord.Guild, memberID string) (*discord.Member,
 }
 
 func (b *Bot) RegisterCommands(guild *discord.Guild) error {
-	gID, err := util.StrToInt64(guild.ID)
+	gID, err := stringsHelper.StrToInt64(guild.ID)
 	if err != nil {
 		return err
 	}
@@ -314,7 +323,7 @@ func (b *Bot) MemberHasRole(g *discord.Guild, m *discord.Member, targetRoleName 
 		return false
 	}
 
-	targetRole, _ := util.PoorMansFind(roles, func(r *discord.Role) bool {
+	targetRole, _ := collections.PoorMansFind(roles, func(r *discord.Role) bool {
 		return r.Name == targetRoleName
 	})
 
@@ -329,4 +338,14 @@ func (b *Bot) MemberHasRole(g *discord.Guild, m *discord.Member, targetRoleName 
 	}
 
 	return false
+}
+
+func (b *Bot) OpenDM(m *discord.Member) (*discord.Channel, error) {
+	sess := b.mgr.SessionForDM()
+	channel, err := sess.UserChannelCreate(m.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return MapChannel(channel), nil
 }

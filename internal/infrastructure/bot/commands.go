@@ -2,7 +2,7 @@ package bot
 
 import (
 	"fmt"
-	"spot-assistant/util"
+	"spot-assistant/internal/common/strings"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -34,6 +34,8 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 		} else {
 			err = b.Unbook(i)
 		}
+	case "summary":
+		err = b.PrivateSummary(i)
 	default:
 		err = fmt.Errorf("missing handler for command: %s", name)
 	}
@@ -43,7 +45,7 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 			Content: b.dcErrorMsg(err),
 		}
 
-		gID, err := util.StrToInt64(i.GuildID)
+		gID, err := strings.StrToInt64(i.GuildID)
 		if err != nil {
 			b.log.Errorf("could not translate guildID: %s", err)
 			return
@@ -110,5 +112,10 @@ var commands = []*discordgo.ApplicationCommand{
 				Autocomplete: true,
 			},
 		},
+	},
+	{
+		Name:        "summary",
+		Description: "Request a summary snapshot",
+		Type:        discordgo.ChatApplicationCommand,
 	},
 }

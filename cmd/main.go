@@ -11,7 +11,8 @@ import (
 	"spot-assistant/internal/core/booking"
 	"spot-assistant/internal/core/summary"
 
-	bot "spot-assistant/internal/infrastructure/bot"
+	"spot-assistant/internal/common/version"
+	"spot-assistant/internal/infrastructure/bot"
 	"spot-assistant/internal/infrastructure/chart"
 	"spot-assistant/internal/infrastructure/db/postgresql"
 	reservationRepository "spot-assistant/internal/infrastructure/reservation/postgresql/sqlc"
@@ -19,10 +20,10 @@ import (
 )
 
 func init() {
-	logrus.Warningf("Starting with TZ: %s", time.Now().Location())
 }
 
 func main() {
+	logrus.Warningf("Version %s - Starting with TZ: %s", version.Version, time.Now().Location())
 	config, err := pgxpool.ParseConfig(postgresql.Dsn())
 	if err != nil {
 		panic(err)

@@ -8,9 +8,9 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/sirupsen/logrus"
 
+	"spot-assistant/internal/common/errors"
 	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/reservation"
-	"spot-assistant/util"
 )
 
 type DBTXWrapper interface {
@@ -140,7 +140,7 @@ func (t *ReservationRepository) CreateAndDeleteConflicting(ctx context.Context, 
 	if err != nil {
 		return []*reservation.Reservation{}, err
 	}
-	defer util.ExecuteAndIgnoreErrorF(tx.Rollback, ctx)
+	defer errors.ExecuteAndIgnoreErrorF(tx.Rollback, ctx)
 	qtx := t.q.WithTx(tx)
 
 	for _, reservation := range conflicts {
