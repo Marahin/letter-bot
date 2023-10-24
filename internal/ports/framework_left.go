@@ -4,6 +4,7 @@ import (
 	"spot-assistant/internal/core/dto/book"
 	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/reservation"
+	"spot-assistant/internal/core/dto/summary"
 )
 
 type APIPort interface {
@@ -14,4 +15,5 @@ type APIPort interface {
 	OnBookAutocomplete(book.BookAutocompleteRequest) (book.BookAutocompleteResponse, error)
 	OnUnbook(bot BotPort, request book.UnbookRequest) (*reservation.ReservationWithSpot, error)
 	OnUnbookAutocomplete(request book.UnbookAutocompleteRequest) (book.UnbookAutocompleteResponse, error)
+	OnPrivateSummary(BotPort, summary.PrivateSummaryRequest) error
 }

@@ -5,6 +5,7 @@ import (
 	"slices"
 	"time"
 
+	"spot-assistant/internal/common/version"
 	"spot-assistant/internal/core/dto/reservation"
 	dto "spot-assistant/internal/core/dto/summary"
 )
@@ -15,7 +16,7 @@ func (a *Adapter) BaseSummary() *dto.Summary {
 		Title:       "TibiaLoot.com - Spot Assistant",
 		Description: "Current and upcoming hunts. Times are in **Europe/Berlin**.",
 		Footer: fmt.Sprintf(
-			"powered by TibiaLoot.com (%s)", time.Now().Format("15:04 01.02"),
+			"Version: %s powered by TibiaLoot.com (%s)", version.Version, time.Now().Format("15:04 01.02"),
 		),
 	}
 }

@@ -1,26 +1,14 @@
-package booking
+package mocks
 
 import (
 	"context"
-	"fmt"
-	"spot-assistant/internal/core/dto/discord"
-	"spot-assistant/internal/core/dto/reservation"
-	"spot-assistant/internal/core/dto/spot"
 	"time"
 
 	"github.com/stretchr/testify/mock"
+
+	"spot-assistant/internal/core/dto/discord"
+	"spot-assistant/internal/core/dto/reservation"
 )
-
-var ContextMock = mock.AnythingOfType(fmt.Sprintf("%T", context.Background()))
-
-type MockSpotRepo struct {
-	mock.Mock
-}
-
-func (a *MockSpotRepo) SelectAllSpots(ctx context.Context) ([]*spot.Spot, error) {
-	args := a.Called(ctx)
-	return args.Get(0).([]*spot.Spot), args.Error(1)
-}
 
 type MockReservationRepo struct {
 	mock.Mock

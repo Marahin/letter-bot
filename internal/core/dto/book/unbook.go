@@ -5,16 +5,9 @@ import (
 	"spot-assistant/internal/core/dto/reservation"
 )
 
-type UnbookAutocompleteFocus int
-
-const (
-	UnbookAutocompleteReservation UnbookAutocompleteFocus = iota
-)
-
 type UnbookAutocompleteRequest struct {
 	Member *discord.Member
 	Guild  *discord.Guild
-	Field  UnbookAutocompleteFocus
 	Value  string
 }
 

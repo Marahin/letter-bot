@@ -3,8 +3,8 @@ package sqlc
 import (
 	"context"
 
+	"spot-assistant/internal/common/collections"
 	"spot-assistant/internal/core/dto/spot"
-	"spot-assistant/util"
 )
 
 type SpotRepository struct {
@@ -23,7 +23,7 @@ func (repo *SpotRepository) SelectAllSpots(ctx context.Context) ([]*spot.Spot, e
 		return []*spot.Spot{}, err
 	}
 
-	return util.PoorMansMap(res, func(s WebSpot) *spot.Spot {
+	return collections.PoorMansMap(res, func(s WebSpot) *spot.Spot {
 		return &spot.Spot{
 			ID:        s.ID,
 			Name:      s.Name,

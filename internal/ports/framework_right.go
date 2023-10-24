@@ -40,6 +40,7 @@ type BotPort interface {
 	SendLetterMessage(g *discord.Guild, ch *discord.Channel, sum *summary.Summary) error
 	RegisterCommands(g *discord.Guild) error
 	MemberHasRole(g *discord.Guild, m *discord.Member, roleName string) bool
+	OpenDM(m *discord.Member) (*discord.Channel, error)
 	// Should start background worker loop, which should then emit Tick event periodically.
 	StartTicking()
 }

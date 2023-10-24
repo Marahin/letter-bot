@@ -36,4 +36,8 @@ sqlc-vet:
 	sqlc vet -f internal/infrastructure/spot/postgresql/sqlc.yaml
 
 build: install-dependencies sqlc-generate test
-	go build -o ${APP} -ldflags="-w -s" -buildvcs=false cmd/main.go
+	make build-only
+
+build-only:
+	echo "My tag is: ${TAG}"
+	CGO_ENABLED=0 go build -o ${APP} -ldflags="-X spot-assistant/internal/common/version.Version=${TAG}" cmd/main.go

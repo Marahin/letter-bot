@@ -1,22 +1,9 @@
-package util
+package collections
 
 import (
-	"context"
 	"math"
-	"strconv"
 	"time"
-
-	"github.com/sirupsen/logrus"
 )
-
-func StrToInt64(i string) (int64, error) {
-	id, err := strconv.ParseInt(i, 10, 0)
-	if err != nil {
-		return 0, err
-	}
-
-	return id, nil
-}
 
 func PoorMansMap[T any, M any](a []T, f func(T) M) []M {
 	n := make([]M, len(a))
@@ -81,10 +68,6 @@ func Truncate[T any](input []T, limit int) []T {
 	return res
 }
 
-const DC_TIME_FORMAT = "15:04"
-
-const DC_LONG_TIME_FORMAT = "2006-01-02 15:04"
-
 func PoorMansContains[T comparable](input []T, el T) bool {
 	for _, sliceEl := range input {
 		if sliceEl == el {
@@ -103,40 +86,4 @@ func PoorMansSum[T any, V int64 | float64 | int | time.Duration](input []T, f fu
 	}
 
 	return sum
-}
-
-type LogEntry interface {
-	Error(args ...interface{})
-}
-
-// LogErrors allows for error handling in defer calls:
-// ```
-// defer functionThatReturnsError()
-// ````
-// This would lead to uncatched error. Wrapping it with LogError solves this issue:
-// ```
-// defer LogError(functionThatReturnsError())
-// ```
-func LogError(log LogEntry, err error) {
-	if err != nil {
-		log.Error(err)
-	}
-}
-
-// Deliberately ignore error. This is specifically used in cases where we
-// do not care about the error message at all, such as the case
-// of `defer tx.Rollback(ctx)`: https://stackoverflow.com/a/62533516
-func IgnoreError(err error) {
-	logrus.Debugf("IgnoreError: %s", err)
-}
-
-// This is for case of `tx.Rollback(ctx)` in defer.
-// defer calls happen when the function body ends; however,
-// their arguments are evaluated at the moment `defer` is called.
-// For instance, if we want to deliberately ignore errors (so golangci-lint doesn't yell at us)
-// but still have `defer tx.Rollback(ctx)` (which does nothing if the transaction succeeded)
-// we can't run `defer IgnoreError(tx.Rollback(ctx))` because the `tx.Rollback` part is evaluated
-// the very moment. And so it cancels transaction at the moment of calling defer.
-func ExecuteAndIgnoreErrorF(f func(context.Context) error, ctx context.Context) {
-	IgnoreError(f(ctx))
 }
