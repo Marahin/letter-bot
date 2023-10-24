@@ -348,7 +348,7 @@ func TestBookFailOnUnknownSpot(t *testing.T) {
 }
 
 // https://github.com/Marahin/letter-bot/issues/3
-func TestBookOnPotatoMultizoneCase(t *testing.T) {
+func TestBookOnMultizoneCase(t *testing.T) {
 	// given
 	assert := assert.New(t)
 	guild := &discord.Guild{
