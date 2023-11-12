@@ -3,24 +3,25 @@ package bot
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/sirupsen/logrus"
 
+	"spot-assistant/internal/common/collections"
+	"spot-assistant/internal/common/strings"
 	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/reservation"
-	"spot-assistant/util"
 )
 
 func MapChannel(input *discordgo.Channel) *discord.Channel {
 	return &discord.Channel{
 		ID:   input.ID,
 		Name: input.Name,
+		Type: discord.ChannelType(input.Type),
 	}
 }
 
-func MapRole(input *discordgo.Role) *discord.Role {
+func mapRole(input *discordgo.Role) *discord.Role {
 	return &discord.Role{
 		ID:          input.ID,
 		Name:        input.Name,
@@ -32,7 +33,7 @@ func MapRoles(input []*discordgo.Role) []*discord.Role {
 	roles := make([]*discord.Role, len(input))
 
 	for i, role := range input {
-		roles[i] = MapRole(role)
+		roles[i] = mapRole(role)
 	}
 
 	return roles
@@ -92,7 +93,7 @@ func MapMessage(input *discordgo.Message) *discord.Message {
 }
 
 func MapMessages(input []*discordgo.Message) []*discord.Message {
-	return util.PoorMansMap(input, func(el *discordgo.Message) *discord.Message {
+	return collections.PoorMansMap(input, func(el *discordgo.Message) *discord.Message {
 		return MapMessage(el)
 	})
 }
@@ -111,30 +112,16 @@ func MapStringToChoice(text string) *discordgo.ApplicationCommandOptionChoice {
 }
 
 func MapStringArrToChoice(texts []string) []*discordgo.ApplicationCommandOptionChoice {
-	return util.PoorMansMap(texts, func(t string) *discordgo.ApplicationCommandOptionChoice {
+	return collections.PoorMansMap(texts, func(t string) *discordgo.ApplicationCommandOptionChoice {
 		return MapStringToChoice(t)
 	})
 }
 
-func MapUnbookAutocompleteChoices(input []*reservation.ReservationWithSpot) []*discordgo.ApplicationCommandOptionChoice {
-	return util.PoorMansMap(input, func(i *reservation.ReservationWithSpot) *discordgo.ApplicationCommandOptionChoice {
+func MapReservationWithSpotArrToChoice(input []*reservation.ReservationWithSpot) []*discordgo.ApplicationCommandOptionChoice {
+	return collections.PoorMansMap(input, func(i *reservation.ReservationWithSpot) *discordgo.ApplicationCommandOptionChoice {
 		return &discordgo.ApplicationCommandOptionChoice{
-			Name:  fmt.Sprintf("%s - %s %s", i.StartAt.Format(util.DC_LONG_TIME_FORMAT), i.EndAt.Format(util.DC_LONG_TIME_FORMAT), i.Spot.Name),
+			Name:  fmt.Sprintf("%s - %s %s", i.StartAt.Format(strings.DC_LONG_TIME_FORMAT), i.EndAt.Format(strings.DC_LONG_TIME_FORMAT), i.Spot.Name),
 			Value: strconv.FormatInt(i.Reservation.ID, 10),
 		}
 	})
-}
-
-func MapAuthorWithUsernameToAuthorText(input string) string {
-	start := strings.LastIndex(input, "(")
-	end := strings.Index(input, ")")
-
-	username := strings.TrimSpace(input[start+1 : end])
-	nick := strings.TrimSpace(input[:start])
-
-	if len(nick) == 0 {
-		return username
-	}
-
-	return nick
 }

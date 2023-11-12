@@ -1,8 +1,6 @@
-package summary
+package mocks
 
-import (
-	"github.com/stretchr/testify/mock"
-)
+import "github.com/stretchr/testify/mock"
 
 type MockChartAdapter struct {
 	mock.Mock

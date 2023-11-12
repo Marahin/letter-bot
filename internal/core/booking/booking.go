@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
+	"spot-assistant/internal/common/collections"
+	stringsHelper "spot-assistant/internal/common/strings"
 	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/spot"
-
-	"spot-assistant/util"
 
 	"github.com/sirupsen/logrus"
 )
@@ -30,14 +30,14 @@ func (a *Adapter) FindAvailableSpots(filter string) ([]string, error) {
 	}
 
 	if len(filter) > 0 {
-		spots = util.PoorMansFilter(spots, func(spot *spot.Spot) bool {
+		spots = collections.PoorMansFilter(spots, func(spot *spot.Spot) bool {
 			return strings.Contains(strings.ToLower(spot.Name), strings.ToLower(filter))
 		})
 	}
 
-	spots = util.Truncate(spots, 15)
+	spots = collections.Truncate(spots, 15)
 
-	return util.PoorMansMap(spots, func(s *spot.Spot) string {
+	return collections.PoorMansMap(spots, func(s *spot.Spot) string {
 		return s.Name
 	}), nil
 }
@@ -64,17 +64,17 @@ func (a *Adapter) GetSuggestedHours(baseTime time.Time, filter string) []string 
 		suggestedHours = append(suggestedHours, suggestedHours[x-1].Add(30*time.Minute))
 	}
 
-	suggestedOptions := util.PoorMansMap(suggestedHours, func(hour time.Time) string {
-		return hour.Format(util.DC_TIME_FORMAT)
+	suggestedOptions := collections.PoorMansMap(suggestedHours, func(hour time.Time) string {
+		return hour.Format(stringsHelper.DC_TIME_FORMAT)
 	})
 
 	if len(validatedFilter) > 0 {
-		suggestedOptions = util.PoorMansFilter(suggestedOptions, func(t string) bool {
+		suggestedOptions = collections.PoorMansFilter(suggestedOptions, func(t string) bool {
 			return strings.Contains(strings.ToLower(t), strings.ToLower(validatedFilter))
 		})
 
 		// Add user input, if it's valid
-		if !util.PoorMansContains(suggestedOptions, validatedFilter) {
+		if !collections.PoorMansContains(suggestedOptions, validatedFilter) {
 			suggestedOptions = append(suggestedOptions, validatedFilter)
 		}
 	}
@@ -99,7 +99,7 @@ func (a *Adapter) Book(member *discord.Member, guild *discord.Guild, spotName st
 		return []*reservation.Reservation{}, fmt.Errorf("could not fetch spots: %w", err)
 	}
 
-	spot, _ := util.PoorMansFind(spots, func(s *spot.Spot) bool {
+	spot, _ := collections.PoorMansFind(spots, func(s *spot.Spot) bool {
 		return s.Name == spotName
 	})
 	if spot == nil {
@@ -135,33 +135,18 @@ func (a *Adapter) Book(member *discord.Member, guild *discord.Guild, spotName st
 			return []*reservation.Reservation{}, fmt.Errorf("could not select upcoming member reservations: %w", err)
 		}
 
-		if len(upcomingAuthorReservations) > 0 {
-			tempReservation := reservation.ReservationWithSpot{
-				Reservation: reservation.Reservation{
-					ID:      -1,
-					Author:  member.ID,
-					StartAt: startAt,
-					EndAt:   endAt,
-				},
-				Spot: reservation.Spot{
-					Name: spotName,
-				},
-			}
-			upcomingAuthorReservations = append(upcomingAuthorReservations, &tempReservation)
+		// Ignore spots from Lightbearer event in calculations
+		upcomingAuthorReservations = collections.PoorMansFilter(upcomingAuthorReservations, func(reservation *reservation.ReservationWithSpot) bool {
+			return strings.Contains(strings.ToLower(reservation.Name), strings.ToLower("lightbearer"))
+		})
 
-			// Ignore spots from Lightbearer event in calculations
-			upcomingAuthorReservations = util.PoorMansFilter(upcomingAuthorReservations, func(reservation *reservation.ReservationWithSpot) bool {
-				return strings.Contains(strings.ToLower(reservation.Name), strings.ToLower("lightbearer"))
-			})
+		reducedReservations := reduceAllAuthorReservationsByLongestPerSpot(upcomingAuthorReservations)
+		totalReservationsTime := collections.PoorMansSum(reducedReservations, func(reservation *reservation.ReservationWithSpot) time.Duration {
+			return reservation.EndAt.Sub(reservation.StartAt)
+		})
 
-			reducedReservations := reduceAllAuthorReservationsByLongestPerSpot(upcomingAuthorReservations)
-			totalReservationsTime := util.PoorMansSum(reducedReservations, func(reservation *reservation.ReservationWithSpot) time.Duration {
-				return reservation.EndAt.Sub(reservation.StartAt)
-			})
-
-			if totalReservationsTime > MAXIMUM_RESERVATIONS_TIME {
-				return []*reservation.Reservation{}, MAXIMUM_RESERVATIONS_TIME_EXCEEDED_ERROR
-			}
+		if totalReservationsTime > MAXIMUM_RESERVATIONS_TIME {
+			return []*reservation.Reservation{}, MAXIMUM_RESERVATIONS_TIME_EXCEEDED_ERROR
 		}
 	}
 
@@ -183,10 +168,10 @@ func (a *Adapter) UnbookAutocomplete(g *discord.Guild, m *discord.Member, filter
 
 	// If any input value is passed, try to match it with startAt, endAt and spot name
 	if len(filter) > 0 {
-		reservations = util.PoorMansFilter(reservations, func(r *reservation.ReservationWithSpot) bool {
+		reservations = collections.PoorMansFilter(reservations, func(r *reservation.ReservationWithSpot) bool {
 			searchableString := strings.Join([]string{
-				r.StartAt.Format(util.DC_LONG_TIME_FORMAT),
-				r.StartAt.Format(util.DC_LONG_TIME_FORMAT),
+				r.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT),
+				r.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT),
 				r.Spot.Name}, "")
 			containsFilterWord := strings.Contains(strings.ToLower(searchableString), strings.ToLower(filter))
 			return containsFilterWord

@@ -3,10 +3,12 @@ package api
 import (
 	"context"
 	"fmt"
+	"strconv"
 
+	"spot-assistant/internal/common/errors"
 	"spot-assistant/internal/core/dto/discord"
+	"spot-assistant/internal/core/dto/summary"
 	"spot-assistant/internal/ports"
-	"spot-assistant/util"
 
 	"github.com/sirupsen/logrus"
 )
@@ -56,5 +58,42 @@ func (a *Application) UpdateGuildSummary(bot ports.BotPort, guild *discord.Guild
 }
 
 func (a *Application) UpdateGuildSummaryAndLogError(bot ports.BotPort, guild *discord.Guild) {
-	util.LogError(a.log, a.UpdateGuildSummary(bot, guild))
+	errors.LogError(a.log, a.UpdateGuildSummary(bot, guild))
+}
+
+func (a *Application) OnPrivateSummary(bot ports.BotPort, request summary.PrivateSummaryRequest) error {
+	log := a.log.WithFields(logrus.Fields{"user.ID": request.UserID, "guild.ID": request.GuildID})
+	log.Info("OnPrivateSummary")
+
+	res, err := a.db.SelectUpcomingReservationsWithSpot(context.Background(), strconv.FormatInt(request.GuildID, 10))
+	if err != nil {
+		return fmt.Errorf("could not fetch upcoming reservations")
+	}
+
+	if len(res) == 0 {
+		log.Warning("no reservations to display in DM; skipping")
+
+		return nil
+	}
+
+	summary, err := a.summarySrv.PrepareSummary(res)
+	if err != nil {
+		log.Errorf("could not generate summary: %s", err)
+
+		return fmt.Errorf("could not generate summary: %s", err)
+	}
+
+	dmChannel, err := bot.OpenDM(&discord.Member{ID: strconv.FormatInt(request.UserID, 10)})
+	if err != nil {
+		return err
+	}
+
+	err = bot.SendLetterMessage(nil, dmChannel, summary)
+	if err != nil {
+		log.Errorf("could not send letter message: %s", err)
+
+		return fmt.Errorf("could not send letter message: %s", err)
+	}
+
+	return nil
 }

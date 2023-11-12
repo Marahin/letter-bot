@@ -1,6 +1,8 @@
 package summary
 
-import "time"
+import (
+	"time"
+)
 
 type Summary struct {
 	Chart        []byte
@@ -31,4 +33,9 @@ type Booking struct {
 type LegendValue struct {
 	Legend string
 	Value  float64
+}
+
+type PrivateSummaryRequest struct {
+	UserID  int64
+	GuildID int64
 }

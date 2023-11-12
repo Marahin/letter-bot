@@ -1,13 +1,11 @@
-FROM golang:1.21.1
-
+FROM golang:1.21.1-alpine
 WORKDIR /app
-
 COPY ./ /app
 
-RUN apt-get install git
-
+RUN apk update && apk add ca-certificates && apk add tzdata && apk add git && apk add make
+RUN git config --global --add safe.directory /app
 RUN go install github.com/githubnemo/CompileDaemon@latest
-
 RUN go mod download
+ENV TZ Europe/Berlin
 
-ENTRYPOINT CompileDaemon --build='go build -o spot-assistant-bot -buildvcs=false cmd/main.go' --command=./spot-assistant-bot
+ENTRYPOINT CompileDaemon -include=Makefile -build='make build-only' -command=./spot-assistant-bot
