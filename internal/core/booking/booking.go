@@ -106,8 +106,11 @@ func (a *Adapter) Book(member *discord.Member, guild *discord.Guild, spotName st
 		return []*reservation.Reservation{}, fmt.Errorf("could not find spot called %s", spotName)
 	}
 
-	if endAt.Sub(startAt) > 3*time.Hour {
-		return []*reservation.Reservation{}, fmt.Errorf("reservation cannot take more than 3 hours")
+	// Allow Lightbearer event reservation to pass through
+	if !strings.Contains(strings.ToLower(spotName), strings.ToLower("lightbearer")) {
+		if endAt.Sub(startAt) > 3*time.Hour {
+			return []*reservation.Reservation{}, fmt.Errorf("reservation cannot take more than 3 hours")
+		}
 	}
 
 	conflictingReservations, err := a.reservationRepo.SelectOverlappingReservations(context.Background(), spotName, startAt, endAt, guild.ID)
@@ -124,33 +127,41 @@ func (a *Adapter) Book(member *discord.Member, guild *discord.Guild, spotName st
 		}
 	}
 
-	// Check for potentially exceeding maximum hours, with an exception for multi-floor respawns
-	upcomingAuthorReservations, err := a.reservationRepo.SelectUpcomingMemberReservationsWithSpots(context.Background(), guild, member)
-	if err != nil {
-		return []*reservation.Reservation{}, fmt.Errorf("could not select upcoming member reservations: %w", err)
-	}
-
-	if len(upcomingAuthorReservations) > 0 {
-		tempReservation := reservation.ReservationWithSpot{
-			Reservation: reservation.Reservation{
-				ID:      -1,
-				Author:  member.ID,
-				StartAt: startAt,
-				EndAt:   endAt,
-			},
-			Spot: reservation.Spot{
-				Name: spotName,
-			},
+	// Allow Lightbearer event reservation to pass through
+	if !strings.Contains(strings.ToLower(spotName), strings.ToLower("lightbearer")) {
+		// Check for potentially exceeding maximum hours, with an exception for multi-floor respawns
+		upcomingAuthorReservations, err := a.reservationRepo.SelectUpcomingMemberReservationsWithSpots(context.Background(), guild, member)
+		if err != nil {
+			return []*reservation.Reservation{}, fmt.Errorf("could not select upcoming member reservations: %w", err)
 		}
-		upcomingAuthorReservations = append(upcomingAuthorReservations, &tempReservation)
 
-		reducedReservations := reduceAllAuthorReservationsByLongestPerSpot(upcomingAuthorReservations)
-		totalReservationsTime := util.PoorMansSum(reducedReservations, func(reservation *reservation.ReservationWithSpot) time.Duration {
-			return reservation.EndAt.Sub(reservation.StartAt)
-		})
+		if len(upcomingAuthorReservations) > 0 {
+			tempReservation := reservation.ReservationWithSpot{
+				Reservation: reservation.Reservation{
+					ID:      -1,
+					Author:  member.ID,
+					StartAt: startAt,
+					EndAt:   endAt,
+				},
+				Spot: reservation.Spot{
+					Name: spotName,
+				},
+			}
+			upcomingAuthorReservations = append(upcomingAuthorReservations, &tempReservation)
 
-		if totalReservationsTime > MAXIMUM_RESERVATIONS_TIME {
-			return []*reservation.Reservation{}, MAXIMUM_RESERVATIONS_TIME_EXCEEDED_ERROR
+			// Ignore spots from Lightbearer event in calculations
+			upcomingAuthorReservations = util.PoorMansFilter(upcomingAuthorReservations, func(reservation *reservation.ReservationWithSpot) bool {
+				return strings.Contains(strings.ToLower(reservation.Name), strings.ToLower("lightbearer"))
+			})
+
+			reducedReservations := reduceAllAuthorReservationsByLongestPerSpot(upcomingAuthorReservations)
+			totalReservationsTime := util.PoorMansSum(reducedReservations, func(reservation *reservation.ReservationWithSpot) time.Duration {
+				return reservation.EndAt.Sub(reservation.StartAt)
+			})
+
+			if totalReservationsTime > MAXIMUM_RESERVATIONS_TIME {
+				return []*reservation.Reservation{}, MAXIMUM_RESERVATIONS_TIME_EXCEEDED_ERROR
+			}
 		}
 	}
 
