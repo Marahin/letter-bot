@@ -137,16 +137,30 @@ func (a *Adapter) Book(member *discord.Member, guild *discord.Guild, spotName st
 
 		// Ignore spots from Lightbearer event in calculations
 		upcomingAuthorReservations = collections.PoorMansFilter(upcomingAuthorReservations, func(reservation *reservation.ReservationWithSpot) bool {
-			return strings.Contains(strings.ToLower(reservation.Name), strings.ToLower("lightbearer"))
+			return !strings.Contains(strings.ToLower(reservation.Name), strings.ToLower("lightbearer"))
 		})
 
-		reducedReservations := reduceAllAuthorReservationsByLongestPerSpot(upcomingAuthorReservations)
-		totalReservationsTime := collections.PoorMansSum(reducedReservations, func(reservation *reservation.ReservationWithSpot) time.Duration {
-			return reservation.EndAt.Sub(reservation.StartAt)
-		})
+		if len(upcomingAuthorReservations) > 0 {
+			tempReservation := reservation.ReservationWithSpot{
+				Reservation: reservation.Reservation{
+					ID:      -1,
+					Author:  member.ID,
+					StartAt: startAt,
+					EndAt:   endAt,
+				},
+				Spot: reservation.Spot{
+					Name: spotName,
+				},
+			}
+			upcomingAuthorReservations = append(upcomingAuthorReservations, &tempReservation)
+			reducedReservations := reduceAllAuthorReservationsByLongestPerSpot(upcomingAuthorReservations)
+			totalReservationsTime := collections.PoorMansSum(reducedReservations, func(reservation *reservation.ReservationWithSpot) time.Duration {
+				return reservation.EndAt.Sub(reservation.StartAt)
+			})
 
-		if totalReservationsTime > MAXIMUM_RESERVATIONS_TIME {
-			return []*reservation.Reservation{}, MAXIMUM_RESERVATIONS_TIME_EXCEEDED_ERROR
+			if totalReservationsTime > MAXIMUM_RESERVATIONS_TIME {
+				return []*reservation.Reservation{}, MAXIMUM_RESERVATIONS_TIME_EXCEEDED_ERROR
+			}
 		}
 	}
 
