@@ -148,6 +148,13 @@ func (t *ReservationRepository) CreateAndDeleteConflicting(ctx context.Context, 
 		if err != nil {
 			return nil, err
 		}
+
+		if reservation.AuthorDiscordID != member.ID {
+			err = t.createOverbookedLeftovers(ctx, qtx, reservation, spotId, startAt, endAt)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	startAtInput := pgtype.Timestamptz{}
@@ -224,6 +231,96 @@ func (t *ReservationRepository) DeletePresentMemberReservation(ctx context.Conte
 	})
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (t *ReservationRepository) createOverbookedLeftovers(ctx context.Context, qtx *Queries, overbookedReservation *reservation.Reservation, spotId int64, startAt time.Time, endAt time.Time) error {
+	t.log.Info("createOverbookedLeftovers")
+	if overbookedReservation.StartAt.Before(startAt) {
+		t.log.Info("Overbooked reservation starts before new reservation start")
+		// Create one reservation that starts at reservation.StartAt and ends at startAt
+		startAtInput := pgtype.Timestamptz{}
+		err := startAtInput.Scan(overbookedReservation.StartAt)
+		if err != nil {
+			return err
+		}
+
+		endAtInput := pgtype.Timestamptz{}
+		err = endAtInput.Scan(startAt.Add(-1 * time.Minute))
+		if err != nil {
+			return err
+		}
+
+		err = qtx.CreateReservation(ctx, CreateReservationParams{
+			Author:          overbookedReservation.Author,
+			AuthorDiscordID: overbookedReservation.AuthorDiscordID,
+			StartAt:         startAtInput,
+			EndAt:           endAtInput,
+			SpotID:          spotId,
+			GuildID:         overbookedReservation.GuildID,
+		})
+
+		if err != nil {
+			return err
+		}
+
+		if overbookedReservation.EndAt.After(endAt) {
+			t.log.Info("Overbooked reservation ends after new reservation end")
+			// Create one reservation that starts at endAt and ends at reservation.EndAt
+			startAtInput := pgtype.Timestamptz{}
+			err := startAtInput.Scan(endAt.Add(1 * time.Minute))
+			if err != nil {
+				return err
+			}
+
+			endAtInput := pgtype.Timestamptz{}
+			err = endAtInput.Scan(overbookedReservation.EndAt)
+			if err != nil {
+				return err
+			}
+
+			err = qtx.CreateReservation(ctx, CreateReservationParams{
+				Author:          overbookedReservation.Author,
+				AuthorDiscordID: overbookedReservation.AuthorDiscordID,
+				StartAt:         startAtInput,
+				EndAt:           endAtInput,
+				SpotID:          spotId,
+				GuildID:         overbookedReservation.GuildID,
+			})
+
+			if err != nil {
+				return err
+			}
+		}
+	} else if (overbookedReservation.StartAt.Equal(startAt) || overbookedReservation.StartAt.After(startAt)) && overbookedReservation.EndAt.After(endAt) {
+		// Create one reservation that starts at endAt and ends at reservation.EndAt
+		t.log.Info("Overbooked reservation starts at the same time or later than new one and ends after the new reservation")
+		startAtInput := pgtype.Timestamptz{}
+		err := startAtInput.Scan(endAt.Add(1 * time.Minute))
+		if err != nil {
+			return err
+		}
+
+		endAtInput := pgtype.Timestamptz{}
+		err = endAtInput.Scan(overbookedReservation.EndAt)
+		if err != nil {
+			return err
+		}
+
+		err = qtx.CreateReservation(ctx, CreateReservationParams{
+			Author:          overbookedReservation.Author,
+			AuthorDiscordID: overbookedReservation.AuthorDiscordID,
+			StartAt:         startAtInput,
+			EndAt:           endAtInput,
+			SpotID:          spotId,
+			GuildID:         overbookedReservation.GuildID,
+		})
+
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

@@ -418,3 +418,73 @@ func TestBookOnMultizoneCase(t *testing.T) {
 	assert.Nil(err)
 	assert.NotNil(res)
 }
+
+func TestAdjustingOverbookedReservationTimes(t *testing.T) {
+	// given
+	assert := assert.New(t)
+	guild := &discord.Guild{
+		ID:   "test-id",
+		Name: "test-guild-name",
+	}
+	member := &discord.Member{
+		ID:       "test-member",
+		Nick:     "test-nick",
+		Username: "test-username",
+	}
+	member2 := &discord.Member{
+		ID:       "test-member2",
+		Nick:     "test-nick2",
+		Username: "test-username2",
+	}
+	member3 := &discord.Member{
+		ID:       "test-member3",
+		Nick:     "test-nick3",
+		Username: "test-username3",
+	}
+	spotInput := &spot.Spot{
+		Name:      "Prison -3",
+		ID:        3,
+		CreatedAt: time.Now(),
+	}
+	timeNow := time.Now()
+	currentYear := timeNow.Year()
+	currentMonth := timeNow.Month()
+	currentDay := timeNow.Day()
+	existingReservations := []*reservation.Reservation{
+		{
+			Author:          member2.Username,
+			CreatedAt:       timeNow,
+			StartAt:         time.Date(currentYear, currentMonth, currentDay, 16, 0, 0, 0, time.UTC),
+			EndAt:           time.Date(currentYear, currentMonth, currentDay, 18, 0, 0, 0, time.UTC),
+			SpotID:          2,
+			GuildID:         guild.ID,
+			AuthorDiscordID: member2.ID,
+		},
+		{
+			Author:          member3.Username,
+			CreatedAt:       timeNow,
+			StartAt:         time.Date(currentYear, currentMonth, currentDay, 19, 0, 0, 0, time.UTC),
+			EndAt:           time.Date(currentYear, currentMonth, currentDay, 21, 0, 0, 0, time.UTC),
+			SpotID:          1,
+			GuildID:         guild.ID,
+			AuthorDiscordID: member3.ID,
+		},
+	}
+	startAt := time.Date(currentYear, currentMonth, currentDay, 17, 0, 0, 0, time.UTC)
+	endAt := time.Date(currentYear, currentMonth, currentDay, 20, 0, 0, 0, time.UTC)
+	spotService := new(mocks.MockSpotRepo)
+	spotService.On("SelectAllSpots", mocks.ContextMock).Return([]*spot.Spot{spotInput}, nil)
+	reservationService := new(mocks.MockReservationRepo)
+	reservationService.On("SelectOverlappingReservations", mocks.ContextMock, spotInput.Name, startAt, endAt, guild.ID).Return(existingReservations, nil)
+	reservationService.On("SelectUpcomingMemberReservationsWithSpots", mocks.ContextMock, guild, member).Return([]*reservation.ReservationWithSpot{}, nil)
+	reservationService.On("CreateAndDeleteConflicting", mocks.ContextMock, member, guild, existingReservations, spotInput.ID, startAt, endAt).Return(existingReservations, nil)
+	// reservationService.On("CreateOverbookedLeftovers", mocks.ContextMock,)
+	adapter := NewAdapter(spotService, reservationService)
+
+	// when
+	res, err := adapter.Book(member, guild, spotInput.Name, startAt, endAt, true, true)
+
+	// assert
+	assert.Nil(err)
+	assert.NotNil(res)
+}
