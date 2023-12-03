@@ -76,9 +76,11 @@ func (q *Queries) DeleteReservation(ctx context.Context, id int64) error {
 
 const selectOverlappingReservations = `-- name: SelectOverlappingReservations :many
 SELECT web_reservation.id,
+  web_reservation.author,
   web_reservation.author_discord_id,
   web_reservation.start_at,
-  web_reservation.end_at
+  web_reservation.end_at,
+  web_reservation.guild_id
 FROM web_reservation
   INNER JOIN web_spot ON web_reservation.spot_id = web_spot.id
 WHERE web_reservation.end_at >= now()
@@ -100,9 +102,11 @@ type SelectOverlappingReservationsParams struct {
 
 type SelectOverlappingReservationsRow struct {
 	ID              int64
+	Author          string
 	AuthorDiscordID string
 	StartAt         pgtype.Timestamptz
 	EndAt           pgtype.Timestamptz
+	GuildID         string
 }
 
 func (q *Queries) SelectOverlappingReservations(ctx context.Context, arg SelectOverlappingReservationsParams) ([]SelectOverlappingReservationsRow, error) {
@@ -121,9 +125,11 @@ func (q *Queries) SelectOverlappingReservations(ctx context.Context, arg SelectO
 		var i SelectOverlappingReservationsRow
 		if err := rows.Scan(
 			&i.ID,
+			&i.Author,
 			&i.AuthorDiscordID,
 			&i.StartAt,
 			&i.EndAt,
+			&i.GuildID,
 		); err != nil {
 			return nil, err
 		}

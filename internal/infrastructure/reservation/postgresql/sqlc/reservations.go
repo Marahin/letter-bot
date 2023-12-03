@@ -126,9 +126,11 @@ func (t *ReservationRepository) SelectOverlappingReservations(ctx context.Contex
 	for i, row := range res {
 		reservations[i] = &reservation.Reservation{
 			ID:              row.ID,
+			Author:          row.Author,
 			AuthorDiscordID: row.AuthorDiscordID,
 			StartAt:         row.StartAt.Time,
 			EndAt:           row.EndAt.Time,
+			GuildID:         row.GuildID,
 		}
 	}
 
