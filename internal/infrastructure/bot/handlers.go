@@ -130,7 +130,7 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 	if len(response.ConflictingReservations) > 0 {
 		message.WriteString("Following reservations are conflicting")
 		if err == nil {
-			message.WriteString(" **and have been removed**")
+			message.WriteString(" **and have been shortened or removed**")
 		}
 		message.WriteString(":\n\n")
 
