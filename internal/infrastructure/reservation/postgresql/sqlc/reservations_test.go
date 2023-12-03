@@ -35,7 +35,7 @@ func TestCreateAndDeleteConflictingWithNoConflicting(t *testing.T) {
 	}
 	defer mock.Close()
 	mock.ExpectBegin()
-	mock.ExpectExec("INSERT INTO web_reservation").WithArgs(testMember.Nick, testMember.ID, mocks.PgTimestamptzTime{startAt}, mocks.PgTimestamptzTime{endAt}, spotId, testGuild.ID).WillReturnResult(pgxmock.NewResult("INSERT", 1))
+	mock.ExpectExec("INSERT INTO web_reservation").WithArgs(testMember.Nick, testMember.ID, mocks.NewPgTimestamptzTime(startAt), mocks.NewPgTimestamptzTime(endAt), spotId, testGuild.ID).WillReturnResult(pgxmock.NewResult("INSERT", 1))
 	mock.ExpectCommit()
 	repository := NewReservationRepository(mock)
 
@@ -95,12 +95,12 @@ func TestCreateAndDeleteConflictingWithOneConflicting(t *testing.T) {
 	mock.ExpectExec("DELETE FROM web_reservation").WithArgs(conflictingReservations[0].ID).WillReturnResult(pgxmock.NewResult("DELETE", 1))
 	mock.ExpectExec("INSERT INTO web_reservation").WithArgs(
 		conflictingReservations[0].Author, conflictingReservations[0].AuthorDiscordID,
-		mocks.PgTimestamptzTime{reservationInput.EndAt.Add(1 * time.Minute)}, mocks.PgTimestamptzTime{conflictingReservations[0].EndAt},
+		mocks.NewPgTimestamptzTime(reservationInput.EndAt.Add(1*time.Minute)), mocks.NewPgTimestamptzTime(conflictingReservations[0].EndAt),
 		conflictingReservations[0].SpotID, conflictingReservations[0].GuildID,
 	).WillReturnResult(pgxmock.NewResult("INSERT", 1))
 	mock.ExpectExec("INSERT INTO web_reservation").WithArgs(
 		reservationInput.Author, reservationInput.AuthorDiscordID,
-		mocks.PgTimestamptzTime{reservationInput.StartAt}, mocks.PgTimestamptzTime{reservationInput.EndAt},
+		mocks.NewPgTimestamptzTime(reservationInput.StartAt), mocks.NewPgTimestamptzTime(reservationInput.EndAt),
 		reservationInput.SpotID, reservationInput.GuildID,
 	).WillReturnResult(pgxmock.NewResult("INSERT", 1))
 	mock.ExpectCommit()
@@ -177,20 +177,20 @@ func TestCreateAndDeleteConflictingWithTwoConflicting(t *testing.T) {
 	mock.ExpectExec("DELETE FROM web_reservation").WithArgs(conflictingReservations[0].ID).WillReturnResult(pgxmock.NewResult("DELETE", 1))
 	mock.ExpectExec("INSERT INTO web_reservation").WithArgs(
 		conflictingReservations[0].Author, conflictingReservations[0].AuthorDiscordID,
-		mocks.PgTimestamptzTime{conflictingReservations[0].StartAt}, mocks.PgTimestamptzTime{reservationInput.StartAt.Add(-1 * time.Minute)},
+		mocks.NewPgTimestamptzTime(conflictingReservations[0].StartAt), mocks.NewPgTimestamptzTime(reservationInput.StartAt.Add(-1*time.Minute)),
 		conflictingReservations[0].SpotID, conflictingReservations[0].GuildID,
 	).WillReturnResult(pgxmock.NewResult("INSERT", 1))
 
 	mock.ExpectExec("DELETE FROM web_reservation").WithArgs(conflictingReservations[1].ID).WillReturnResult(pgxmock.NewResult("DELETE", 1))
 	mock.ExpectExec("INSERT INTO web_reservation").WithArgs(
 		conflictingReservations[1].Author, conflictingReservations[1].AuthorDiscordID,
-		mocks.PgTimestamptzTime{reservationInput.EndAt.Add(1 * time.Minute)}, mocks.PgTimestamptzTime{conflictingReservations[1].EndAt},
+		mocks.NewPgTimestamptzTime(reservationInput.EndAt.Add(1*time.Minute)), mocks.NewPgTimestamptzTime(conflictingReservations[1].EndAt),
 		conflictingReservations[1].SpotID, conflictingReservations[1].GuildID,
 	).WillReturnResult(pgxmock.NewResult("INSERT", 1))
 
 	mock.ExpectExec("INSERT INTO web_reservation").WithArgs(
 		reservationInput.Author, reservationInput.AuthorDiscordID,
-		mocks.PgTimestamptzTime{reservationInput.StartAt}, mocks.PgTimestamptzTime{reservationInput.EndAt},
+		mocks.NewPgTimestamptzTime(reservationInput.StartAt), mocks.NewPgTimestamptzTime(reservationInput.EndAt),
 		reservationInput.SpotID, reservationInput.GuildID,
 	).WillReturnResult(pgxmock.NewResult("INSERT", 1))
 	mock.ExpectCommit()
@@ -262,7 +262,7 @@ func TestCreateAndDeleteConflictingWithTwoConflictingButSecondOneFromTheSameAuth
 	mock.ExpectExec("DELETE FROM web_reservation").WithArgs(conflictingReservations[0].ID).WillReturnResult(pgxmock.NewResult("DELETE", 1))
 	mock.ExpectExec("INSERT INTO web_reservation").WithArgs(
 		conflictingReservations[0].Author, conflictingReservations[0].AuthorDiscordID,
-		mocks.PgTimestamptzTime{conflictingReservations[0].StartAt}, mocks.PgTimestamptzTime{reservationInput.StartAt.Add(-1 * time.Minute)},
+		mocks.NewPgTimestamptzTime(conflictingReservations[0].StartAt), mocks.NewPgTimestamptzTime(reservationInput.StartAt.Add(-1*time.Minute)),
 		conflictingReservations[0].SpotID, conflictingReservations[0].GuildID,
 	).WillReturnResult(pgxmock.NewResult("INSERT", 1))
 
@@ -270,7 +270,7 @@ func TestCreateAndDeleteConflictingWithTwoConflictingButSecondOneFromTheSameAuth
 
 	mock.ExpectExec("INSERT INTO web_reservation").WithArgs(
 		reservationInput.Author, reservationInput.AuthorDiscordID,
-		mocks.PgTimestamptzTime{reservationInput.StartAt}, mocks.PgTimestamptzTime{reservationInput.EndAt},
+		mocks.NewPgTimestamptzTime(reservationInput.StartAt), mocks.NewPgTimestamptzTime(reservationInput.EndAt),
 		reservationInput.SpotID, reservationInput.GuildID,
 	).WillReturnResult(pgxmock.NewResult("INSERT", 1))
 	mock.ExpectCommit()
