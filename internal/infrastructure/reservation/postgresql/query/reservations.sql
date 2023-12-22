@@ -29,9 +29,11 @@ where end_at >= now()
 order by start_at asc;
 -- name: SelectOverlappingReservations :many
 SELECT web_reservation.id,
+  web_reservation.author,
   web_reservation.author_discord_id,
   web_reservation.start_at,
-  web_reservation.end_at
+  web_reservation.end_at,
+  web_reservation.guild_id
 FROM web_reservation
   INNER JOIN web_spot ON web_reservation.spot_id = web_spot.id
 WHERE web_reservation.end_at >= now()

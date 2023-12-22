@@ -17,8 +17,8 @@ type ReservationRepository interface {
 	SelectOverlappingReservations(ctx context.Context, spot string, startAt time.Time, endAt time.Time, guildId string) ([]*reservation.Reservation, error)
 	SelectUpcomingMemberReservationsWithSpots(ctx context.Context, guild *discord.Guild, member *discord.Member) ([]*reservation.ReservationWithSpot, error)
 
-	// Creates a new reservation, and removes any existing conflicting reservations.
-	// Returns removed conflicting reservations.
+	// Creates a new reservation, and removes or shorten any existing conflicting reservations.
+	// Returns removed or shortened conflicting reservations.
 	CreateAndDeleteConflicting(ctx context.Context, member *discord.Member, guild *discord.Guild, conflicts []*reservation.Reservation, spotId int64, startAt time.Time, endAt time.Time) ([]*reservation.Reservation, error)
 
 	// Deletes one of the upcoming member reservations in a given guild. Returns error if operation
