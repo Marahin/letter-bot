@@ -115,6 +115,14 @@ func (a *Adapter) Book(member *discord.Member, guild *discord.Guild, spotName st
 		return []*reservation.Reservation{}, fmt.Errorf("could not select overlapping reservations: %w", err)
 	}
 
+	authorsConflictingReservations, _ := collections.PoorMansFind(conflictingReservations, func(r *reservation.Reservation) bool {
+		return r.AuthorDiscordID == member.ID
+	})
+
+	if authorsConflictingReservations != nil && overbook {
+		return []*reservation.Reservation{}, fmt.Errorf("you cannot overbook yourself")
+	}
+
 	if len(conflictingReservations) > 0 {
 		switch canDo := overbook && isPotentiallyAbandonedReservation(conflictingReservations) || overbook && hasPermissions; canDo {
 		case true:

@@ -418,3 +418,46 @@ func TestBookOnMultizoneCase(t *testing.T) {
 	assert.Nil(err)
 	assert.NotNil(res)
 }
+
+func TestBookFailOnOverbookAuthorsReservation(t *testing.T) {
+	// given
+	assert := assert.New(t)
+	guild := &discord.Guild{
+		ID:   "test-id",
+		Name: "test-guild-name",
+	}
+	member := &discord.Member{
+		ID:   "test-member",
+		Nick: "test-nick",
+	}
+	startAt := time.Now()
+	endAt := startAt.Add(1 * time.Hour)
+	spotInput := &spot.Spot{
+		Name:      "test-spot",
+		ID:        1,
+		CreatedAt: time.Now(),
+	}
+	conflictingReservations := []*reservation.Reservation{
+		{
+			Author:          member.Username,
+			CreatedAt:       time.Now(),
+			StartAt:         time.Date(1, 1, 1, 16, 0, 0, 0, time.UTC),
+			EndAt:           time.Date(1, 1, 1, 17, 0, 0, 0, time.UTC),
+			SpotID:          1,
+			GuildID:         guild.ID,
+			AuthorDiscordID: member.ID,
+		},
+	}
+	spotService := new(mocks.MockSpotRepo)
+	spotService.On("SelectAllSpots", mocks.ContextMock).Return([]*spot.Spot{spotInput}, nil)
+	reservationService := new(mocks.MockReservationRepo)
+	reservationService.On("SelectOverlappingReservations", mocks.ContextMock, spotInput.Name, startAt, endAt, guild.ID).Return(conflictingReservations, nil)
+	adapter := NewAdapter(spotService, reservationService)
+
+	// when
+	res, err := adapter.Book(member, guild, spotInput.Name, startAt, endAt, true, true)
+
+	// assert
+	assert.NotNil(err)
+	assert.Empty(res)
+}
