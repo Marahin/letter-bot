@@ -152,6 +152,22 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 				author = fmt.Sprintf("**%s**", author)
 			}
 
+			privChan, err := dcSession.UserChannelCreate(res.AuthorDiscordID)
+
+			if err != nil {
+				message.WriteString(fmt.Sprintf("Error message:\n```%s```\n", err))
+			}
+			dcSession.ChannelMessageSend(
+				privChan.ID,
+				fmt.Sprintf(
+					"Your reservation was overbooked by %s \n * %s %s %s - %s\n",
+					fmt.Sprintf("<@!%s>", member.ID),
+					author,
+					response.Spot,
+					res.StartAt.Format("2006-01-02 15:04"),
+					res.EndAt.Format("2006-01-02 15:04"),
+				))
+
 			message.WriteString(fmt.Sprintf(
 				"* %s %s - %s\n",
 				author,
