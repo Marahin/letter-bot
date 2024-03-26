@@ -281,6 +281,20 @@ func (b *Bot) SendLetterMessage(guild *discord.Guild, channel *discord.Channel, 
 	return err
 }
 
+func (b *Bot) SendDMMessage(member *discord.Member, message string) error {
+	channel, err := b.OpenDM(member)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = b.mgr.SessionForDM().ChannelMessageSend(
+		channel.ID,
+		message)
+
+	return err
+}
+
 func (b *Bot) GetMember(guild *discord.Guild, memberID string) (*discord.Member, error) {
 	gID, err := stringsHelper.StrToInt64(guild.ID)
 	if err != nil {
