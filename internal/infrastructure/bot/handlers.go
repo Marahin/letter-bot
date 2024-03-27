@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -14,8 +15,10 @@ import (
 	"spot-assistant/internal/core/dto/summary"
 )
 
-// System events
-// Events that are sent by discord itself
+/*
+*
+System events that are initialized by Discord.
+*/
 
 func (b *Bot) GuildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
 	b.log.Debug("GuildCreate")
@@ -29,7 +32,7 @@ func (b *Bot) Ready(s *discordgo.Session, r *discordgo.Ready) {
 	defer b.eventHandler.OnReady(b)
 }
 
-// When a slash command is invoked, this is the entry point.
+// InteractionCreate this is the entry point when a slash command is invoked.
 func (b *Bot) InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	b.log.Debug("InteractionCreate")
 	tStart := time.Now()
@@ -68,7 +71,7 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 	case 3:
 		break
 	default:
-		return fmt.Errorf("Book command requires 3 arguments")
+		return errors.New("book command requires 3 arguments")
 	}
 
 	startAt, err := time.Parse(stringsHelper.DC_TIME_FORMAT, i.ApplicationCommandData().Options[1].StringValue())
@@ -173,7 +176,7 @@ func (b *Bot) BookAutocomplete(i *discordgo.InteractionCreate) error {
 			return o.Focused
 		})
 	if index == -1 {
-		return fmt.Errorf("none of the options were selected for autocompletion")
+		return errors.New("none of the options were selected for autocompletion")
 	}
 
 	response, err := b.eventHandler.OnBookAutocomplete(book.BookAutocompleteRequest{
@@ -192,7 +195,7 @@ func (b *Bot) BookAutocomplete(i *discordgo.InteractionCreate) error {
 
 func (b *Bot) Unbook(i *discordgo.InteractionCreate) error {
 	if len(i.ApplicationCommandData().Options) < 1 {
-		return fmt.Errorf("you must select a reservation to unbook")
+		return errors.New("you must select a reservation to unbook")
 	}
 
 	reservationId, err := stringsHelper.StrToInt64(i.ApplicationCommandData().Options[0].StringValue())
