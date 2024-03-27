@@ -28,6 +28,29 @@ func (a *Application) OnBook(bot ports.BotPort, request book.BookRequest) (book.
 	}
 	go a.UpdateGuildSummaryAndLogError(bot, request.Guild)
 
+	for _, res := range response.ConflictingReservations {
+		member, err := bot.GetMember(request.Guild, res.AuthorDiscordID)
+
+		if err != nil {
+			continue
+		}
+
+		author := fmt.Sprintf("<@!%s>", request.Member.ID)
+		message := fmt.Sprintf(
+			"Your reservation was overbooked by %s \n * %s %s %s - %s\n",
+			fmt.Sprintf("<@!%s>", member.ID),
+			author,
+			request.Spot,
+			res.StartAt.Format("2006-01-02 15:04"),
+			res.EndAt.Format("2006-01-02 15:04"),
+		)
+		err = bot.SendDMMessage(member, message)
+
+		if err != nil {
+			continue
+		}
+	}
+
 	return response, nil
 }
 
