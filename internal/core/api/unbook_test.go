@@ -106,7 +106,7 @@ func TestUnbook(t *testing.T) {
 		Spot:        reservation.Spot{ID: 1},
 	}
 	bot := new(mocks.MockBot)
-	bot.On("FindChannel", request.Guild, "letter-summary").Return(&discord.Channel{Name: "letter-summary"}, nil)
+	bot.On("FindChannel", request.Guild, discord.SummaryChannel).Return(&discord.Channel{Name: discord.SummaryChannel}, nil)
 	bookingSrv := new(mocks.MockBookingService)
 	bookingSrv.On("Unbook", request.Guild, request.Member, request.ReservationID).Return(existingReservation, nil)
 	adapter := NewApplication(reservationRepo, summarySrv, bookingSrv)

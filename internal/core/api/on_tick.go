@@ -21,7 +21,7 @@ func (a *Application) OnTick(bot ports.BotPort) {
 func (a *Application) SendPeriodicMessageUnlessRedundant(bot ports.BotPort, guild *discord.Guild) {
 	log := a.log.WithFields(logrus.Fields{"guild.ID": guild.ID, "guild.Name": guild.Name, "name": "SendPeriodicMessage"})
 
-	commandChannel, err := bot.FindChannel(guild, "letter")
+	commandChannel, err := bot.FindChannel(guild, discord.CommandChannel)
 	if err != nil {
 		log.Errorf("could not find command channel: %s", err)
 

@@ -17,7 +17,7 @@ import (
 func (a *Application) UpdateGuildSummary(bot ports.BotPort, guild *discord.Guild) error {
 	log := a.log.WithFields(logrus.Fields{"guild.ID": guild.ID, "guild.Name": guild.Name, "name": "UpdateGuildSummary"})
 
-	summaryChannel, err := bot.FindChannel(guild, "letter-summary")
+	summaryChannel, err := bot.FindChannel(guild, discord.SummaryChannel)
 	if err != nil {
 		log.Errorf("could not find summary channel: %s", err)
 

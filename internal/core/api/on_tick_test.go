@@ -2,10 +2,11 @@ package api
 
 import (
 	"errors"
+	"testing"
+
 	"spot-assistant/internal/common/strings"
 	"spot-assistant/internal/common/test/mocks"
 	"spot-assistant/internal/core/dto/discord"
-	"testing"
 )
 
 func TestSendPeriodicMessageUnlessRedundantWhenChannelExistsAndNoPreviousMessages(t *testing.T) {
@@ -14,9 +15,9 @@ func TestSendPeriodicMessageUnlessRedundantWhenChannelExistsAndNoPreviousMessage
 		ID:   "test-guild-id",
 		Name: "test-guild-name",
 	}
-	ch := &discord.Channel{ID: "test-channel-id", Name: "letter"}
+	ch := &discord.Channel{ID: "test-channel-id", Name: discord.CommandChannel}
 	bot := new(mocks.MockBot)
-	bot.On("FindChannel", guild, "letter").Return(ch, nil)
+	bot.On("FindChannel", guild, discord.CommandChannel).Return(ch, nil)
 	bot.On("ChannelMessages", guild, ch, 1).Return([]*discord.Message{}, nil)
 	bot.On("SendChannelMessage", guild, ch, strings.PeriodicMessageContent).Return(nil)
 	defer bot.AssertExpectations(t)
@@ -38,9 +39,9 @@ func TestSendPeriodicMessageUnlessRedundantWhenChannelExistsAndMessageIsNotRedun
 		ID:   "test-guild-id",
 		Name: "test-guild-name",
 	}
-	ch := &discord.Channel{ID: "test-channel-id", Name: "letter"}
+	ch := &discord.Channel{ID: "test-channel-id", Name: discord.CommandChannel}
 	bot := new(mocks.MockBot)
-	bot.On("FindChannel", guild, "letter").Return(ch, nil)
+	bot.On("FindChannel", guild, discord.CommandChannel).Return(ch, nil)
 	bot.On("ChannelMessages", guild, ch, 1).Return([]*discord.Message{{Content: "asdf"}}, nil)
 	bot.On("SendChannelMessage", guild, ch, strings.PeriodicMessageContent).Return(nil)
 	defer bot.AssertExpectations(t)
@@ -62,9 +63,9 @@ func TestSendPeriodicMessageUnlessRedundantWhenChannelExistsAndMessageIsRedundan
 		ID:   "test-guild-id",
 		Name: "test-guild-name",
 	}
-	ch := &discord.Channel{ID: "test-channel-id", Name: "letter"}
+	ch := &discord.Channel{ID: "test-channel-id", Name: discord.CommandChannel}
 	bot := new(mocks.MockBot)
-	bot.On("FindChannel", guild, "letter").Return(ch, nil)
+	bot.On("FindChannel", guild, discord.CommandChannel).Return(ch, nil)
 	bot.On("ChannelMessages", guild, ch, 1).Return([]*discord.Message{{Content: strings.PeriodicMessageContent}}, nil)
 	defer bot.AssertExpectations(t)
 	reservationRepo := new(mocks.MockReservationRepo)
@@ -86,7 +87,7 @@ func TestSendPeriodicMessageUnlessRedundantWhenChannelDoesNotExist(t *testing.T)
 		Name: "test-guild-name",
 	}
 	bot := new(mocks.MockBot)
-	bot.On("FindChannel", guild, "letter").Return(&discord.Channel{}, errors.New("channel does not exist"))
+	bot.On("FindChannel", guild, discord.CommandChannel).Return(&discord.Channel{}, errors.New("channel does not exist"))
 	defer bot.AssertExpectations(t)
 	reservationRepo := new(mocks.MockReservationRepo)
 	defer reservationRepo.AssertExpectations(t)

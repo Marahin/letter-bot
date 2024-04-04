@@ -1,14 +1,15 @@
 package api
 
 import (
-	"spot-assistant/internal/common/test/mocks"
-	"spot-assistant/internal/core/dto/discord"
-	"spot-assistant/internal/core/dto/reservation"
-	"spot-assistant/internal/core/dto/summary"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"spot-assistant/internal/common/test/mocks"
+	"spot-assistant/internal/core/dto/discord"
+	"spot-assistant/internal/core/dto/reservation"
+	"spot-assistant/internal/core/dto/summary"
 )
 
 func TestUpdateGuildSummary(t *testing.T) {
@@ -21,7 +22,7 @@ func TestUpdateGuildSummary(t *testing.T) {
 	summary := &summary.Summary{
 		Title: "summary",
 	}
-	summaryCh := &discord.Channel{ID: "test-channel-id", Name: "letter-summary"}
+	summaryCh := &discord.Channel{ID: "test-channel-id", Name: discord.SummaryChannel}
 	reservations := []*reservation.ReservationWithSpot{
 		{
 			Spot: reservation.Spot{
@@ -38,7 +39,7 @@ func TestUpdateGuildSummary(t *testing.T) {
 	}
 	mockBot := new(mocks.MockBot)
 	mockBot.On("SendLetterMessage", guild, summaryCh, summary).Return(nil)
-	mockBot.On("FindChannel", guild, "letter-summary").Return(summaryCh, nil)
+	mockBot.On("FindChannel", guild, discord.SummaryChannel).Return(summaryCh, nil)
 	mockReservationRepo := new(mocks.MockReservationRepo)
 	mockReservationRepo.On("SelectUpcomingReservationsWithSpot", mocks.ContextMock, guild.ID).Return(reservations, nil)
 	mockSummarySrv := new(mocks.MockSummaryService)
