@@ -38,7 +38,7 @@ type BotPort interface {
 	EnsureRoles(g *discord.Guild) error
 	GetGuilds() []*discord.Guild
 	SendLetterMessage(g *discord.Guild, ch *discord.Channel, sum *summary.Summary) error
-	SendDMMessage(m *discord.Member, message string) error
+	SendDM(m *discord.Member, message string) error
 	RegisterCommands(g *discord.Guild) error
 	MemberHasRole(g *discord.Guild, m *discord.Member, roleName string) bool
 	OpenDM(m *discord.Member) (*discord.Channel, error)

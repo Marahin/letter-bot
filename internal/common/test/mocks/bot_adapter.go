@@ -65,3 +65,13 @@ func (m *MockBot) OpenDM(mem *discord.Member) (*discord.Channel, error) {
 func (m *MockBot) StartTicking() {
 	m.Called()
 }
+
+func (m *MockBot) SendDM(mem *discord.Member, msg string) error {
+	args := m.Called(mem, msg)
+	return args.Error(0)
+}
+
+func (m *MockBot) GetMember(g *discord.Guild, memberID string) (*discord.Member, error) {
+	args := m.Called(g, memberID)
+	return args.Get(0).(*discord.Member), args.Error(1)
+}
