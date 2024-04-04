@@ -65,3 +65,8 @@ func (m *MockBot) OpenDM(mem *discord.Member) (*discord.Channel, error) {
 func (m *MockBot) StartTicking() {
 	m.Called()
 }
+
+func (m *MockBot) SendChannelMessage(g *discord.Guild, ch *discord.Channel, content string) error {
+	args := m.Called(g, ch, content)
+	return args.Error(0)
+}

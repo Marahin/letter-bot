@@ -74,14 +74,14 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 		return errors.New("book command requires 3 arguments")
 	}
 
-	startAt, err := time.Parse(stringsHelper.DC_TIME_FORMAT, i.ApplicationCommandData().Options[1].StringValue())
+	startAt, err := time.Parse(stringsHelper.DcTimeFormat, i.ApplicationCommandData().Options[1].StringValue())
 	if err != nil {
 		return err
 	}
 	startAt = time.Date(
 		tNow.Year(), tNow.Month(), tNow.Day(), startAt.Hour(), startAt.Minute(), 0, 0, tNow.Location())
 
-	endAt, err := time.Parse(stringsHelper.DC_TIME_FORMAT, i.ApplicationCommandData().Options[2].StringValue())
+	endAt, err := time.Parse(stringsHelper.DcTimeFormat, i.ApplicationCommandData().Options[2].StringValue())
 	if err != nil {
 		return err
 	}
@@ -223,7 +223,7 @@ func (b *Bot) Unbook(i *discordgo.InteractionCreate) error {
 	}
 
 	_, err = b.mgr.SessionForGuild(gID).FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
-		Content: fmt.Sprintf("%s (%s - %s) reservation has been cancelled.", res.Spot.Name, res.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), res.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT)),
+		Content: fmt.Sprintf("%s (%s - %s) reservation has been cancelled.", res.Spot.Name, res.StartAt.Format(stringsHelper.DcLongTimeFormat), res.EndAt.Format(stringsHelper.DcLongTimeFormat)),
 	})
 	return err
 }

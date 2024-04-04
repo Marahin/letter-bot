@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"spot-assistant/internal/core/dto/book"
+	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/ports"
 )
 
@@ -19,7 +20,7 @@ func (a *Application) OnBook(bot ports.BotPort, request book.BookRequest) (book.
 		request.Member,
 		request.Guild,
 		request.Spot, request.StartAt,
-		request.EndAt, request.Overbook, bot.MemberHasRole(request.Guild, request.Member, "Postman"),
+		request.EndAt, request.Overbook, bot.MemberHasRole(request.Guild, request.Member, discord.PrivilegedRole),
 	)
 	response.ConflictingReservations = conflicting
 

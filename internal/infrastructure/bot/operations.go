@@ -29,7 +29,7 @@ func (b *Bot) StartTicking() {
 }
 
 func (b *Bot) ticker() {
-	ticker := time.NewTicker(2 * time.Minute)
+	ticker := time.NewTicker(60 * time.Second)
 
 	for {
 		select {
@@ -146,7 +146,7 @@ func (b *Bot) EnsureRoles(g *discord.Guild) error {
 		return err
 	}
 	for _, role := range roles {
-		if role.Name == ROLE {
+		if role.Name == discord.PrivilegedRole {
 			return nil
 		}
 	}
@@ -187,6 +187,18 @@ func (b *Bot) GetGuild(id int64) (*discord.Guild, error) {
 	}
 
 	return MapGuild(guild), nil
+}
+
+// SendChannelMessage sends a message to a channel in a guild.
+func (b *Bot) SendChannelMessage(guild *discord.Guild, channel *discord.Channel, message string) error {
+	gID, err := stringsHelper.StrToInt64(guild.ID)
+	if err != nil {
+		return err
+	}
+
+	dcSession := b.mgr.SessionForGuild(gID)
+	_, err = dcSession.ChannelMessageSend(channel.ID, message)
+	return err
 }
 
 func (b *Bot) SendLetterMessage(guild *discord.Guild, channel *discord.Channel, sum *summary.Summary) error {
@@ -255,6 +267,13 @@ func (b *Bot) SendLetterMessage(guild *discord.Guild, channel *discord.Channel, 
 
 	if channel.Type != discord.ChannelTypeDM {
 		err := b.CleanChannel(guild, channel)
+		if err != nil {
+			return err
+		}
+	}
+
+	if sum.PreMessage != "" {
+		_, err := dcSession.ChannelMessageSend(channel.ID, sum.PreMessage)
 		if err != nil {
 			return err
 		}

@@ -4,6 +4,15 @@ import (
 	"time"
 )
 
+// Role is the name of the role that privileged users have with extra permissions.
+const PrivilegedRole = "Postman"
+
+// Name of the channel where summaries should be sent.
+const SummaryChannel = "letter-summary"
+
+// Name of the channel where commands are expected.
+const CommandChannel = "letter"
+
 // ChannelType is the type of a Channel
 type ChannelType int
 

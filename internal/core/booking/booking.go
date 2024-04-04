@@ -65,7 +65,7 @@ func (a *Adapter) GetSuggestedHours(baseTime time.Time, filter string) []string 
 	}
 
 	suggestedOptions := collections.PoorMansMap(suggestedHours, func(hour time.Time) string {
-		return hour.Format(stringsHelper.DC_TIME_FORMAT)
+		return hour.Format(stringsHelper.DcTimeFormat)
 	})
 
 	if len(validatedFilter) > 0 {
@@ -182,8 +182,8 @@ func (a *Adapter) UnbookAutocomplete(g *discord.Guild, m *discord.Member, filter
 	if len(filter) > 0 {
 		reservations = collections.PoorMansFilter(reservations, func(r *reservation.ReservationWithSpot) bool {
 			searchableString := strings.Join([]string{
-				r.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT),
-				r.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT),
+				r.StartAt.Format(stringsHelper.DcLongTimeFormat),
+				r.StartAt.Format(stringsHelper.DcLongTimeFormat),
 				r.Spot.Name}, "")
 			containsFilterWord := strings.Contains(strings.ToLower(searchableString), strings.ToLower(filter))
 			return containsFilterWord
