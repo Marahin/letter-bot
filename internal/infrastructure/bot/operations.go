@@ -29,7 +29,7 @@ func (b *Bot) StartTicking() {
 }
 
 func (b *Bot) ticker() {
-	ticker := time.NewTicker(60 * time.Second)
+	ticker := time.NewTicker(2 * time.Minute)
 
 	for {
 		select {
