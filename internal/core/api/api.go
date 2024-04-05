@@ -1,9 +1,11 @@
 package api
 
 import (
-	"spot-assistant/internal/ports"
+	"sync/atomic"
 
 	"github.com/sirupsen/logrus"
+
+	"spot-assistant/internal/ports"
 )
 
 type Application struct {
@@ -11,6 +13,7 @@ type Application struct {
 	summarySrv summaryService
 	bookingSrv bookingService
 	log        *logrus.Entry
+	ticks      atomic.Uint64
 }
 
 func NewApplication(db ports.ReservationRepository, summarySrv summaryService, bookingSrv bookingService) *Application {
@@ -19,5 +22,6 @@ func NewApplication(db ports.ReservationRepository, summarySrv summaryService, b
 		summarySrv: summarySrv,
 		bookingSrv: bookingSrv,
 		log:        logrus.WithFields(logrus.Fields{"type": "application"}),
+		ticks:      atomic.Uint64{},
 	}
 }

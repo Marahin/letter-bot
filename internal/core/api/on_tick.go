@@ -17,8 +17,13 @@ func (a *Application) OnTick(bot ports.BotPort) {
 }
 
 // SendPeriodicMessage sends a message to the command channel, linking to the open source repository and buy me a coffee page.
-// Happens only if last message is not the same.
+// Happens only if last message is not the same, every four ticks.
 func (a *Application) SendPeriodicMessageUnlessRedundant(bot ports.BotPort, guild *discord.Guild) {
+	if a.ticks.Load()%4 != 0 {
+		return
+	}
+	a.ticks.Add(1)
+
 	log := a.log.WithFields(logrus.Fields{"guild.ID": guild.ID, "guild.Name": guild.Name, "name": "SendPeriodicMessage"})
 
 	commandChannel, err := bot.FindChannel(guild, discord.CommandChannel)
