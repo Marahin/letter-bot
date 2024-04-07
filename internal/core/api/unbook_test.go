@@ -45,6 +45,7 @@ func TestOnUnbookAutocomplete(t *testing.T) {
 		},
 	}
 	bookingSrv.On("UnbookAutocomplete", guild, member, filter).Return(reservations, nil)
+	defer bookingSrv.AssertExpectations(t)
 
 	// when
 	res, err := adapter.OnUnbookAutocomplete(book.UnbookAutocompleteRequest{
@@ -74,6 +75,7 @@ func TestOnUnbookAutocompleteServiceError(t *testing.T) {
 	}
 	filter := ""
 	bookingSrv.On("UnbookAutocomplete", guild, member, filter).Return([]*reservation.ReservationWithSpot{}, errors.New("test-error"))
+	defer bookingSrv.AssertExpectations(t)
 
 	// when
 	_, err := adapter.OnUnbookAutocomplete(book.UnbookAutocompleteRequest{
@@ -149,8 +151,8 @@ func TestUnbookOnError(t *testing.T) {
 	bot := new(mocks.MockBot)
 	defer bot.AssertExpectations(t)
 	bookingSrv := new(mocks.MockBookingService)
-	defer bookingSrv.AssertExpectations(t)
 	bookingSrv.On("Unbook", request.Guild, request.Member, request.ReservationID).Return(existingReservation, errors.New("test-error")).Times(0)
+	defer bookingSrv.AssertExpectations(t)
 	adapter := NewApplication(reservationRepo, summarySrv, bookingSrv)
 
 	// when

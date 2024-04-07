@@ -281,7 +281,7 @@ func (b *Bot) SendLetterMessage(guild *discord.Guild, channel *discord.Channel, 
 	return err
 }
 
-func (b *Bot) SendDMMessage(member *discord.Member, message string) error {
+func (b *Bot) SendDM(member *discord.Member, message string) error {
 	channel, err := b.OpenDM(member)
 
 	if err != nil {
