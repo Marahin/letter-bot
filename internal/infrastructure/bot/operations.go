@@ -283,7 +283,6 @@ func (b *Bot) SendLetterMessage(guild *discord.Guild, channel *discord.Channel, 
 
 func (b *Bot) SendDM(member *discord.Member, message string) error {
 	channel, err := b.OpenDM(member)
-
 	if err != nil {
 		return err
 	}
