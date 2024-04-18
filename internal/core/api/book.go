@@ -39,17 +39,20 @@ func (a *Application) OnBook(bot ports.BotPort, request book.BookRequest) (book.
 				return
 			}
 
-			author := fmt.Sprintf("<@!%s>", request.Member.ID)
-			message := fmt.Sprintf(
-				"Your reservation was overbooked by %s \n * %s %s %s - %s\n",
+			msgHeader := fmt.Sprintf(
+				"Your reservation was overbooked by %s\n",
+				fmt.Sprintf("<@!%s>", request.Member.ID),
+			)
+			msgBody := fmt.Sprintf(
+				"* %s %s %s - %s\\n",
 				fmt.Sprintf("<@!%s>", member.ID),
-				author,
 				request.Spot,
 				res.StartAt.Format(strings.DC_LONG_TIME_FORMAT),
 				res.EndAt.Format(strings.DC_LONG_TIME_FORMAT),
 			)
+			msgFooter := fmt.Sprintf("https://discord.com/channels/%s/%s/%s", request.Guild.ID, request.Channel.ID, request.Message.ID)
 
-			err = bot.SendDM(member, message)
+			err = bot.SendDM(member, msgHeader+msgBody+msgFooter)
 			if err != nil {
 				a.log.Errorf("error sending DM: %s", err)
 			}

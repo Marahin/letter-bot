@@ -99,19 +99,26 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 	if err != nil {
 		return err
 	}
+
+	channel, err := b.FindChannel(guild, i.ChannelID)
+	if err != nil {
+		return err
+	}
+
 	member := MapMember(i.Member)
 	request := book.BookRequest{
 		Member:   member,
 		Guild:    guild,
+		Channel:  channel,
+		Message:  MapMessage(i.Message),
 		Spot:     i.ApplicationCommandData().Options[0].StringValue(),
 		StartAt:  startAt,
 		EndAt:    endAt,
 		Overbook: overbook,
 	}
 
-	response, err := b.eventHandler.OnBook(b, request)
-
 	message := strings.Builder{}
+	response, err := b.eventHandler.OnBook(b, request)
 	if err != nil {
 		message.WriteString("I'm sorry, but something went wrong. If you require support, join TibiaLoot.com Discord: https://discord.gg/F4YKgsnzmc \n")
 

@@ -27,8 +27,10 @@ type BookAutocompleteResponse []string
 
 // Booking request
 type BookRequest struct {
-	*discord.Member
 	*discord.Guild
+	*discord.Channel
+	*discord.Message
+	*discord.Member
 
 	Spot     string
 	StartAt  time.Time

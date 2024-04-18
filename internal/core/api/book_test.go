@@ -2,12 +2,12 @@ package api
 
 import (
 	"fmt"
+	"spot-assistant/internal/common/strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
-	"spot-assistant/internal/common/strings"
 	"spot-assistant/internal/common/test/mocks"
 	"spot-assistant/internal/core/dto/book"
 	"spot-assistant/internal/core/dto/discord"
@@ -24,6 +24,11 @@ func TestOnBookWithoutConflictingReservations(t *testing.T) {
 	guild := &discord.Guild{
 		ID: "test-guild-id",
 	}
+	channel := &discord.Channel{
+		ID: "test-channel-id",
+	}
+	message := &discord.Message{
+		ID: "test-message-id"}
 	summaryChannel := &discord.Channel{
 		ID:   "test-channel-id",
 		Name: "letter-summary",
@@ -48,6 +53,8 @@ func TestOnBookWithoutConflictingReservations(t *testing.T) {
 	res, err := adapter.OnBook(botPort, book.BookRequest{
 		Member:  member,
 		Guild:   guild,
+		Channel: channel,
+		Message: message,
 		StartAt: startAt,
 		EndAt:   endAt,
 		Spot:    "test-spot",
@@ -75,6 +82,11 @@ func TestOnBookWithConflictingReservations(t *testing.T) {
 		Name: "letter-summary",
 		Type: discord.ChannelTypeGuildText,
 	}
+	channel := &discord.Channel{
+		ID: "test-channel-id",
+	}
+	message := &discord.Message{
+		ID: "test-message-id"}
 	startAt := time.Now()
 	endAt := startAt.Add(2 * time.Hour)
 	spot := reservation.Spot{
@@ -119,8 +131,7 @@ func TestOnBookWithConflictingReservations(t *testing.T) {
 	botPort.On("FindChannel", guild, "letter-summary").Return(summaryChannel, nil)
 	botPort.On("GetMember", guild, conflictingMember.ID).Return(conflictingMember, nil)
 	botPort.On("SendLetterMessage", guild, summaryChannel, outcomeSummary).Return(nil)
-	botPort.On("SendDM", conflictingMember, fmt.Sprintf("Your reservation was overbooked by <@!test-conflicting-author-id> \n * <@!test-member-id> test-spot %s - %s\n",
-		startAt.Format(strings.DC_LONG_TIME_FORMAT), endAt.Format(strings.DC_LONG_TIME_FORMAT))).Return(nil)
+	botPort.On("SendDM", conflictingMember, fmt.Sprintf("Your reservation was overbooked by <@!test-member-id>\n* <@!test-conflicting-author-id> test-spot %s - %s\\nhttps://discord.com/channels/test-guild-id/test-channel-id/test-message-id", startAt.Format(strings.DC_LONG_TIME_FORMAT), endAt.Format(strings.DC_LONG_TIME_FORMAT))).Return(nil)
 	summarySrv := new(mocks.MockSummaryService)
 	summarySrv.On("PrepareSummary", finalReservations).Return(outcomeSummary, nil)
 	adapter := NewApplication(reservationRepo, summarySrv, bookingSrv)
@@ -129,6 +140,8 @@ func TestOnBookWithConflictingReservations(t *testing.T) {
 	res, err := adapter.OnBook(botPort, book.BookRequest{
 		Member:  member,
 		Guild:   guild,
+		Channel: channel,
+		Message: message,
 		StartAt: startAt,
 		EndAt:   endAt,
 		Spot:    "test-spot",
