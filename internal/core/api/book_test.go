@@ -1,6 +1,8 @@
 package api
 
 import (
+	"fmt"
+	stringsHelper "spot-assistant/internal/common/strings"
 	"testing"
 	"time"
 
@@ -120,7 +122,7 @@ func TestOnBookWithConflictingReservations(t *testing.T) {
 	botPort.On("FindChannelByName", guild, "letter-summary").Return(summaryChannel, nil)
 	botPort.On("GetMember", guild, conflictingMember.ID).Return(conflictingMember, nil)
 	botPort.On("SendLetterMessage", guild, summaryChannel, outcomeSummary).Return(nil)
-	botPort.On("SendDM", conflictingMember, "Your reservation was overbooked by <@!test-member-id>\n* <@!test-conflicting-author-id> test-spot has been entirely removed").Return(nil)
+	botPort.On("SendDM", conflictingMember, fmt.Sprintf("Your reservation was overbooked by <@!test-member-id>\n* <@!test-conflicting-author-id> test-spot has been entirely removed (originally: **%s - %s**)", conflictingReservations[0].Original.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), conflictingReservations[0].Original.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT))).Return(nil)
 	summarySrv := new(mocks.MockSummaryService)
 	summarySrv.On("PrepareSummary", finalReservations).Return(outcomeSummary, nil)
 	adapter := NewApplication(reservationRepo, summarySrv, bookingSrv)

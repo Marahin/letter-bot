@@ -55,7 +55,7 @@ func (a *Application) OnBook(bot ports.BotPort, request book.BookRequest) (book.
 				})
 				msgBody.WriteString(strings.Join(newClippedRanges, ", "))
 			} else {
-				msgBody.WriteString("has been entirely removed")
+				msgBody.WriteString(fmt.Sprintf("has been entirely removed (originally: **%s - %s**)", res.Original.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), res.Original.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT)))
 			}
 
 			err = bot.SendDM(member, msgHeader+msgBody.String())

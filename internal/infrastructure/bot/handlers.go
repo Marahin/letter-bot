@@ -164,18 +164,18 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 				if len(res.New) > 0 {
 					message.WriteString("had their reservation clipped to: ")
 					newClippedRanges := collections.PoorMansMap(res.New, func(r *reservation.Reservation) string {
-						return fmt.Sprintf("%s - %s", r.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), r.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT))
+						return fmt.Sprintf("**%s - %s**", r.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), r.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT))
 					})
 					message.WriteString(strings.Join(newClippedRanges, ", "))
 				} else {
 					message.WriteString("had their reservation removed ")
 				}
 
-				message.WriteString(fmt.Sprintf("(originally: %s - %s)", res.Original.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), res.Original.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT)))
-				continue
+				message.WriteString(fmt.Sprintf("(originally: %s - %s)\n", res.Original.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), res.Original.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT)))
+				continue // Stop here
 			}
 
-			message.WriteString(fmt.Sprintf("%s - %s ", res.Original.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), res.Original.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT)))
+			message.WriteString(fmt.Sprintf("%s - %s\n", res.Original.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), res.Original.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT)))
 		}
 	}
 
