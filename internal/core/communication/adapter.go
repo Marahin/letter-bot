@@ -12,9 +12,10 @@ type Adapter struct {
 	formatter ports.TextFormatter
 }
 
-func NewAdapter(bot ports.BotPort) *Adapter {
+func NewAdapter(bot ports.BotPort, formatter ports.TextFormatter) *Adapter {
 	return &Adapter{
-		bot: bot,
-		log: logrus.WithFields(logrus.Fields{"type": "core", "name": "communication"}),
+		bot:       bot,
+		formatter: formatter,
+		log:       logrus.WithFields(logrus.Fields{"type": "core", "name": "communication"}),
 	}
 }

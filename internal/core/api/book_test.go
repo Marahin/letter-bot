@@ -36,7 +36,7 @@ func TestOnBookWithoutConflictingReservations(t *testing.T) {
 	adapter := NewApplication(reservationRepo, summarySrv, bookingSrv)
 	botPort := new(mocks.MockBot)
 	botPort.On("WithEventHandler", adapter).Return(botPort)
-	botPort.On("MemberHasRole", guild, member, "Postman").Return(false)
+	botPort.On("MemberHasRole", guild, member, discord.PrivilegedRole).Return(false)
 	adapter.WithBot(botPort)
 
 	// when
@@ -91,11 +91,12 @@ func TestOnBookWithConflictingReservations(t *testing.T) {
 		},
 	}
 	request := book.BookRequest{
-		Member:  member,
-		Guild:   guild,
-		StartAt: startAt,
-		EndAt:   endAt,
-		Spot:    "test-spot",
+		Member:   member,
+		Guild:    guild,
+		StartAt:  startAt,
+		EndAt:    endAt,
+		Spot:     "test-spot",
+		Overbook: true,
 	}
 	finalReservations := []*reservation.ReservationWithSpot{
 		{
@@ -113,7 +114,7 @@ func TestOnBookWithConflictingReservations(t *testing.T) {
 	communicationSrv.On("NotifyOverbookedMember", conflictingMember, request, conflictingReservations[0]).Return()
 	communicationSrv.On("SendGuildSummary", guild, outcomeSummary).Return(nil)
 	bookingSrv := new(mocks.MockBookingService)
-	bookingSrv.On("Book", member, guild, spot.Name, startAt, endAt, false, false).Return(conflictingReservations, nil)
+	bookingSrv.On("Book", member, guild, spot.Name, startAt, endAt, true, true).Return(conflictingReservations, nil)
 	reservationRepo := new(mocks.MockReservationRepo)
 	reservationRepo.On("SelectUpcomingReservationsWithSpot", mocks.ContextMock, guild.ID).Return(finalReservations, nil)
 	defer bookingSrv.AssertExpectations(t)
@@ -121,7 +122,7 @@ func TestOnBookWithConflictingReservations(t *testing.T) {
 	summarySrv.On("PrepareSummary", finalReservations).Return(outcomeSummary, nil)
 	botPort := new(mocks.MockBot)
 	botPort.On("WithEventHandler", mock.AnythingOfType("*api.Application")).Return(botPort)
-	botPort.On("MemberHasRole", guild, member, "Postman").Return(false)
+	botPort.On("MemberHasRole", guild, member, discord.PrivilegedRole).Return(true)
 	botPort.On("GetMember", guild, conflictingMember.ID).Return(conflictingMember, nil)
 	adapter := NewApplication(reservationRepo, summarySrv, bookingSrv).WithBot(botPort).WithCommunication(communicationSrv)
 

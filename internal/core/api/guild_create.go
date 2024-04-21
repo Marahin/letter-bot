@@ -30,7 +30,7 @@ func (a *Application) OnGuildCreate(guild *discord.Guild) {
 		return
 	}
 
-	summaryChannel, err := a.botSrv.FindChannelByName(guild, "letter-summary")
+	summaryChannel, err := a.botSrv.FindChannelByName(guild, discord.SummaryChannel)
 	if err != nil {
 		log.Errorf("could not find summary channel: %s", err)
 

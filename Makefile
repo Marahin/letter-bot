@@ -33,7 +33,7 @@ sqlc-diff:
 	@sqlc diff -f internal/infrastructure/reservation/postgresql/sqlc.yaml
 	@sqlc diff -f internal/infrastructure/spot/postgresql/sqlc.yaml
 
-test: install-dependencies sqlc-diff go-vet
+test: install-dependencies sqlc-diff go-vet gocyclo
 	@echo "$(GREEN)INFO: Running tests$(RESET)"
 	@go test -race -coverprofile=coverage.out ./...
 
@@ -45,6 +45,15 @@ go-vet:
 	@echo "$(GREEN)INFO: Running go vet$(RESET)"
 	@go vet ./...
 
+gocyclo:
+	@echo "$(GREEN)INFO: Running gocyclo$(RESET)"
+	@output=$$(gocyclo -over 15 .) ; \
+	if [ $$? -ne 0 ]; then \
+		echo "Gocyclo complexity complaints: "; \
+		echo $$output; \
+		exit 1; \
+	fi
+	
 sqlc-generate:
 	@echo "$(GREEN)INFO: Generating sqlc$(RESET)"
 	@sqlc generate -f internal/infrastructure/reservation/postgresql/sqlc.yaml

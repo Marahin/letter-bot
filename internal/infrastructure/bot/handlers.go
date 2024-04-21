@@ -75,14 +75,14 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 		return errors.New("book command requires 3 arguments")
 	}
 
-	startAt, err := time.Parse(stringsHelper.DC_TIME_FORMAT, i.ApplicationCommandData().Options[1].StringValue())
+	startAt, err := time.Parse(stringsHelper.DcTimeFormat, i.ApplicationCommandData().Options[1].StringValue())
 	if err != nil {
 		return err
 	}
 	startAt = time.Date(
 		tNow.Year(), tNow.Month(), tNow.Day(), startAt.Hour(), startAt.Minute(), 0, 0, tNow.Location())
 
-	endAt, err := time.Parse(stringsHelper.DC_TIME_FORMAT, i.ApplicationCommandData().Options[2].StringValue())
+	endAt, err := time.Parse(stringsHelper.DcTimeFormat, i.ApplicationCommandData().Options[2].StringValue())
 	if err != nil {
 		return err
 	}

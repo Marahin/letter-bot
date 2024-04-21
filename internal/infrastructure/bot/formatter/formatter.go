@@ -22,7 +22,7 @@ func (f *DiscordFormatter) FormatGenericError(err error) string {
 }
 
 func (f *DiscordFormatter) FormatUnbookResponse(res *reservation.ReservationWithSpot) string {
-	return fmt.Sprintf("%s (%s - %s) reservation has been cancelled.", res.Spot.Name, res.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), res.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT))
+	return fmt.Sprintf("%s (%s - %s) reservation has been cancelled.", res.Spot.Name, res.StartAt.Format(stringsHelper.DcLongTimeFormat), res.EndAt.Format(stringsHelper.DcLongTimeFormat))
 }
 
 // FormatBookError formats book error to Discord format
@@ -44,8 +44,8 @@ func (f *DiscordFormatter) FormatBookError(response book.BookResponse, err error
 			message.WriteString(fmt.Sprintf(
 				"* %s %s - %s\n",
 				author,
-				res.Original.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT),
-				res.Original.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT)),
+				res.Original.StartAt.Format(stringsHelper.DcLongTimeFormat),
+				res.Original.EndAt.Format(stringsHelper.DcLongTimeFormat)),
 			)
 		}
 	}
@@ -76,7 +76,7 @@ func (f *DiscordFormatter) FormatBookResponse(response book.BookResponse) string
 			if len(res.New) > 0 {
 				message.WriteString("had their reservation clipped to: ")
 				newClippedRanges := collections.PoorMansMap(res.New, func(r *reservation.Reservation) string {
-					return fmt.Sprintf("**%s - %s**", r.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), r.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT))
+					return fmt.Sprintf("**%s - %s**", r.StartAt.Format(stringsHelper.DcLongTimeFormat), r.EndAt.Format(stringsHelper.DcLongTimeFormat))
 				})
 				message.WriteString(strings.Join(newClippedRanges, ", "))
 			} else {
@@ -84,9 +84,9 @@ func (f *DiscordFormatter) FormatBookResponse(response book.BookResponse) string
 			}
 
 			message.WriteString(fmt.Sprintf(
-				"(originally: %s - %s)\n",
-				res.Original.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT),
-				res.Original.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT),
+				" (originally: %s - %s)\n",
+				res.Original.StartAt.Format(stringsHelper.DcLongTimeFormat),
+				res.Original.EndAt.Format(stringsHelper.DcLongTimeFormat),
 			))
 			continue // Stop here
 		}
@@ -95,9 +95,9 @@ func (f *DiscordFormatter) FormatBookResponse(response book.BookResponse) string
 	return message.String()
 }
 
-func FormatOverbookedMemberNotification(member *discord.Member,
+func (f *DiscordFormatter) FormatOverbookedMemberNotification(member *discord.Member,
 	request book.BookRequest,
-	res reservation.ClippedOrRemovedReservation) string {
+	res *reservation.ClippedOrRemovedReservation) string {
 	var msgBody strings.Builder
 	msgBody.WriteString(fmt.Sprintf(
 		"Your reservation was overbooked by %s\n",
@@ -107,11 +107,11 @@ func FormatOverbookedMemberNotification(member *discord.Member,
 	if len(res.New) > 0 { // The reservation has been modified, but not entirely removed - lets notify the user!
 		msgBody.WriteString("has been clipped to: ")
 		newClippedRanges := collections.PoorMansMap(res.New, func(r *reservation.Reservation) string {
-			return fmt.Sprintf("%s - %s", r.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), r.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT))
+			return fmt.Sprintf("%s - %s", r.StartAt.Format(stringsHelper.DcLongTimeFormat), r.EndAt.Format(stringsHelper.DcLongTimeFormat))
 		})
 		msgBody.WriteString(strings.Join(newClippedRanges, ", "))
 	} else {
-		msgBody.WriteString(fmt.Sprintf("has been entirely removed (originally: **%s - %s**)", res.Original.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), res.Original.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT)))
+		msgBody.WriteString(fmt.Sprintf("has been entirely removed (originally: **%s - %s**)", res.Original.StartAt.Format(stringsHelper.DcLongTimeFormat), res.Original.EndAt.Format(stringsHelper.DcLongTimeFormat)))
 	}
 
 	return msgBody.String()

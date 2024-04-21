@@ -5,6 +5,7 @@ import (
 	"slices"
 	"time"
 
+	commonStrings "spot-assistant/internal/common/strings"
 	"spot-assistant/internal/common/version"
 	"spot-assistant/internal/core/dto/reservation"
 	dto "spot-assistant/internal/core/dto/summary"
@@ -12,6 +13,7 @@ import (
 
 func (a *Adapter) BaseSummary() *dto.Summary {
 	return &dto.Summary{
+		PreMessage:  commonStrings.PeriodicMessageContent,
 		URL:         "https://tibialoot.com",
 		Title:       "TibiaLoot.com - Spot Assistant",
 		Description: "Current and upcoming hunts. Times are in **Europe/Berlin**.",

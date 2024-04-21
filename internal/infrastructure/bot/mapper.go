@@ -120,7 +120,7 @@ func MapStringArrToChoice(texts []string) []*discordgo.ApplicationCommandOptionC
 func MapReservationWithSpotArrToChoice(input []*reservation.ReservationWithSpot) []*discordgo.ApplicationCommandOptionChoice {
 	return collections.PoorMansMap(input, func(i *reservation.ReservationWithSpot) *discordgo.ApplicationCommandOptionChoice {
 		return &discordgo.ApplicationCommandOptionChoice{
-			Name:  fmt.Sprintf("%s - %s %s", i.StartAt.Format(strings.DC_LONG_TIME_FORMAT), i.EndAt.Format(strings.DC_LONG_TIME_FORMAT), i.Spot.Name),
+			Name:  fmt.Sprintf("%s - %s %s", i.StartAt.Format(strings.DcLongTimeFormat), i.EndAt.Format(strings.DcLongTimeFormat), i.Spot.Name),
 			Value: strconv.FormatInt(i.Reservation.ID, 10),
 		}
 	})

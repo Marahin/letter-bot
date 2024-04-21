@@ -52,7 +52,7 @@ func main() {
 
 	// Core
 	summaryService := summary.NewAdapter(charter)
-	communicationService := communication.NewAdapter(botService)
+	communicationService := communication.NewAdapter(botService, dcFormatter)
 	bookingService := booking.NewAdapter(spotRepo, reservationRepo)
 
 	// App

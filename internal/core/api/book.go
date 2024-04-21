@@ -6,10 +6,11 @@ import (
 
 	"spot-assistant/internal/core/dto/book"
 	"spot-assistant/internal/core/dto/reservation"
+	"spot-assistant/internal/core/dto/discord"
 )
 
 func (a *Application) OnBook(request book.BookRequest) (book.BookResponse, error) {
-	hasPermissions := a.botSrv.MemberHasRole(request.Guild, request.Member, "Postman")
+	hasPermissions := a.botSrv.MemberHasRole(request.Guild, request.Member, discord.PrivilegedRole)
 	response := book.BookResponse{
 		Spot:           request.Spot,
 		StartAt:        request.StartAt,

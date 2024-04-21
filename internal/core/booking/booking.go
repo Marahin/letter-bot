@@ -2,7 +2,6 @@ package booking
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -17,9 +16,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const MAXIMUM_RESERVATIONS_TIME = 3 * time.Hour
-
-var MAXIMUM_RESERVATIONS_TIME_EXCEEDED_ERROR = errors.New("You can only book 3 hours of reservations within 24 hour window")
 var HourRegex = regexp.MustCompile(`(\d{2}:\d{2})`)
 
 // Returns spots filtered by filter, if non-zero length.
@@ -65,7 +61,7 @@ func (a *Adapter) GetSuggestedHours(baseTime time.Time, filter string) []string 
 	}
 
 	suggestedOptions := collections.PoorMansMap(suggestedHours, func(hour time.Time) string {
-		return hour.Format(stringsHelper.DC_TIME_FORMAT)
+		return hour.Format(stringsHelper.DcTimeFormat)
 	})
 
 	if len(validatedFilter) > 0 {
@@ -83,15 +79,15 @@ func (a *Adapter) GetSuggestedHours(baseTime time.Time, filter string) []string 
 }
 
 func (a *Adapter) Book(member *discord.Member, guild *discord.Guild, spotName string, startAt time.Time, endAt time.Time, overbook bool, hasPermissions bool) ([]*reservation.ClippedOrRemovedReservation, error) {
-	currTime := time.Now()
-
 	a.log.WithFields(logrus.Fields{
-		"member":         member,
-		"hasPermissions": hasPermissions,
-		"overbook":       overbook,
-		"startAt":        startAt,
-		"endAt":          endAt,
-		"currTime":       currTime,
+		"spot":            spotName,
+		"member.id":       member.ID,
+		"member.name":     member.Nick,
+		"member.username": member.Username,
+		"hasPermissions":  hasPermissions,
+		"overbook":        overbook,
+		"startAt":         startAt,
+		"endAt":           endAt,
 	}).Info("booking request")
 
 	spots, err := a.spotRepo.SelectAllSpots(context.Background())
@@ -106,8 +102,17 @@ func (a *Adapter) Book(member *discord.Member, guild *discord.Guild, spotName st
 		return nil, fmt.Errorf("could not find spot called %s", spotName)
 	}
 
-	if endAt.Sub(startAt) > 3*time.Hour {
-		return nil, errors.New("reservation cannot take more than 3 hours")
+	if err = validateHuntLength(endAt.Sub(startAt)); err != nil {
+		return nil, err
+	}
+
+	upcomingAuthorReservations, err := a.reservationRepo.SelectUpcomingMemberReservationsWithSpots(context.Background(), guild, member)
+	if err != nil {
+		return nil, fmt.Errorf("could not select upcoming member reservations: %w", err)
+	}
+
+	if err = validateHuntLengthForMultiFloorRespawns(spotName, upcomingAuthorReservations, startAt, endAt); err != nil {
+		return nil, err
 	}
 
 	conflictingReservations, err := a.reservationRepo.SelectOverlappingReservations(context.Background(), spotName, startAt, endAt, guild.ID)
@@ -115,55 +120,22 @@ func (a *Adapter) Book(member *discord.Member, guild *discord.Guild, spotName st
 		return nil, fmt.Errorf("could not select overlapping reservations: %w", err)
 	}
 
-	authorsConflictingReservations, _ := collections.PoorMansFind(conflictingReservations, func(r *reservation.Reservation) bool {
-		return r.AuthorDiscordID == member.ID
-	})
-
-	if authorsConflictingReservations != nil && overbook {
-		return nil, errors.New("you cannot overbook yourself")
-	}
-
 	if len(conflictingReservations) > 0 {
-		switch canDo := overbook && isPotentiallyAbandonedReservation(conflictingReservations) || overbook && hasPermissions; canDo {
-		case true:
-			break
-		case false:
+		if overbook {
+			err = validateNoSelfOverbook(member, conflictingReservations)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		if !canOverbook(overbook, hasPermissions, conflictingReservations) {
 			return collections.PoorMansMap(conflictingReservations, func(r *reservation.Reservation) *reservation.ClippedOrRemovedReservation {
 				return &reservation.ClippedOrRemovedReservation{
 					Original: r,
 					New:      []*reservation.Reservation{r},
 				}
-			}), errors.New("There are conflicting reservation which prevented booking this reservation. If you would like to overbook them, ensure you have a @Postman role, then repeat the command and set 'overbook' parameter to 'true'.")
-		}
-	}
+			}), InsufficientPermissionsError
 
-	// Check for potentially exceeding maximum hours, with an exception for multi-floor respawns
-	upcomingAuthorReservations, err := a.reservationRepo.SelectUpcomingMemberReservationsWithSpots(context.Background(), guild, member)
-	if err != nil {
-		return nil, fmt.Errorf("could not select upcoming member reservations: %w", err)
-	}
-
-	if len(upcomingAuthorReservations) > 0 {
-		tempReservation := reservation.ReservationWithSpot{
-			Reservation: reservation.Reservation{
-				ID:      -1,
-				Author:  member.ID,
-				StartAt: startAt,
-				EndAt:   endAt,
-			},
-			Spot: reservation.Spot{
-				Name: spotName,
-			},
-		}
-		upcomingAuthorReservations = append(upcomingAuthorReservations, &tempReservation)
-
-		reducedReservations := reduceAllAuthorReservationsByLongestPerSpot(upcomingAuthorReservations)
-		totalReservationsTime := collections.PoorMansSum(reducedReservations, func(reservation *reservation.ReservationWithSpot) time.Duration {
-			return reservation.EndAt.Sub(reservation.StartAt)
-		})
-
-		if totalReservationsTime > MAXIMUM_RESERVATIONS_TIME {
-			return nil, MAXIMUM_RESERVATIONS_TIME_EXCEEDED_ERROR
 		}
 	}
 
@@ -187,8 +159,8 @@ func (a *Adapter) UnbookAutocomplete(g *discord.Guild, m *discord.Member, filter
 	if len(filter) > 0 {
 		reservations = collections.PoorMansFilter(reservations, func(r *reservation.ReservationWithSpot) bool {
 			searchableString := strings.Join([]string{
-				r.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT),
-				r.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT),
+				r.StartAt.Format(stringsHelper.DcLongTimeFormat),
+				r.StartAt.Format(stringsHelper.DcLongTimeFormat),
 				r.Spot.Name}, "")
 			containsFilterWord := strings.Contains(strings.ToLower(searchableString), strings.ToLower(filter))
 			return containsFilterWord
@@ -214,16 +186,4 @@ func (a *Adapter) Unbook(g *discord.Guild, m *discord.Member, reservationId int6
 	}
 
 	return res, nil
-}
-
-// This is an edge case, where we check:
-// if there is only one overlapping reservation,
-// and if it started,
-// and if it hasn't ended,
-// and it contains our reservation request and time
-func isPotentiallyAbandonedReservation(overlappingReservations []*reservation.Reservation) bool {
-	return len(overlappingReservations) == 1 &&
-		overlappingReservations[0].StartAt.Before(time.Now()) &&
-		(overlappingReservations[0].EndAt.After(time.Now()) ||
-			overlappingReservations[0].EndAt.Equal(time.Now()))
 }

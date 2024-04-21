@@ -78,7 +78,6 @@ func (b *Bot) EnsureChannel(guild *discord.Guild) error {
 	log := logrus.WithFields(logrus.Fields{"type": "infra"})
 	letterSummaryChannelFound := false
 	letterChannelFound := false
-	defer log.WithFields(logrus.Fields{"summaryFound": letterSummaryChannelFound, "letterFound": letterChannelFound})
 
 	g, err := b.mgr.Gateway.Guild(guild.ID)
 	if err != nil {
@@ -92,24 +91,25 @@ func (b *Bot) EnsureChannel(guild *discord.Guild) error {
 	}
 
 	for _, ch := range channels {
-		if ch.Name == "letter-summary" {
+		if ch.Name == discord.SummaryChannel {
 			letterSummaryChannelFound = true
 		}
 
-		if ch.Name == "letter" {
+		if ch.Name == discord.CommandChannel {
 			letterChannelFound = true
 		}
 	}
+	log.WithFields(logrus.Fields{"summaryFound": letterSummaryChannelFound, "letterFound": letterChannelFound})
 
 	if !letterSummaryChannelFound {
-		_, err := b.mgr.Gateway.GuildChannelCreate(g.ID, "letter-summary", discordgo.ChannelTypeGuildText)
+		_, err := b.mgr.Gateway.GuildChannelCreate(g.ID, discord.SummaryChannel, discordgo.ChannelTypeGuildText)
 		if err != nil {
 			return err
 		}
 	}
 
 	if !letterChannelFound {
-		_, err := b.mgr.Gateway.GuildChannelCreate(g.ID, "letter", discordgo.ChannelTypeGuildText)
+		_, err := b.mgr.Gateway.GuildChannelCreate(g.ID, discord.CommandChannel, discordgo.ChannelTypeGuildText)
 		if err != nil {
 
 			return err
@@ -162,12 +162,12 @@ func (b *Bot) EnsureRoles(g *discord.Guild) error {
 		return err
 	}
 	for _, role := range roles {
-		if role.Name == ROLE {
+		if role.Name == discord.PrivilegedRole {
 			return nil
 		}
 	}
 
-	_, err = b.mgr.Gateway.GuildRoleCreate(guild.ID, &discordgo.RoleParams{Name: "Postman"})
+	_, err = b.mgr.Gateway.GuildRoleCreate(guild.ID, &discordgo.RoleParams{Name: discord.PrivilegedRole})
 	if err != nil {
 		return fmt.Errorf("error when creating a postman role: %s", err)
 	}
@@ -203,6 +203,18 @@ func (b *Bot) GetGuild(id int64) (*discord.Guild, error) {
 	}
 
 	return MapGuild(guild), nil
+}
+
+// SendChannelMessage sends a message to a channel in a guild.
+func (b *Bot) SendChannelMessage(guild *discord.Guild, channel *discord.Channel, message string) error {
+	gID, err := stringsHelper.StrToInt64(guild.ID)
+	if err != nil {
+		return err
+	}
+
+	dcSession := b.mgr.SessionForGuild(gID)
+	_, err = dcSession.ChannelMessageSend(channel.ID, message)
+	return err
 }
 
 func (b *Bot) SendLetterMessage(guild *discord.Guild, channel *discord.Channel, sum *summary.Summary) error {
@@ -271,6 +283,13 @@ func (b *Bot) SendLetterMessage(guild *discord.Guild, channel *discord.Channel, 
 
 	if channel.Type != discord.ChannelTypeDM {
 		err := b.CleanChannel(guild, channel)
+		if err != nil {
+			return err
+		}
+	}
+
+	if sum.PreMessage != "" {
+		_, err := dcSession.ChannelMessageSend(channel.ID, sum.PreMessage)
 		if err != nil {
 			return err
 		}

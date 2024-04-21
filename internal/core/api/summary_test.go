@@ -1,15 +1,16 @@
 package api
 
 import (
-	"github.com/stretchr/testify/mock"
-	"spot-assistant/internal/common/test/mocks"
-	"spot-assistant/internal/core/dto/discord"
-	"spot-assistant/internal/core/dto/reservation"
-	"spot-assistant/internal/core/dto/summary"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+
+	"spot-assistant/internal/common/test/mocks"
+	"spot-assistant/internal/core/dto/discord"
+	"spot-assistant/internal/core/dto/reservation"
+	"spot-assistant/internal/core/dto/summary"
 )
 
 func TestUpdateGuildSummary(t *testing.T) {

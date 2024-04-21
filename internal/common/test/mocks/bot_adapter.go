@@ -77,6 +77,11 @@ func (m *MockBot) StartTicking() {
 	m.Called()
 }
 
+func (m *MockBot) SendChannelMessage(g *discord.Guild, ch *discord.Channel, content string) error {
+	args := m.Called(g, ch, content)
+	return args.Error(0)
+}
+
 func (m *MockBot) SendDM(mem *discord.Member, msg string) error {
 	args := m.Called(mem, msg)
 	return args.Error(0)

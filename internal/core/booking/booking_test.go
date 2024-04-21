@@ -452,6 +452,7 @@ func TestBookFailOnOverbookAuthorsReservation(t *testing.T) {
 	spotService.On("SelectAllSpots", mocks.ContextMock).Return([]*spot.Spot{spotInput}, nil)
 	reservationService := new(mocks.MockReservationRepo)
 	reservationService.On("SelectOverlappingReservations", mocks.ContextMock, spotInput.Name, startAt, endAt, guild.ID).Return(conflictingReservations, nil)
+	reservationService.On("SelectUpcomingMemberReservationsWithSpots", mocks.ContextMock, guild, member).Return([]*reservation.ReservationWithSpot{}, nil)
 	adapter := NewAdapter(spotService, reservationService)
 
 	// when

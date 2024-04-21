@@ -2,9 +2,9 @@ package ports
 
 import (
 	"context"
-	"spot-assistant/internal/core/dto/book"
 	"time"
 
+	"spot-assistant/internal/core/dto/book"
 	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/spot"
@@ -46,6 +46,7 @@ type BotPort interface {
 	MemberHasRole(g *discord.Guild, m *discord.Member, roleName string) bool
 	OpenDM(m *discord.Member) (*discord.Channel, error)
 	GetMember(guild *discord.Guild, memberID string) (*discord.Member, error)
+	SendChannelMessage(g *discord.Guild, ch *discord.Channel, content string) error
 	// Should start background worker loop, which should then emit Tick event periodically.
 	StartTicking()
 }
@@ -56,7 +57,7 @@ type ChartAdapter interface {
 
 type TextFormatter interface {
 	FormatGenericError(err error) string
-	FormatBookResponse(response *reservation.ReservationWithSpot) string
+	FormatBookResponse(response book.BookResponse) string
 	FormatBookError(response book.BookResponse, err error) string
 	FormatOverbookedMemberNotification(member *discord.Member,
 		request book.BookRequest,
