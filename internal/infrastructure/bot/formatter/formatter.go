@@ -31,19 +31,12 @@ func (f *DiscordFormatter) FormatBookError(response book.BookResponse, err error
 	message.WriteString(f.FormatGenericError(err))
 
 	if len(response.ConflictingReservations) > 0 {
-		message.WriteString("Following reservations are conflicting:\n\n")
+		message.WriteString("\nFollowing reservations are conflicting:\n\n")
 
 		for _, res := range response.ConflictingReservations {
-			var author string
-			author = response.Member.Nick
-			if len(author) == 0 {
-				author = response.Member.Username
-			}
-			author = fmt.Sprintf("**%s**", author)
-
 			message.WriteString(fmt.Sprintf(
-				"* %s %s - %s\n",
-				author,
+				"* **%s** %s - %s\n",
+				res.Original.Author,
 				res.Original.StartAt.Format(stringsHelper.DcLongTimeFormat),
 				res.Original.EndAt.Format(stringsHelper.DcLongTimeFormat)),
 			)
