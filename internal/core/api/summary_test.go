@@ -22,7 +22,6 @@ func TestUpdateGuildSummary(t *testing.T) {
 	summary := &summary.Summary{
 		Title: "summary",
 	}
-	summaryCh := &discord.Channel{ID: "test-channel-id", Name: "letter-summary"}
 	reservations := []*reservation.ReservationWithSpot{
 		{
 			Spot: reservation.Spot{
@@ -37,22 +36,23 @@ func TestUpdateGuildSummary(t *testing.T) {
 			},
 		},
 	}
+	mockComm := new(mocks.MockCommunicationService)
+	mockComm.On("SendGuildSummary", guild, summary).Return(nil)
 	mockBot := new(mocks.MockBot)
 	mockBot.On("WithEventHandler", mock.AnythingOfType("*api.Application")).Return(mockBot)
-	mockBot.On("SendLetterMessage", guild, summaryCh, summary).Return(nil)
-	mockBot.On("FindChannelByName", guild, "letter-summary").Return(summaryCh, nil)
 	mockReservationRepo := new(mocks.MockReservationRepo)
 	mockReservationRepo.On("SelectUpcomingReservationsWithSpot", mocks.ContextMock, guild.ID).Return(reservations, nil)
 	mockSummarySrv := new(mocks.MockSummaryService)
 	mockSummarySrv.On("PrepareSummary", reservations).Return(summary, nil)
 	mockBookingSrv := new(mocks.MockBookingService)
-	adapter := NewApplication(mockReservationRepo, mockSummarySrv, mockBookingSrv).WithBot(mockBot)
+	adapter := NewApplication(mockReservationRepo, mockSummarySrv, mockBookingSrv).WithBot(mockBot).WithCommunication(mockComm)
 
 	// when
 	err := adapter.UpdateGuildSummary(guild)
 
 	// assert
 	assert.Nil(err)
+	mockComm.AssertExpectations(t)
 	mockReservationRepo.AssertExpectations(t)
 	mockSummarySrv.AssertExpectations(t)
 	mockBot.AssertExpectations(t)

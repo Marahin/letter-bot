@@ -47,7 +47,7 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 
 		if !isAutocomplete {
 			webhookParams := &discordgo.WebhookParams{
-				Content: b.dcErrorMsg(err),
+				Content: b.formatter.FormatGenericError(err),
 			}
 
 			gID, err := strings.StrToInt64(i.GuildID)

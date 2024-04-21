@@ -17,6 +17,8 @@ type communicationService interface {
 	NotifyOverbookedMember(member *discord.Member,
 		request book.BookRequest,
 		res *reservation.ClippedOrRemovedReservation)
+	SendGuildSummary(guild *discord.Guild, summary *summary.Summary) error
+	SendPrivateSummary(request summary.PrivateSummaryRequest, summary *summary.Summary) error
 }
 
 type bookingService interface {
@@ -33,8 +35,4 @@ type bookingService interface {
 	UnbookAutocomplete(g *discord.Guild, m *discord.Member, filter string) ([]*reservation.ReservationWithSpot, error)
 
 	Unbook(g *discord.Guild, m *discord.Member, reservationId int64) (*reservation.ReservationWithSpot, error)
-}
-
-type formatterService interface {
-	FormatBookResponse(response book.BookResponse) string
 }

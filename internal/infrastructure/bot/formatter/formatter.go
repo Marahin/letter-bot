@@ -21,6 +21,10 @@ func (f *DiscordFormatter) FormatGenericError(err error) string {
 	return fmt.Sprintf("Sorry, but something went wrong. If you require support, join TibiaLoot.com Discord: https://discord.gg/F4YKgsnzmc \nError message:\n```\n%s\n```", err.Error())
 }
 
+func (f *DiscordFormatter) FormatUnbookResponse(res *reservation.ReservationWithSpot) string {
+	return fmt.Sprintf("%s (%s - %s) reservation has been cancelled.", res.Spot.Name, res.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), res.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT))
+}
+
 // FormatBookError formats book error to Discord format
 func (f *DiscordFormatter) FormatBookError(response book.BookResponse, err error) string {
 	var message strings.Builder

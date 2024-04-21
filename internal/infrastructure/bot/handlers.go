@@ -28,6 +28,8 @@ func (b *Bot) GuildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
 func (b *Bot) Ready(s *discordgo.Session, r *discordgo.Ready) {
 	b.log.Debug("Ready")
 
+	b.StartTicking()
+
 	defer b.eventHandler.OnReady()
 }
 
@@ -182,7 +184,7 @@ func (b *Bot) Unbook(i *discordgo.InteractionCreate) error {
 	}
 
 	_, err = b.mgr.SessionForGuild(gID).FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
-		Content: fmt.Sprintf("%s (%s - %s) reservation has been cancelled.", res.Spot.Name, res.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), res.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT)),
+		Content: b.formatter.FormatUnbookResponse(res),
 	})
 	return err
 }
@@ -225,7 +227,7 @@ func (b *Bot) UnbookAutocomplete(i *discordgo.InteractionCreate) error {
 }
 
 func (b *Bot) PrivateSummary(i *discordgo.InteractionCreate) error {
-	b.log.Info("PrivateSummary")
+	b.log.Debug("PrivateSummary")
 
 	gID, err := stringsHelper.StrToInt64(i.GuildID)
 	if err != nil {

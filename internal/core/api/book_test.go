@@ -23,11 +23,6 @@ func TestOnBookWithoutConflictingReservations(t *testing.T) {
 	guild := &discord.Guild{
 		ID: "test-guild-id",
 	}
-	summaryChannel := &discord.Channel{
-		ID:   "test-channel-id",
-		Name: "letter-summary",
-		Type: discord.ChannelTypeGuildText,
-	}
 	startAt := time.Now()
 	endAt := startAt.Add(2 * time.Hour)
 	spotName := "test-spot"
@@ -42,8 +37,6 @@ func TestOnBookWithoutConflictingReservations(t *testing.T) {
 	botPort := new(mocks.MockBot)
 	botPort.On("WithEventHandler", adapter).Return(botPort)
 	botPort.On("MemberHasRole", guild, member, "Postman").Return(false)
-	botPort.On("FindChannelByName", guild, "letter-summary").Return(summaryChannel, nil)
-	botPort.On("WithEventHandler", adapter).Return(botPort)
 	adapter.WithBot(botPort)
 
 	// when
@@ -71,11 +64,6 @@ func TestOnBookWithConflictingReservations(t *testing.T) {
 	}
 	guild := &discord.Guild{
 		ID: "test-guild-id",
-	}
-	summaryChannel := &discord.Channel{
-		ID:   "test-channel-id",
-		Name: "letter-summary",
-		Type: discord.ChannelTypeGuildText,
 	}
 	startAt := time.Now()
 	endAt := startAt.Add(2 * time.Hour)
@@ -123,6 +111,7 @@ func TestOnBookWithConflictingReservations(t *testing.T) {
 	outcomeSummary := &summary.Summary{}
 	communicationSrv := new(mocks.MockCommunicationService)
 	communicationSrv.On("NotifyOverbookedMember", conflictingMember, request, conflictingReservations[0]).Return()
+	communicationSrv.On("SendGuildSummary", guild, outcomeSummary).Return(nil)
 	bookingSrv := new(mocks.MockBookingService)
 	bookingSrv.On("Book", member, guild, spot.Name, startAt, endAt, false, false).Return(conflictingReservations, nil)
 	reservationRepo := new(mocks.MockReservationRepo)
@@ -133,9 +122,7 @@ func TestOnBookWithConflictingReservations(t *testing.T) {
 	botPort := new(mocks.MockBot)
 	botPort.On("WithEventHandler", mock.AnythingOfType("*api.Application")).Return(botPort)
 	botPort.On("MemberHasRole", guild, member, "Postman").Return(false)
-	botPort.On("FindChannelByName", guild, "letter-summary").Return(summaryChannel, nil)
 	botPort.On("GetMember", guild, conflictingMember.ID).Return(conflictingMember, nil)
-	botPort.On("SendLetterMessage", guild, summaryChannel, outcomeSummary).Return(nil)
 	adapter := NewApplication(reservationRepo, summarySrv, bookingSrv).WithBot(botPort).WithCommunication(communicationSrv)
 
 	// when

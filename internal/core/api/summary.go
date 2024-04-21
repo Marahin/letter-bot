@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
 	"spot-assistant/internal/common/errors"
@@ -16,19 +15,12 @@ import (
 func (a *Application) UpdateGuildSummary(guild *discord.Guild) error {
 	log := a.log.WithFields(logrus.Fields{"guild.ID": guild.ID, "guild.Name": guild.Name, "name": "UpdateGuildSummary"})
 
-	summaryChannel, err := a.botSrv.FindChannelByName(guild, "letter-summary")
-	if err != nil {
-		log.Errorf("could not find summary channel: %s", err)
-
-		return err
-	}
-
 	// For each guild
 	reservations, err := a.db.SelectUpcomingReservationsWithSpot(
 		context.Background(), guild.ID,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to retrieve upcoming reservations: %s", err)
+		return err
 	}
 
 	if len(reservations) == 0 {
@@ -37,23 +29,12 @@ func (a *Application) UpdateGuildSummary(guild *discord.Guild) error {
 		return nil
 	}
 
-	summary, err := a.summarySrv.PrepareSummary(reservations)
+	summ, err := a.summarySrv.PrepareSummary(reservations)
 	if err != nil {
-		log.Errorf("could not generate summary: %s", err)
-
-		return fmt.Errorf("failed to retrieve upcoming reservations: %s", err)
+		return err
 	}
 
-	log.Info("updating summary")
-
-	err = a.botSrv.SendLetterMessage(guild, summaryChannel, summary)
-	if err != nil {
-		log.Errorf("could not send letter message: %s", err)
-
-		return fmt.Errorf("failed to retrieve upcoming reservations: %s", err)
-	}
-
-	return nil
+	return a.commSrv.SendGuildSummary(guild, summ)
 }
 
 func (a *Application) UpdateGuildSummaryAndLogError(guild *discord.Guild) {
@@ -62,11 +43,11 @@ func (a *Application) UpdateGuildSummaryAndLogError(guild *discord.Guild) {
 
 func (a *Application) OnPrivateSummary(request summary.PrivateSummaryRequest) error {
 	log := a.log.WithFields(logrus.Fields{"user.ID": request.UserID, "guild.ID": request.GuildID})
-	log.Info("OnPrivateSummary")
+	log.Debug("OnPrivateSummary")
 
 	res, err := a.db.SelectUpcomingReservationsWithSpot(context.Background(), strconv.FormatInt(request.GuildID, 10))
 	if err != nil {
-		return fmt.Errorf("could not fetch upcoming reservations")
+		return err
 	}
 
 	if len(res) == 0 {
@@ -75,24 +56,10 @@ func (a *Application) OnPrivateSummary(request summary.PrivateSummaryRequest) er
 		return nil
 	}
 
-	summary, err := a.summarySrv.PrepareSummary(res)
-	if err != nil {
-		log.Errorf("could not generate summary: %s", err)
-
-		return fmt.Errorf("could not generate summary: %s", err)
-	}
-
-	dmChannel, err := a.botSrv.OpenDM(&discord.Member{ID: strconv.FormatInt(request.UserID, 10)})
+	summ, err := a.summarySrv.PrepareSummary(res)
 	if err != nil {
 		return err
 	}
 
-	err = a.botSrv.SendLetterMessage(nil, dmChannel, summary)
-	if err != nil {
-		log.Errorf("could not send letter message: %s", err)
-
-		return fmt.Errorf("could not send letter message: %s", err)
-	}
-
-	return nil
+	return a.commSrv.SendPrivateSummary(request, summ)
 }

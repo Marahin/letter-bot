@@ -1,7 +1,6 @@
 package bot
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"spot-assistant/internal/infrastructure/bot/formatter"
@@ -108,8 +107,4 @@ func (b *Bot) interactionRespond(i *discordgo.InteractionCreate, responseData *d
 		Type: responseType,
 		Data: responseData,
 	})
-}
-
-func (b *Bot) dcErrorMsg(err error) string {
-	return fmt.Sprintf("Sorry, but something went wrong. If you require support, join TibiaLoot.com Discord: https://discord.gg/F4YKgsnzmc \nError message:\n```\n%s\n```", err.Error())
 }
