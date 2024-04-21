@@ -10,6 +10,7 @@ type Application struct {
 	db         ports.ReservationRepository
 	summarySrv summaryService
 	bookingSrv bookingService
+	commSrv    communicationService
 	botSrv     ports.BotPort
 	log        *logrus.Entry
 }
@@ -31,6 +32,12 @@ func NewApplication(
 
 func (a *Application) WithBot(bot ports.BotPort) *Application {
 	a.botSrv = bot.WithEventHandler(a)
+
+	return a
+}
+
+func (a *Application) WithCommunication(commSrv communicationService) *Application {
+	a.commSrv = commSrv
 
 	return a
 }

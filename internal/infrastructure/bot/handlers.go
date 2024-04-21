@@ -3,7 +3,6 @@ package bot
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -12,7 +11,6 @@ import (
 	"spot-assistant/internal/common/collections"
 	stringsHelper "spot-assistant/internal/common/strings"
 	"spot-assistant/internal/core/dto/book"
-	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/summary"
 )
 
@@ -114,73 +112,16 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 		Overbook: overbook,
 	}
 
-	message := strings.Builder{}
+	var message string
 	response, err := b.eventHandler.OnBook(request)
 	if err != nil {
-		message.WriteString("I'm sorry, but something went wrong. If you require support, join TibiaLoot.com Discord: https://discord.gg/F4YKgsnzmc \n")
-
-		message.WriteString(fmt.Sprintf("Error message:\n```%s```\n", err))
+		message = b.formatter.FormatBookError(response, err)
 	} else {
-		message.WriteString(fmt.Sprintf(
-			"<@!%s> booked **%s** between %s and %s.\n\n",
-			member.ID,
-			response.Spot,
-			response.StartAt.Format("2006-01-02 15:04"),
-			response.EndAt.Format("2006-01-02 15:04"),
-		))
-	}
-	haveWeOverbooked := err == nil
-
-	if len(response.ConflictingReservations) > 0 {
-		message.WriteString("Following reservations are conflicting")
-		if err == nil {
-			message.WriteString(" **and have been shortened or removed**")
-		}
-		message.WriteString(":\n\n")
-
-		for _, res := range response.ConflictingReservations {
-			var author string
-			switch haveWeOverbooked { // We notify users on overbooks only
-			case true:
-				author = fmt.Sprintf("<@!%s>", res.Original.AuthorDiscordID) // Mention user profile by ID
-			case false:
-				member, err = b.GetMember(guild, res.Original.AuthorDiscordID)
-				if err == nil {
-					author = member.Nick
-					if len(author) == 0 {
-						author = member.Username
-					}
-				} else {
-					author = res.Original.Author
-				}
-				author = fmt.Sprintf("**%s**", author)
-			}
-
-			message.WriteString(fmt.Sprintf(
-				"* %s ", author,
-			))
-
-			if haveWeOverbooked {
-				if len(res.New) > 0 {
-					message.WriteString("had their reservation clipped to: ")
-					newClippedRanges := collections.PoorMansMap(res.New, func(r *reservation.Reservation) string {
-						return fmt.Sprintf("**%s - %s**", r.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), r.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT))
-					})
-					message.WriteString(strings.Join(newClippedRanges, ", "))
-				} else {
-					message.WriteString("had their reservation removed ")
-				}
-
-				message.WriteString(fmt.Sprintf("(originally: %s - %s)\n", res.Original.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), res.Original.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT)))
-				continue // Stop here
-			}
-
-			message.WriteString(fmt.Sprintf("%s - %s\n", res.Original.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), res.Original.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT)))
-		}
+		message = b.formatter.FormatBookResponse(response)
 	}
 
 	_, err = dcSession.FollowupMessageCreate(interaction, false, &discordgo.WebhookParams{
-		Content: message.String(),
+		Content: message,
 		AllowedMentions: &discordgo.MessageAllowedMentions{
 			Parse: []discordgo.AllowedMentionType{discordgo.AllowedMentionTypeUsers},
 		},

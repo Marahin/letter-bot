@@ -2,9 +2,6 @@ package api
 
 import (
 	"fmt"
-	"spot-assistant/internal/common/collections"
-	stringsHelper "spot-assistant/internal/common/strings"
-	"strings"
 	"time"
 
 	"spot-assistant/internal/core/dto/book"
@@ -12,18 +9,22 @@ import (
 )
 
 func (a *Application) OnBook(request book.BookRequest) (book.BookResponse, error) {
+	hasPermissions := a.botSrv.MemberHasRole(request.Guild, request.Member, "Postman")
 	response := book.BookResponse{
-		Spot:    request.Spot,
-		StartAt: request.StartAt,
-		EndAt:   request.EndAt,
+		Spot:           request.Spot,
+		StartAt:        request.StartAt,
+		EndAt:          request.EndAt,
+		Member:         request.Member,
+		Overbook:       request.Overbook,
+		HasPermissions: hasPermissions,
 	}
 
 	conflicting, err := a.bookingSrv.Book(
 		request.Member,
 		request.Guild,
 		request.Spot, request.StartAt,
-		request.EndAt, request.Overbook, a.botSrv.MemberHasRole(request.Guild, request.Member, "Postman"),
-	)
+		request.EndAt, request.Overbook, hasPermissions)
+
 	response.ConflictingReservations = conflicting
 
 	if err != nil {
@@ -40,27 +41,8 @@ func (a *Application) OnBook(request book.BookRequest) (book.BookResponse, error
 				return
 			}
 
-			msgHeader := fmt.Sprintf(
-				"Your reservation was overbooked by %s\n",
-				fmt.Sprintf("<@!%s>", request.Member.ID),
-			)
+			a.commSrv.NotifyOverbookedMember(member, request, res)
 
-			var msgBody strings.Builder
-			msgBody.WriteString(fmt.Sprintf("* %s %s ", fmt.Sprintf("<@!%s>", member.ID), request.Spot))
-			if len(res.New) > 0 { // The reservation has been modified, but not entirely removed - lets notify the user!
-				msgBody.WriteString("has been clipped to: ")
-				newClippedRanges := collections.PoorMansMap(res.New, func(r *reservation.Reservation) string {
-					return fmt.Sprintf("%s - %s", r.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), r.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT))
-				})
-				msgBody.WriteString(strings.Join(newClippedRanges, ", "))
-			} else {
-				msgBody.WriteString(fmt.Sprintf("has been entirely removed (originally: **%s - %s**)", res.Original.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), res.Original.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT)))
-			}
-
-			err = a.botSrv.SendDM(member, msgHeader+msgBody.String())
-			if err != nil {
-				a.log.Errorf("error sending DM: %s", err)
-			}
 		}(res)
 	}
 

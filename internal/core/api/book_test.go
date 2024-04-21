@@ -1,9 +1,7 @@
 package api
 
 import (
-	"fmt"
 	"github.com/stretchr/testify/mock"
-	stringsHelper "spot-assistant/internal/common/strings"
 	"testing"
 	"time"
 
@@ -104,6 +102,13 @@ func TestOnBookWithConflictingReservations(t *testing.T) {
 			New: []*reservation.Reservation{},
 		},
 	}
+	request := book.BookRequest{
+		Member:  member,
+		Guild:   guild,
+		StartAt: startAt,
+		EndAt:   endAt,
+		Spot:    "test-spot",
+	}
 	finalReservations := []*reservation.ReservationWithSpot{
 		{
 			Reservation: reservation.Reservation{
@@ -116,6 +121,8 @@ func TestOnBookWithConflictingReservations(t *testing.T) {
 		},
 	}
 	outcomeSummary := &summary.Summary{}
+	communicationSrv := new(mocks.MockCommunicationService)
+	communicationSrv.On("NotifyOverbookedMember", conflictingMember, request, conflictingReservations[0]).Return()
 	bookingSrv := new(mocks.MockBookingService)
 	bookingSrv.On("Book", member, guild, spot.Name, startAt, endAt, false, false).Return(conflictingReservations, nil)
 	reservationRepo := new(mocks.MockReservationRepo)
@@ -129,22 +136,18 @@ func TestOnBookWithConflictingReservations(t *testing.T) {
 	botPort.On("FindChannelByName", guild, "letter-summary").Return(summaryChannel, nil)
 	botPort.On("GetMember", guild, conflictingMember.ID).Return(conflictingMember, nil)
 	botPort.On("SendLetterMessage", guild, summaryChannel, outcomeSummary).Return(nil)
-	botPort.On("SendDM", conflictingMember, fmt.Sprintf("Your reservation was overbooked by <@!test-member-id>\n* <@!test-conflicting-author-id> test-spot has been entirely removed (originally: **%s - %s**)", conflictingReservations[0].Original.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), conflictingReservations[0].Original.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT))).Return(nil)
-	adapter := NewApplication(reservationRepo, summarySrv, bookingSrv).WithBot(botPort)
+	adapter := NewApplication(reservationRepo, summarySrv, bookingSrv).WithBot(botPort).WithCommunication(communicationSrv)
 
 	// when
-	res, err := adapter.OnBook(book.BookRequest{
-		Member:  member,
-		Guild:   guild,
-		StartAt: startAt,
-		EndAt:   endAt,
-		Spot:    "test-spot",
-	})
+	res, err := adapter.OnBook(request)
 
 	// assert
 	assert.Nil(err)
 	assert.NotNil(res)
 	assert.Eventually(func() bool { // wait for asynchronous summary refresh attempt
-		return botPort.AssertExpectations(t) && reservationRepo.AssertExpectations(t) && summarySrv.AssertExpectations(t)
+		return botPort.AssertExpectations(t) &&
+			reservationRepo.AssertExpectations(t) &&
+			summarySrv.AssertExpectations(t) &&
+			communicationSrv.AssertExpectations(t)
 	}, 2*time.Second, 500*time.Millisecond)
 }

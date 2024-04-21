@@ -1,6 +1,7 @@
 package api
 
 import (
+	"spot-assistant/internal/core/dto/book"
 	"time"
 
 	"spot-assistant/internal/core/dto/discord"
@@ -10,6 +11,12 @@ import (
 
 type summaryService interface {
 	PrepareSummary(reservations []*reservation.ReservationWithSpot) (*summary.Summary, error)
+}
+
+type communicationService interface {
+	NotifyOverbookedMember(member *discord.Member,
+		request book.BookRequest,
+		res *reservation.ClippedOrRemovedReservation)
 }
 
 type bookingService interface {
@@ -26,4 +33,8 @@ type bookingService interface {
 	UnbookAutocomplete(g *discord.Guild, m *discord.Member, filter string) ([]*reservation.ReservationWithSpot, error)
 
 	Unbook(g *discord.Guild, m *discord.Member, reservationId int64) (*reservation.ReservationWithSpot, error)
+}
+
+type formatterService interface {
+	FormatBookResponse(response book.BookResponse) string
 }

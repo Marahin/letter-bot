@@ -2,6 +2,7 @@ package ports
 
 import (
 	"context"
+	"spot-assistant/internal/core/dto/book"
 	"time"
 
 	"spot-assistant/internal/core/dto/discord"
@@ -51,4 +52,13 @@ type BotPort interface {
 
 type ChartAdapter interface {
 	NewChart(values []float64, legend []string) ([]byte, error)
+}
+
+type TextFormatter interface {
+	FormatGenericError(err error) string
+	FormatBookResponse(response *reservation.ReservationWithSpot) string
+	FormatBookError(response book.BookResponse, err error) string
+	FormatOverbookedMemberNotification(member *discord.Member,
+		request book.BookRequest,
+		res *reservation.ClippedOrRemovedReservation) string
 }

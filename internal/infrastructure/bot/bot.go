@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"spot-assistant/internal/infrastructure/bot/formatter"
 	"sync"
 	"syscall"
 
@@ -26,6 +27,7 @@ type Bot struct {
 	mgr          *shards.Manager
 	log          *logrus.Entry
 	quit         chan struct{}
+	formatter    *formatter.DiscordFormatter
 	channelLocks cmap.ConcurrentMap[string, *sync.RWMutex]
 }
 
@@ -58,6 +60,12 @@ func NewManager() *Bot {
 	bot.mgr.AddHandler(bot.InteractionCreate)
 
 	return bot
+}
+
+func (b *Bot) WithFormatter(formatter *formatter.DiscordFormatter) *Bot {
+	b.formatter = formatter
+
+	return b
 }
 
 // WithEVentHandler sets bot's event handler to the provided port

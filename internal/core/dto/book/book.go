@@ -37,9 +37,12 @@ type BookRequest struct {
 }
 
 type BookResponse struct {
+	Member  *discord.Member
 	Spot    string
 	StartAt time.Time
 	EndAt   time.Time
 
 	ConflictingReservations []*reservation.ClippedOrRemovedReservation
+	Overbook                bool
+	HasPermissions          bool
 }

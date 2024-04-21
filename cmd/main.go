@@ -9,10 +9,13 @@ import (
 
 	"spot-assistant/internal/core/api"
 	"spot-assistant/internal/core/booking"
+	"spot-assistant/internal/core/communication"
 	"spot-assistant/internal/core/summary"
 
 	"spot-assistant/internal/common/version"
+
 	"spot-assistant/internal/infrastructure/bot"
+	"spot-assistant/internal/infrastructure/bot/formatter"
 	"spot-assistant/internal/infrastructure/chart"
 	"spot-assistant/internal/infrastructure/db/postgresql"
 	reservationRepository "spot-assistant/internal/infrastructure/reservation/postgresql/sqlc"
@@ -44,14 +47,18 @@ func main() {
 	reservationRepo := reservationRepository.NewReservationRepository(db)
 	spotRepo := spotRepository.NewSpotRepository(db)
 	charter := chart.NewAdapter()
+	dcFormatter := formatter.NewFormatter()
+	botService := bot.NewManager().WithFormatter(dcFormatter)
 
 	// Core
 	summaryService := summary.NewAdapter(charter)
+	communicationService := communication.NewAdapter(botService)
 	bookingService := booking.NewAdapter(spotRepo, reservationRepo)
-	botService := bot.NewManager()
 
 	// App
-	app := api.NewApplication(reservationRepo, summaryService, bookingService).WithBot(botService)
+	app := api.NewApplication(reservationRepo, summaryService, bookingService).
+		WithBot(botService).
+		WithCommunication(communicationService)
 
 	err = app.Run()
 	if err != nil {
