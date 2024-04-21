@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"spot-assistant/internal/core/dto/reservation"
 	"strconv"
 
 	"spot-assistant/internal/common/errors"
@@ -65,9 +66,11 @@ func (a *Application) OnPrivateSummary(bot ports.BotPort, request summary.Privat
 	log := a.log.WithFields(logrus.Fields{"user.ID": request.UserID, "guild.ID": request.GuildID})
 	log.Info("OnPrivateSummary")
 
-	res, err := a.db.SelectUpcomingReservationsWithSpot(context.Background(), strconv.FormatInt(request.GuildID, 10))
-	if err != nil {
-		return fmt.Errorf("could not fetch upcoming reservations")
+	res, err := a.fetchUpcomingReservationsWithSpot(request)
+	if res == nil {
+		fmt.Errorf("could not fetch upcoming reservations: %v", err)
+
+		return nil
 	}
 
 	if len(res) == 0 {
@@ -96,4 +99,23 @@ func (a *Application) OnPrivateSummary(bot ports.BotPort, request summary.Privat
 	}
 
 	return nil
+}
+
+func (a *Application) fetchUpcomingReservationsWithSpot(request summary.PrivateSummaryRequest) ([]*reservation.ReservationWithSpot, error) {
+	var res []*reservation.ReservationWithSpot
+	var err error
+
+	if request.Spots != nil {
+		res, err = a.db.SelectUpcomingReservationsWithSpotBySpots(context.Background(), strconv.FormatInt(request.GuildID, 10), request.Spots)
+		if err != nil {
+			return nil, fmt.Errorf("could not fetch upcoming reservations: %v", err)
+		}
+	} else {
+		res, err = a.db.SelectUpcomingReservationsWithSpot(context.Background(), strconv.FormatInt(request.GuildID, 10))
+		if err != nil {
+			return nil, fmt.Errorf("could not fetch upcoming reservations: %v", err)
+		}
+	}
+
+	return res, nil
 }

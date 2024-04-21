@@ -14,6 +14,7 @@ type ReservationRepository interface {
 	Find(ctx context.Context, id int64) (*reservation.Reservation, error)
 	FindReservationWithSpot(ctx context.Context, id int64, guildID, authorDiscordID string) (*reservation.ReservationWithSpot, error)
 	SelectUpcomingReservationsWithSpot(ctx context.Context, guildId string) ([]*reservation.ReservationWithSpot, error)
+	SelectUpcomingReservationsWithSpotBySpots(ctx context.Context, guildId string, spots []string) ([]*reservation.ReservationWithSpot, error)
 	SelectOverlappingReservations(ctx context.Context, spot string, startAt time.Time, endAt time.Time, guildId string) ([]*reservation.Reservation, error)
 	SelectUpcomingMemberReservationsWithSpots(ctx context.Context, guild *discord.Guild, member *discord.Member) ([]*reservation.ReservationWithSpot, error)
 

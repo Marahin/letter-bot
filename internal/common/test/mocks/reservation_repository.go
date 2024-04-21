@@ -14,6 +14,11 @@ type MockReservationRepo struct {
 	mock.Mock
 }
 
+func (a *MockReservationRepo) SelectUpcomingReservationsWithSpotBySpots(ctx context.Context, guildId string, spots []string) ([]*reservation.ReservationWithSpot, error) {
+	args := a.Called(ctx, guildId, spots)
+	return args.Get(0).([]*reservation.ReservationWithSpot), args.Error(0)
+}
+
 func (a *MockReservationRepo) Find(ctx context.Context, id int64) (*reservation.Reservation, error) {
 	args := a.Called(ctx, id)
 	return args.Get(0).(*reservation.Reservation), args.Error(1)

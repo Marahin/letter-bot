@@ -38,4 +38,5 @@ type LegendValue struct {
 type PrivateSummaryRequest struct {
 	UserID  int64
 	GuildID int64
+	Spots   []string
 }

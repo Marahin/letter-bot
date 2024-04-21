@@ -217,7 +217,7 @@ func (q *Queries) SelectReservationWithSpot(ctx context.Context, arg SelectReser
 	return i, err
 }
 
-const selectReservationsWithSpots = `-- name: SelectReservationsWithSpots :many
+const selectAllReservationsWithSpots = `-- name: SelectAllReservationsWithSpots :many
 select web_spot.id, web_spot.name, web_spot.created_at,
   web_reservation.id, web_reservation.author, web_reservation.created_at, web_reservation.start_at, web_reservation.end_at, web_reservation.spot_id, web_reservation.guild_id, web_reservation.author_discord_id
 from web_reservation
@@ -231,8 +231,8 @@ type SelectReservationsWithSpotsRow struct {
 	WebReservation WebReservation
 }
 
-func (q *Queries) SelectReservationsWithSpots(ctx context.Context, guildID string) ([]SelectReservationsWithSpotsRow, error) {
-	rows, err := q.db.Query(ctx, selectReservationsWithSpots, guildID)
+func (q *Queries) SelectAllReservationsWithSpots(ctx context.Context, guildID string) ([]SelectReservationsWithSpotsRow, error) {
+	rows, err := q.db.Query(ctx, selectAllReservationsWithSpots, guildID)
 	if err != nil {
 		return nil, err
 	}
@@ -240,6 +240,53 @@ func (q *Queries) SelectReservationsWithSpots(ctx context.Context, guildID strin
 	var items []SelectReservationsWithSpotsRow
 	for rows.Next() {
 		var i SelectReservationsWithSpotsRow
+		if err := rows.Scan(
+			&i.WebSpot.ID,
+			&i.WebSpot.Name,
+			&i.WebSpot.CreatedAt,
+			&i.WebReservation.ID,
+			&i.WebReservation.Author,
+			&i.WebReservation.CreatedAt,
+			&i.WebReservation.StartAt,
+			&i.WebReservation.EndAt,
+			&i.WebReservation.SpotID,
+			&i.WebReservation.GuildID,
+			&i.WebReservation.AuthorDiscordID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const selectAllReservationsWithSpotsBySpotNames = `-- name: SelectAllReservationsWithSpots :many
+select web_spot.id, web_spot.name, web_spot.created_at,
+  web_reservation.id, web_reservation.author, web_reservation.created_at, web_reservation.start_at, web_reservation.end_at, web_reservation.spot_id, web_reservation.guild_id, web_reservation.author_discord_id
+from web_reservation
+  inner join web_spot on web_reservation.spot_id = web_spot.id
+where end_at >= now()
+  AND guild_id = $1
+  AND web_spot.name IN $2
+`
+
+type SelectAllReservationsWithSpotsBySpotNamesRow struct {
+	WebSpot        WebSpot
+	WebReservation WebReservation
+}
+
+func (q *Queries) SelectAllReservationsWithSpotsBySpots(ctx context.Context, guildID string, spotNames []string) ([]SelectAllReservationsWithSpotsBySpotNamesRow, error) {
+	rows, err := q.db.Query(ctx, selectAllReservationsWithSpotsBySpotNames, guildID, spotNames)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SelectAllReservationsWithSpotsBySpotNamesRow
+	for rows.Next() {
+		var i SelectAllReservationsWithSpotsBySpotNamesRow
 		if err := rows.Scan(
 			&i.WebSpot.ID,
 			&i.WebSpot.Name,
