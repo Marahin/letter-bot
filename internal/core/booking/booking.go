@@ -107,12 +107,20 @@ func (a *Adapter) Book(member *discord.Member, guild *discord.Guild, spotName st
 	}
 
 	if endAt.Sub(startAt) > 3*time.Hour {
-		return nil, fmt.Errorf("reservation cannot take more than 3 hours")
+		return nil, errors.New("reservation cannot take more than 3 hours")
 	}
 
 	conflictingReservations, err := a.reservationRepo.SelectOverlappingReservations(context.Background(), spotName, startAt, endAt, guild.ID)
 	if err != nil {
 		return nil, fmt.Errorf("could not select overlapping reservations: %w", err)
+	}
+
+	authorsConflictingReservations, _ := collections.PoorMansFind(conflictingReservations, func(r *reservation.Reservation) bool {
+		return r.AuthorDiscordID == member.ID
+	})
+
+	if authorsConflictingReservations != nil && overbook {
+		return nil, errors.New("you cannot overbook yourself")
 	}
 
 	if len(conflictingReservations) > 0 {
@@ -125,7 +133,7 @@ func (a *Adapter) Book(member *discord.Member, guild *discord.Guild, spotName st
 					Original: r,
 					New:      []*reservation.Reservation{r},
 				}
-			}), fmt.Errorf("There are conflicting reservation which prevented booking this reservation. If you would like to overbook them, ensure you have a @Postman role, then repeat the command and set 'overbook' parameter to 'true'.")
+			}), errors.New("There are conflicting reservation which prevented booking this reservation. If you would like to overbook them, ensure you have a @Postman role, then repeat the command and set 'overbook' parameter to 'true'.")
 		}
 	}
 
