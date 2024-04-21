@@ -1,12 +1,8 @@
 package api
 
-import (
-	"spot-assistant/internal/ports"
-)
-
-func (a *Application) OnTick(bot ports.BotPort) {
-	guilds := bot.GetGuilds()
+func (a *Application) OnTick() {
+	guilds := a.botSrv.GetGuilds()
 	for _, guild := range guilds {
-		go a.UpdateGuildSummaryAndLogError(bot, guild)
+		go a.UpdateGuildSummaryAndLogError(guild)
 	}
 }

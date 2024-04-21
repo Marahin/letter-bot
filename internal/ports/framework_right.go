@@ -31,6 +31,8 @@ type SpotRepository interface {
 }
 
 type BotPort interface {
+	Run() error
+	WithEventHandler(APIPort) BotPort
 	ChannelMessages(g *discord.Guild, ch *discord.Channel, limit int) ([]*discord.Message, error)
 	CleanChannel(g *discord.Guild, channel *discord.Channel) error
 	EnsureChannel(g *discord.Guild) error

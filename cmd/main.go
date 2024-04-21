@@ -48,13 +48,12 @@ func main() {
 	// Core
 	summaryService := summary.NewAdapter(charter)
 	bookingService := booking.NewAdapter(spotRepo, reservationRepo)
-	api := api.NewApplication(reservationRepo, summaryService, bookingService)
+	botService := bot.NewManager()
 
-	// Inverted flow - our port, "input"
-	// (but also an adapter for operations)
-	bot := bot.NewManager(api)
+	// App
+	app := api.NewApplication(reservationRepo, summaryService, bookingService).WithBot(botService)
 
-	err = bot.Run()
+	err = app.Run()
 	if err != nil {
 		panic(err)
 	}

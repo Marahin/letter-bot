@@ -8,16 +8,15 @@ import (
 	"spot-assistant/internal/common/errors"
 	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/summary"
-	"spot-assistant/internal/ports"
 
 	"github.com/sirupsen/logrus"
 )
 
 // UpdateGuild makes a full-fledged guild update including summary re-generation.
-func (a *Application) UpdateGuildSummary(bot ports.BotPort, guild *discord.Guild) error {
+func (a *Application) UpdateGuildSummary(guild *discord.Guild) error {
 	log := a.log.WithFields(logrus.Fields{"guild.ID": guild.ID, "guild.Name": guild.Name, "name": "UpdateGuildSummary"})
 
-	summaryChannel, err := bot.FindChannelByName(guild, "letter-summary")
+	summaryChannel, err := a.botSrv.FindChannelByName(guild, "letter-summary")
 	if err != nil {
 		log.Errorf("could not find summary channel: %s", err)
 
@@ -47,7 +46,7 @@ func (a *Application) UpdateGuildSummary(bot ports.BotPort, guild *discord.Guild
 
 	log.Info("updating summary")
 
-	err = bot.SendLetterMessage(guild, summaryChannel, summary)
+	err = a.botSrv.SendLetterMessage(guild, summaryChannel, summary)
 	if err != nil {
 		log.Errorf("could not send letter message: %s", err)
 
@@ -57,11 +56,11 @@ func (a *Application) UpdateGuildSummary(bot ports.BotPort, guild *discord.Guild
 	return nil
 }
 
-func (a *Application) UpdateGuildSummaryAndLogError(bot ports.BotPort, guild *discord.Guild) {
-	errors.LogError(a.log, a.UpdateGuildSummary(bot, guild))
+func (a *Application) UpdateGuildSummaryAndLogError(guild *discord.Guild) {
+	errors.LogError(a.log, a.UpdateGuildSummary(guild))
 }
 
-func (a *Application) OnPrivateSummary(bot ports.BotPort, request summary.PrivateSummaryRequest) error {
+func (a *Application) OnPrivateSummary(request summary.PrivateSummaryRequest) error {
 	log := a.log.WithFields(logrus.Fields{"user.ID": request.UserID, "guild.ID": request.GuildID})
 	log.Info("OnPrivateSummary")
 
@@ -83,12 +82,12 @@ func (a *Application) OnPrivateSummary(bot ports.BotPort, request summary.Privat
 		return fmt.Errorf("could not generate summary: %s", err)
 	}
 
-	dmChannel, err := bot.OpenDM(&discord.Member{ID: strconv.FormatInt(request.UserID, 10)})
+	dmChannel, err := a.botSrv.OpenDM(&discord.Member{ID: strconv.FormatInt(request.UserID, 10)})
 	if err != nil {
 		return err
 	}
 
-	err = bot.SendLetterMessage(nil, dmChannel, summary)
+	err = a.botSrv.SendLetterMessage(nil, dmChannel, summary)
 	if err != nil {
 		log.Errorf("could not send letter message: %s", err)
 

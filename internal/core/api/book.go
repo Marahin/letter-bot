@@ -9,10 +9,9 @@ import (
 
 	"spot-assistant/internal/core/dto/book"
 	"spot-assistant/internal/core/dto/reservation"
-	"spot-assistant/internal/ports"
 )
 
-func (a *Application) OnBook(bot ports.BotPort, request book.BookRequest) (book.BookResponse, error) {
+func (a *Application) OnBook(request book.BookRequest) (book.BookResponse, error) {
 	response := book.BookResponse{
 		Spot:    request.Spot,
 		StartAt: request.StartAt,
@@ -23,19 +22,19 @@ func (a *Application) OnBook(bot ports.BotPort, request book.BookRequest) (book.
 		request.Member,
 		request.Guild,
 		request.Spot, request.StartAt,
-		request.EndAt, request.Overbook, bot.MemberHasRole(request.Guild, request.Member, "Postman"),
+		request.EndAt, request.Overbook, a.botSrv.MemberHasRole(request.Guild, request.Member, "Postman"),
 	)
 	response.ConflictingReservations = conflicting
 
 	if err != nil {
 		return response, err
 	}
-	go a.UpdateGuildSummaryAndLogError(bot, request.Guild)
+	go a.UpdateGuildSummaryAndLogError(request.Guild)
 
 	// Notify users about overbooking
 	for _, res := range response.ConflictingReservations {
 		go func(res *reservation.ClippedOrRemovedReservation) {
-			member, err := bot.GetMember(request.Guild, res.Original.AuthorDiscordID)
+			member, err := a.botSrv.GetMember(request.Guild, res.Original.AuthorDiscordID)
 			if err != nil {
 				a.log.Errorf("error getting member: %s", err)
 				return
@@ -58,7 +57,7 @@ func (a *Application) OnBook(bot ports.BotPort, request book.BookRequest) (book.
 				msgBody.WriteString(fmt.Sprintf("has been entirely removed (originally: **%s - %s**)", res.Original.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), res.Original.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT)))
 			}
 
-			err = bot.SendDM(member, msgHeader+msgBody.String())
+			err = a.botSrv.SendDM(member, msgHeader+msgBody.String())
 			if err != nil {
 				a.log.Errorf("error sending DM: %s", err)
 			}

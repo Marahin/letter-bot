@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"github.com/stretchr/testify/mock"
 	"testing"
 	"time"
 
@@ -108,14 +109,15 @@ func TestUnbook(t *testing.T) {
 		Spot:        reservation.Spot{ID: 1},
 	}
 	bot := new(mocks.MockBot)
+	bot.On("WithEventHandler", mock.AnythingOfType("*api.Application")).Return(bot)
 	bot.On("FindChannelByName", request.Guild, "letter-summary").Return(&discord.Channel{Name: "letter-summary"}, nil)
 	bookingSrv := new(mocks.MockBookingService)
 	bookingSrv.On("Unbook", request.Guild, request.Member, request.ReservationID).Return(existingReservation, nil)
-	adapter := NewApplication(reservationRepo, summarySrv, bookingSrv)
+	adapter := NewApplication(reservationRepo, summarySrv, bookingSrv).WithBot(bot)
 	reservationRepo.On("SelectUpcomingReservationsWithSpot", mocks.ContextMock, request.Guild.ID).Return([]*reservation.ReservationWithSpot{}, nil)
 
 	// when
-	res, err := adapter.OnUnbook(bot, request)
+	res, err := adapter.OnUnbook(request)
 
 	// assert
 	assert.Nil(err)
@@ -148,15 +150,13 @@ func TestUnbookOnError(t *testing.T) {
 		Reservation: reservation.Reservation{ID: 1},
 		Spot:        reservation.Spot{ID: 1},
 	}
-	bot := new(mocks.MockBot)
-	defer bot.AssertExpectations(t)
 	bookingSrv := new(mocks.MockBookingService)
 	bookingSrv.On("Unbook", request.Guild, request.Member, request.ReservationID).Return(existingReservation, errors.New("test-error")).Times(0)
 	defer bookingSrv.AssertExpectations(t)
 	adapter := NewApplication(reservationRepo, summarySrv, bookingSrv)
 
 	// when
-	_, err := adapter.OnUnbook(bot, request)
+	_, err := adapter.OnUnbook(request)
 
 	// assert
 	assert.NotNil(err)

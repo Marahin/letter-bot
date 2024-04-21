@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/stretchr/testify/mock"
 	"spot-assistant/internal/common/test/mocks"
 	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/reservation"
@@ -37,6 +38,7 @@ func TestUpdateGuildSummary(t *testing.T) {
 		},
 	}
 	mockBot := new(mocks.MockBot)
+	mockBot.On("WithEventHandler", mock.AnythingOfType("*api.Application")).Return(mockBot)
 	mockBot.On("SendLetterMessage", guild, summaryCh, summary).Return(nil)
 	mockBot.On("FindChannelByName", guild, "letter-summary").Return(summaryCh, nil)
 	mockReservationRepo := new(mocks.MockReservationRepo)
@@ -44,10 +46,10 @@ func TestUpdateGuildSummary(t *testing.T) {
 	mockSummarySrv := new(mocks.MockSummaryService)
 	mockSummarySrv.On("PrepareSummary", reservations).Return(summary, nil)
 	mockBookingSrv := new(mocks.MockBookingService)
-	adapter := NewApplication(mockReservationRepo, mockSummarySrv, mockBookingSrv)
+	adapter := NewApplication(mockReservationRepo, mockSummarySrv, mockBookingSrv).WithBot(mockBot)
 
 	// when
-	err := adapter.UpdateGuildSummary(mockBot, guild)
+	err := adapter.UpdateGuildSummary(guild)
 
 	// assert
 	assert.Nil(err)

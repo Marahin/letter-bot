@@ -4,46 +4,45 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"spot-assistant/internal/core/dto/discord"
-	"spot-assistant/internal/ports"
 )
 
-func (a *Application) OnGuildCreate(bot ports.BotPort, guild *discord.Guild) {
+func (a *Application) OnGuildCreate(guild *discord.Guild) {
 	log := a.log.WithFields(logrus.Fields{"event": "OnGuildCreate", "guild.ID": guild.ID, "guild.Name": guild.Name})
 	// Register commands
-	err := bot.RegisterCommands(guild)
+	err := a.botSrv.RegisterCommands(guild)
 	if err != nil {
 		log.Errorf("could not overwrite commands: %s", err)
 
 		return
 	}
 
-	err = bot.EnsureChannel(guild)
+	err = a.botSrv.EnsureChannel(guild)
 	if err != nil {
 		log.Errorf("could not ensure channels: %s", err)
 
 		return
 	}
 
-	err = bot.EnsureRoles(guild)
+	err = a.botSrv.EnsureRoles(guild)
 	if err != nil {
 		log.Errorf("could not ensure roles: %s", err)
 
 		return
 	}
 
-	summaryChannel, err := bot.FindChannelByName(guild, "letter-summary")
+	summaryChannel, err := a.botSrv.FindChannelByName(guild, "letter-summary")
 	if err != nil {
 		log.Errorf("could not find summary channel: %s", err)
 
 		return
 	}
 
-	err = bot.CleanChannel(guild, summaryChannel)
+	err = a.botSrv.CleanChannel(guild, summaryChannel)
 	if err != nil {
 		return
 	}
 
 	log.Info("successfully registered a guild")
 
-	go a.UpdateGuildSummaryAndLogError(bot, guild)
+	go a.UpdateGuildSummaryAndLogError(guild)
 }

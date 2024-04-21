@@ -3,7 +3,6 @@ package api
 import (
 	"spot-assistant/internal/core/dto/book"
 	"spot-assistant/internal/core/dto/reservation"
-	"spot-assistant/internal/ports"
 )
 
 func (a *Application) OnUnbookAutocomplete(request book.UnbookAutocompleteRequest) (book.UnbookAutocompleteResponse, error) {
@@ -17,13 +16,13 @@ func (a *Application) OnUnbookAutocomplete(request book.UnbookAutocompleteReques
 	}, nil
 }
 
-func (a *Application) OnUnbook(bot ports.BotPort, request book.UnbookRequest) (*reservation.ReservationWithSpot, error) {
+func (a *Application) OnUnbook(request book.UnbookRequest) (*reservation.ReservationWithSpot, error) {
 	res, err := a.bookingSrv.Unbook(request.Guild, request.Member, request.ReservationID)
 	if err != nil {
 		return nil, err
 	}
 
-	go a.UpdateGuildSummaryAndLogError(bot, request.Guild)
+	go a.UpdateGuildSummaryAndLogError(request.Guild)
 
 	return res, nil
 }

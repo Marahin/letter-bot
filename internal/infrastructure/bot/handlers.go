@@ -24,13 +24,13 @@ System events that are initialized by Discord.
 func (b *Bot) GuildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
 	b.log.Debug("GuildCreate")
 
-	defer b.eventHandler.OnGuildCreate(b, MapGuild(g.Guild))
+	defer b.eventHandler.OnGuildCreate(MapGuild(g.Guild))
 }
 
 func (b *Bot) Ready(s *discordgo.Session, r *discordgo.Ready) {
 	b.log.Debug("Ready")
 
-	defer b.eventHandler.OnReady(b)
+	defer b.eventHandler.OnReady()
 }
 
 // InteractionCreate this is the entry point when a slash command is invoked.
@@ -50,7 +50,7 @@ func (b *Bot) InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCr
 func (b *Bot) Tick() {
 	b.log.Debug("Tick")
 
-	defer b.eventHandler.OnTick(b)
+	defer b.eventHandler.OnTick()
 }
 
 func (b *Bot) Book(i *discordgo.InteractionCreate) error {
@@ -115,7 +115,7 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 	}
 
 	message := strings.Builder{}
-	response, err := b.eventHandler.OnBook(b, request)
+	response, err := b.eventHandler.OnBook(request)
 	if err != nil {
 		message.WriteString("I'm sorry, but something went wrong. If you require support, join TibiaLoot.com Discord: https://discord.gg/F4YKgsnzmc \n")
 
@@ -231,7 +231,7 @@ func (b *Bot) Unbook(i *discordgo.InteractionCreate) error {
 		return err
 	}
 
-	res, err := b.eventHandler.OnUnbook(b, book.UnbookRequest{
+	res, err := b.eventHandler.OnUnbook(book.UnbookRequest{
 		Member:        MapMember(i.Member),
 		Guild:         guild,
 		ReservationID: reservationId,
@@ -296,7 +296,7 @@ func (b *Bot) PrivateSummary(i *discordgo.InteractionCreate) error {
 		return err
 	}
 
-	err = b.eventHandler.OnPrivateSummary(b, summary.PrivateSummaryRequest{
+	err = b.eventHandler.OnPrivateSummary(summary.PrivateSummaryRequest{
 		GuildID: gID,
 		UserID:  uID,
 	})

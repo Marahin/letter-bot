@@ -1,9 +1,7 @@
 package api
 
-import "spot-assistant/internal/ports"
-
-func (a *Application) OnReady(bot ports.BotPort) {
+func (a *Application) OnReady() {
 	a.log.Info("OnReady")
 
-	bot.StartTicking()
+	a.botSrv.StartTicking()
 }

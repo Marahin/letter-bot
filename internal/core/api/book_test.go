@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/mock"
 	stringsHelper "spot-assistant/internal/common/strings"
 	"testing"
 	"time"
@@ -38,14 +39,17 @@ func TestOnBookWithoutConflictingReservations(t *testing.T) {
 	reservationRepo := new(mocks.MockReservationRepo)
 	reservationRepo.On("SelectUpcomingReservationsWithSpot", mocks.ContextMock, guild.ID).Return(make([]*reservation.ReservationWithSpot, 0), nil)
 	defer reservationRepo.AssertExpectations(t)
-	botPort := new(mocks.MockBot)
-	botPort.On("MemberHasRole", guild, member, "Postman").Return(false)
-	botPort.On("FindChannelByName", guild, "letter-summary").Return(summaryChannel, nil)
 	summarySrv := new(mocks.MockSummaryService)
 	adapter := NewApplication(reservationRepo, summarySrv, bookingSrv)
+	botPort := new(mocks.MockBot)
+	botPort.On("WithEventHandler", adapter).Return(botPort)
+	botPort.On("MemberHasRole", guild, member, "Postman").Return(false)
+	botPort.On("FindChannelByName", guild, "letter-summary").Return(summaryChannel, nil)
+	botPort.On("WithEventHandler", adapter).Return(botPort)
+	adapter.WithBot(botPort)
 
 	// when
-	res, err := adapter.OnBook(botPort, book.BookRequest{
+	res, err := adapter.OnBook(book.BookRequest{
 		Member:  member,
 		Guild:   guild,
 		StartAt: startAt,
@@ -117,18 +121,19 @@ func TestOnBookWithConflictingReservations(t *testing.T) {
 	reservationRepo := new(mocks.MockReservationRepo)
 	reservationRepo.On("SelectUpcomingReservationsWithSpot", mocks.ContextMock, guild.ID).Return(finalReservations, nil)
 	defer bookingSrv.AssertExpectations(t)
+	summarySrv := new(mocks.MockSummaryService)
+	summarySrv.On("PrepareSummary", finalReservations).Return(outcomeSummary, nil)
 	botPort := new(mocks.MockBot)
+	botPort.On("WithEventHandler", mock.AnythingOfType("*api.Application")).Return(botPort)
 	botPort.On("MemberHasRole", guild, member, "Postman").Return(false)
 	botPort.On("FindChannelByName", guild, "letter-summary").Return(summaryChannel, nil)
 	botPort.On("GetMember", guild, conflictingMember.ID).Return(conflictingMember, nil)
 	botPort.On("SendLetterMessage", guild, summaryChannel, outcomeSummary).Return(nil)
 	botPort.On("SendDM", conflictingMember, fmt.Sprintf("Your reservation was overbooked by <@!test-member-id>\n* <@!test-conflicting-author-id> test-spot has been entirely removed (originally: **%s - %s**)", conflictingReservations[0].Original.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), conflictingReservations[0].Original.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT))).Return(nil)
-	summarySrv := new(mocks.MockSummaryService)
-	summarySrv.On("PrepareSummary", finalReservations).Return(outcomeSummary, nil)
-	adapter := NewApplication(reservationRepo, summarySrv, bookingSrv)
+	adapter := NewApplication(reservationRepo, summarySrv, bookingSrv).WithBot(botPort)
 
 	// when
-	res, err := adapter.OnBook(botPort, book.BookRequest{
+	res, err := adapter.OnBook(book.BookRequest{
 		Member:  member,
 		Guild:   guild,
 		StartAt: startAt,

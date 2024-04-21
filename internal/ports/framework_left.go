@@ -8,12 +8,12 @@ import (
 )
 
 type APIPort interface {
-	OnReady(BotPort)
-	OnGuildCreate(BotPort, *discord.Guild)
-	OnTick(BotPort)
-	OnBook(BotPort, book.BookRequest) (book.BookResponse, error)
+	OnReady()
+	OnGuildCreate(*discord.Guild)
+	OnTick()
+	OnBook(book.BookRequest) (book.BookResponse, error)
 	OnBookAutocomplete(book.BookAutocompleteRequest) (book.BookAutocompleteResponse, error)
-	OnUnbook(bot BotPort, request book.UnbookRequest) (*reservation.ReservationWithSpot, error)
+	OnUnbook(request book.UnbookRequest) (*reservation.ReservationWithSpot, error)
 	OnUnbookAutocomplete(request book.UnbookAutocompleteRequest) (book.UnbookAutocompleteResponse, error)
-	OnPrivateSummary(BotPort, summary.PrivateSummaryRequest) error
+	OnPrivateSummary(summary.PrivateSummaryRequest) error
 }

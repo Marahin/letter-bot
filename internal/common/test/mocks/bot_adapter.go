@@ -2,6 +2,7 @@ package mocks
 
 import (
 	"github.com/stretchr/testify/mock"
+	"spot-assistant/internal/ports"
 
 	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/summary"
@@ -9,6 +10,16 @@ import (
 
 type MockBot struct {
 	mock.Mock
+}
+
+func (m *MockBot) Run() error {
+	args := m.Called()
+	return args.Error(0)
+}
+
+func (m *MockBot) WithEventHandler(handler ports.APIPort) ports.BotPort {
+	args := m.Called(handler)
+	return args.Get(0).(*MockBot)
 }
 
 func (m *MockBot) ChannelMessages(g *discord.Guild, ch *discord.Channel, limit int) ([]*discord.Message, error) {

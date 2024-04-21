@@ -10,14 +10,31 @@ type Application struct {
 	db         ports.ReservationRepository
 	summarySrv summaryService
 	bookingSrv bookingService
+	botSrv     ports.BotPort
 	log        *logrus.Entry
 }
 
-func NewApplication(db ports.ReservationRepository, summarySrv summaryService, bookingSrv bookingService) *Application {
-	return &Application{
+func NewApplication(
+	db ports.ReservationRepository,
+	summarySrv summaryService,
+	bookingSrv bookingService) *Application {
+
+	app := &Application{
 		db:         db,
 		summarySrv: summarySrv,
 		bookingSrv: bookingSrv,
 		log:        logrus.WithFields(logrus.Fields{"type": "application"}),
 	}
+
+	return app
+}
+
+func (a *Application) WithBot(bot ports.BotPort) *Application {
+	a.botSrv = bot.WithEventHandler(a)
+
+	return a
+}
+
+func (a *Application) Run() error {
+	return a.botSrv.Run()
 }

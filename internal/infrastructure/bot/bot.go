@@ -37,7 +37,7 @@ func init() {
 	envconfig.MustProcess("bot", &Config)
 }
 
-func NewManager(eventHandler ports.APIPort) *Bot {
+func NewManager() *Bot {
 	// Create a new shard manager using the provided bot token.
 	mgr, err := shards.New("Bot " + Config.Token)
 	if err != nil {
@@ -48,7 +48,6 @@ func NewManager(eventHandler ports.APIPort) *Bot {
 
 	bot := &Bot{
 		mgr:          mgr,
-		eventHandler: eventHandler,
 		quit:         make(chan struct{}),
 		channelLocks: cmap.New[*sync.RWMutex](),
 		log:          logrus.WithFields(logrus.Fields{"type": "infra", "name": "bot"}),
@@ -59,6 +58,13 @@ func NewManager(eventHandler ports.APIPort) *Bot {
 	bot.mgr.AddHandler(bot.InteractionCreate)
 
 	return bot
+}
+
+// WithEVentHandler sets bot's event handler to the provided port
+func (b *Bot) WithEventHandler(port ports.APIPort) ports.BotPort {
+	b.eventHandler = port
+
+	return b
 }
 
 func (b *Bot) Run() error {
