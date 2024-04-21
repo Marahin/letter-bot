@@ -13,6 +13,14 @@ type Reservation struct {
 	AuthorDiscordID string
 }
 
+// ClippedOrRemovedReservation holds both original reservation and
+// a slice holding outcome of overbooking the original reservation.
+// Used when other reservation clips or removes the original one.
+type ClippedOrRemovedReservation struct {
+	New      []*Reservation
+	Original *Reservation
+}
+
 type Spot struct {
 	ID   int64
 	Name string

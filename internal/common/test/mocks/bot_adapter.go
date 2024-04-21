@@ -26,7 +26,7 @@ func (m *MockBot) EnsureChannel(g *discord.Guild) error {
 	return args.Error(0)
 }
 
-func (m *MockBot) FindChannel(g *discord.Guild, channelName string) (*discord.Channel, error) {
+func (m *MockBot) FindChannelByName(g *discord.Guild, channelName string) (*discord.Channel, error) {
 	args := m.Called(g, channelName)
 
 	return args.Get(0).(*discord.Channel), args.Error(1)
@@ -64,4 +64,14 @@ func (m *MockBot) OpenDM(mem *discord.Member) (*discord.Channel, error) {
 
 func (m *MockBot) StartTicking() {
 	m.Called()
+}
+
+func (m *MockBot) SendDM(mem *discord.Member, msg string) error {
+	args := m.Called(mem, msg)
+	return args.Error(0)
+}
+
+func (m *MockBot) GetMember(g *discord.Guild, memberID string) (*discord.Member, error) {
+	args := m.Called(g, memberID)
+	return args.Get(0).(*discord.Member), args.Error(1)
 }

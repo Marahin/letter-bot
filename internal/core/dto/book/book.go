@@ -27,8 +27,8 @@ type BookAutocompleteResponse []string
 
 // Booking request
 type BookRequest struct {
-	*discord.Member
 	*discord.Guild
+	*discord.Member
 
 	Spot     string
 	StartAt  time.Time
@@ -41,5 +41,5 @@ type BookResponse struct {
 	StartAt time.Time
 	EndAt   time.Time
 
-	ConflictingReservations []*reservation.Reservation
+	ConflictingReservations []*reservation.ClippedOrRemovedReservation
 }

@@ -12,6 +12,7 @@ import (
 	"spot-assistant/internal/common/collections"
 	stringsHelper "spot-assistant/internal/common/strings"
 	"spot-assistant/internal/core/dto/book"
+	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/summary"
 )
 
@@ -39,7 +40,7 @@ func (b *Bot) InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCr
 
 	b.handleCommand(i)
 
-	b.log.WithFields(logrus.Fields{"time": time.Since(tStart)}).Info("interaction handled")
+	b.log.WithFields(logrus.Fields{"time": time.Since(tStart)}).Debug("interaction handled")
 }
 
 // Service events
@@ -53,7 +54,7 @@ func (b *Bot) Tick() {
 }
 
 func (b *Bot) Book(i *discordgo.InteractionCreate) error {
-	b.log.Debug("Book")
+	interaction := i.Interaction
 	tNow := time.Now()
 	gID, err := stringsHelper.StrToInt64(i.GuildID)
 	if err != nil {
@@ -102,6 +103,7 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 	if err != nil {
 		return err
 	}
+
 	member := MapMember(i.Member)
 	request := book.BookRequest{
 		Member:   member,
@@ -112,9 +114,8 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 		Overbook: overbook,
 	}
 
-	response, err := b.eventHandler.OnBook(b, request)
-
 	message := strings.Builder{}
+	response, err := b.eventHandler.OnBook(b, request)
 	if err != nil {
 		message.WriteString("I'm sorry, but something went wrong. If you require support, join TibiaLoot.com Discord: https://discord.gg/F4YKgsnzmc \n")
 
@@ -141,31 +142,48 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 			var author string
 			switch haveWeOverbooked { // We notify users on overbooks only
 			case true:
-				author = fmt.Sprintf("<@!%s>", res.AuthorDiscordID) // Mention user profile by ID
+				author = fmt.Sprintf("<@!%s>", res.Original.AuthorDiscordID) // Mention user profile by ID
 			case false:
-				member, err = b.GetMember(guild, res.AuthorDiscordID)
+				member, err = b.GetMember(guild, res.Original.AuthorDiscordID)
 				if err == nil {
 					author = member.Nick
 					if len(author) == 0 {
 						author = member.Username
 					}
 				} else {
-					author = res.Author
+					author = res.Original.Author
 				}
 				author = fmt.Sprintf("**%s**", author)
 			}
 
 			message.WriteString(fmt.Sprintf(
-				"* %s %s - %s\n",
-				author,
-				res.StartAt.Format("2006-01-02 15:04"),
-				res.EndAt.Format("2006-01-02 15:04"),
+				"* %s ", author,
 			))
+
+			if haveWeOverbooked {
+				if len(res.New) > 0 {
+					message.WriteString("had their reservation clipped to: ")
+					newClippedRanges := collections.PoorMansMap(res.New, func(r *reservation.Reservation) string {
+						return fmt.Sprintf("**%s - %s**", r.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), r.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT))
+					})
+					message.WriteString(strings.Join(newClippedRanges, ", "))
+				} else {
+					message.WriteString("had their reservation removed ")
+				}
+
+				message.WriteString(fmt.Sprintf("(originally: %s - %s)\n", res.Original.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), res.Original.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT)))
+				continue // Stop here
+			}
+
+			message.WriteString(fmt.Sprintf("%s - %s\n", res.Original.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), res.Original.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT)))
 		}
 	}
 
-	_, err = dcSession.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+	_, err = dcSession.FollowupMessageCreate(interaction, false, &discordgo.WebhookParams{
 		Content: message.String(),
+		AllowedMentions: &discordgo.MessageAllowedMentions{
+			Parse: []discordgo.AllowedMentionType{discordgo.AllowedMentionTypeUsers},
+		},
 	})
 	return err
 }

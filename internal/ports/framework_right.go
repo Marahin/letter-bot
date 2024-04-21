@@ -19,7 +19,7 @@ type ReservationRepository interface {
 
 	// Creates a new reservation, and removes or shorten any existing conflicting reservations.
 	// Returns removed or shortened conflicting reservations.
-	CreateAndDeleteConflicting(ctx context.Context, member *discord.Member, guild *discord.Guild, conflicts []*reservation.Reservation, spotId int64, startAt time.Time, endAt time.Time) ([]*reservation.Reservation, error)
+	CreateAndDeleteConflicting(ctx context.Context, member *discord.Member, guild *discord.Guild, conflicts []*reservation.Reservation, spotId int64, startAt time.Time, endAt time.Time) ([]*reservation.ClippedOrRemovedReservation, error)
 
 	// Deletes one of the upcoming member reservations in a given guild. Returns error if operation
 	// did not succeed.
@@ -34,13 +34,15 @@ type BotPort interface {
 	ChannelMessages(g *discord.Guild, ch *discord.Channel, limit int) ([]*discord.Message, error)
 	CleanChannel(g *discord.Guild, channel *discord.Channel) error
 	EnsureChannel(g *discord.Guild) error
-	FindChannel(g *discord.Guild, channelName string) (*discord.Channel, error)
+	FindChannelByName(g *discord.Guild, channelName string) (*discord.Channel, error)
 	EnsureRoles(g *discord.Guild) error
 	GetGuilds() []*discord.Guild
 	SendLetterMessage(g *discord.Guild, ch *discord.Channel, sum *summary.Summary) error
+	SendDM(m *discord.Member, message string) error
 	RegisterCommands(g *discord.Guild) error
 	MemberHasRole(g *discord.Guild, m *discord.Member, roleName string) bool
 	OpenDM(m *discord.Member) (*discord.Channel, error)
+	GetMember(guild *discord.Guild, memberID string) (*discord.Member, error)
 	// Should start background worker loop, which should then emit Tick event periodically.
 	StartTicking()
 }

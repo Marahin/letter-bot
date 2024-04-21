@@ -2,7 +2,6 @@ package bot
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -120,10 +119,27 @@ func (b *Bot) EnsureChannel(guild *discord.Guild) error {
 	return nil
 }
 
-func (b *Bot) FindChannel(g *discord.Guild, channelName string) (*discord.Channel, error) {
+func (b *Bot) FindChannelById(g *discord.Guild, channelId string) (*discord.Channel, error) {
 	channels, err := b.mgr.Gateway.GuildChannels(g.ID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error when fetching guild channels: %s", err)
+	}
+
+	channel, _ := collections.PoorMansFind(channels, func(channel *discordgo.Channel) bool {
+		return channel.ID == channelId
+	})
+
+	if channel != nil {
+		return MapChannel(channel), nil
+	}
+
+	return nil, fmt.Errorf("channel with id '%s' not found in guild '%s'", channelId, g.Name)
+}
+
+func (b *Bot) FindChannelByName(g *discord.Guild, channelName string) (*discord.Channel, error) {
+	channels, err := b.mgr.Gateway.GuildChannels(g.ID)
+	if err != nil {
+		return nil, fmt.Errorf("error when fetching guild channels: %s", err)
 	}
 
 	for _, channel := range channels {
@@ -132,7 +148,7 @@ func (b *Bot) FindChannel(g *discord.Guild, channelName string) (*discord.Channe
 		}
 	}
 
-	return nil, errors.New("channel not found")
+	return nil, fmt.Errorf("channel '%s' not found in guild '%s'", channelName, g.Name)
 }
 
 func (b *Bot) EnsureRoles(g *discord.Guild) error {
@@ -277,6 +293,19 @@ func (b *Bot) SendLetterMessage(guild *discord.Guild, channel *discord.Channel, 
 			b.log.Errorf("something went wrong when sending embed: %s", err)
 		}
 	}
+
+	return err
+}
+
+func (b *Bot) SendDM(member *discord.Member, message string) error {
+	channel, err := b.OpenDM(member)
+	if err != nil {
+		return err
+	}
+
+	_, err = b.mgr.SessionForDM().ChannelMessageSend(
+		channel.ID,
+		message)
 
 	return err
 }

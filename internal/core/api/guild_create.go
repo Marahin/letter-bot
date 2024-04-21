@@ -31,7 +31,7 @@ func (a *Application) OnGuildCreate(bot ports.BotPort, guild *discord.Guild) {
 		return
 	}
 
-	summaryChannel, err := bot.FindChannel(guild, "letter-summary")
+	summaryChannel, err := bot.FindChannelByName(guild, "letter-summary")
 	if err != nil {
 		log.Errorf("could not find summary channel: %s", err)
 

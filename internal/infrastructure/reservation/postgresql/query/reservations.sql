@@ -44,7 +44,7 @@ WHERE web_reservation.end_at >= now()
   )
   AND lower(web_spot.name) = lower(@respawn)
   AND web_reservation.guild_id = @guild_id;
--- name: CreateReservation :exec
+-- name: CreateReservation :one
 INSERT INTO web_reservation (
     author,
     author_discord_id,
@@ -54,7 +54,8 @@ INSERT INTO web_reservation (
     created_at,
     guild_id
   )
-VALUES ($1, $2, $3, $4, $5, now(), $6);
+VALUES ($1, $2, $3, $4, $5, now(), $6)
+RETURNING *;
 -- name: SelectReservationsWithSpots :many
 select sqlc.embed(web_spot),
   sqlc.embed(web_reservation)

@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createReservation = `-- name: CreateReservation :exec
+const createReservation = `-- name: CreateReservation :one
 INSERT INTO web_reservation (
     author,
     author_discord_id,
@@ -22,6 +22,7 @@ INSERT INTO web_reservation (
     guild_id
   )
 VALUES ($1, $2, $3, $4, $5, now(), $6)
+RETURNING id, author, created_at, start_at, end_at, spot_id, guild_id, author_discord_id
 `
 
 type CreateReservationParams struct {
@@ -33,8 +34,8 @@ type CreateReservationParams struct {
 	GuildID         string
 }
 
-func (q *Queries) CreateReservation(ctx context.Context, arg CreateReservationParams) error {
-	_, err := q.db.Exec(ctx, createReservation,
+func (q *Queries) CreateReservation(ctx context.Context, arg CreateReservationParams) (WebReservation, error) {
+	row := q.db.QueryRow(ctx, createReservation,
 		arg.Author,
 		arg.AuthorDiscordID,
 		arg.StartAt,
@@ -42,7 +43,18 @@ func (q *Queries) CreateReservation(ctx context.Context, arg CreateReservationPa
 		arg.SpotID,
 		arg.GuildID,
 	)
-	return err
+	var i WebReservation
+	err := row.Scan(
+		&i.ID,
+		&i.Author,
+		&i.CreatedAt,
+		&i.StartAt,
+		&i.EndAt,
+		&i.SpotID,
+		&i.GuildID,
+		&i.AuthorDiscordID,
+	)
+	return i, err
 }
 
 const deletePresentMemberReservation = `-- name: DeletePresentMemberReservation :exec
