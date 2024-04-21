@@ -21,7 +21,7 @@ type bookingService interface {
 
 	// Returns array of conflicting reservations (or removed reservations)
 	// and an optional error.
-	Book(member *discord.Member, guild *discord.Guild, spot string, startAt time.Time, endAt time.Time, overbook bool, hasPermissions bool) ([]*reservation.Reservation, error)
+	Book(member *discord.Member, guild *discord.Guild, spot string, startAt time.Time, endAt time.Time, overbook bool, hasPermissions bool) ([]*reservation.ClippedOrRemovedReservation, error)
 
 	UnbookAutocomplete(g *discord.Guild, m *discord.Member, filter string) ([]*reservation.ReservationWithSpot, error)
 

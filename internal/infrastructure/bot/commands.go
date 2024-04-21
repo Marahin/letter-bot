@@ -2,6 +2,7 @@ package bot
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"spot-assistant/internal/common/strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -11,6 +12,7 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 	var err error
 	name := i.ApplicationCommandData().Name
 	isAutocomplete := i.Type == discordgo.InteractionApplicationCommandAutocomplete
+	log := b.log.WithFields(logrus.Fields{"name": name, "isAutocomplete": isAutocomplete})
 
 	if !isAutocomplete {
 		err = b.interactionRespond(i, &discordgo.InteractionResponseData{}, discordgo.InteractionResponseDeferredChannelMessageWithSource)
@@ -40,22 +42,26 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 		err = fmt.Errorf("missing handler for command: %s", name)
 	}
 
-	if err != nil && !isAutocomplete {
-		webhookParams := &discordgo.WebhookParams{
-			Content: b.dcErrorMsg(err),
-		}
+	if err != nil {
+		log.Error(err)
 
-		gID, err := strings.StrToInt64(i.GuildID)
-		if err != nil {
-			b.log.Errorf("could not translate guildID: %s", err)
-			return
-		}
+		if !isAutocomplete {
+			webhookParams := &discordgo.WebhookParams{
+				Content: b.dcErrorMsg(err),
+			}
 
-		dcSession := b.mgr.SessionForGuild(gID)
-		_, err = dcSession.FollowupMessageCreate(i.Interaction, false, webhookParams)
+			gID, err := strings.StrToInt64(i.GuildID)
+			if err != nil {
+				b.log.Errorf("could not translate guildID: %s", err)
+				return
+			}
 
-		if err != nil {
-			b.log.Errorf("could not respond with an error message: %s", err)
+			dcSession := b.mgr.SessionForGuild(gID)
+			_, err = dcSession.FollowupMessageCreate(i.Interaction, false, webhookParams)
+
+			if err != nil {
+				b.log.Errorf("could not respond with an error message: %s", err)
+			}
 		}
 	}
 }

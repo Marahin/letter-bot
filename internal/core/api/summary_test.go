@@ -38,7 +38,7 @@ func TestUpdateGuildSummary(t *testing.T) {
 	}
 	mockBot := new(mocks.MockBot)
 	mockBot.On("SendLetterMessage", guild, summaryCh, summary).Return(nil)
-	mockBot.On("FindChannel", guild, "letter-summary").Return(summaryCh, nil)
+	mockBot.On("FindChannelByName", guild, "letter-summary").Return(summaryCh, nil)
 	mockReservationRepo := new(mocks.MockReservationRepo)
 	mockReservationRepo.On("SelectUpcomingReservationsWithSpot", mocks.ContextMock, guild.ID).Return(reservations, nil)
 	mockSummarySrv := new(mocks.MockSummaryService)

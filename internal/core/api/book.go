@@ -2,9 +2,11 @@ package api
 
 import (
 	"fmt"
+	"spot-assistant/internal/common/collections"
+	stringsHelper "spot-assistant/internal/common/strings"
+	"strings"
 	"time"
 
-	"spot-assistant/internal/common/strings"
 	"spot-assistant/internal/core/dto/book"
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/ports"
@@ -32,8 +34,8 @@ func (a *Application) OnBook(bot ports.BotPort, request book.BookRequest) (book.
 
 	// Notify users about overbooking
 	for _, res := range response.ConflictingReservations {
-		go func(res *reservation.Reservation) {
-			member, err := bot.GetMember(request.Guild, res.AuthorDiscordID)
+		go func(res *reservation.ClippedOrRemovedReservation) {
+			member, err := bot.GetMember(request.Guild, res.Original.AuthorDiscordID)
 			if err != nil {
 				a.log.Errorf("error getting member: %s", err)
 				return
@@ -43,16 +45,20 @@ func (a *Application) OnBook(bot ports.BotPort, request book.BookRequest) (book.
 				"Your reservation was overbooked by %s\n",
 				fmt.Sprintf("<@!%s>", request.Member.ID),
 			)
-			msgBody := fmt.Sprintf(
-				"* %s %s %s - %s\\n",
-				fmt.Sprintf("<@!%s>", member.ID),
-				request.Spot,
-				res.StartAt.Format(strings.DC_LONG_TIME_FORMAT),
-				res.EndAt.Format(strings.DC_LONG_TIME_FORMAT),
-			)
-			msgFooter := fmt.Sprintf("https://discord.com/channels/%s/%s/%s", request.Guild.ID, request.Channel.ID, request.Message.ID)
 
-			err = bot.SendDM(member, msgHeader+msgBody+msgFooter)
+			var msgBody strings.Builder
+			msgBody.WriteString(fmt.Sprintf("* %s %s ", fmt.Sprintf("<@!%s>", member.ID), request.Spot))
+			if len(res.New) > 0 { // The reservation has been modified, but not entirely removed - lets notify the user!
+				msgBody.WriteString("has been clipped to: ")
+				newClippedRanges := collections.PoorMansMap(res.New, func(r *reservation.Reservation) string {
+					return fmt.Sprintf("%s - %s", r.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), r.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT))
+				})
+				msgBody.WriteString(strings.Join(newClippedRanges, ", "))
+			} else {
+				msgBody.WriteString("has been entirely removed")
+			}
+
+			err = bot.SendDM(member, msgHeader+msgBody.String())
 			if err != nil {
 				a.log.Errorf("error sending DM: %s", err)
 			}

@@ -26,7 +26,7 @@ func (m *MockBot) EnsureChannel(g *discord.Guild) error {
 	return args.Error(0)
 }
 
-func (m *MockBot) FindChannel(g *discord.Guild, channelName string) (*discord.Channel, error) {
+func (m *MockBot) FindChannelByName(g *discord.Guild, channelName string) (*discord.Channel, error) {
 	args := m.Called(g, channelName)
 
 	return args.Get(0).(*discord.Channel), args.Error(1)

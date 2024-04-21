@@ -13,10 +13,10 @@ type MockBookingService struct {
 	mock.Mock
 }
 
-func (a *MockBookingService) Book(m *discord.Member, g *discord.Guild, spotName string, startAt time.Time, endAt time.Time, overbook bool, hasPermissions bool) ([]*reservation.Reservation, error) {
+func (a *MockBookingService) Book(m *discord.Member, g *discord.Guild, spotName string, startAt time.Time, endAt time.Time, overbook bool, hasPermissions bool) ([]*reservation.ClippedOrRemovedReservation, error) {
 	args := a.Called(m, g, spotName, startAt, endAt, overbook, hasPermissions)
 
-	return args.Get(0).([]*reservation.Reservation), args.Error(1)
+	return args.Get(0).([]*reservation.ClippedOrRemovedReservation), args.Error(1)
 }
 
 func (a *MockBookingService) FindAvailableSpots(filter string) ([]string, error) {

@@ -30,10 +30,10 @@ func (a *MockReservationRepo) SelectOverlappingReservations(ctx context.Context,
 	return args.Get(0).([]*reservation.Reservation), args.Error(1)
 }
 
-func (a *MockReservationRepo) CreateAndDeleteConflicting(ctx context.Context, member *discord.Member, guild *discord.Guild, conflicts []*reservation.Reservation, spotId int64, startAt time.Time, endAt time.Time) ([]*reservation.Reservation, error) {
+func (a *MockReservationRepo) CreateAndDeleteConflicting(ctx context.Context, member *discord.Member, guild *discord.Guild, conflicts []*reservation.Reservation, spotId int64, startAt time.Time, endAt time.Time) ([]*reservation.ClippedOrRemovedReservation, error) {
 	args := a.Called(ctx, member, guild, conflicts, spotId, startAt, endAt)
 
-	return args.Get(0).([]*reservation.Reservation), args.Error(1)
+	return args.Get(0).([]*reservation.ClippedOrRemovedReservation), args.Error(1)
 
 }
 

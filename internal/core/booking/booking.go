@@ -82,7 +82,7 @@ func (a *Adapter) GetSuggestedHours(baseTime time.Time, filter string) []string 
 	return suggestedOptions
 }
 
-func (a *Adapter) Book(member *discord.Member, guild *discord.Guild, spotName string, startAt time.Time, endAt time.Time, overbook bool, hasPermissions bool) ([]*reservation.Reservation, error) {
+func (a *Adapter) Book(member *discord.Member, guild *discord.Guild, spotName string, startAt time.Time, endAt time.Time, overbook bool, hasPermissions bool) ([]*reservation.ClippedOrRemovedReservation, error) {
 	currTime := time.Now()
 
 	a.log.WithFields(logrus.Fields{
@@ -96,23 +96,23 @@ func (a *Adapter) Book(member *discord.Member, guild *discord.Guild, spotName st
 
 	spots, err := a.spotRepo.SelectAllSpots(context.Background())
 	if err != nil {
-		return []*reservation.Reservation{}, fmt.Errorf("could not fetch spots: %w", err)
+		return nil, fmt.Errorf("could not fetch spots: %w", err)
 	}
 
 	spot, _ := collections.PoorMansFind(spots, func(s *spot.Spot) bool {
 		return s.Name == spotName
 	})
 	if spot == nil {
-		return []*reservation.Reservation{}, fmt.Errorf("could not find spot called %s", spotName)
+		return nil, fmt.Errorf("could not find spot called %s", spotName)
 	}
 
 	if endAt.Sub(startAt) > 3*time.Hour {
-		return []*reservation.Reservation{}, fmt.Errorf("reservation cannot take more than 3 hours")
+		return nil, fmt.Errorf("reservation cannot take more than 3 hours")
 	}
 
 	conflictingReservations, err := a.reservationRepo.SelectOverlappingReservations(context.Background(), spotName, startAt, endAt, guild.ID)
 	if err != nil {
-		return []*reservation.Reservation{}, fmt.Errorf("could not select overlapping reservations: %w", err)
+		return nil, fmt.Errorf("could not select overlapping reservations: %w", err)
 	}
 
 	if len(conflictingReservations) > 0 {
@@ -120,14 +120,19 @@ func (a *Adapter) Book(member *discord.Member, guild *discord.Guild, spotName st
 		case true:
 			break
 		case false:
-			return conflictingReservations, fmt.Errorf("There are conflicting reservation which prevented booking this reservation. If you would like to overbook them, ensure you have a @Postman role, then repeat the command and set 'overbook' parameter to 'true'.")
+			return collections.PoorMansMap(conflictingReservations, func(r *reservation.Reservation) *reservation.ClippedOrRemovedReservation {
+				return &reservation.ClippedOrRemovedReservation{
+					Original: r,
+					New:      []*reservation.Reservation{r},
+				}
+			}), fmt.Errorf("There are conflicting reservation which prevented booking this reservation. If you would like to overbook them, ensure you have a @Postman role, then repeat the command and set 'overbook' parameter to 'true'.")
 		}
 	}
 
 	// Check for potentially exceeding maximum hours, with an exception for multi-floor respawns
 	upcomingAuthorReservations, err := a.reservationRepo.SelectUpcomingMemberReservationsWithSpots(context.Background(), guild, member)
 	if err != nil {
-		return []*reservation.Reservation{}, fmt.Errorf("could not select upcoming member reservations: %w", err)
+		return nil, fmt.Errorf("could not select upcoming member reservations: %w", err)
 	}
 
 	if len(upcomingAuthorReservations) > 0 {
@@ -150,7 +155,7 @@ func (a *Adapter) Book(member *discord.Member, guild *discord.Guild, spotName st
 		})
 
 		if totalReservationsTime > MAXIMUM_RESERVATIONS_TIME {
-			return []*reservation.Reservation{}, MAXIMUM_RESERVATIONS_TIME_EXCEEDED_ERROR
+			return nil, MAXIMUM_RESERVATIONS_TIME_EXCEEDED_ERROR
 		}
 	}
 
