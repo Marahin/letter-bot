@@ -8,18 +8,10 @@ import (
 	"github.com/pashagolub/pgxmock/v3"
 	"github.com/stretchr/testify/assert"
 
-	"spot-assistant/internal/common/collections"
 	"spot-assistant/internal/common/test/mocks"
 	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/reservation"
 )
-
-func newReservationRows() *pgxmock.Rows {
-	return pgxmock.NewRows([]string{
-		"id", "author", "created_at", "start_at", "end_at",
-		"spot_id", "guild_id", "author_discord_id",
-	})
-}
 
 func TestCreateAndDeleteConflictingWithNoConflicting(t *testing.T) {
 	// given
@@ -43,13 +35,7 @@ func TestCreateAndDeleteConflictingWithNoConflicting(t *testing.T) {
 	}
 	defer mock.Close()
 	mock.ExpectBegin()
-	mock.ExpectQuery("INSERT INTO web_reservation").WithArgs(
-		testMember.Nick, testMember.ID, mocks.NewPgTimestamptzTime(startAt),
-		mocks.NewPgTimestamptzTime(endAt), spotId, testGuild.ID,
-	).WillReturnRows(newReservationRows().AddRow(
-		int64(1), testMember.Nick, time.Now(), startAt, endAt, spotId, testGuild.ID, testMember.ID,
-	))
-
+	mock.ExpectExec("INSERT INTO web_reservation").WithArgs(testMember.Nick, testMember.ID, mocks.NewPgTimestamptzTime(startAt), mocks.NewPgTimestamptzTime(endAt), spotId, testGuild.ID).WillReturnResult(pgxmock.NewResult("INSERT", 1))
 	mock.ExpectCommit()
 	repository := NewReservationRepository(mock)
 
@@ -107,25 +93,16 @@ func TestCreateAndDeleteConflictingWithOneConflicting(t *testing.T) {
 	defer mock.Close()
 	mock.ExpectBegin()
 	mock.ExpectExec("DELETE FROM web_reservation").WithArgs(conflictingReservations[0].ID).WillReturnResult(pgxmock.NewResult("DELETE", 1))
-	mock.ExpectQuery("INSERT INTO web_reservation").WithArgs(
+	mock.ExpectExec("INSERT INTO web_reservation").WithArgs(
 		conflictingReservations[0].Author, conflictingReservations[0].AuthorDiscordID,
-		mocks.NewPgTimestamptzTime(reservationInput.EndAt.Add(1*time.Minute)),
-		mocks.NewPgTimestamptzTime(conflictingReservations[0].EndAt),
+		mocks.NewPgTimestamptzTime(reservationInput.EndAt.Add(1*time.Minute)), mocks.NewPgTimestamptzTime(conflictingReservations[0].EndAt),
 		conflictingReservations[0].SpotID, conflictingReservations[0].GuildID,
-	).WillReturnRows(newReservationRows().AddRow(
-		int64(1), testMember.Nick, time.Now(),
-		reservationInput.EndAt.Add(1*time.Minute), conflictingReservations[0].EndAt,
-		spotId, testGuild.ID, testMember.ID,
-	))
-	mock.ExpectQuery("INSERT INTO web_reservation").WithArgs(
+	).WillReturnResult(pgxmock.NewResult("INSERT", 1))
+	mock.ExpectExec("INSERT INTO web_reservation").WithArgs(
 		reservationInput.Author, reservationInput.AuthorDiscordID,
 		mocks.NewPgTimestamptzTime(reservationInput.StartAt), mocks.NewPgTimestamptzTime(reservationInput.EndAt),
 		reservationInput.SpotID, reservationInput.GuildID,
-	).WillReturnRows(newReservationRows().AddRow(
-		int64(2), testMember.Nick, time.Now(),
-		reservationInput.StartAt, reservationInput.EndAt,
-		spotId, testGuild.ID, testMember.ID,
-	))
+	).WillReturnResult(pgxmock.NewResult("INSERT", 1))
 	mock.ExpectCommit()
 	repository := NewReservationRepository(mock)
 
@@ -136,9 +113,7 @@ func TestCreateAndDeleteConflictingWithOneConflicting(t *testing.T) {
 	assert.Nil(err)
 	assert.NotEmpty(removed)
 	assert.Nil(mock.ExpectationsWereMet())
-	assert.Equal(conflictingReservations, collections.PoorMansMap(removed, func(r *reservation.ClippedOrRemovedReservation) *reservation.Reservation {
-		return r.Original
-	}))
+	assert.Equal(conflictingReservations, removed)
 }
 
 func TestCreateAndDeleteConflictingWithTwoConflicting(t *testing.T) {
@@ -200,24 +175,24 @@ func TestCreateAndDeleteConflictingWithTwoConflicting(t *testing.T) {
 	defer mock.Close()
 	mock.ExpectBegin()
 	mock.ExpectExec("DELETE FROM web_reservation").WithArgs(conflictingReservations[0].ID).WillReturnResult(pgxmock.NewResult("DELETE", 1))
-	mock.ExpectQuery("INSERT INTO web_reservation").WithArgs(
+	mock.ExpectExec("INSERT INTO web_reservation").WithArgs(
 		conflictingReservations[0].Author, conflictingReservations[0].AuthorDiscordID,
 		mocks.NewPgTimestamptzTime(conflictingReservations[0].StartAt), mocks.NewPgTimestamptzTime(reservationInput.StartAt.Add(-1*time.Minute)),
 		conflictingReservations[0].SpotID, conflictingReservations[0].GuildID,
-	).WillReturnRows(newReservationRows().AddRow(
-		int64(3), testMember2.Nick, time.Now(), conflictingReservations[0].StartAt, reservationInput.StartAt.Add(-1*time.Minute), spotId, testGuild.ID, testMember.ID,
-	))
+	).WillReturnResult(pgxmock.NewResult("INSERT", 1))
+
 	mock.ExpectExec("DELETE FROM web_reservation").WithArgs(conflictingReservations[1].ID).WillReturnResult(pgxmock.NewResult("DELETE", 1))
-	mock.ExpectQuery("INSERT INTO web_reservation").WithArgs(
+	mock.ExpectExec("INSERT INTO web_reservation").WithArgs(
 		conflictingReservations[1].Author, conflictingReservations[1].AuthorDiscordID,
 		mocks.NewPgTimestamptzTime(reservationInput.EndAt.Add(1*time.Minute)), mocks.NewPgTimestamptzTime(conflictingReservations[1].EndAt),
 		conflictingReservations[1].SpotID, conflictingReservations[1].GuildID,
-	).WillReturnRows(newReservationRows().AddRow(int64(4), testMember3.Nick, time.Now(), reservationInput.EndAt.Add(1*time.Minute), conflictingReservations[1].EndAt, spotId, testGuild.ID, testMember.ID))
-	mock.ExpectQuery("INSERT INTO web_reservation").WithArgs(
+	).WillReturnResult(pgxmock.NewResult("INSERT", 1))
+
+	mock.ExpectExec("INSERT INTO web_reservation").WithArgs(
 		reservationInput.Author, reservationInput.AuthorDiscordID,
 		mocks.NewPgTimestamptzTime(reservationInput.StartAt), mocks.NewPgTimestamptzTime(reservationInput.EndAt),
 		reservationInput.SpotID, reservationInput.GuildID,
-	).WillReturnRows(newReservationRows().AddRow(int64(5), testMember.Nick, time.Now(), reservationInput.EndAt.Add(1*time.Minute), conflictingReservations[1].EndAt, spotId, testGuild.ID, testMember.ID))
+	).WillReturnResult(pgxmock.NewResult("INSERT", 1))
 	mock.ExpectCommit()
 	repository := NewReservationRepository(mock)
 
@@ -228,9 +203,7 @@ func TestCreateAndDeleteConflictingWithTwoConflicting(t *testing.T) {
 	assert.Nil(err)
 	assert.NotEmpty(removed)
 	assert.Nil(mock.ExpectationsWereMet())
-	assert.Equal(conflictingReservations, collections.PoorMansMap(removed, func(r *reservation.ClippedOrRemovedReservation) *reservation.Reservation {
-		return r.Original
-	}))
+	assert.Equal(conflictingReservations, removed)
 }
 
 func TestCreateAndDeleteConflictingWithTwoConflictingButSecondOneFromTheSameAuthorAsNewReservation(t *testing.T) {
@@ -287,20 +260,19 @@ func TestCreateAndDeleteConflictingWithTwoConflictingButSecondOneFromTheSameAuth
 	defer mock.Close()
 	mock.ExpectBegin()
 	mock.ExpectExec("DELETE FROM web_reservation").WithArgs(conflictingReservations[0].ID).WillReturnResult(pgxmock.NewResult("DELETE", 1))
-	mock.ExpectQuery("INSERT INTO web_reservation").WithArgs(
+	mock.ExpectExec("INSERT INTO web_reservation").WithArgs(
 		conflictingReservations[0].Author, conflictingReservations[0].AuthorDiscordID,
 		mocks.NewPgTimestamptzTime(conflictingReservations[0].StartAt), mocks.NewPgTimestamptzTime(reservationInput.StartAt.Add(-1*time.Minute)),
 		conflictingReservations[0].SpotID, conflictingReservations[0].GuildID,
-	).WillReturnRows(newReservationRows().AddRow(
-		int64(3), testMember2.Nick, time.Now(), conflictingReservations[0].StartAt, reservationInput.StartAt.Add(-1*time.Minute), spotId, testGuild.ID, testMember.ID))
+	).WillReturnResult(pgxmock.NewResult("INSERT", 1))
+
 	mock.ExpectExec("DELETE FROM web_reservation").WithArgs(conflictingReservations[1].ID).WillReturnResult(pgxmock.NewResult("DELETE", 1))
-	mock.ExpectQuery("INSERT INTO web_reservation").WithArgs(
+
+	mock.ExpectExec("INSERT INTO web_reservation").WithArgs(
 		reservationInput.Author, reservationInput.AuthorDiscordID,
 		mocks.NewPgTimestamptzTime(reservationInput.StartAt), mocks.NewPgTimestamptzTime(reservationInput.EndAt),
 		reservationInput.SpotID, reservationInput.GuildID,
-	).WillReturnRows(newReservationRows().AddRow(
-		int64(4), testMember.Nick, time.Now(), reservationInput.StartAt, reservationInput.EndAt, spotId, testGuild.ID, testMember.ID,
-	))
+	).WillReturnResult(pgxmock.NewResult("INSERT", 1))
 	mock.ExpectCommit()
 	repository := NewReservationRepository(mock)
 
@@ -311,7 +283,5 @@ func TestCreateAndDeleteConflictingWithTwoConflictingButSecondOneFromTheSameAuth
 	assert.Nil(err)
 	assert.NotEmpty(removed)
 	assert.Nil(mock.ExpectationsWereMet())
-	assert.Equal(conflictingReservations, collections.PoorMansMap(removed, func(r *reservation.ClippedOrRemovedReservation) *reservation.Reservation {
-		return r.Original
-	}))
+	assert.Equal(conflictingReservations, removed)
 }

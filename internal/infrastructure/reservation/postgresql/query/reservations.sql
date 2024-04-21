@@ -44,7 +44,7 @@ WHERE web_reservation.end_at >= now()
   )
   AND lower(web_spot.name) = lower(@respawn)
   AND web_reservation.guild_id = @guild_id;
--- name: CreateReservation :one
+-- name: CreateReservation :exec
 INSERT INTO web_reservation (
     author,
     author_discord_id,
@@ -54,8 +54,7 @@ INSERT INTO web_reservation (
     created_at,
     guild_id
   )
-VALUES ($1, $2, $3, $4, $5, now(), $6)
-RETURNING *;
+VALUES ($1, $2, $3, $4, $5, now(), $6);
 -- name: SelectReservationsWithSpots :many
 select sqlc.embed(web_spot),
   sqlc.embed(web_reservation)
@@ -66,3 +65,11 @@ where end_at >= now()
 -- name: DeleteReservation :exec
 DELETE FROM web_reservation
 WHERE web_reservation.id = $1;
+-- name: SelectAllReservationsWithSpotsBySpotNames :many
+select sqlc.embed(web_spot),
+       sqlc.embed(web_reservation)
+from web_reservation
+         inner join web_spot on web_reservation.spot_id = web_spot.id
+where end_at >= now()
+  AND guild_id = $1
+  AND web_spot.name = ANY(@spot_names::text[]);
