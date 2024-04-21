@@ -8,6 +8,7 @@ REGISTRY ?= registry.marahin.pl
 .PHONY: install-dependencies install-bins go-mod
 
 install-bins:
+	@go install github.com/fzipp/gocyclo/cmd/gocyclo@v0.6.0
 	@for pkg in $$(go list -f '{{range .Imports}}{{.}} {{end}}' cmd/tools.go); do \
 		echo "$(GREEN)INFO: Installing $$pkg$(RESET)"; \
 		go install $$pkg; \
