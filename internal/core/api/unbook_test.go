@@ -20,7 +20,7 @@ func TestOnUnbookAutocomplete(t *testing.T) {
 	summarySrv := new(mocks.MockSummaryService)
 	reservationRepo := new(mocks.MockReservationRepo)
 	bookingSrv := new(mocks.MockBookingService)
-	adapter := NewApplication(reservationRepo, summarySrv, bookingSrv)
+	adapter := NewApplication().WithReservationRepository(reservationRepo).WithSummaryService(summarySrv).WithBookingService(bookingSrv)
 	member := &discord.Member{
 		ID: "test-member-id",
 	}
@@ -67,7 +67,10 @@ func TestOnUnbookAutocompleteServiceError(t *testing.T) {
 	summarySrv := new(mocks.MockSummaryService)
 	reservationRepo := new(mocks.MockReservationRepo)
 	bookingSrv := new(mocks.MockBookingService)
-	adapter := NewApplication(reservationRepo, summarySrv, bookingSrv)
+	adapter := NewApplication().
+		WithReservationRepository(reservationRepo).
+		WithSummaryService(summarySrv).
+		WithBookingService(bookingSrv)
 	member := &discord.Member{
 		ID: "test-member-id",
 	}
@@ -112,7 +115,11 @@ func TestUnbook(t *testing.T) {
 	bot.On("WithEventHandler", mock.AnythingOfType("*api.Application")).Return(bot)
 	bookingSrv := new(mocks.MockBookingService)
 	bookingSrv.On("Unbook", request.Guild, request.Member, request.ReservationID).Return(existingReservation, nil)
-	adapter := NewApplication(reservationRepo, summarySrv, bookingSrv).WithBot(bot)
+	adapter := NewApplication().
+		WithReservationRepository(reservationRepo).
+		WithSummaryService(summarySrv).
+		WithBookingService(bookingSrv).
+		WithBot(bot)
 	reservationRepo.On("SelectUpcomingReservationsWithSpot", mocks.ContextMock, request.Guild.ID).Return([]*reservation.ReservationWithSpot{}, nil)
 
 	// when
@@ -152,7 +159,10 @@ func TestUnbookOnError(t *testing.T) {
 	bookingSrv := new(mocks.MockBookingService)
 	bookingSrv.On("Unbook", request.Guild, request.Member, request.ReservationID).Return(existingReservation, errors.New("test-error")).Times(0)
 	defer bookingSrv.AssertExpectations(t)
-	adapter := NewApplication(reservationRepo, summarySrv, bookingSrv)
+	adapter := NewApplication().
+		WithReservationRepository(reservationRepo).
+		WithSummaryService(summarySrv).
+		WithBookingService(bookingSrv)
 
 	// when
 	_, err := adapter.OnUnbook(request)

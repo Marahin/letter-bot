@@ -18,17 +18,10 @@ type Application struct {
 	ticks      atomic.Uint64
 }
 
-func NewApplication(
-	db ports.ReservationRepository,
-	summarySrv summaryService,
-	bookingSrv bookingService) *Application {
-
+func NewApplication() *Application {
 	app := &Application{
-		db:         db,
-		summarySrv: summarySrv,
-		bookingSrv: bookingSrv,
-		log:        logrus.WithFields(logrus.Fields{"type": "application"}),
-		ticks:      atomic.Uint64{},
+		log:   logrus.WithFields(logrus.Fields{"type": "application"}),
+		ticks: atomic.Uint64{},
 	}
 
 	return app
@@ -40,8 +33,26 @@ func (a *Application) WithBot(bot ports.BotPort) *Application {
 	return a
 }
 
-func (a *Application) WithCommunication(commSrv communicationService) *Application {
+func (a *Application) WithCommunicationService(commSrv communicationService) *Application {
 	a.commSrv = commSrv
+
+	return a
+}
+
+func (a *Application) WithReservationRepository(db ports.ReservationRepository) *Application {
+	a.db = db
+
+	return a
+}
+
+func (a *Application) WithSummaryService(summarySrv summaryService) *Application {
+	a.summarySrv = summarySrv
+
+	return a
+}
+
+func (a *Application) WithBookingService(bookingSrv bookingService) *Application {
+	a.bookingSrv = bookingSrv
 
 	return a
 }

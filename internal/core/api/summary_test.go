@@ -46,7 +46,12 @@ func TestUpdateGuildSummary(t *testing.T) {
 	mockSummarySrv := new(mocks.MockSummaryService)
 	mockSummarySrv.On("PrepareSummary", reservations).Return(summary, nil)
 	mockBookingSrv := new(mocks.MockBookingService)
-	adapter := NewApplication(mockReservationRepo, mockSummarySrv, mockBookingSrv).WithBot(mockBot).WithCommunication(mockComm)
+	adapter := NewApplication().
+		WithReservationRepository(mockReservationRepo).
+		WithSummaryService(mockSummarySrv).
+		WithBookingService(mockBookingSrv).
+		WithBot(mockBot).
+		WithCommunicationService(mockComm)
 
 	// when
 	err := adapter.UpdateGuildSummary(guild)

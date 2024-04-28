@@ -56,9 +56,12 @@ func main() {
 	bookingService := booking.NewAdapter(spotRepo, reservationRepo)
 
 	// App
-	app := api.NewApplication(reservationRepo, summaryService, bookingService).
+	app := api.NewApplication().
 		WithBot(botService).
-		WithCommunication(communicationService)
+		WithCommunicationService(communicationService).
+		WithReservationRepository(reservationRepo).
+		WithSummaryService(summaryService).
+		WithBookingService(bookingService)
 
 	err = app.Run()
 	if err != nil {

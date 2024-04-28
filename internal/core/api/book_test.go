@@ -33,7 +33,7 @@ func TestOnBookWithoutConflictingReservations(t *testing.T) {
 	reservationRepo.On("SelectUpcomingReservationsWithSpot", mocks.ContextMock, guild.ID).Return(make([]*reservation.ReservationWithSpot, 0), nil)
 	defer reservationRepo.AssertExpectations(t)
 	summarySrv := new(mocks.MockSummaryService)
-	adapter := NewApplication(reservationRepo, summarySrv, bookingSrv)
+	adapter := NewApplication().WithReservationRepository(reservationRepo).WithSummaryService(summarySrv).WithBookingService(bookingSrv)
 	botPort := new(mocks.MockBot)
 	botPort.On("WithEventHandler", adapter).Return(botPort)
 	botPort.On("MemberHasRole", guild, member, discord.PrivilegedRole).Return(false)
@@ -124,7 +124,12 @@ func TestOnBookWithConflictingReservations(t *testing.T) {
 	botPort.On("WithEventHandler", mock.AnythingOfType("*api.Application")).Return(botPort)
 	botPort.On("MemberHasRole", guild, member, discord.PrivilegedRole).Return(true)
 	botPort.On("GetMember", guild, conflictingMember.ID).Return(conflictingMember, nil)
-	adapter := NewApplication(reservationRepo, summarySrv, bookingSrv).WithBot(botPort).WithCommunication(communicationSrv)
+	adapter := NewApplication().
+		WithReservationRepository(reservationRepo).
+		WithSummaryService(summarySrv).
+		WithBookingService(bookingSrv).
+		WithBot(botPort).
+		WithCommunicationService(communicationSrv)
 
 	// when
 	res, err := adapter.OnBook(request)

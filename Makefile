@@ -9,13 +9,10 @@ REGISTRY ?= registry.marahin.pl
 
 install-bins:
 	@go install github.com/fzipp/gocyclo/cmd/gocyclo@v0.6.0
-	@for pkg in $$(go list -f '{{range .Imports}}{{.}} {{end}}' cmd/tools.go); do \
-		echo "$(GREEN)INFO: Installing $$pkg$(RESET)"; \
-		go install $$pkg; \
-	done
+	@go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.21.0
 
 go-mod:
-	@echo "$(GREEN)INFO: Running go mod tidy$(RESET)"
+	@echo "$(GREEN)INFO: Running go mod tmakefileidy$(RESET)"
 	@go mod tidy
 
 install-dependencies: install-bins go-mod
