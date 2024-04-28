@@ -9,7 +9,7 @@ REGISTRY ?= registry.marahin.pl
 
 install-bins:
 	@go install github.com/fzipp/gocyclo/cmd/gocyclo@v0.6.0
-	@go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.21.0
+	@go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.26.0
 
 go-mod:
 	@echo "$(GREEN)INFO: Running go mod tmakefileidy$(RESET)"
