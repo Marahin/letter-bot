@@ -11,7 +11,7 @@ require (
 	github.com/pashagolub/pgxmock/v3 v3.2.0
 	github.com/servusdei2018/shards/v2 v2.2.1
 	github.com/sirupsen/logrus v1.9.2
-	github.com/sqlc-dev/sqlc v1.21.0
+	github.com/sqlc-dev/sqlc v1.26.0
 	github.com/stretchr/testify v1.8.4
 	github.com/vicanso/go-charts/v2 v2.6.1
 )
