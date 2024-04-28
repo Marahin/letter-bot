@@ -39,7 +39,7 @@ jobs:
 
       - uses: sqlc-dev/setup-sqlc@v3
         with:
-          sqlc-version: "1.21.0"
+          sqlc-version: "1.26.0"
 
       - name: Install dependencies
         run: make install-dependencies
