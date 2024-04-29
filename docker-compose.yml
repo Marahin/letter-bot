@@ -1,0 +1,28 @@
+name: letter_bot
+volumes:
+  postgres:
+services:
+  db:
+    image: postgres:12
+    command: postgres -c log_statement=all
+    volumes:
+      - postgres:/var/lib/postgresql/data
+      - ./bin/seed:/bin/seed
+      - ./internal/infrastructure/db/postgresql/seeds:/internal/infrastructure/db/postgresql/seeds
+      - ./internal/infrastructure/db/postgresql/scripts:/docker-entrypoint-initdb.d
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME}
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+  bot:
+    build:
+      context: ../letter-bot
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./:/app
+    env_file:
+      - .env

@@ -1,9 +1,8 @@
 package api
 
 import (
+	"go.uber.org/zap"
 	"sync/atomic"
-
-	"github.com/sirupsen/logrus"
 
 	"spot-assistant/internal/ports"
 )
@@ -14,17 +13,23 @@ type Application struct {
 	bookingSrv bookingService
 	commSrv    communicationService
 	botSrv     ports.BotPort
-	log        *logrus.Entry
+	log        *zap.SugaredLogger
 	ticks      atomic.Uint64
 }
 
 func NewApplication() *Application {
 	app := &Application{
-		log:   logrus.WithFields(logrus.Fields{"type": "application"}),
 		ticks: atomic.Uint64{},
+		log:   zap.NewNop().Sugar(),
 	}
 
 	return app
+}
+
+func (a *Application) WithLogger(log *zap.SugaredLogger) *Application {
+	a.log = log.With("layer", "core", "name", "application")
+
+	return a
 }
 
 func (a *Application) WithBot(bot ports.BotPort) *Application {

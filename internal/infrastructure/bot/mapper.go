@@ -5,8 +5,6 @@ import (
 	"strconv"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/sirupsen/logrus"
-
 	"spot-assistant/internal/common/collections"
 	"spot-assistant/internal/common/strings"
 	"spot-assistant/internal/core/dto/discord"
@@ -58,7 +56,6 @@ func MapGuilds(input []*discordgo.Guild) []*discord.Guild {
 
 func MapUser(input *discordgo.User) *discord.User {
 	if input == nil {
-		logrus.Error("MapUser got nil on input: ", input)
 		return nil
 	}
 

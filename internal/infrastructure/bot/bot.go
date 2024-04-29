@@ -1,9 +1,9 @@
 package bot
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
-	"spot-assistant/internal/infrastructure/bot/formatter"
 	"sync"
 	"syscall"
 
@@ -11,8 +11,9 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	cmap "github.com/orcaman/concurrent-map/v2"
 	"github.com/servusdei2018/shards/v2"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
+	"spot-assistant/internal/infrastructure/bot/formatter"
 	"spot-assistant/internal/ports"
 )
 
@@ -24,7 +25,7 @@ type cfg struct {
 type Bot struct {
 	eventHandler ports.APIPort
 	mgr          *shards.Manager
-	log          *logrus.Entry
+	log          *zap.SugaredLogger
 	quit         chan struct{}
 	formatter    *formatter.DiscordFormatter
 	channelLocks cmap.ConcurrentMap[string, *sync.RWMutex]
@@ -42,7 +43,7 @@ func NewManager() *Bot {
 	// Create a new shard manager using the provided bot token.
 	mgr, err := shards.New("Bot " + Config.Token)
 	if err != nil {
-		logrus.Panic("could not create shards manager,", err)
+		panic(fmt.Errorf("could not create shards manager, %w", err))
 	}
 
 	mgr.Intent = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages | discordgo.IntentsGuildVoiceStates
@@ -51,7 +52,6 @@ func NewManager() *Bot {
 		mgr:          mgr,
 		quit:         make(chan struct{}),
 		channelLocks: cmap.New[*sync.RWMutex](),
-		log:          logrus.WithFields(logrus.Fields{"type": "infra", "name": "bot"}),
 	}
 
 	bot.mgr.AddHandler(bot.GuildCreate)
@@ -74,7 +74,14 @@ func (b *Bot) WithEventHandler(port ports.APIPort) ports.BotPort {
 	return b
 }
 
+func (b *Bot) WithLogger(log *zap.SugaredLogger) *Bot {
+	b.log = log.With("layer", "infrastructure", "name", "bot")
+
+	return b
+}
+
 func (b *Bot) Run() error {
+	b.log.Info("Starting bot...")
 	err := b.mgr.Start()
 	if err != nil {
 		return err
@@ -87,7 +94,7 @@ func (b *Bot) Run() error {
 	<-sc
 
 	// Cleanly close down the Manager.
-	b.log.Warning("stopping shard manager...")
+	b.log.Warn("stopping shard manager...")
 	err = b.mgr.Shutdown()
 	if err != nil {
 		return err

@@ -2,12 +2,11 @@ package sqlc
 
 import (
 	"context"
+	"go.uber.org/zap"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/sirupsen/logrus"
-
 	"spot-assistant/internal/common/errors"
 	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/reservation"
@@ -22,15 +21,22 @@ type DBTXWrapper interface {
 type ReservationRepository struct {
 	q   *Queries
 	db  DBTXWrapper
-	log *logrus.Entry
+	log *zap.SugaredLogger
 }
 
 func NewReservationRepository(db DBTXWrapper) *ReservationRepository {
 	return &ReservationRepository{
-		q:   New(db),
-		db:  db,
-		log: logrus.WithFields(logrus.Fields{"type": "infra", "name": "ReservationRepository"}),
+		q:  New(db),
+		db: db,
 	}
+}
+
+func (t *ReservationRepository) WithLogger(log *zap.SugaredLogger) *ReservationRepository {
+	t.log = log.With(
+		"layer", "infrastructure",
+		"name", "ReservationRepository")
+
+	return t
 }
 
 func (t *ReservationRepository) Find(ctx context.Context, id int64) (*reservation.Reservation, error) {

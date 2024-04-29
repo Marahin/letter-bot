@@ -12,8 +12,6 @@ import (
 	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/spot"
-
-	"github.com/sirupsen/logrus"
 )
 
 var HourRegex = regexp.MustCompile(`(\d{2}:\d{2})`)
@@ -79,16 +77,16 @@ func (a *Adapter) GetSuggestedHours(baseTime time.Time, filter string) []string 
 }
 
 func (a *Adapter) Book(member *discord.Member, guild *discord.Guild, spotName string, startAt time.Time, endAt time.Time, overbook bool, hasPermissions bool) ([]*reservation.ClippedOrRemovedReservation, error) {
-	a.log.WithFields(logrus.Fields{
-		"spot":            spotName,
-		"member.id":       member.ID,
-		"member.name":     member.Nick,
-		"member.username": member.Username,
-		"hasPermissions":  hasPermissions,
-		"overbook":        overbook,
-		"startAt":         startAt,
-		"endAt":           endAt,
-	}).Info("booking request")
+	a.log.With(
+		"spot", spotName,
+		"member.id", member.ID,
+		"member.name", member.Nick,
+		"member.username", member.Username,
+		"hasPermissions", hasPermissions,
+		"overbook", overbook,
+		"startAt", startAt,
+		"endAt", endAt,
+	).Info("booking request")
 
 	spots, err := a.spotRepo.SelectAllSpots(context.Background())
 	if err != nil {

@@ -1,13 +1,11 @@
 package api
 
 import (
-	"github.com/sirupsen/logrus"
-
 	"spot-assistant/internal/core/dto/discord"
 )
 
 func (a *Application) OnGuildCreate(guild *discord.Guild) {
-	log := a.log.WithFields(logrus.Fields{"event": "OnGuildCreate", "guild.ID": guild.ID, "guild.Name": guild.Name})
+	log := a.log.With("event", "OnGuildCreate", "guild.ID", guild.ID, "guild.Name", guild.Name)
 	// Register commands
 	err := a.botSrv.RegisterCommands(guild)
 	if err != nil {

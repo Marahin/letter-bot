@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/sirupsen/logrus"
-
 	"spot-assistant/internal/common/collections"
 	stringsHelper "spot-assistant/internal/common/strings"
 	"spot-assistant/internal/core/dto/book"
@@ -40,7 +38,7 @@ func (b *Bot) InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCr
 
 	b.handleCommand(i)
 
-	b.log.WithFields(logrus.Fields{"time": time.Since(tStart)}).Debug("interaction handled")
+	b.log.With("duration", time.Since(tStart)).Debug("interaction handled")
 }
 
 // Service events
@@ -54,6 +52,7 @@ func (b *Bot) Tick() {
 }
 
 func (b *Bot) Book(i *discordgo.InteractionCreate) error {
+	b.log.Info("Book")
 	interaction := i.Interaction
 	tNow := time.Now()
 	gID, err := stringsHelper.StrToInt64(i.GuildID)
@@ -90,7 +89,6 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 		tNow.Year(), tNow.Month(), tNow.Day(), endAt.Hour(), endAt.Minute(), 0, 0, tNow.Location())
 
 	if startAt.Before(tNow) {
-		b.log.Warning("moving startAt to next day, as it's already past the starting point")
 		startAt = startAt.Add(24 * time.Hour)
 		endAt = endAt.Add(24 * time.Hour)
 	}
@@ -114,14 +112,20 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 		Overbook: overbook,
 	}
 
-	var message string
+	tStart := time.Now()
 	response, err := b.eventHandler.OnBook(request)
+	bookLog := b.log.With("duration", time.Since(tStart), "error", err)
+	var message string
 	if err != nil {
+		bookLog.Warn("book request handled")
 		message = b.formatter.FormatBookError(response, err)
 	} else {
+		bookLog.Info("book request handled")
 		message = b.formatter.FormatBookResponse(response)
 	}
 
+	bookLog.Info("followup message sending")
+	b.log.Info("asdfsafsadf")
 	_, err = dcSession.FollowupMessageCreate(interaction, false, &discordgo.WebhookParams{
 		Content: message,
 		AllowedMentions: &discordgo.MessageAllowedMentions{

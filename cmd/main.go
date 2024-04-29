@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"spot-assistant/internal/core/api"
 	"spot-assistant/internal/core/booking"
@@ -26,37 +26,48 @@ func init() {
 }
 
 func main() {
-	logrus.Warningf("Version %s - Starting with TZ: %s", version.Version, time.Now().Location())
+	logger, _ := zap.NewProduction()
+	defer func(logger *zap.Logger) {
+		err := logger.Sync()
+		if err != nil {
+			panic(err)
+		}
+	}(logger) // flushes buffer, if any
+
+	log := logger.Sugar()
+	log.Warn("Version ", version.Version,
+		" - Starting with TZ: ", time.Now().Location())
 	config, err := pgxpool.ParseConfig(postgresql.Dsn())
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 	db, err := pgxpool.NewWithConfig(context.Background(), config)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 	defer db.Close()
 
 	timeout, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	if err := db.Ping(timeout); err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 	cancel()
 
 	// Infrastructure
-	reservationRepo := reservationRepository.NewReservationRepository(db)
+	reservationRepo := reservationRepository.NewReservationRepository(db).WithLogger(log)
 	spotRepo := spotRepository.NewSpotRepository(db)
 	charter := chart.NewAdapter()
 	dcFormatter := formatter.NewFormatter()
-	botService := bot.NewManager().WithFormatter(dcFormatter)
+	botService := bot.NewManager().WithFormatter(dcFormatter).WithLogger(log)
 
 	// Core
-	summaryService := summary.NewAdapter(charter)
-	communicationService := communication.NewAdapter(botService, dcFormatter)
-	bookingService := booking.NewAdapter(spotRepo, reservationRepo)
+	summaryService := summary.NewAdapter(charter) //.WithLogger(log)
+	communicationService := communication.NewAdapter(botService, dcFormatter).WithLogger(log)
+	bookingService := booking.NewAdapter(spotRepo, reservationRepo).WithLogger(log)
 
 	// App
 	app := api.NewApplication().
+		WithLogger(log).
 		WithBot(botService).
 		WithCommunicationService(communicationService).
 		WithReservationRepository(reservationRepo).

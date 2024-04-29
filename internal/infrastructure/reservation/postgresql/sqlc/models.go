@@ -8,6 +8,80 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type AuthGroup struct {
+	ID   int32
+	Name string
+}
+
+type AuthGroupPermission struct {
+	ID           int64
+	GroupID      int32
+	PermissionID int32
+}
+
+type AuthPermission struct {
+	ID            int32
+	Name          string
+	ContentTypeID int32
+	Codename      string
+}
+
+type AuthUser struct {
+	ID          int32
+	Password    string
+	LastLogin   pgtype.Timestamptz
+	IsSuperuser bool
+	Username    string
+	FirstName   string
+	LastName    string
+	Email       string
+	IsStaff     bool
+	IsActive    bool
+	DateJoined  pgtype.Timestamptz
+}
+
+type AuthUserGroup struct {
+	ID      int64
+	UserID  int32
+	GroupID int32
+}
+
+type AuthUserUserPermission struct {
+	ID           int64
+	UserID       int32
+	PermissionID int32
+}
+
+type DjangoAdminLog struct {
+	ID            int32
+	ActionTime    pgtype.Timestamptz
+	ObjectID      pgtype.Text
+	ObjectRepr    string
+	ActionFlag    int16
+	ChangeMessage string
+	ContentTypeID pgtype.Int4
+	UserID        int32
+}
+
+type DjangoContentType struct {
+	ID       int32
+	AppLabel string
+	Model    string
+}
+
+type DjangoMigration struct {
+	ID      int64
+	App     string
+	Name    string
+	Applied pgtype.Timestamptz
+}
+
+type DjangoSession struct {
+	SessionKey  string
+	SessionData string
+	ExpireDate  pgtype.Timestamptz
+}
+
 type WebReservation struct {
 	ID              int64
 	Author          string

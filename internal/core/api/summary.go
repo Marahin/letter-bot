@@ -7,13 +7,11 @@ import (
 	"spot-assistant/internal/common/errors"
 	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/summary"
-
-	"github.com/sirupsen/logrus"
 )
 
 // UpdateGuild makes a full-fledged guild update including summary re-generation.
 func (a *Application) UpdateGuildSummary(guild *discord.Guild) error {
-	log := a.log.WithFields(logrus.Fields{"guild.ID": guild.ID, "guild.Name": guild.Name, "name": "UpdateGuildSummary"})
+	log := a.log.With("guild.ID", guild.ID, "guild.Name", guild.Name, "event", "UpdateGuildSummary")
 
 	// For each guild
 	reservations, err := a.db.SelectUpcomingReservationsWithSpot(
@@ -24,7 +22,7 @@ func (a *Application) UpdateGuildSummary(guild *discord.Guild) error {
 	}
 
 	if len(reservations) == 0 {
-		log.Warning("no reservations for guild, skipping")
+		log.Warn("no reservations for guild, skipping")
 
 		return nil
 	}
@@ -42,7 +40,7 @@ func (a *Application) UpdateGuildSummaryAndLogError(guild *discord.Guild) {
 }
 
 func (a *Application) OnPrivateSummary(request summary.PrivateSummaryRequest) error {
-	log := a.log.WithFields(logrus.Fields{"user.ID": request.UserID, "guild.ID": request.GuildID})
+	log := a.log.With("user.ID", request.UserID, "guild.ID", request.GuildID)
 	log.Debug("OnPrivateSummary")
 
 	res, err := a.db.SelectUpcomingReservationsWithSpot(context.Background(), strconv.FormatInt(request.GuildID, 10))
@@ -51,7 +49,7 @@ func (a *Application) OnPrivateSummary(request summary.PrivateSummaryRequest) er
 	}
 
 	if len(res) == 0 {
-		log.Warning("no reservations to display in DM; skipping")
+		log.Warn("no reservations to display in DM; skipping")
 
 		return nil
 	}

@@ -2,10 +2,10 @@ FROM golang:1.22-alpine
 WORKDIR /app
 COPY ./ /app
 
-RUN apk update && apk add ca-certificates && apk add tzdata && apk add git && apk add make
+RUN apk update && apk add ca-certificates tzdata git make curl
+RUN curl -sSf https://atlasgo.sh | sh
 RUN git config --global --add safe.directory /app
-RUN go install github.com/githubnemo/CompileDaemon@latest
-RUN go mod download
+RUN go install github.com/githubnemo/CompileDaemon@latest && go mod download
 ENV TZ Europe/Berlin
 
-ENTRYPOINT CompileDaemon -include=Makefile -build='make build-only' -command=./spot-assistant-bot
+ENTRYPOINT CompileDaemon -include=Makefile -build='make build-only' -command=./bin/spot-assistant-bot

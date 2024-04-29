@@ -1,21 +1,25 @@
 package booking
 
 import (
+	"go.uber.org/zap"
 	"spot-assistant/internal/ports"
-
-	"github.com/sirupsen/logrus"
 )
 
 type Adapter struct {
 	reservationRepo ports.ReservationRepository
 	spotRepo        ports.SpotRepository
-	log             *logrus.Entry
+	log             *zap.SugaredLogger
 }
 
 func NewAdapter(spotRepo ports.SpotRepository, reservationRepo ports.ReservationRepository) *Adapter {
 	return &Adapter{
-		log:             logrus.WithFields(logrus.Fields{"type": "core", "name": "booking"}),
 		spotRepo:        spotRepo,
 		reservationRepo: reservationRepo,
+		log:             zap.NewNop().Sugar(),
 	}
+}
+
+func (a *Adapter) WithLogger(log *zap.SugaredLogger) *Adapter {
+	a.log = log.With("layer", "core", "name", "bookingService")
+	return a
 }

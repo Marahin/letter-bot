@@ -10,8 +10,6 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/sirupsen/logrus"
-
 	"spot-assistant/internal/common/collections"
 	stringsHelper "spot-assistant/internal/common/strings"
 	"spot-assistant/internal/core/dto/discord"
@@ -33,7 +31,7 @@ func (b *Bot) ticker() {
 	for {
 		select {
 		case <-b.quit:
-			b.log.Warning("shutting down bot ticker")
+			b.log.Warn("shutting down bot ticker")
 			ticker.Stop()
 			return
 		case <-ticker.C:
@@ -75,7 +73,6 @@ func (b *Bot) CleanChannel(g *discord.Guild, channel *discord.Channel) error {
 }
 
 func (b *Bot) EnsureChannel(guild *discord.Guild) error {
-	log := logrus.WithFields(logrus.Fields{"type": "infra"})
 	letterSummaryChannelFound := false
 	letterChannelFound := false
 
@@ -99,7 +96,6 @@ func (b *Bot) EnsureChannel(guild *discord.Guild) error {
 			letterChannelFound = true
 		}
 	}
-	log.WithFields(logrus.Fields{"summaryFound": letterSummaryChannelFound, "letterFound": letterChannelFound})
 
 	if !letterSummaryChannelFound {
 		_, err := b.mgr.Gateway.GuildChannelCreate(g.ID, discord.SummaryChannel, discordgo.ChannelTypeGuildText)
@@ -184,7 +180,7 @@ func (b *Bot) GetGuilds() []*discord.Guild {
 		for _, poorGuild := range shard.Session.State.Guilds {
 			guild, err := shard.Session.Guild(poorGuild.ID)
 			if err != nil {
-				b.log.WithFields(logrus.Fields{"guild.ID": guild.ID}).Errorf("could not download guild data: %s", err)
+				b.log.With("guild.ID", guild.ID).Errorf("could not download guild data: %s", err)
 
 				continue
 			}

@@ -1,22 +1,21 @@
 package summary
 
 import (
-	"github.com/sirupsen/logrus"
-
 	"spot-assistant/internal/ports"
 )
 
 type Adapter struct {
 	service ports.ChartAdapter
-	log     *logrus.Entry
+	//log     *zap.SugaredLogger
 }
 
 func NewAdapter(srv ports.ChartAdapter) *Adapter {
 	return &Adapter{
 		service: srv,
-		log: logrus.WithFields(logrus.Fields{
-			"type": "core",
-			"name": "summary",
-		}),
 	}
 }
+
+//func (a *Adapter) WithLogger(log *zap.SugaredLogger) *Adapter {
+//	a.log = log.With("layer", "infrastructure", "name", "summaryService")
+//	return a
+//}
