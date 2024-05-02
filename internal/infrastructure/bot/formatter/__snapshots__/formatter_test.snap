@@ -1,0 +1,42 @@
+
+[TestDiscordFormatter_FormatGenericError - 1]
+Sorry, but something went wrong. If you require support, join TibiaLoot.com Discord: https://discord.gg/F4YKgsnzmc 
+Error message:
+```
+test error
+```
+---
+
+[TestDiscordFormatter_FormatUnbookResponse - 1]
+sample-spot-name (2021-01-01 00:00 - 2021-01-01 02:00) reservation has been cancelled.
+---
+
+[TestDiscordFormatter_FormatBookError - 1]
+Sorry, but something went wrong. If you require support, join TibiaLoot.com Discord: https://discord.gg/F4YKgsnzmc 
+Error message:
+```
+test error
+```
+Following reservations are conflicting:
+
+* **sample-author** 2021-01-01 00:00 - 2021-01-01 02:00
+
+---
+
+[TestDiscordFormatter_FormatUnbookResponse1 - 1]
+test-spot (2021-01-01 00:00 - 2021-01-01 02:00) reservation has been cancelled.
+---
+
+[TestDiscordFormatter_FormatBookResponse - 1]
+<@!test-id> booked **test-spot** between 2021-01-01 00:00 and 2021-01-01 02:00.
+
+Following reservations are conflicting **and have been shortened or removed**:
+
+* <@!> had their reservation clipped to: **2021-01-01 00:00 - 2021-01-01 01:30** (originally: 2021-01-01 00:00 - 2021-01-01 02:00)
+
+---
+
+[TestDiscordFormatter_FormatOverbookedMemberNotification - 1]
+Your reservation was overbooked by <@!test-id>
+* <@!test-id>  has been clipped to: 2021-01-01 00:00 - 2021-01-01 01:10, 2021-01-01 01:30 - 2021-01-01 02:00
+---

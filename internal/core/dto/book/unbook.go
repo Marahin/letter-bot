@@ -1,13 +1,14 @@
 package book
 
 import (
-	"spot-assistant/internal/core/dto/discord"
+	"spot-assistant/internal/core/dto/guild"
+	"spot-assistant/internal/core/dto/member"
 	"spot-assistant/internal/core/dto/reservation"
 )
 
 type UnbookAutocompleteRequest struct {
-	Member *discord.Member
-	Guild  *discord.Guild
+	Member *member.Member
+	Guild  *guild.Guild
 	Value  string
 }
 
@@ -21,7 +22,7 @@ type UnbookAutocompleteResponse struct {
 }
 
 type UnbookRequest struct {
-	Member        *discord.Member
-	Guild         *discord.Guild
+	Member        *member.Member
+	Guild         *guild.Guild
 	ReservationID int64
 }

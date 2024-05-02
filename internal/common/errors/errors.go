@@ -3,7 +3,7 @@ package errors
 import (
 	"context"
 
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 )
 
 type LogEntry interface {
@@ -28,7 +28,7 @@ func LogError(log LogEntry, err error) {
 // do not care about the error message at all, such as the case
 // of `defer tx.Rollback(ctx)`: https://stackoverflow.com/a/62533516
 func IgnoreError(err error) {
-	logrus.Debugf("IgnoreError: %s", err)
+	zap.S().Debugf("IgnoreError: %s", err)
 }
 
 // This is for case of `tx.Rollback(ctx)` in defer.

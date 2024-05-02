@@ -2,8 +2,9 @@ package formatter
 
 import (
 	"fmt"
-	"spot-assistant/internal/core/dto/discord"
 	"strings"
+
+	"spot-assistant/internal/core/dto/member"
 
 	"spot-assistant/internal/common/collections"
 	stringsHelper "spot-assistant/internal/common/strings"
@@ -52,10 +53,10 @@ func (f *DiscordFormatter) FormatBookResponse(response book.BookResponse) string
 
 	message.WriteString(fmt.Sprintf(
 		"<@!%s> booked **%s** between %s and %s.\n\n",
-		response.Member.ID,
-		response.Spot,
-		response.StartAt.Format("2006-01-02 15:04"),
-		response.EndAt.Format("2006-01-02 15:04"),
+		response.Request.Member.ID,
+		response.Request.Spot,
+		response.Request.StartAt.Format("2006-01-02 15:04"),
+		response.Request.EndAt.Format("2006-01-02 15:04"),
 	))
 
 	if len(response.ConflictingReservations) > 0 { // We have overbooked
@@ -88,9 +89,11 @@ func (f *DiscordFormatter) FormatBookResponse(response book.BookResponse) string
 	return message.String()
 }
 
-func (f *DiscordFormatter) FormatOverbookedMemberNotification(member *discord.Member,
+func (f *DiscordFormatter) FormatOverbookedMemberNotification(
+	member *member.Member,
 	request book.BookRequest,
-	res *reservation.ClippedOrRemovedReservation) string {
+	res *reservation.ClippedOrRemovedReservation,
+) string {
 	var msgBody strings.Builder
 	msgBody.WriteString(fmt.Sprintf(
 		"Your reservation was overbooked by %s\n",

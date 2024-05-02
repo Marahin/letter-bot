@@ -7,9 +7,12 @@ import (
 	"strings"
 	"time"
 
+	"spot-assistant/internal/core/dto/book"
+	"spot-assistant/internal/core/dto/guild"
+	"spot-assistant/internal/core/dto/member"
+
 	"spot-assistant/internal/common/collections"
 	stringsHelper "spot-assistant/internal/common/strings"
-	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/spot"
 )
@@ -76,7 +79,14 @@ func (a *Adapter) GetSuggestedHours(baseTime time.Time, filter string) []string 
 	return suggestedOptions
 }
 
-func (a *Adapter) Book(member *discord.Member, guild *discord.Guild, spotName string, startAt time.Time, endAt time.Time, overbook bool, hasPermissions bool) ([]*reservation.ClippedOrRemovedReservation, error) {
+func (a *Adapter) Book(request book.BookRequest) ([]*reservation.ClippedOrRemovedReservation, error) {
+	spotName := request.Spot
+	member := request.Member
+	startAt := request.StartAt
+	endAt := request.EndAt
+	overbook := request.Overbook
+	hasPermissions := request.HasPermissions
+	guild := request.Guild
 	a.log.With(
 		"spot", spotName,
 		"member.id", member.ID,
@@ -142,10 +152,15 @@ func (a *Adapter) Book(member *discord.Member, guild *discord.Guild, spotName st
 		return nil, fmt.Errorf("could not create the reservation: %w", err)
 	}
 
+	for _, res := range res {
+		res := res
+		go a.commSrv.NotifyOverbookedMember(request, res)
+	}
+
 	return res, nil
 }
 
-func (a *Adapter) UnbookAutocomplete(g *discord.Guild, m *discord.Member, filter string) ([]*reservation.ReservationWithSpot, error) {
+func (a *Adapter) UnbookAutocomplete(g *guild.Guild, m *member.Member, filter string) ([]*reservation.ReservationWithSpot, error) {
 	// Get reservations with end_date >= time.Now()
 	// a.reservationRepo.SelectUpcomingReservationsWithSpot(context.Background(), g.ID)
 	reservations, err := a.reservationRepo.SelectUpcomingMemberReservationsWithSpots(context.Background(), g, m)
@@ -168,7 +183,7 @@ func (a *Adapter) UnbookAutocomplete(g *discord.Guild, m *discord.Member, filter
 	return reservations, nil
 }
 
-func (a *Adapter) Unbook(g *discord.Guild, m *discord.Member, reservationId int64) (*reservation.ReservationWithSpot, error) {
+func (a *Adapter) Unbook(g *guild.Guild, m *member.Member, reservationId int64) (*reservation.ReservationWithSpot, error) {
 
 	// Get non-expired reservation for guild + member + reservation
 	// Remove it

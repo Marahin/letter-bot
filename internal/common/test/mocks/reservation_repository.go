@@ -2,11 +2,12 @@ package mocks
 
 import (
 	"context"
+	"spot-assistant/internal/core/dto/guild"
+	"spot-assistant/internal/core/dto/member"
 	"time"
 
 	"github.com/stretchr/testify/mock"
 
-	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/reservation"
 )
 
@@ -30,21 +31,21 @@ func (a *MockReservationRepo) SelectOverlappingReservations(ctx context.Context,
 	return args.Get(0).([]*reservation.Reservation), args.Error(1)
 }
 
-func (a *MockReservationRepo) CreateAndDeleteConflicting(ctx context.Context, member *discord.Member, guild *discord.Guild, conflicts []*reservation.Reservation, spotId int64, startAt time.Time, endAt time.Time) ([]*reservation.ClippedOrRemovedReservation, error) {
+func (a *MockReservationRepo) CreateAndDeleteConflicting(ctx context.Context, member *member.Member, guild *guild.Guild, conflicts []*reservation.Reservation, spotId int64, startAt time.Time, endAt time.Time) ([]*reservation.ClippedOrRemovedReservation, error) {
 	args := a.Called(ctx, member, guild, conflicts, spotId, startAt, endAt)
 
 	return args.Get(0).([]*reservation.ClippedOrRemovedReservation), args.Error(1)
 
 }
 
-func (a *MockReservationRepo) SelectUpcomingMemberReservationsWithSpots(ctx context.Context, guild *discord.Guild, member *discord.Member) ([]*reservation.ReservationWithSpot, error) {
+func (a *MockReservationRepo) SelectUpcomingMemberReservationsWithSpots(ctx context.Context, guild *guild.Guild, member *member.Member) ([]*reservation.ReservationWithSpot, error) {
 	args := a.Called(ctx, guild, member)
 
 	return args.Get(0).([]*reservation.ReservationWithSpot), args.Error(1)
 
 }
 
-func (a *MockReservationRepo) DeletePresentMemberReservation(ctx context.Context, g *discord.Guild, m *discord.Member, reservationId int64) error {
+func (a *MockReservationRepo) DeletePresentMemberReservation(ctx context.Context, g *guild.Guild, m *member.Member, reservationId int64) error {
 	args := a.Called(ctx, g, m, reservationId)
 
 	return args.Error(0)

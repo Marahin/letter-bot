@@ -19,7 +19,30 @@ System events that are initialized by Discord.
 
 func (b *Bot) GuildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
 	b.log.Debug("GuildCreate")
+	guild := MapGuild(g.Guild)
+	// Register commands
+	err := b.RegisterCommands(guild)
+	if err != nil {
+		b.log.Errorf("could not overwrite commands: %s", err)
 
+		return
+	}
+	//
+	err = b.EnsureChannel(guild)
+	if err != nil {
+		b.log.Errorf("could not ensure channels: %s", err)
+
+		return
+	}
+	//
+	err = b.EnsureRoles(guild)
+	if err != nil {
+		b.log.Errorf("could not ensure roles: %s", err)
+
+		return
+	}
+
+	go b.TryUpdateGuildLetter(guild)
 	defer b.eventHandler.OnGuildCreate(MapGuild(g.Guild))
 }
 
@@ -41,12 +64,14 @@ func (b *Bot) InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCr
 	b.log.With("duration", time.Since(tStart)).Debug("interaction handled")
 }
 
-// Service events
-// Events that are sent by tickers or our custom integrations,
-// such as commands.
-
 func (b *Bot) Tick() {
 	b.log.Debug("Tick")
+
+	guilds := b.GetGuilds()
+	for _, guild := range guilds {
+		guild := guild
+		go b.TryUpdateGuildLetter(guild)
+	}
 
 	defer b.eventHandler.OnTick()
 }
@@ -117,15 +142,13 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 	bookLog := b.log.With("duration", time.Since(tStart), "error", err)
 	var message string
 	if err != nil {
-		bookLog.Warn("book request handled")
 		message = b.formatter.FormatBookError(response, err)
 	} else {
-		bookLog.Info("book request handled")
+		go b.TryUpdateGuildLetter(guild)
 		message = b.formatter.FormatBookResponse(response)
 	}
 
-	bookLog.Info("followup message sending")
-	b.log.Info("asdfsafsadf")
+	bookLog.Info("booking request handled")
 	_, err = dcSession.FollowupMessageCreate(interaction, false, &discordgo.WebhookParams{
 		Content: message,
 		AllowedMentions: &discordgo.MessageAllowedMentions{
@@ -186,6 +209,8 @@ func (b *Bot) Unbook(i *discordgo.InteractionCreate) error {
 	if err != nil {
 		return err
 	}
+
+	go b.TryUpdateGuildLetter(guild)
 
 	_, err = b.mgr.SessionForGuild(gID).FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
 		Content: b.formatter.FormatUnbookResponse(res),

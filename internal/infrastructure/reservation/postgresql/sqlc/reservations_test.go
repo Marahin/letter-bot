@@ -2,6 +2,8 @@ package sqlc
 
 import (
 	"context"
+	"spot-assistant/internal/core/dto/guild"
+	"spot-assistant/internal/core/dto/member"
 	"testing"
 	"time"
 
@@ -10,7 +12,6 @@ import (
 
 	"spot-assistant/internal/common/collections"
 	"spot-assistant/internal/common/test/mocks"
-	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/reservation"
 )
 
@@ -24,12 +25,12 @@ func newReservationRows() *pgxmock.Rows {
 func TestCreateAndDeleteConflictingWithNoConflicting(t *testing.T) {
 	// given
 	assert := assert.New(t)
-	testMember := &discord.Member{
+	testMember := &member.Member{
 		ID:       "test-member-id",
 		Username: "test-member-username",
 		Nick:     "test-member-nick",
 	}
-	testGuild := &discord.Guild{
+	testGuild := &guild.Guild{
 		ID:   "test-guild-id",
 		Name: "test-guild-name",
 	}
@@ -65,17 +66,17 @@ func TestCreateAndDeleteConflictingWithNoConflicting(t *testing.T) {
 func TestCreateAndDeleteConflictingWithOneConflicting(t *testing.T) {
 	// given
 	assert := assert.New(t)
-	testMember := &discord.Member{
+	testMember := &member.Member{
 		ID:       "test-member-id",
 		Username: "test-member-username",
 		Nick:     "test-member-nick",
 	}
-	testMember2 := &discord.Member{
+	testMember2 := &member.Member{
 		ID:       "test-member-id-2",
 		Username: "test-member-username-2",
 		Nick:     "test-member-nick-2",
 	}
-	testGuild := &discord.Guild{
+	testGuild := &guild.Guild{
 		ID:   "test-guild-id",
 		Name: "test-guild-name",
 	}
@@ -144,22 +145,22 @@ func TestCreateAndDeleteConflictingWithOneConflicting(t *testing.T) {
 func TestCreateAndDeleteConflictingWithTwoConflicting(t *testing.T) {
 	// given
 	assert := assert.New(t)
-	testMember := &discord.Member{
+	testMember := &member.Member{
 		ID:       "test-member-id",
 		Username: "test-member-username",
 		Nick:     "test-member-nick",
 	}
-	testMember2 := &discord.Member{
+	testMember2 := &member.Member{
 		ID:       "test-member-id-2",
 		Username: "test-member-username-2",
 		Nick:     "test-member-nick-2",
 	}
-	testMember3 := &discord.Member{
+	testMember3 := &member.Member{
 		ID:       "test-member-id-3",
 		Username: "test-member-username-3",
 		Nick:     "test-member-nick-3",
 	}
-	testGuild := &discord.Guild{
+	testGuild := &guild.Guild{
 		ID:   "test-guild-id",
 		Name: "test-guild-name",
 	}
@@ -236,17 +237,17 @@ func TestCreateAndDeleteConflictingWithTwoConflicting(t *testing.T) {
 func TestCreateAndDeleteConflictingWithTwoConflictingButSecondOneFromTheSameAuthorAsNewReservation(t *testing.T) {
 	// given
 	assert := assert.New(t)
-	testMember := &discord.Member{
+	testMember := &member.Member{
 		ID:       "test-member-id",
 		Username: "test-member-username",
 		Nick:     "test-member-nick",
 	}
-	testMember2 := &discord.Member{
+	testMember2 := &member.Member{
 		ID:       "test-member-id-2",
 		Username: "test-member-username-2",
 		Nick:     "test-member-nick-2",
 	}
-	testGuild := &discord.Guild{
+	testGuild := &guild.Guild{
 		ID:   "test-guild-id",
 		Name: "test-guild-name",
 	}

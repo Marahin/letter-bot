@@ -2,6 +2,7 @@ package bot
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"sync"
@@ -23,12 +24,14 @@ type cfg struct {
 }
 
 type Bot struct {
-	eventHandler ports.APIPort
-	mgr          *shards.Manager
-	log          *zap.SugaredLogger
-	quit         chan struct{}
-	formatter    *formatter.DiscordFormatter
-	channelLocks cmap.ConcurrentMap[string, *sync.RWMutex]
+	summarySrv      ports.SummaryService
+	reservationRepo ports.ReservationRepository
+	eventHandler    ports.APIPort
+	mgr             *shards.Manager
+	log             *zap.SugaredLogger
+	quit            chan struct{}
+	formatter       *formatter.DiscordFormatter
+	channelLocks    cmap.ConcurrentMap[string, *sync.RWMutex]
 }
 
 var (
@@ -39,19 +42,19 @@ func init() {
 	envconfig.MustProcess("bot", &Config)
 }
 
-func NewManager() *Bot {
-	// Create a new shard manager using the provided bot token.
+func NewManager(summarySrv ports.SummaryService, reservationRepo ports.ReservationRepository) *Bot {
 	mgr, err := shards.New("Bot " + Config.Token)
 	if err != nil {
 		panic(fmt.Errorf("could not create shards manager, %w", err))
 	}
 
 	mgr.Intent = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages | discordgo.IntentsGuildVoiceStates
-
 	bot := &Bot{
-		mgr:          mgr,
-		quit:         make(chan struct{}),
-		channelLocks: cmap.New[*sync.RWMutex](),
+		mgr:             mgr,
+		quit:            make(chan struct{}),
+		channelLocks:    cmap.New[*sync.RWMutex](),
+		summarySrv:      summarySrv,
+		reservationRepo: reservationRepo,
 	}
 
 	bot.mgr.AddHandler(bot.GuildCreate)
@@ -59,6 +62,9 @@ func NewManager() *Bot {
 	bot.mgr.AddHandler(bot.InteractionCreate)
 
 	return bot
+}
+
+func (b *Bot) WithHttpClient(client *http.Client) {
 }
 
 func (b *Bot) WithFormatter(formatter *formatter.DiscordFormatter) *Bot {
@@ -70,8 +76,11 @@ func (b *Bot) WithFormatter(formatter *formatter.DiscordFormatter) *Bot {
 // WithEVentHandler sets bot's event handler to the provided port
 func (b *Bot) WithEventHandler(port ports.APIPort) ports.BotPort {
 	b.eventHandler = port
-
 	return b
+}
+
+func (b *Bot) setHttpClient(client *http.Client) {
+	b.mgr.Gateway.Client = client
 }
 
 func (b *Bot) WithLogger(log *zap.SugaredLogger) *Bot {

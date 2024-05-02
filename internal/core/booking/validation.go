@@ -2,10 +2,10 @@ package booking
 
 import (
 	"errors"
+	"spot-assistant/internal/core/dto/member"
 	"time"
 
 	"spot-assistant/internal/common/collections"
-	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/reservation"
 )
 
@@ -19,7 +19,7 @@ func validateHuntLength(t time.Duration) error {
 	return nil
 }
 
-func validateNoSelfOverbook(member *discord.Member, conflictingReservations []*reservation.Reservation) error {
+func validateNoSelfOverbook(member *member.Member, conflictingReservations []*reservation.Reservation) error {
 	authorsConflictingReservations, _ := collections.PoorMansFind(conflictingReservations, func(r *reservation.Reservation) bool {
 		return r.AuthorDiscordID == member.ID
 	})

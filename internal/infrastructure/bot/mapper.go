@@ -2,6 +2,9 @@ package bot
 
 import (
 	"fmt"
+	"spot-assistant/internal/core/dto/guild"
+	"spot-assistant/internal/core/dto/member"
+	"spot-assistant/internal/core/dto/role"
 	"strconv"
 
 	"github.com/bwmarrin/discordgo"
@@ -19,16 +22,16 @@ func MapChannel(input *discordgo.Channel) *discord.Channel {
 	}
 }
 
-func mapRole(input *discordgo.Role) *discord.Role {
-	return &discord.Role{
+func mapRole(input *discordgo.Role) *role.Role {
+	return &role.Role{
 		ID:          input.ID,
 		Name:        input.Name,
 		Permissions: input.Permissions,
 	}
 }
 
-func MapRoles(input []*discordgo.Role) []*discord.Role {
-	roles := make([]*discord.Role, len(input))
+func MapRoles(input []*discordgo.Role) []*role.Role {
+	roles := make([]*role.Role, len(input))
 
 	for i, role := range input {
 		roles[i] = mapRole(role)
@@ -37,16 +40,16 @@ func MapRoles(input []*discordgo.Role) []*discord.Role {
 	return roles
 }
 
-func MapGuild(input *discordgo.Guild) *discord.Guild {
-	return &discord.Guild{
+func MapGuild(input *discordgo.Guild) *guild.Guild {
+	return &guild.Guild{
 		Roles: MapRoles(input.Roles),
 		ID:    input.ID,
 		Name:  input.Name,
 	}
 }
 
-func MapGuilds(input []*discordgo.Guild) []*discord.Guild {
-	guilds := make([]*discord.Guild, len(input))
+func MapGuilds(input []*discordgo.Guild) []*guild.Guild {
+	guilds := make([]*guild.Guild, len(input))
 	for i, guild := range input {
 		guilds[i] = MapGuild(guild)
 	}
@@ -65,12 +68,12 @@ func MapUser(input *discordgo.User) *discord.User {
 	}
 }
 
-func MapMember(input *discordgo.Member) *discord.Member {
+func MapMember(input *discordgo.Member) *member.Member {
 	if input == nil {
 		return nil
 	}
 
-	return &discord.Member{
+	return &member.Member{
 		ID:       input.User.ID,
 		Nick:     input.Nick,
 		Username: input.User.Username,

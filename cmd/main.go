@@ -7,7 +7,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
-	"spot-assistant/internal/core/api"
 	"spot-assistant/internal/core/booking"
 	"spot-assistant/internal/core/communication"
 	"spot-assistant/internal/core/summary"
@@ -18,14 +17,13 @@ import (
 	"spot-assistant/internal/infrastructure/bot/formatter"
 	"spot-assistant/internal/infrastructure/chart"
 	"spot-assistant/internal/infrastructure/db/postgresql"
+	"spot-assistant/internal/infrastructure/eventhandler"
 	reservationRepository "spot-assistant/internal/infrastructure/reservation/postgresql/sqlc"
 	spotRepository "spot-assistant/internal/infrastructure/spot/postgresql/sqlc"
 )
 
-func init() {
-}
-
 func main() {
+	// Logger setup
 	logger, _ := zap.NewProduction()
 	defer func(logger *zap.Logger) {
 		err := logger.Sync()
@@ -33,10 +31,11 @@ func main() {
 			panic(err)
 		}
 	}(logger) // flushes buffer, if any
-
 	log := logger.Sugar()
 	log.Warn("Version ", version.Version,
 		" - Starting with TZ: ", time.Now().Location())
+
+	// Database
 	config, err := pgxpool.ParseConfig(postgresql.Dsn())
 	if err != nil {
 		log.Panic(err)
@@ -46,35 +45,29 @@ func main() {
 		log.Panic(err)
 	}
 	defer db.Close()
-
 	timeout, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	if err := db.Ping(timeout); err != nil {
 		log.Panic(err)
 	}
 	cancel()
 
+	// Summary
+	charter := chart.NewAdapter()
+	summaryService := summary.NewAdapter(charter) // .WithLogger(log)
+
 	// Infrastructure
 	reservationRepo := reservationRepository.NewReservationRepository(db).WithLogger(log)
 	spotRepo := spotRepository.NewSpotRepository(db)
-	charter := chart.NewAdapter()
+
+	// Discord
 	dcFormatter := formatter.NewFormatter()
-	botService := bot.NewManager().WithFormatter(dcFormatter).WithLogger(log)
+	botService := bot.NewManager(summaryService, reservationRepo).WithFormatter(dcFormatter).WithLogger(log)
+	communicationService := communication.NewAdapter(botService, botService).WithLogger(log)
 
-	// Core
-	summaryService := summary.NewAdapter(charter) //.WithLogger(log)
-	communicationService := communication.NewAdapter(botService, dcFormatter).WithLogger(log)
-	bookingService := booking.NewAdapter(spotRepo, reservationRepo).WithLogger(log)
-
-	// App
-	app := api.NewApplication().
-		WithLogger(log).
-		WithBot(botService).
-		WithCommunicationService(communicationService).
-		WithReservationRepository(reservationRepo).
-		WithSummaryService(summaryService).
-		WithBookingService(bookingService)
-
-	err = app.Run()
+	// Bot
+	bookingService := booking.NewAdapter(spotRepo, reservationRepo, communicationService).WithLogger(log)
+	eventHandler := eventhandler.NewHandler(bookingService, reservationRepo, communicationService, summaryService)
+	err = botService.WithEventHandler(eventHandler).Run()
 	if err != nil {
 		panic(err)
 	}

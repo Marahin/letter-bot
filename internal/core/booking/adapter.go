@@ -8,13 +8,15 @@ import (
 type Adapter struct {
 	reservationRepo ports.ReservationRepository
 	spotRepo        ports.SpotRepository
+	commSrv         ports.CommunicationService
 	log             *zap.SugaredLogger
 }
 
-func NewAdapter(spotRepo ports.SpotRepository, reservationRepo ports.ReservationRepository) *Adapter {
+func NewAdapter(spotRepo ports.SpotRepository, reservationRepo ports.ReservationRepository, commSrv ports.CommunicationService) *Adapter {
 	return &Adapter{
 		spotRepo:        spotRepo,
 		reservationRepo: reservationRepo,
+		commSrv:         commSrv,
 		log:             zap.NewNop().Sugar(),
 	}
 }

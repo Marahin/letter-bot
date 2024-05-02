@@ -3,12 +3,13 @@ package sqlc
 import (
 	"context"
 	"go.uber.org/zap"
+	"spot-assistant/internal/core/dto/guild"
+	"spot-assistant/internal/core/dto/member"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"spot-assistant/internal/common/errors"
-	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/reservation"
 )
 
@@ -143,7 +144,7 @@ func (t *ReservationRepository) SelectOverlappingReservations(ctx context.Contex
 	return reservations, nil
 }
 
-func (t *ReservationRepository) CreateAndDeleteConflicting(ctx context.Context, member *discord.Member, guild *discord.Guild, conflicts []*reservation.Reservation, spotId int64, startAt time.Time, endAt time.Time) ([]*reservation.ClippedOrRemovedReservation, error) {
+func (t *ReservationRepository) CreateAndDeleteConflicting(ctx context.Context, member *member.Member, guild *guild.Guild, conflicts []*reservation.Reservation, spotId int64, startAt time.Time, endAt time.Time) ([]*reservation.ClippedOrRemovedReservation, error) {
 	modifiedConflicts := make([]*reservation.ClippedOrRemovedReservation, len(conflicts))
 	tx, err := t.db.Begin(ctx)
 	if err != nil {
@@ -219,7 +220,7 @@ func (t *ReservationRepository) CreateAndDeleteConflicting(ctx context.Context, 
 	return modifiedConflicts, tx.Commit(ctx)
 }
 
-func (t *ReservationRepository) SelectUpcomingMemberReservationsWithSpots(ctx context.Context, guild *discord.Guild, member *discord.Member) ([]*reservation.ReservationWithSpot, error) {
+func (t *ReservationRepository) SelectUpcomingMemberReservationsWithSpots(ctx context.Context, guild *guild.Guild, member *member.Member) ([]*reservation.ReservationWithSpot, error) {
 	res, err := t.q.SelectUpcomingMemberReservationsWithSpots(ctx, SelectUpcomingMemberReservationsWithSpotsParams{
 		GuildID:         guild.ID,
 		AuthorDiscordID: member.ID,
@@ -251,7 +252,7 @@ func (t *ReservationRepository) SelectUpcomingMemberReservationsWithSpots(ctx co
 	return reservations, nil
 }
 
-func (t *ReservationRepository) DeletePresentMemberReservation(ctx context.Context, g *discord.Guild, m *discord.Member, reservationId int64) error {
+func (t *ReservationRepository) DeletePresentMemberReservation(ctx context.Context, g *guild.Guild, m *member.Member, reservationId int64) error {
 	err := t.q.DeletePresentMemberReservation(ctx, DeletePresentMemberReservationParams{
 		GuildID:         g.ID,
 		AuthorDiscordID: m.ID,

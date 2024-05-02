@@ -3,7 +3,9 @@ package book
 import (
 	"time"
 
-	"spot-assistant/internal/core/dto/discord"
+	"spot-assistant/internal/core/dto/guild"
+	"spot-assistant/internal/core/dto/member"
+
 	"spot-assistant/internal/core/dto/reservation"
 )
 
@@ -27,22 +29,18 @@ type BookAutocompleteResponse []string
 
 // Booking request
 type BookRequest struct {
-	*discord.Guild
-	*discord.Member
+	*guild.Guild
+	*member.Member
 
-	Spot     string
-	StartAt  time.Time
-	EndAt    time.Time
-	Overbook bool
+	Spot           string
+	StartAt        time.Time
+	EndAt          time.Time
+	Overbook       bool
+	HasPermissions bool
 }
 
 type BookResponse struct {
-	Member  *discord.Member
-	Spot    string
-	StartAt time.Time
-	EndAt   time.Time
+	Request *BookRequest
 
 	ConflictingReservations []*reservation.ClippedOrRemovedReservation
-	Overbook                bool
-	HasPermissions          bool
 }
