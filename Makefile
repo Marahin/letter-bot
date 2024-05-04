@@ -30,7 +30,7 @@ sqlc-diff:
 
 test: install-dependencies sqlc-diff go-vet gocyclo
 	@echo "INFO: Running tests"
-	@go test -race -coverprofile=coverage.out ./...
+	@go test -cover -race -coverprofile=coverage.out ./...
 
 test-coverage: test
 	@echo "INFO: Generating test coverage report"

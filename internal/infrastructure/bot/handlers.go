@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+
 	"spot-assistant/internal/common/collections"
 	stringsHelper "spot-assistant/internal/common/strings"
 	"spot-assistant/internal/core/dto/book"
@@ -90,23 +91,23 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 	overbook := false
 	switch len(i.ApplicationCommandData().Options) {
 	case 4:
-		if i.ApplicationCommandData().Options[3].StringValue() == "true" {
-			overbook = true
-		}
+		overbook = i.ApplicationCommandData().Options[3].BoolValue()
 	case 3:
 		break
 	default:
 		return errors.New("book command requires 3 arguments")
 	}
 
-	startAt, err := time.Parse(stringsHelper.DcTimeFormat, i.ApplicationCommandData().Options[1].StringValue())
+	startAtStr := sanitizeTimeFormat(i.ApplicationCommandData().Options[1].StringValue())
+	startAt, err := time.Parse(stringsHelper.DcTimeFormat, startAtStr)
 	if err != nil {
 		return err
 	}
 	startAt = time.Date(
 		tNow.Year(), tNow.Month(), tNow.Day(), startAt.Hour(), startAt.Minute(), 0, 0, tNow.Location())
 
-	endAt, err := time.Parse(stringsHelper.DcTimeFormat, i.ApplicationCommandData().Options[2].StringValue())
+	endAtStr := sanitizeTimeFormat(i.ApplicationCommandData().Options[2].StringValue())
+	endAt, err := time.Parse(stringsHelper.DcTimeFormat, endAtStr)
 	if err != nil {
 		return err
 	}

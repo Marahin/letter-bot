@@ -1,9 +1,11 @@
 package mocks
 
 import (
+	"time"
+
+	"spot-assistant/internal/core/dto/book"
 	"spot-assistant/internal/core/dto/guild"
 	"spot-assistant/internal/core/dto/member"
-	"time"
 
 	"github.com/stretchr/testify/mock"
 
@@ -14,8 +16,8 @@ type MockBookingService struct {
 	mock.Mock
 }
 
-func (a *MockBookingService) Book(m *member.Member, g *guild.Guild, spotName string, startAt time.Time, endAt time.Time, overbook bool, hasPermissions bool) ([]*reservation.ClippedOrRemovedReservation, error) {
-	args := a.Called(m, g, spotName, startAt, endAt, overbook, hasPermissions)
+func (a *MockBookingService) Book(request book.BookRequest) ([]*reservation.ClippedOrRemovedReservation, error) {
+	args := a.Called(request)
 
 	return args.Get(0).([]*reservation.ClippedOrRemovedReservation), args.Error(1)
 }
