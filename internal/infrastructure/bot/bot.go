@@ -79,10 +79,6 @@ func (b *Bot) WithEventHandler(port ports.APIPort) ports.BotPort {
 	return b
 }
 
-func (b *Bot) setHttpClient(client *http.Client) {
-	b.mgr.Gateway.Client = client
-}
-
 func (b *Bot) WithLogger(log *zap.SugaredLogger) *Bot {
 	b.log = log.With("layer", "infrastructure", "name", "bot")
 

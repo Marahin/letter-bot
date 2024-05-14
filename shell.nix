@@ -1,5 +1,12 @@
-{ pkgs ? import <nixpkgs> {} }: with pkgs;
-mkShell {
-  buildInputs = [ go_1_22 jetbrains.goland atlas ];
+{ pkgs ? import <nixpkgs> { } }:
+let
+  unstable = import <unstable> { };
+in
+pkgs.mkShell {
+  buildInputs = [
+    unstable.go_1_22
+    unstable.jetbrains.goland
+    pkgs.atlas
+  ];
   hardeningDisable = [ "fortify" ];
 }
