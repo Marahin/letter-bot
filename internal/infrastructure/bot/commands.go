@@ -2,7 +2,6 @@ package bot
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"spot-assistant/internal/common/strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -12,7 +11,7 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 	var err error
 	name := i.ApplicationCommandData().Name
 	isAutocomplete := i.Type == discordgo.InteractionApplicationCommandAutocomplete
-	log := b.log.WithFields(logrus.Fields{"name": name, "isAutocomplete": isAutocomplete})
+	log := b.log.With("interaction_name", name, "isAutocomplete", isAutocomplete)
 
 	if !isAutocomplete {
 		err = b.interactionRespond(i, &discordgo.InteractionResponseData{}, discordgo.InteractionResponseDeferredChannelMessageWithSource)
@@ -47,7 +46,7 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 
 		if !isAutocomplete {
 			webhookParams := &discordgo.WebhookParams{
-				Content: b.dcErrorMsg(err),
+				Content: b.formatter.FormatGenericError(err),
 			}
 
 			gID, err := strings.StrToInt64(i.GuildID)

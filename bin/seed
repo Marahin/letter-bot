@@ -1,0 +1,2 @@
+psql -U ${DATABASE_USER} \
+     -h 127.0.0.1 -d ${DATABASE_NAME} < internal/infrastructure/db/postgresql/seeds/spots.sql

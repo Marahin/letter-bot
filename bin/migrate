@@ -1,0 +1,3 @@
+atlas migrate apply \
+    --url "postgres://${DATABASE_USER}:${DATABASE_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT}/${DATABASE_NAME}?sslmode=${DATABASE_SSL}" \
+    --dir "file://internal/infrastructure/db/postgresql/migrations"

@@ -4,6 +4,10 @@ import (
 	"context"
 	"time"
 
+	"spot-assistant/internal/core/dto/guild"
+	"spot-assistant/internal/core/dto/member"
+
+	"spot-assistant/internal/core/dto/book"
 	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/spot"
@@ -15,38 +19,61 @@ type ReservationRepository interface {
 	FindReservationWithSpot(ctx context.Context, id int64, guildID, authorDiscordID string) (*reservation.ReservationWithSpot, error)
 	SelectUpcomingReservationsWithSpot(ctx context.Context, guildId string) ([]*reservation.ReservationWithSpot, error)
 	SelectOverlappingReservations(ctx context.Context, spot string, startAt time.Time, endAt time.Time, guildId string) ([]*reservation.Reservation, error)
-	SelectUpcomingMemberReservationsWithSpots(ctx context.Context, guild *discord.Guild, member *discord.Member) ([]*reservation.ReservationWithSpot, error)
+	SelectUpcomingMemberReservationsWithSpots(ctx context.Context, guild *guild.Guild, member *member.Member) ([]*reservation.ReservationWithSpot, error)
 
 	// Creates a new reservation, and removes or shorten any existing conflicting reservations.
 	// Returns removed or shortened conflicting reservations.
-	CreateAndDeleteConflicting(ctx context.Context, member *discord.Member, guild *discord.Guild, conflicts []*reservation.Reservation, spotId int64, startAt time.Time, endAt time.Time) ([]*reservation.ClippedOrRemovedReservation, error)
+	CreateAndDeleteConflicting(ctx context.Context, member *member.Member, guild *guild.Guild, conflicts []*reservation.Reservation, spotId int64, startAt time.Time, endAt time.Time) ([]*reservation.ClippedOrRemovedReservation, error)
 
 	// Deletes one of the upcoming member reservations in a given guild. Returns error if operation
 	// did not succeed.
-	DeletePresentMemberReservation(ctx context.Context, g *discord.Guild, m *discord.Member, reservationId int64) error
+	DeletePresentMemberReservation(ctx context.Context, g *guild.Guild, m *member.Member, reservationId int64) error
 }
 
 type SpotRepository interface {
+	// SelectAllSpots returns all spots.
 	SelectAllSpots(ctx context.Context) ([]*spot.Spot, error)
 }
 
 type BotPort interface {
-	ChannelMessages(g *discord.Guild, ch *discord.Channel, limit int) ([]*discord.Message, error)
-	CleanChannel(g *discord.Guild, channel *discord.Channel) error
-	EnsureChannel(g *discord.Guild) error
-	FindChannelByName(g *discord.Guild, channelName string) (*discord.Channel, error)
-	EnsureRoles(g *discord.Guild) error
-	GetGuilds() []*discord.Guild
-	SendLetterMessage(g *discord.Guild, ch *discord.Channel, sum *summary.Summary) error
-	SendDM(m *discord.Member, message string) error
-	RegisterCommands(g *discord.Guild) error
-	MemberHasRole(g *discord.Guild, m *discord.Member, roleName string) bool
-	OpenDM(m *discord.Member) (*discord.Channel, error)
-	GetMember(guild *discord.Guild, memberID string) (*discord.Member, error)
-	// Should start background worker loop, which should then emit Tick event periodically.
-	StartTicking()
+	// Run Starts the bot instance, blocks until the bot is stopped.
+	Run() error
+
+	// FindChannelByName finds a channel by name in a given guild.
+	FindChannelByName(g *guild.Guild, channelName string) (*discord.Channel, error)
+
+	// SendLetterMessage sends a message to a guild channel
+	// or a DM if guild is empty.
+	SendLetterMessage(g *guild.Guild, ch *discord.Channel, sum *summary.Summary) error
+
+	// SendDMOverbookedNotification sends a DM to a member about overbooking.
+	SendDMOverbookedNotification(member *member.Member, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) error
+
+	// OpenDM opens a DM channel with a member.
+	OpenDM(m *member.Member) (*discord.Channel, error)
+}
+
+type GuildRepository interface {
+	// GetGuilds returns all guilds.
+	GetGuilds() []*guild.Guild
+}
+
+type MemberRepository interface {
+	// GetMemberByGuildAndId returns member by guild and id.
+	GetMemberByGuildAndId(g *guild.Guild, memberId string) (*member.Member, error)
+	// MemberHasRole checks if a member has a role.
+	MemberHasRole(g *guild.Guild, m *member.Member, roleName string) bool
 }
 
 type ChartAdapter interface {
 	NewChart(values []float64, legend []string) ([]byte, error)
+}
+
+type TextFormatter interface {
+	FormatGenericError(err error) string
+	FormatBookResponse(response book.BookResponse) string
+	FormatBookError(response book.BookResponse, err error) string
+	FormatOverbookedMemberNotification(member *member.Member,
+		request book.BookRequest,
+		res *reservation.ClippedOrRemovedReservation) string
 }

@@ -1,6 +1,3 @@
-GREEN=\033[0;32m
-RESET=\033[0m
-
 APP ?= spot-assistant-bot
 TAG ?= $(shell git rev-parse --short HEAD)
 REGISTRY ?= registry.marahin.pl
@@ -8,50 +5,57 @@ REGISTRY ?= registry.marahin.pl
 .PHONY: install-dependencies install-bins go-mod
 
 install-bins:
-	@for pkg in $$(go list -f '{{range .Imports}}{{.}} {{end}}' cmd/tools.go); do \
-		echo "$(GREEN)INFO: Installing $$pkg$(RESET)"; \
-		go install $$pkg; \
-	done
+	@go install github.com/fzipp/gocyclo/cmd/gocyclo@v0.6.0
+	@go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.26.0
 
 go-mod:
-	@echo "$(GREEN)INFO: Running go mod tidy$(RESET)"
+	@echo "INFO: Running go mod tidy"
 	@go mod tidy
 
 install-dependencies: install-bins go-mod
-	@echo "$(GREEN)INFO: Downloading dependencies$(RESET)"
+	@echo "INFO: Downloading dependencies"
 
 docker:
-	@echo "$(GREEN)INFO: Building Docker image$(RESET)"
+	@echo "INFO: Building Docker image"
 	@docker build -t "${REGISTRY}/${APP}:${TAG}" -f Dockerfile .
 
 push-to-registry:
 	@docker push "${REGISTRY}/${APP}:${TAG}"
-	@echo "$(GREEN)INFO: Pushed ${REGISTRY}/${APP}:${TAG}$(RESET)"
+	@echo "INFO: Pushed ${REGISTRY}/${APP}:${TAG}"
 
 sqlc-diff:
-	@echo "$(GREEN)INFO: Running sqlc diff$(RESET)"
+	@echo "INFO: Running sqlc diff"
 	@sqlc diff -f internal/infrastructure/reservation/postgresql/sqlc.yaml
 	@sqlc diff -f internal/infrastructure/spot/postgresql/sqlc.yaml
 
-test: install-dependencies sqlc-diff go-vet
-	@echo "$(GREEN)INFO: Running tests$(RESET)"
-	@go test -race -coverprofile=coverage.out ./...
+test: install-dependencies sqlc-diff go-vet gocyclo
+	@echo "INFO: Running tests"
+	@go test -cover -race -coverprofile=coverage.out ./...
 
 test-coverage: test
-	@echo "$(GREEN)INFO: Generating test coverage report$(RESET)"
+	@echo "INFO: Generating test coverage report"
 	@go tool cover -html=coverage.out
 
 go-vet:
-	@echo "$(GREEN)INFO: Running go vet$(RESET)"
+	@echo "INFO: Running go vet"
 	@go vet ./...
 
+gocyclo:
+	@echo "INFO: Running gocyclo"
+	@output=$$(gocyclo -over 15 .) ; \
+	if [ $$? -ne 0 ]; then \
+		echo "Gocyclo complexity complaints: "; \
+		echo $$output; \
+		exit 1; \
+	fi
+	
 sqlc-generate:
-	@echo "$(GREEN)INFO: Generating sqlc$(RESET)"
+	@echo "INFO: Generating sqlc"
 	@sqlc generate -f internal/infrastructure/reservation/postgresql/sqlc.yaml
 	@sqlc generate -f internal/infrastructure/spot/postgresql/sqlc.yaml
 
 sqlc-vet:
-	@echo "$(GREEN)INFO: Running sqlc vet$(RESET)"
+	@echo "INFO: Running sqlc vet"
 	@sqlc vet -f internal/infrastructure/reservation/postgresql/sqlc.yaml
 	@sqlc vet -f internal/infrastructure/spot/postgresql/sqlc.yaml
 
@@ -59,5 +63,5 @@ build: install-dependencies sqlc-generate test
 	@make build-only
 
 build-only:
-	@echo "$(GREEN)INFO: Building version: ${TAG}$(RESET)"
-	@CGO_ENABLED=0 go build -o ${APP} -ldflags="-X spot-assistant/internal/common/version.Version=${TAG}" cmd/main.go
+	@echo "INFO: Building version: ${TAG}"
+	@CGO_ENABLED=0 go build -o ./bin/${APP} -ldflags="-X spot-assistant/internal/common/version.Version=${TAG}" cmd/main.go

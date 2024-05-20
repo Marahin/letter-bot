@@ -2,6 +2,7 @@ package bot
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"sync"
@@ -11,8 +12,9 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	cmap "github.com/orcaman/concurrent-map/v2"
 	"github.com/servusdei2018/shards/v2"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
+	"spot-assistant/internal/infrastructure/bot/formatter"
 	"spot-assistant/internal/ports"
 )
 
@@ -22,11 +24,14 @@ type cfg struct {
 }
 
 type Bot struct {
-	eventHandler ports.APIPort
-	mgr          *shards.Manager
-	log          *logrus.Entry
-	quit         chan struct{}
-	channelLocks cmap.ConcurrentMap[string, *sync.RWMutex]
+	summarySrv      ports.SummaryService
+	reservationRepo ports.ReservationRepository
+	eventHandler    ports.APIPort
+	mgr             *shards.Manager
+	log             *zap.SugaredLogger
+	quit            chan struct{}
+	formatter       *formatter.DiscordFormatter
+	channelLocks    cmap.ConcurrentMap[string, *sync.RWMutex]
 }
 
 var (
@@ -37,21 +42,19 @@ func init() {
 	envconfig.MustProcess("bot", &Config)
 }
 
-func NewManager(eventHandler ports.APIPort) *Bot {
-	// Create a new shard manager using the provided bot token.
+func NewManager(summarySrv ports.SummaryService, reservationRepo ports.ReservationRepository) *Bot {
 	mgr, err := shards.New("Bot " + Config.Token)
 	if err != nil {
-		logrus.Panic("could not create shards manager,", err)
+		panic(fmt.Errorf("could not create shards manager, %w", err))
 	}
 
 	mgr.Intent = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages | discordgo.IntentsGuildVoiceStates
-
 	bot := &Bot{
-		mgr:          mgr,
-		eventHandler: eventHandler,
-		quit:         make(chan struct{}),
-		channelLocks: cmap.New[*sync.RWMutex](),
-		log:          logrus.WithFields(logrus.Fields{"type": "infra", "name": "bot"}),
+		mgr:             mgr,
+		quit:            make(chan struct{}),
+		channelLocks:    cmap.New[*sync.RWMutex](),
+		summarySrv:      summarySrv,
+		reservationRepo: reservationRepo,
 	}
 
 	bot.mgr.AddHandler(bot.GuildCreate)
@@ -61,7 +64,29 @@ func NewManager(eventHandler ports.APIPort) *Bot {
 	return bot
 }
 
+func (b *Bot) WithHttpClient(client *http.Client) {
+}
+
+func (b *Bot) WithFormatter(formatter *formatter.DiscordFormatter) *Bot {
+	b.formatter = formatter
+
+	return b
+}
+
+// WithEVentHandler sets bot's event handler to the provided port
+func (b *Bot) WithEventHandler(port ports.APIPort) ports.BotPort {
+	b.eventHandler = port
+	return b
+}
+
+func (b *Bot) WithLogger(log *zap.SugaredLogger) *Bot {
+	b.log = log.With("layer", "infrastructure", "name", "bot")
+
+	return b
+}
+
 func (b *Bot) Run() error {
+	b.log.Info("Starting bot...")
 	err := b.mgr.Start()
 	if err != nil {
 		return err
@@ -74,7 +99,7 @@ func (b *Bot) Run() error {
 	<-sc
 
 	// Cleanly close down the Manager.
-	b.log.Warning("stopping shard manager...")
+	b.log.Warn("stopping shard manager...")
 	err = b.mgr.Shutdown()
 	if err != nil {
 		return err
@@ -94,8 +119,4 @@ func (b *Bot) interactionRespond(i *discordgo.InteractionCreate, responseData *d
 		Type: responseType,
 		Data: responseData,
 	})
-}
-
-func (b *Bot) dcErrorMsg(err error) string {
-	return fmt.Sprintf("Sorry, but something went wrong. If you require support, join TibiaLoot.com Discord: https://discord.gg/F4YKgsnzmc \nError message:\n```\n%s\n```", err.Error())
 }

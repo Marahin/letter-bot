@@ -11,5 +11,6 @@ https://play-with-go.dev/tools-as-dependencies_go119_en/
 package main
 
 import (
+	_ "github.com/fzipp/gocyclo"
 	_ "github.com/sqlc-dev/sqlc"
 )

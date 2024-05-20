@@ -7,11 +7,11 @@ import (
 )
 
 type Specification struct {
-	Host     string `required:"true"`
-	Port     int    `required:"true"`
-	User     string `required:"true"`
-	Password string `required:"true"`
-	Name     string `required:"true"`
+	Host     string `required:"true" default:"db"`
+	Port     int    `required:"true" default:"5432"`
+	User     string `required:"true" default:"postgres"`
+	Password string `required:"true" default:"postgres"`
+	Name     string `required:"true" default:"name"`
 }
 
 func Dsn() string {

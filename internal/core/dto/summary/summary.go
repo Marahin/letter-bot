@@ -5,6 +5,7 @@ import (
 )
 
 type Summary struct {
+	PreMessage   string
 	Chart        []byte
 	URL          string
 	Title        string

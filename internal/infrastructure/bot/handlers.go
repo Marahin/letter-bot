@@ -3,16 +3,13 @@ package bot
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/sirupsen/logrus"
 
 	"spot-assistant/internal/common/collections"
 	stringsHelper "spot-assistant/internal/common/strings"
 	"spot-assistant/internal/core/dto/book"
-	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/summary"
 )
 
@@ -23,14 +20,39 @@ System events that are initialized by Discord.
 
 func (b *Bot) GuildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
 	b.log.Debug("GuildCreate")
+	guild := MapGuild(g.Guild)
+	// Register commands
+	err := b.RegisterCommands(guild)
+	if err != nil {
+		b.log.Errorf("could not overwrite commands: %s", err)
 
-	defer b.eventHandler.OnGuildCreate(b, MapGuild(g.Guild))
+		return
+	}
+	//
+	err = b.EnsureChannel(guild)
+	if err != nil {
+		b.log.Errorf("could not ensure channels: %s", err)
+
+		return
+	}
+	//
+	err = b.EnsureRoles(guild)
+	if err != nil {
+		b.log.Errorf("could not ensure roles: %s", err)
+
+		return
+	}
+
+	go b.TryUpdateGuildLetter(guild)
+	defer b.eventHandler.OnGuildCreate(MapGuild(g.Guild))
 }
 
 func (b *Bot) Ready(s *discordgo.Session, r *discordgo.Ready) {
 	b.log.Debug("Ready")
 
-	defer b.eventHandler.OnReady(b)
+	b.StartTicking()
+
+	defer b.eventHandler.OnReady()
 }
 
 // InteractionCreate this is the entry point when a slash command is invoked.
@@ -40,20 +62,23 @@ func (b *Bot) InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCr
 
 	b.handleCommand(i)
 
-	b.log.WithFields(logrus.Fields{"time": time.Since(tStart)}).Debug("interaction handled")
+	b.log.With("duration", time.Since(tStart)).Debug("interaction handled")
 }
-
-// Service events
-// Events that are sent by tickers or our custom integrations,
-// such as commands.
 
 func (b *Bot) Tick() {
 	b.log.Debug("Tick")
 
-	defer b.eventHandler.OnTick(b)
+	guilds := b.GetGuilds()
+	for _, guild := range guilds {
+		guild := guild
+		go b.TryUpdateGuildLetter(guild)
+	}
+
+	defer b.eventHandler.OnTick()
 }
 
 func (b *Bot) Book(i *discordgo.InteractionCreate) error {
+	b.log.Info("Book")
 	interaction := i.Interaction
 	tNow := time.Now()
 	gID, err := stringsHelper.StrToInt64(i.GuildID)
@@ -66,23 +91,23 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 	overbook := false
 	switch len(i.ApplicationCommandData().Options) {
 	case 4:
-		if i.ApplicationCommandData().Options[3].StringValue() == "true" {
-			overbook = true
-		}
+		overbook = i.ApplicationCommandData().Options[3].BoolValue()
 	case 3:
 		break
 	default:
 		return errors.New("book command requires 3 arguments")
 	}
 
-	startAt, err := time.Parse(stringsHelper.DC_TIME_FORMAT, i.ApplicationCommandData().Options[1].StringValue())
+	startAtStr := sanitizeTimeFormat(i.ApplicationCommandData().Options[1].StringValue())
+	startAt, err := time.Parse(stringsHelper.DcTimeFormat, startAtStr)
 	if err != nil {
 		return err
 	}
 	startAt = time.Date(
 		tNow.Year(), tNow.Month(), tNow.Day(), startAt.Hour(), startAt.Minute(), 0, 0, tNow.Location())
 
-	endAt, err := time.Parse(stringsHelper.DC_TIME_FORMAT, i.ApplicationCommandData().Options[2].StringValue())
+	endAtStr := sanitizeTimeFormat(i.ApplicationCommandData().Options[2].StringValue())
+	endAt, err := time.Parse(stringsHelper.DcTimeFormat, endAtStr)
 	if err != nil {
 		return err
 	}
@@ -90,7 +115,6 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 		tNow.Year(), tNow.Month(), tNow.Day(), endAt.Hour(), endAt.Minute(), 0, 0, tNow.Location())
 
 	if startAt.Before(tNow) {
-		b.log.Warning("moving startAt to next day, as it's already past the starting point")
 		startAt = startAt.Add(24 * time.Hour)
 		endAt = endAt.Add(24 * time.Hour)
 	}
@@ -114,73 +138,20 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 		Overbook: overbook,
 	}
 
-	message := strings.Builder{}
-	response, err := b.eventHandler.OnBook(b, request)
+	tStart := time.Now()
+	response, err := b.eventHandler.OnBook(request)
+	bookLog := b.log.With("duration", time.Since(tStart), "error", err)
+	var message string
 	if err != nil {
-		message.WriteString("I'm sorry, but something went wrong. If you require support, join TibiaLoot.com Discord: https://discord.gg/F4YKgsnzmc \n")
-
-		message.WriteString(fmt.Sprintf("Error message:\n```%s```\n", err))
+		message = b.formatter.FormatBookError(response, err)
 	} else {
-		message.WriteString(fmt.Sprintf(
-			"<@!%s> booked **%s** between %s and %s.\n\n",
-			member.ID,
-			response.Spot,
-			response.StartAt.Format("2006-01-02 15:04"),
-			response.EndAt.Format("2006-01-02 15:04"),
-		))
-	}
-	haveWeOverbooked := err == nil
-
-	if len(response.ConflictingReservations) > 0 {
-		message.WriteString("Following reservations are conflicting")
-		if err == nil {
-			message.WriteString(" **and have been shortened or removed**")
-		}
-		message.WriteString(":\n\n")
-
-		for _, res := range response.ConflictingReservations {
-			var author string
-			switch haveWeOverbooked { // We notify users on overbooks only
-			case true:
-				author = fmt.Sprintf("<@!%s>", res.Original.AuthorDiscordID) // Mention user profile by ID
-			case false:
-				member, err = b.GetMember(guild, res.Original.AuthorDiscordID)
-				if err == nil {
-					author = member.Nick
-					if len(author) == 0 {
-						author = member.Username
-					}
-				} else {
-					author = res.Original.Author
-				}
-				author = fmt.Sprintf("**%s**", author)
-			}
-
-			message.WriteString(fmt.Sprintf(
-				"* %s ", author,
-			))
-
-			if haveWeOverbooked {
-				if len(res.New) > 0 {
-					message.WriteString("had their reservation clipped to: ")
-					newClippedRanges := collections.PoorMansMap(res.New, func(r *reservation.Reservation) string {
-						return fmt.Sprintf("**%s - %s**", r.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), r.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT))
-					})
-					message.WriteString(strings.Join(newClippedRanges, ", "))
-				} else {
-					message.WriteString("had their reservation removed ")
-				}
-
-				message.WriteString(fmt.Sprintf("(originally: %s - %s)\n", res.Original.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), res.Original.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT)))
-				continue // Stop here
-			}
-
-			message.WriteString(fmt.Sprintf("%s - %s\n", res.Original.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), res.Original.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT)))
-		}
+		go b.TryUpdateGuildLetter(guild)
+		message = b.formatter.FormatBookResponse(response)
 	}
 
+	bookLog.Info("booking request handled")
 	_, err = dcSession.FollowupMessageCreate(interaction, false, &discordgo.WebhookParams{
-		Content: message.String(),
+		Content: message,
 		AllowedMentions: &discordgo.MessageAllowedMentions{
 			Parse: []discordgo.AllowedMentionType{discordgo.AllowedMentionTypeUsers},
 		},
@@ -231,7 +202,7 @@ func (b *Bot) Unbook(i *discordgo.InteractionCreate) error {
 		return err
 	}
 
-	res, err := b.eventHandler.OnUnbook(b, book.UnbookRequest{
+	res, err := b.eventHandler.OnUnbook(book.UnbookRequest{
 		Member:        MapMember(i.Member),
 		Guild:         guild,
 		ReservationID: reservationId,
@@ -240,8 +211,10 @@ func (b *Bot) Unbook(i *discordgo.InteractionCreate) error {
 		return err
 	}
 
+	go b.TryUpdateGuildLetter(guild)
+
 	_, err = b.mgr.SessionForGuild(gID).FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
-		Content: fmt.Sprintf("%s (%s - %s) reservation has been cancelled.", res.Spot.Name, res.StartAt.Format(stringsHelper.DC_LONG_TIME_FORMAT), res.EndAt.Format(stringsHelper.DC_LONG_TIME_FORMAT)),
+		Content: b.formatter.FormatUnbookResponse(res),
 	})
 	return err
 }
@@ -284,7 +257,7 @@ func (b *Bot) UnbookAutocomplete(i *discordgo.InteractionCreate) error {
 }
 
 func (b *Bot) PrivateSummary(i *discordgo.InteractionCreate) error {
-	b.log.Info("PrivateSummary")
+	b.log.Debug("PrivateSummary")
 
 	gID, err := stringsHelper.StrToInt64(i.GuildID)
 	if err != nil {
@@ -296,7 +269,7 @@ func (b *Bot) PrivateSummary(i *discordgo.InteractionCreate) error {
 		return err
 	}
 
-	err = b.eventHandler.OnPrivateSummary(b, summary.PrivateSummaryRequest{
+	err = b.eventHandler.OnPrivateSummary(summary.PrivateSummaryRequest{
 		GuildID: gID,
 		UserID:  uID,
 	})

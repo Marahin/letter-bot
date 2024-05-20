@@ -2,11 +2,12 @@ package bot
 
 import (
 	"fmt"
+	"spot-assistant/internal/core/dto/guild"
+	"spot-assistant/internal/core/dto/member"
+	"spot-assistant/internal/core/dto/role"
 	"strconv"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/sirupsen/logrus"
-
 	"spot-assistant/internal/common/collections"
 	"spot-assistant/internal/common/strings"
 	"spot-assistant/internal/core/dto/discord"
@@ -21,16 +22,16 @@ func MapChannel(input *discordgo.Channel) *discord.Channel {
 	}
 }
 
-func mapRole(input *discordgo.Role) *discord.Role {
-	return &discord.Role{
+func mapRole(input *discordgo.Role) *role.Role {
+	return &role.Role{
 		ID:          input.ID,
 		Name:        input.Name,
 		Permissions: input.Permissions,
 	}
 }
 
-func MapRoles(input []*discordgo.Role) []*discord.Role {
-	roles := make([]*discord.Role, len(input))
+func MapRoles(input []*discordgo.Role) []*role.Role {
+	roles := make([]*role.Role, len(input))
 
 	for i, role := range input {
 		roles[i] = mapRole(role)
@@ -39,16 +40,16 @@ func MapRoles(input []*discordgo.Role) []*discord.Role {
 	return roles
 }
 
-func MapGuild(input *discordgo.Guild) *discord.Guild {
-	return &discord.Guild{
+func MapGuild(input *discordgo.Guild) *guild.Guild {
+	return &guild.Guild{
 		Roles: MapRoles(input.Roles),
 		ID:    input.ID,
 		Name:  input.Name,
 	}
 }
 
-func MapGuilds(input []*discordgo.Guild) []*discord.Guild {
-	guilds := make([]*discord.Guild, len(input))
+func MapGuilds(input []*discordgo.Guild) []*guild.Guild {
+	guilds := make([]*guild.Guild, len(input))
 	for i, guild := range input {
 		guilds[i] = MapGuild(guild)
 	}
@@ -58,7 +59,6 @@ func MapGuilds(input []*discordgo.Guild) []*discord.Guild {
 
 func MapUser(input *discordgo.User) *discord.User {
 	if input == nil {
-		logrus.Error("MapUser got nil on input: ", input)
 		return nil
 	}
 
@@ -68,12 +68,12 @@ func MapUser(input *discordgo.User) *discord.User {
 	}
 }
 
-func MapMember(input *discordgo.Member) *discord.Member {
+func MapMember(input *discordgo.Member) *member.Member {
 	if input == nil {
 		return nil
 	}
 
-	return &discord.Member{
+	return &member.Member{
 		ID:       input.User.ID,
 		Nick:     input.Nick,
 		Username: input.User.Username,
@@ -120,7 +120,7 @@ func MapStringArrToChoice(texts []string) []*discordgo.ApplicationCommandOptionC
 func MapReservationWithSpotArrToChoice(input []*reservation.ReservationWithSpot) []*discordgo.ApplicationCommandOptionChoice {
 	return collections.PoorMansMap(input, func(i *reservation.ReservationWithSpot) *discordgo.ApplicationCommandOptionChoice {
 		return &discordgo.ApplicationCommandOptionChoice{
-			Name:  fmt.Sprintf("%s - %s %s", i.StartAt.Format(strings.DC_LONG_TIME_FORMAT), i.EndAt.Format(strings.DC_LONG_TIME_FORMAT), i.Spot.Name),
+			Name:  fmt.Sprintf("%s - %s %s", i.StartAt.Format(strings.DcLongTimeFormat), i.EndAt.Format(strings.DcLongTimeFormat), i.Spot.Name),
 			Value: strconv.FormatInt(i.Reservation.ID, 10),
 		}
 	})
