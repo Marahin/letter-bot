@@ -2,6 +2,7 @@ package bot
 
 import (
 	"fmt"
+
 	"spot-assistant/internal/common/strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -98,7 +99,7 @@ var commands = []*discordgo.ApplicationCommand{
 			{
 				Name:         "overbook",
 				Description:  "An hour the hunt shall end (e.g. 17:20)",
-				Type:         discordgo.ApplicationCommandOptionString,
+				Type:         discordgo.ApplicationCommandOptionBoolean,
 				Required:     false,
 				Autocomplete: true,
 			},
