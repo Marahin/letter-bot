@@ -91,7 +91,7 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 	overbook := false
 	switch len(i.ApplicationCommandData().Options) {
 	case 4:
-		overbook = i.ApplicationCommandData().Options[3].BoolValue()
+		overbook = i.ApplicationCommandData().Options[3].StringValue() == "true"
 	case 3:
 		break
 	default:
