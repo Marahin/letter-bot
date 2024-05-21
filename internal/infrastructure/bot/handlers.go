@@ -10,6 +10,7 @@ import (
 	"spot-assistant/internal/common/collections"
 	stringsHelper "spot-assistant/internal/common/strings"
 	"spot-assistant/internal/core/dto/book"
+	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/summary"
 )
 
@@ -91,7 +92,7 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 	overbook := false
 	switch len(i.ApplicationCommandData().Options) {
 	case 4:
-		overbook = i.ApplicationCommandData().Options[3].BoolValue()
+		overbook = i.ApplicationCommandData().Options[3].StringValue() == "true"
 	case 3:
 		break
 	default:
@@ -130,12 +131,13 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 
 	member := MapMember(i.Member)
 	request := book.BookRequest{
-		Member:   member,
-		Guild:    guild,
-		Spot:     i.ApplicationCommandData().Options[0].StringValue(),
-		StartAt:  startAt,
-		EndAt:    endAt,
-		Overbook: overbook,
+		Member:         member,
+		Guild:          guild,
+		Spot:           i.ApplicationCommandData().Options[0].StringValue(),
+		StartAt:        startAt,
+		EndAt:          endAt,
+		HasPermissions: b.MemberHasRole(guild, member, discord.PrivilegedRole),
+		Overbook:       overbook,
 	}
 
 	tStart := time.Now()
