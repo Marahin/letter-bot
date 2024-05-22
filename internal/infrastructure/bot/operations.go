@@ -386,6 +386,18 @@ func (b *Bot) RegisterCommands(guild *guild.Guild) error {
 	}
 
 	session := b.mgr.SessionForGuild(gID)
+	cmds, err := session.ApplicationCommands(session.State.User.ID, guild.ID)
+	if err != nil {
+		return err
+	}
+
+	for _, cmd := range cmds {
+		err = session.ApplicationCommandDelete(session.State.User.ID, guild.ID, cmd.ID)
+		if err != nil {
+			b.log.Error("could not delete command: %s", err)
+		}
+	}
+
 	_, err = session.ApplicationCommandBulkOverwrite(session.State.User.ID, guild.ID, commands)
 	return err
 }
