@@ -392,6 +392,7 @@ func (b *Bot) RegisterCommands(guild *guild.Guild) error {
 	}
 
 	for _, cmd := range cmds {
+		b.log.With("guild_name", guild.Name, "cmd.ID", cmd.ID, "cmd.Name", cmd.Name).Warn("removing command")
 		err = session.ApplicationCommandDelete(session.State.User.ID, guild.ID, cmd.ID)
 		if err != nil {
 			b.log.Error("could not delete command: %s", err)
