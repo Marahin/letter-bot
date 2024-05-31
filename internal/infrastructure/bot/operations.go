@@ -386,6 +386,34 @@ func (b *Bot) RegisterCommands(guild *guild.Guild) error {
 	}
 
 	session := b.mgr.SessionForGuild(gID)
+
+	// In the past, we've been using global commands for all guilds.
+	// This is a legacy code that should be removed in the future.
+	globalCmds, err := session.ApplicationCommands(session.State.User.ID, "")
+	if err != nil {
+		return err
+	}
+	for _, cmd := range globalCmds {
+		b.log.With("guild_name", guild.Name, "cmd.ID", cmd.ID, "cmd.Name", cmd.Name).Warn("removing command")
+		err = session.ApplicationCommandDelete(session.State.User.ID, "", cmd.ID)
+		if err != nil {
+			b.log.Error("could not delete command: %s", err)
+		}
+	}
+
+	// This is the way to register and unregister commands now.
+	guildCmds, err := session.ApplicationCommands(session.State.User.ID, guild.ID)
+	if err != nil {
+		return err
+	}
+	for _, cmd := range guildCmds {
+		b.log.With("guild_name", guild.Name, "cmd.ID", cmd.ID, "cmd.Name", cmd.Name).Warn("removing command")
+		err = session.ApplicationCommandDelete(session.State.User.ID, guild.ID, cmd.ID)
+		if err != nil {
+			b.log.Error("could not delete command: %s", err)
+		}
+	}
+
 	_, err = session.ApplicationCommandBulkOverwrite(session.State.User.ID, guild.ID, commands)
 	return err
 }

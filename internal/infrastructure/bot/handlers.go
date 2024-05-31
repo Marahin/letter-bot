@@ -20,7 +20,7 @@ System events that are initialized by Discord.
 */
 
 func (b *Bot) GuildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
-	b.log.Debug("GuildCreate")
+	b.log.With("event", "GuildCreate", "guild_name", g.Name, "g.ID", g.ID).Info("guild created")
 	guild := MapGuild(g.Guild)
 	// Register commands
 	err := b.RegisterCommands(guild)
