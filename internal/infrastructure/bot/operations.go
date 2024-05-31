@@ -388,22 +388,20 @@ func (b *Bot) RegisterCommands(guild *guild.Guild) error {
 	session := b.mgr.SessionForGuild(gID)
 	var cmds []*discordgo.ApplicationCommand
 
-	// In the past,
+	// In the past, we've been using global commands for all guilds.
+	// This is a legacy code that should be removed in the future.
 	globalCmds, err := session.ApplicationCommands(session.State.User.ID, "")
 	if err != nil {
 		return err
 	}
-	for _, cmd := range globalCmds {
-		cmds = append(cmds, cmd)
-	}
+	cmds = append(cmds, globalCmds...)
 
+	// This is the way to register and unregister commands now.
 	guildCmds, err := session.ApplicationCommands(session.State.User.ID, guild.ID)
 	if err != nil {
 		return err
 	}
-	for _, cmd := range guildCmds {
-		cmds = append(cmds, cmd)
-	}
+	cmds = append(cmds, guildCmds...)
 
 	for _, cmd := range cmds {
 		b.log.With("guild_name", guild.Name, "cmd.ID", cmd.ID, "cmd.Name", cmd.Name).Warn("removing command")
