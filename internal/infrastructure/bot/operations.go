@@ -386,9 +386,23 @@ func (b *Bot) RegisterCommands(guild *guild.Guild) error {
 	}
 
 	session := b.mgr.SessionForGuild(gID)
-	cmds, err := session.ApplicationCommands(session.State.User.ID, guild.ID)
+	var cmds []*discordgo.ApplicationCommand
+
+	// In the past,
+	globalCmds, err := session.ApplicationCommands(session.State.User.ID, "")
 	if err != nil {
 		return err
+	}
+	for _, cmd := range globalCmds {
+		cmds = append(cmds, cmd)
+	}
+
+	guildCmds, err := session.ApplicationCommands(session.State.User.ID, guild.ID)
+	if err != nil {
+		return err
+	}
+	for _, cmd := range guildCmds {
+		cmds = append(cmds, cmd)
 	}
 
 	for _, cmd := range cmds {
