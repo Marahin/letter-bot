@@ -99,7 +99,7 @@ var commands = []*discordgo.ApplicationCommand{
 			{
 				Name:         "overbook",
 				Description:  "An hour the hunt shall end (e.g. 17:20)",
-				Type:         discordgo.ApplicationCommandOptionBoolean,
+				Type:         discordgo.ApplicationCommandOptionString,
 				Required:     false,
 				Autocomplete: true,
 			},
