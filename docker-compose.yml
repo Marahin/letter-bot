@@ -2,7 +2,20 @@ name: letter_bot
 volumes:
   postgres:
 services:
-  db:
+  dev-db: # Dev database for atlas migrations to calculate diffs
+    image: postgres:12
+    command: postgres -c log_statement=all
+    volumes:
+      - ./internal/infrastructure/db/postgresql/scripts:/docker-entrypoint-initdb.d
+    environment:
+      POSTGRES_DB: atlas
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    env_file:
+      - .env
+    ports:
+      - "5433:5432"
+  db: # Actual application database
     image: postgres:12
     command: postgres -c log_statement=all
     volumes:
@@ -19,6 +32,7 @@ services:
     ports:
       - "5432:5432"
   bot:
+    command: CompileDaemon -include=Makefile -build='make build-only' -command=./bin/spot-assistant-bot
     build:
       context: ../letter-bot
       dockerfile: Dockerfile.dev
@@ -26,3 +40,14 @@ services:
       - ./:/app
     env_file:
       - .env
+  api:
+    command: CompileDaemon -include=Makefile -build='make build-only' -command=./bin/spot-assistant-api
+    build:
+      context: ../letter-bot
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./:/app
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"

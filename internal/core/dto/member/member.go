@@ -6,7 +6,7 @@ type Member struct {
 	// ID of the user. MAY NOT BE PRESENT
 	ID string
 
-	// User name
+	// Username name
 	Username string
 
 	// The nickname of the member, if they have one.

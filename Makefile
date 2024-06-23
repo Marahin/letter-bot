@@ -1,4 +1,4 @@
-APP ?= spot-assistant-bot
+APP ?= spot-assistant
 TAG ?= $(shell git rev-parse --short HEAD)
 REGISTRY ?= registry.marahin.pl
 
@@ -27,6 +27,7 @@ sqlc-diff:
 	@echo "INFO: Running sqlc diff"
 	@sqlc diff -f internal/infrastructure/reservation/postgresql/sqlc.yaml
 	@sqlc diff -f internal/infrastructure/spot/postgresql/sqlc.yaml
+	@sqlc diff -f internal/infrastructure/guild/postgresql/sqlc.yaml
 
 test: install-dependencies sqlc-diff go-vet gocyclo
 	@echo "INFO: Running tests"
@@ -53,15 +54,20 @@ sqlc-generate:
 	@echo "INFO: Generating sqlc"
 	@sqlc generate -f internal/infrastructure/reservation/postgresql/sqlc.yaml
 	@sqlc generate -f internal/infrastructure/spot/postgresql/sqlc.yaml
+	@sqlc generate -f internal/infrastructure/guild/postgresql/sqlc.yaml
 
 sqlc-vet:
 	@echo "INFO: Running sqlc vet"
 	@sqlc vet -f internal/infrastructure/reservation/postgresql/sqlc.yaml
 	@sqlc vet -f internal/infrastructure/spot/postgresql/sqlc.yaml
+	@sqlc vet -f internal/infrastructure/guild/postgresql/sqlc.yaml
 
 build: install-dependencies sqlc-generate test
 	@make build-only
 
 build-only:
 	@echo "INFO: Building version: ${TAG}"
-	@CGO_ENABLED=0 go build -o ./bin/${APP} -ldflags="-X spot-assistant/internal/common/version.Version=${TAG}" cmd/main.go
+	@for dir in $$(ls cmd/); do \
+		echo "INFO: Building cmd/$$dir"; \
+		CGO_ENABLED=0 go build -o ./bin/${APP}-$$dir -ldflags="-X spot-assistant/internal/common/version.Version=${TAG}" cmd/$$dir/main.go; \
+	done

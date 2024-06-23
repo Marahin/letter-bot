@@ -7,8 +7,8 @@ import (
 	"spot-assistant/internal/core/dto/book"
 )
 
-func (h *Handler) OnBook(request book.BookRequest) (book.BookResponse, error) {
-	conflicting, err := h.bookingSrv.Book(request)
+func (a *Handler) OnBook(request book.BookRequest) (book.BookResponse, error) {
+	conflicting, err := a.bookingSrv.Book(request)
 	response := book.BookResponse{
 		Request:                 &request,
 		ConflictingReservations: conflicting,

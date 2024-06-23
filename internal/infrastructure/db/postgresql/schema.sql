@@ -834,3 +834,46 @@ ALTER TABLE ONLY public.web_reservation
 -- PostgreSQL database dump complete
 --
 
+CREATE TABLE public.guilds (
+    id SERIAL PRIMARY KEY,
+    guild_id VARCHAR(255) NOT NULL,
+    guild_name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX guilds_guild_id_uindex ON public.guilds (guild_id);
+
+CREATE TABLE public.users (
+                       discord_id VARCHAR(255) PRIMARY KEY,
+                       username VARCHAR(255) NOT NULL,
+                       avatar_url VARCHAR(255),
+                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE public.roles (
+                       role_id VARCHAR(255) PRIMARY KEY,
+                       role_name VARCHAR(255) NOT NULL,
+                       guild_id VARCHAR(255) NOT NULL,
+                       FOREIGN KEY (guild_id) REFERENCES public.guilds(guild_id) ON DELETE CASCADE,
+                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE public.user_roles (
+                            user_role_id SERIAL PRIMARY KEY,
+                            discord_id VARCHAR(255) NOT NULL,
+                            guild_id VARCHAR(255) NOT NULL,
+                            role_id VARCHAR(255) NOT NULL,
+                            FOREIGN KEY (discord_id) REFERENCES public.users(discord_id) ON DELETE CASCADE,
+                            FOREIGN KEY (guild_id) REFERENCES public.guilds(guild_id) ON DELETE CASCADE,
+                            FOREIGN KEY (role_id) REFERENCES public.roles(role_id) ON DELETE CASCADE,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE public.sessions (
+                          session_id SERIAL PRIMARY KEY,
+                          session_cookie VARCHAR(255) NOT NULL,
+                          discord_id VARCHAR(255) NOT NULL,
+                          expires_at TIMESTAMP NOT NULL,
+                          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                          FOREIGN KEY (discord_id) REFERENCES public.users(discord_id) ON DELETE CASCADE
+);

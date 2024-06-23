@@ -34,6 +34,7 @@ func TestHandler_OnBookWhenSuccessfulWithNoConflicting(t *testing.T) {
 		new(mocks.MockReservationRepo),
 		new(mocks.MockCommunicationService),
 		new(mocks.MockSummaryService),
+		new(mocks.MockGuildRepository),
 	)
 
 	// when
@@ -64,6 +65,7 @@ func TestHandler_OnBookWhenOnUnsuccessful(t *testing.T) {
 		new(mocks.MockReservationRepo),
 		new(mocks.MockCommunicationService),
 		new(mocks.MockSummaryService),
+		new(mocks.MockGuildRepository),
 	)
 
 	// when
@@ -83,6 +85,7 @@ func TestHandler_OnBookAutocompleteOverbookField(t *testing.T) {
 		new(mocks.MockReservationRepo),
 		new(mocks.MockCommunicationService),
 		new(mocks.MockSummaryService),
+		new(mocks.MockGuildRepository),
 	)
 	request := book.BookAutocompleteRequest{
 		Field: book.BookAutocompleteOverbook,
@@ -106,6 +109,7 @@ func TestHandler_OnBookAutocompleteStartAtField(t *testing.T) {
 		new(mocks.MockReservationRepo),
 		new(mocks.MockCommunicationService),
 		new(mocks.MockSummaryService),
+		new(mocks.MockGuildRepository),
 	)
 	request := book.BookAutocompleteRequest{
 		Field: book.BookAutocompleteStartAt,
@@ -133,6 +137,7 @@ func TestHandler_OnBookAutocompleteEndAtField(t *testing.T) {
 		new(mocks.MockReservationRepo),
 		new(mocks.MockCommunicationService),
 		new(mocks.MockSummaryService),
+		new(mocks.MockGuildRepository),
 	)
 	request := book.BookAutocompleteRequest{
 		Field: book.BookAutocompleteEndAt,
@@ -157,6 +162,7 @@ func TestHandler_OnBookAutocompleteSpotField(t *testing.T) {
 		new(mocks.MockReservationRepo),
 		new(mocks.MockCommunicationService),
 		new(mocks.MockSummaryService),
+		new(mocks.MockGuildRepository),
 	)
 	request := book.BookAutocompleteRequest{
 		Field: book.BookAutocompleteSpot,

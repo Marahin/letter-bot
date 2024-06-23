@@ -67,4 +67,5 @@ CREATE UNIQUE INDEX "unique_reservation_time_and_space_per_guild" ON "public"."w
 -- Create index "web_reservation_spot_id_6b297c19" to table: "web_reservation"
 CREATE INDEX "web_reservation_spot_id_6b297c19" ON "public"."web_reservation" ("spot_id");
 -- Create index "web_reservations_no_overlapping_ranges" to table: "web_reservation"
+CREATE EXTENSION IF NOT EXISTS btree_gist WITH SCHEMA public;
 CREATE INDEX "web_reservations_no_overlapping_ranges" ON "public"."web_reservation" USING gist ("spot_id", "guild_id", (tstzrange(start_at, end_at)));

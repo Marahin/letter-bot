@@ -95,10 +95,14 @@ Letter bot originated within [Refugees](https://www.tibia.com/community/?subtopi
 
 ### Database and migrations
 
-If you change SQL schema in any way, remember to:
+We are using PostgreSQL as the repository implementation. Currently, in order to modify the database:
 
+* modify `schema.sql`
 * regenerate sqlc: `make sqlc-generate` - this generates Go wrapper around our queries,
-* run `docker-compose exec bot sh -c "bin/generate_migration <YOUR_MIGRATION_NAME>"` - so if you change a timestamp, you could name it `"users_timestamps"`.
+* run `docker-compose exec bot sh -c "bin/generate_migration <YOUR_MIGRATION_NAME>"` - so if you change a timestamp, you could name it `"users_timestamps"`,
+* run `docker-compose exec bot sh -c "bin/migrate"` to run the migration.
+
+This process is required for the development environment. In production, you should only run migrations (the last step).
 
 ### Contributing
 

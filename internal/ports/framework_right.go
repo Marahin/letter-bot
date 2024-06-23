@@ -54,8 +54,8 @@ type BotPort interface {
 }
 
 type GuildRepository interface {
-	// GetGuilds returns all guilds.
-	GetGuilds() []*guild.Guild
+	SelectGuilds(ctx context.Context) ([]*guild.Guild, error)
+	CreateGuild(ctx context.Context, guildID string, guildName string) (*guild.Guild, error)
 }
 
 type MemberRepository interface {

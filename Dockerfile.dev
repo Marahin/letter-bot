@@ -7,5 +7,3 @@ RUN curl -sSf https://atlasgo.sh | sh
 RUN git config --global --add safe.directory /app
 RUN go install github.com/githubnemo/CompileDaemon@latest && go mod download
 ENV TZ Europe/Berlin
-
-ENTRYPOINT CompileDaemon -include=Makefile -build='make build-only' -command=./bin/spot-assistant-bot

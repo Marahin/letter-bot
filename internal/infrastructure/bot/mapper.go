@@ -2,12 +2,14 @@ package bot
 
 import (
 	"fmt"
+	"strconv"
+
 	"spot-assistant/internal/core/dto/guild"
 	"spot-assistant/internal/core/dto/member"
 	"spot-assistant/internal/core/dto/role"
-	"strconv"
 
 	"github.com/bwmarrin/discordgo"
+
 	"spot-assistant/internal/common/collections"
 	"spot-assistant/internal/common/strings"
 	"spot-assistant/internal/core/dto/discord"
@@ -38,6 +40,13 @@ func MapRoles(input []*discordgo.Role) []*role.Role {
 	}
 
 	return roles
+}
+
+func MapUserGuild(input *discordgo.UserGuild) *guild.Guild {
+	return &guild.Guild{
+		ID:   input.ID,
+		Name: input.Name,
+	}
 }
 
 func MapGuild(input *discordgo.Guild) *guild.Guild {
