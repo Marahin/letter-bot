@@ -66,3 +66,12 @@ where end_at >= now()
 -- name: DeleteReservation :exec
 DELETE FROM web_reservation
 WHERE web_reservation.id = $1;
+-- name: SelectUpcomingReservationsWithSpotBySpots :many
+select sqlc.embed(web_spot),
+       sqlc.embed(web_reservation)
+from web_reservation
+         inner join web_spot on web_reservation.spot_id = web_spot.id
+where end_at >= now()
+  AND guild_id = $1
+  AND web_spot.name = ANY($2::text[]);
+

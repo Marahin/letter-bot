@@ -315,3 +315,55 @@ func (q *Queries) SelectUpcomingMemberReservationsWithSpots(ctx context.Context,
 	}
 	return items, nil
 }
+
+const selectUpcomingReservationsWithSpotBySpots = `-- name: SelectUpcomingReservationsWithSpotBySpots :many
+select web_spot.id, web_spot.name, web_spot.created_at,
+       web_reservation.id, web_reservation.author, web_reservation.created_at, web_reservation.start_at, web_reservation.end_at, web_reservation.spot_id, web_reservation.guild_id, web_reservation.author_discord_id
+from web_reservation
+         inner join web_spot on web_reservation.spot_id = web_spot.id
+where end_at >= now()
+  AND guild_id = $1
+  AND web_spot.name = ANY($2::text[])
+`
+
+type SelectUpcomingReservationsWithSpotBySpotsParams struct {
+	GuildID string
+	Column2 []string
+}
+
+type SelectUpcomingReservationsWithSpotBySpotsRow struct {
+	WebSpot        WebSpot
+	WebReservation WebReservation
+}
+
+func (q *Queries) SelectUpcomingReservationsWithSpotBySpots(ctx context.Context, arg SelectUpcomingReservationsWithSpotBySpotsParams) ([]SelectUpcomingReservationsWithSpotBySpotsRow, error) {
+	rows, err := q.db.Query(ctx, selectUpcomingReservationsWithSpotBySpots, arg.GuildID, arg.Column2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SelectUpcomingReservationsWithSpotBySpotsRow
+	for rows.Next() {
+		var i SelectUpcomingReservationsWithSpotBySpotsRow
+		if err := rows.Scan(
+			&i.WebSpot.ID,
+			&i.WebSpot.Name,
+			&i.WebSpot.CreatedAt,
+			&i.WebReservation.ID,
+			&i.WebReservation.Author,
+			&i.WebReservation.CreatedAt,
+			&i.WebReservation.StartAt,
+			&i.WebReservation.EndAt,
+			&i.WebReservation.SpotID,
+			&i.WebReservation.GuildID,
+			&i.WebReservation.AuthorDiscordID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

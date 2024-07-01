@@ -333,3 +333,34 @@ func (t *ReservationRepository) createOverbookedLeftovers(
 
 	return leftoverReservations, nil
 }
+
+func (t *ReservationRepository) SelectUpcomingReservationsWithSpotBySpots(ctx context.Context, guildId string, spots []string) ([]*reservation.ReservationWithSpot, error) {
+	res, err := t.q.SelectUpcomingReservationsWithSpotBySpots(ctx, SelectUpcomingReservationsWithSpotBySpotsParams{
+		GuildID: guildId,
+		Column2: spots,
+	})
+	if err != nil {
+		return []*reservation.ReservationWithSpot{}, err
+	}
+	reservationsWithSpots := make([]*reservation.ReservationWithSpot, len(res))
+	for i, reservationWithSpotRow := range res {
+		mappedRes := &reservation.ReservationWithSpot{
+			Reservation: reservation.Reservation{
+				ID:              reservationWithSpotRow.WebReservation.ID,
+				Author:          reservationWithSpotRow.WebReservation.Author,
+				CreatedAt:       reservationWithSpotRow.WebReservation.CreatedAt.Time,
+				StartAt:         reservationWithSpotRow.WebReservation.StartAt.Time,
+				EndAt:           reservationWithSpotRow.WebReservation.EndAt.Time,
+				SpotID:          reservationWithSpotRow.WebReservation.SpotID,
+				GuildID:         reservationWithSpotRow.WebReservation.GuildID,
+				AuthorDiscordID: reservationWithSpotRow.WebReservation.AuthorDiscordID,
+			},
+			Spot: reservation.Spot{
+				ID:   reservationWithSpotRow.WebSpot.ID,
+				Name: reservationWithSpotRow.WebSpot.Name,
+			},
+		}
+		reservationsWithSpots[i] = mappedRes
+	}
+	return reservationsWithSpots, nil
+}
