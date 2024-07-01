@@ -37,7 +37,11 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 			err = b.Unbook(i)
 		}
 	case "summary":
-		err = b.PrivateSummary(i)
+		if isAutocomplete {
+			err = b.PrivateSummaryWithSpotNamesAutocomplete(i)
+		} else {
+			err = b.PrivateSummary(i)
+		}
 	default:
 		err = fmt.Errorf("missing handler for command: %s", name)
 	}
@@ -123,5 +127,14 @@ var commands = []*discordgo.ApplicationCommand{
 		Name:        "summary",
 		Description: "Request a summary snapshot",
 		Type:        discordgo.ChatApplicationCommand,
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Name:         "respawns",
+				Description:  "Name of the respawns, separated by comma",
+				Type:         discordgo.ApplicationCommandOptionString,
+				Required:     false,
+				Autocomplete: true,
+			},
+		},
 	},
 }
