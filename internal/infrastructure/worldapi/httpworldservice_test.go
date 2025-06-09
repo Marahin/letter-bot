@@ -23,7 +23,7 @@ func TestGetOnlinePlayerNames_Success(t *testing.T) {
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, "/v4/world/Celesta", r.URL.Path)
+		require.Equal(t, "/world/Celesta", r.URL.Path)
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(mockResponse)
 	}))

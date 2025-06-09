@@ -13,28 +13,34 @@ func TestMapReservation(t *testing.T) {
 	// Given
 	assert := assert.New(t)
 	chartSrvMock := new(mocks.MockChartAdapter)
-	adapter := NewAdapter(chartSrvMock)
+	mockOnlineCheckService := new(mocks.MockOnlineCheckService)
+	adapter := NewAdapter(chartSrvMock, mockOnlineCheckService)
 	input := &reservation.Reservation{
 		Author:  "test author",
 		StartAt: time.Now(),
 		EndAt:   time.Now().Add(2 * time.Hour),
 	}
 
+	// mock IsOnline to return true for this author
+	mockOnlineCheckService.On("IsOnline", input.Author).Return(true)
+
 	// when
 	res := adapter.MapReservation(input)
 
 	// assert
 	assert.NotNil(res)
-	assert.Equal(res.Author, input.Author)
-	assert.Equal(res.StartAt, input.StartAt)
-	assert.Equal(res.EndAt, input.EndAt)
+	assert.Equal(input.Author, res.Author)
+	assert.Equal(input.StartAt, res.StartAt)
+	assert.Equal(input.EndAt, res.EndAt)
+	assert.Equal(":green_circle: ", res.Status)
 }
 
 func TestMapReservations(t *testing.T) {
 	// Given
 	assert := assert.New(t)
 	chartSrvMock := new(mocks.MockChartAdapter)
-	adapter := NewAdapter(chartSrvMock)
+	mockOnlineCheckService := new(mocks.MockOnlineCheckService)
+	adapter := NewAdapter(chartSrvMock, mockOnlineCheckService)
 	input := []*reservation.Reservation{
 		{
 			Author:  "test author",
@@ -48,14 +54,20 @@ func TestMapReservations(t *testing.T) {
 		},
 	}
 
+	// mock IsOnline for both authors
+	mockOnlineCheckService.On("IsOnline", input[0].Author).Return(true)
+	mockOnlineCheckService.On("IsOnline", input[1].Author).Return(false)
+
 	// when
 	res := adapter.MapReservations(input)
 
 	// assert
-	assert.Len(input, 2)
+	assert.Len(res, 2)
 	for i, booking := range res {
-		assert.Equal(booking.Author, input[i].Author)
-		assert.Equal(booking.StartAt, input[i].StartAt)
-		assert.Equal(booking.EndAt, input[i].EndAt)
+		assert.Equal(input[i].Author, booking.Author)
+		assert.Equal(input[i].StartAt, booking.StartAt)
+		assert.Equal(input[i].EndAt, booking.EndAt)
 	}
+	assert.Equal(":green_circle: ", res[0].Status)
+	assert.Equal(":red_circle: ", res[1].Status)
 }

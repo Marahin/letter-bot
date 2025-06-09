@@ -21,7 +21,7 @@ func NewHttpWorldService(baseURL string) *HttpWorldService {
 }
 
 func (h *HttpWorldService) GetOnlinePlayerNames(worldName string) ([]string, error) {
-	url := fmt.Sprintf("%s/v4/world/%s", h.BaseURL, worldName)
+	url := fmt.Sprintf("%s/world/%s", h.BaseURL, worldName)
 
 	resp, err := h.Client.Get(url)
 	if err != nil {

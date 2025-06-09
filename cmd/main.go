@@ -65,7 +65,7 @@ func main() {
 
 	// Summary
 	charter := chart.NewAdapter()
-	summaryService := summary.NewAdapter(charter) // .WithLogger(log)
+	summaryService := summary.NewAdapter(charter, onlineChecker) // .WithLogger(log)
 
 	// Infrastructure
 	reservationRepo := reservationRepository.NewReservationRepository(db).WithLogger(log)
@@ -73,7 +73,7 @@ func main() {
 
 	// Discord
 	dcFormatter := formatter.NewFormatter()
-	botService := bot.NewManager(summaryService, reservationRepo, onlineChecker).WithFormatter(dcFormatter).WithLogger(log)
+	botService := bot.NewManager(summaryService, reservationRepo).WithFormatter(dcFormatter).WithLogger(log)
 	communicationService := communication.NewAdapter(botService, botService).WithLogger(log)
 
 	// Bot

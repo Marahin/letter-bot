@@ -18,7 +18,8 @@ func TestBaseSummary(t *testing.T) {
 	// given
 	assert := assert.New(t)
 	mockChartAdapter := new(mocks.MockChartAdapter)
-	adapter := NewAdapter(mockChartAdapter)
+	mockOnlineCheckService := new(mocks.MockOnlineCheckService)
+	adapter := NewAdapter(mockChartAdapter, mockOnlineCheckService)
 
 	// when
 	summary := adapter.BaseSummary()
@@ -35,7 +36,8 @@ func TestPrepareSummary(t *testing.T) {
 	// given
 	assert := assert.New(t)
 	mockChartAdapter := new(mocks.MockChartAdapter)
-	adapter := NewAdapter(mockChartAdapter)
+	mockOnlineCheckService := new(mocks.MockOnlineCheckService)
+	adapter := NewAdapter(mockChartAdapter, mockOnlineCheckService)
 	input := []*reservation.ReservationWithSpot{
 		{
 			Reservation: reservation.Reservation{
@@ -59,7 +61,7 @@ func TestPrepareSummary(t *testing.T) {
 		},
 		{
 			Reservation: reservation.Reservation{
-				Author:  "test author",
+				Author:  "test author 2",
 				StartAt: time.Now(),
 				EndAt:   time.Now().Add(2 * time.Hour),
 			},
@@ -77,6 +79,10 @@ func TestPrepareSummary(t *testing.T) {
 	values := collections.PoorMansMap(lvs, func(lv dto.LegendValue) float64 {
 		return lv.Value
 	})
+
+	// mock IsOnline for authors
+	mockOnlineCheckService.On("IsOnline", "test author").Return(true)
+	mockOnlineCheckService.On("IsOnline", "test author 2").Return(false)
 
 	// when
 	mockChartAdapter.On("NewChart", values, legend).Return([]byte{123}, nil)
@@ -101,6 +107,7 @@ func TestPrepareSummary(t *testing.T) {
 		assert.NotEmpty(entry.Author)
 		assert.NotEmpty(entry.StartAt)
 		assert.NotEmpty(entry.EndAt)
+		assert.Equal(":green_circle: ", entry.Status)
 	}
 
 	assert.Equal(secondEntry.Spot, "test-2")
@@ -110,6 +117,7 @@ func TestPrepareSummary(t *testing.T) {
 		assert.NotEmpty(entry.Author)
 		assert.NotEmpty(entry.StartAt)
 		assert.NotEmpty(entry.EndAt)
+		assert.Equal(":red_circle: ", entry.Status)
 	}
 }
 
@@ -117,13 +125,14 @@ func TestPrepareSummaryTruncated(t *testing.T) {
 	// given
 	assert := assert.New(t)
 	mockChartAdapter := new(mocks.MockChartAdapter)
-	adapter := NewAdapter(mockChartAdapter)
+	mockOnlineCheckService := new(mocks.MockOnlineCheckService)
+	adapter := NewAdapter(mockChartAdapter, mockOnlineCheckService)
 
 	input := []*reservation.ReservationWithSpot{}
 	for ind := 0; ind < 2*MAX_CHART_RESPAWNS; ind++ {
 		input = append(input, &reservation.ReservationWithSpot{
 			Reservation: reservation.Reservation{
-				Author:  "test author",
+				Author:  fmt.Sprintf("test author %d", ind),
 				StartAt: time.Now(),
 				EndAt:   time.Now().Add(2 * time.Hour),
 			},
@@ -144,7 +153,11 @@ func TestPrepareSummaryTruncated(t *testing.T) {
 	}
 	input = append(input, expectedOthers)
 
-	// when
+	// mock IsOnline for all authors
+	for _, r := range input {
+		mockOnlineCheckService.On("IsOnline", r.Author).Return(false)
+	}
+
 	mockChartAdapter.On("NewChart", mock.AnythingOfType("[]float64"), mock.AnythingOfType("[]string")).Return([]byte{123}, nil)
 	summary, err := adapter.PrepareSummary(input)
 
@@ -160,4 +173,11 @@ func TestPrepareSummaryTruncated(t *testing.T) {
 	assert.NotNil(otherEntry)
 	assert.NotEqual(-1, index)
 	assert.NotZero(otherEntry.Value)
+
+	// check that all bookings have the correct status
+	for _, ledgerEntry := range summary.Ledger {
+		for _, booking := range ledgerEntry.Bookings {
+			assert.Equal(":red_circle: ", booking.Status)
+		}
+	}
 }

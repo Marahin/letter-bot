@@ -30,6 +30,7 @@ type CommunicationService interface {
 
 type SummaryService interface {
 	PrepareSummary(reservations []*reservation.ReservationWithSpot) (*summary.Summary, error)
+	RefreshOnlinePlayers() error
 }
 
 type BookingService interface {

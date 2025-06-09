@@ -26,6 +26,7 @@ type LedgerEntry struct {
 type Booking struct {
 	Author          string
 	AuthorDiscordID string
+	Status          string
 	StartAt         time.Time
 	EndAt           time.Time
 }
