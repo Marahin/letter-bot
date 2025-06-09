@@ -24,5 +24,8 @@ services:
       dockerfile: Dockerfile.dev
     volumes:
       - ./:/app
+    environment:
+      WORLD_NAME: ${TIBIA_WORLD_NAME}
+      WORLD_API_BASE_URL: ${TIBIA_WORLD_API_BASE_URL}
     env_file:
       - .env

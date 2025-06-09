@@ -47,3 +47,9 @@ type BookingService interface {
 
 	Unbook(g *guild.Guild, m *member.Member, reservationId int64) (*reservation.ReservationWithSpot, error)
 }
+
+type OnlineCheckService interface {
+	IsOnline(characterName string) bool
+	RefreshOnlinePlayers() error
+	IsConfigured() bool
+}

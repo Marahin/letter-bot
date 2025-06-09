@@ -68,7 +68,8 @@ func (b *Bot) InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCr
 
 func (b *Bot) Tick() {
 	b.log.Debug("Tick")
-
+	b.log.Info("About to refresh online players")
+	b.onlineCheckService.RefreshOnlinePlayers()
 	guilds := b.GetGuilds()
 	for _, guild := range guilds {
 		guild := guild

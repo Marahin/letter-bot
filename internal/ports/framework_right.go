@@ -65,6 +65,11 @@ type MemberRepository interface {
 	MemberHasRole(g *guild.Guild, m *member.Member, roleName string) bool
 }
 
+type WorldApi interface {
+	GetOnlinePlayerNames(worldName string) ([]string, error)
+	GetBaseURL() string
+}
+
 type ChartAdapter interface {
 	NewChart(values []float64, legend []string) ([]byte, error)
 }

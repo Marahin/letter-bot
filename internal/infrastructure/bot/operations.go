@@ -287,9 +287,19 @@ func (b *Bot) SendLetterMessage(guild *guild.Guild, channel *discord.Channel, su
 		writtenReservations := strings.Builder{}
 
 		for _, booking := range el.Bookings {
+			status := ""
+			// Only check online status if onlineCheckService is configured
+			if b.onlineCheckService != nil && b.onlineCheckService.IsConfigured() {
+				online := b.onlineCheckService.IsOnline(booking.Author)
+				status = ":red_circle: "
+				if online {
+					status = ":green_circle: "
+				}
+			}
 			writtenReservations.WriteString(
 				fmt.Sprintf(
-					"**%s** - **%s** %s\n",
+					"%s**%s** - **%s** %s\n",
+					status,
 					booking.StartAt.Format("15:04"),
 					booking.EndAt.Format("15:04"),
 					booking.Author,

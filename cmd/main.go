@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -9,6 +10,7 @@ import (
 
 	"spot-assistant/internal/core/booking"
 	"spot-assistant/internal/core/communication"
+	"spot-assistant/internal/core/onlinecheck"
 	"spot-assistant/internal/core/summary"
 
 	"spot-assistant/internal/common/version"
@@ -20,6 +22,7 @@ import (
 	"spot-assistant/internal/infrastructure/eventhandler"
 	reservationRepository "spot-assistant/internal/infrastructure/reservation/postgresql/sqlc"
 	spotRepository "spot-assistant/internal/infrastructure/spot/postgresql/sqlc"
+	"spot-assistant/internal/infrastructure/worldapi"
 )
 
 func main() {
@@ -51,6 +54,15 @@ func main() {
 	}
 	cancel()
 
+	// Online Checker
+	tibiaDataBaseURL := os.Getenv("WORLD_API_BASE_URL")
+	worldName := os.Getenv("WORLD_NAME")
+	worldApi := worldapi.NewHttpWorldService(tibiaDataBaseURL)
+	onlineChecker := onlinecheck.NewAdapter(worldApi, worldName).WithLogger(log)
+	if !onlineChecker.IsConfigured() {
+		log.Warn("Online checker is disabled: WORLD_API_BASE_URL or WORLD_NAME not set")
+	}
+
 	// Summary
 	charter := chart.NewAdapter()
 	summaryService := summary.NewAdapter(charter) // .WithLogger(log)
@@ -61,7 +73,7 @@ func main() {
 
 	// Discord
 	dcFormatter := formatter.NewFormatter()
-	botService := bot.NewManager(summaryService, reservationRepo).WithFormatter(dcFormatter).WithLogger(log)
+	botService := bot.NewManager(summaryService, reservationRepo, onlineChecker).WithFormatter(dcFormatter).WithLogger(log)
 	communicationService := communication.NewAdapter(botService, botService).WithLogger(log)
 
 	// Bot
