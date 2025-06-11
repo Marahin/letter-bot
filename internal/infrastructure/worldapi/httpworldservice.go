@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"spot-assistant/internal/core/dto/world"
 )
@@ -16,7 +17,7 @@ type HttpWorldService struct {
 func NewHttpWorldService(baseURL string) *HttpWorldService {
 	return &HttpWorldService{
 		BaseURL: baseURL,
-		Client:  &http.Client{},
+		Client:  &http.Client{Timeout: 10 * time.Second},
 	}
 }
 

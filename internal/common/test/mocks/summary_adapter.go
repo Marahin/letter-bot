@@ -16,8 +16,3 @@ func (a *MockSummaryService) PrepareSummary(reservations []*reservation.Reservat
 
 	return args.Get(0).(*dto.Summary), args.Error(1)
 }
-
-func (m *MockSummaryService) RefreshOnlinePlayers() error {
-	args := m.Called()
-	return args.Error(0)
-}

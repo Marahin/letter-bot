@@ -287,10 +287,17 @@ func (b *Bot) SendLetterMessage(guild *guild.Guild, channel *discord.Channel, su
 		writtenReservations := strings.Builder{}
 
 		for _, booking := range el.Bookings {
+			statusStr := ""
+			switch booking.Status {
+			case summary.Online:
+				statusStr = ":green_circle: "
+			case summary.Offline:
+				statusStr = ":red_circle: "
+			}
 			writtenReservations.WriteString(
 				fmt.Sprintf(
 					"%s**%s** - **%s** %s\n",
-					booking.Status,
+					statusStr,
 					booking.StartAt.Format("15:04"),
 					booking.EndAt.Format("15:04"),
 					booking.Author,

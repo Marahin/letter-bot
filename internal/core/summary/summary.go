@@ -87,10 +87,3 @@ func (a *Adapter) mapToSpotsToCounts(spotsToReservations map[string][]*reservati
 
 	return spotsToCounts
 }
-
-func (a *Adapter) RefreshOnlinePlayers() error {
-	if a.onlineCheck == nil {
-		return nil
-	}
-	return a.onlineCheck.RefreshOnlinePlayers()
-}

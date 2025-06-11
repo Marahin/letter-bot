@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -105,4 +106,27 @@ func TestGetOnlinePlayerNames_HttpRequestFails(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "error making GET request")
 	require.Nil(t, names)
+}
+
+func TestGetOnlinePlayerNames_Timeout(t *testing.T) {
+	// given
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(200 * time.Millisecond) // longer than client timeout
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	service := NewHttpWorldService(server.URL)
+	// set a short timeout for this test
+	service.Client.Timeout = 50 * time.Millisecond
+
+	// when
+	start := time.Now()
+	names, err := service.GetOnlinePlayerNames("Celesta")
+	elapsed := time.Since(start)
+
+	// then
+	require.Error(t, err)
+	require.Nil(t, names)
+	require.Less(t, elapsed, 200*time.Millisecond, "should timeout before server responds")
 }

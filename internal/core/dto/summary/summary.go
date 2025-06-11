@@ -4,6 +4,14 @@ import (
 	"time"
 )
 
+type OnlineStatus int
+
+const (
+	Unknown OnlineStatus = iota
+	Online
+	Offline
+)
+
 type Summary struct {
 	PreMessage   string
 	Chart        []byte
@@ -26,7 +34,7 @@ type LedgerEntry struct {
 type Booking struct {
 	Author          string
 	AuthorDiscordID string
-	Status          string
+	Status          OnlineStatus
 	StartAt         time.Time
 	EndAt           time.Time
 }

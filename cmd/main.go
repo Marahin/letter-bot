@@ -73,7 +73,7 @@ func main() {
 
 	// Discord
 	dcFormatter := formatter.NewFormatter()
-	botService := bot.NewManager(summaryService, reservationRepo).WithFormatter(dcFormatter).WithLogger(log)
+	botService := bot.NewManager(summaryService, reservationRepo, onlineChecker).WithFormatter(dcFormatter).WithLogger(log)
 	communicationService := communication.NewAdapter(botService, botService).WithLogger(log)
 
 	// Bot

@@ -107,7 +107,7 @@ func TestPrepareSummary(t *testing.T) {
 		assert.NotEmpty(entry.Author)
 		assert.NotEmpty(entry.StartAt)
 		assert.NotEmpty(entry.EndAt)
-		assert.Equal(":green_circle: ", entry.Status)
+		assert.Equal(dto.Online, entry.Status)
 	}
 
 	assert.Equal(secondEntry.Spot, "test-2")
@@ -117,7 +117,7 @@ func TestPrepareSummary(t *testing.T) {
 		assert.NotEmpty(entry.Author)
 		assert.NotEmpty(entry.StartAt)
 		assert.NotEmpty(entry.EndAt)
-		assert.Equal(":red_circle: ", entry.Status)
+		assert.Equal(dto.Offline, entry.Status)
 	}
 }
 
@@ -177,7 +177,7 @@ func TestPrepareSummaryTruncated(t *testing.T) {
 	// check that all bookings have the correct status
 	for _, ledgerEntry := range summary.Ledger {
 		for _, booking := range ledgerEntry.Bookings {
-			assert.Equal(":red_circle: ", booking.Status)
+			assert.Equal(dto.Offline, booking.Status)
 		}
 	}
 }

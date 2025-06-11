@@ -7,13 +7,12 @@ import (
 )
 
 func (a *Adapter) MapReservation(reservation *reservation.Reservation) *summary.Booking {
-	status := ""
+	status := summary.Unknown
 	if a.onlineCheck != nil {
-		online := a.onlineCheck.IsOnline(reservation.Author)
-		if online {
-			status = ":green_circle: "
+		if a.onlineCheck.IsOnline(reservation.Author) {
+			status = summary.Online
 		} else {
-			status = ":red_circle: "
+			status = summary.Offline
 		}
 	}
 	return &summary.Booking{

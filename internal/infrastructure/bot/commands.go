@@ -38,6 +38,8 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 		}
 	case "summary":
 		err = b.PrivateSummary(i)
+	case "world-set":
+		err = b.SetWorld(i)
 	default:
 		err = fmt.Errorf("missing handler for command: %s", name)
 	}
@@ -123,5 +125,18 @@ var commands = []*discordgo.ApplicationCommand{
 		Name:        "summary",
 		Description: "Request a summary snapshot",
 		Type:        discordgo.ChatApplicationCommand,
+	},
+	{ //it's intentionally not 'set-world' as it would appear alphabetically higher than summary and unbook - purely for UX - its only used once and only by owner
+		Name:        "world-set",
+		Description: "Set the Tibia world for this server (owner only)",
+		Type:        discordgo.ChatApplicationCommand,
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Name:        "world",
+				Description: "Tibia world name",
+				Type:        discordgo.ApplicationCommandOptionString,
+				Required:    true,
+			},
+		},
 	},
 }

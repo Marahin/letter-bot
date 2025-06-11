@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	dto "spot-assistant/internal/core/dto/summary"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,7 +34,7 @@ func TestMapReservation(t *testing.T) {
 	assert.Equal(input.Author, res.Author)
 	assert.Equal(input.StartAt, res.StartAt)
 	assert.Equal(input.EndAt, res.EndAt)
-	assert.Equal(":green_circle: ", res.Status)
+	assert.Equal(dto.Online, res.Status)
 }
 
 func TestMapReservations(t *testing.T) {
@@ -68,6 +70,6 @@ func TestMapReservations(t *testing.T) {
 		assert.Equal(input[i].StartAt, booking.StartAt)
 		assert.Equal(input[i].EndAt, booking.EndAt)
 	}
-	assert.Equal(":green_circle: ", res[0].Status)
-	assert.Equal(":red_circle: ", res[1].Status)
+	assert.Equal(dto.Online, res[0].Status)
+	assert.Equal(dto.Offline, res[1].Status)
 }

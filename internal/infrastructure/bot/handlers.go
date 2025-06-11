@@ -66,13 +66,22 @@ func (b *Bot) InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCr
 	b.log.With("duration", time.Since(tStart)).Debug("interaction handled")
 }
 
+func (b *Bot) TryRefresh() {
+	go func() {
+		if err := b.refresh(); err != nil {
+			b.log.Errorf("failed to refresh online players: %v", err)
+		}
+	}()
+}
+
+func (b *Bot) refresh() error {
+	return b.onlineCheckService.RefreshOnlinePlayers()
+}
+
 func (b *Bot) Tick() {
 	b.log.Debug("Tick")
 	b.log.Info("About to refresh online players")
-	err := b.summarySrv.RefreshOnlinePlayers()
-	if err != nil {
-		b.log.Errorf("failed to refresh online players: %v", err)
-	}
+	b.TryRefresh()
 	guilds := b.GetGuilds()
 	for _, guild := range guilds {
 		guild := guild
@@ -284,5 +293,40 @@ func (b *Bot) PrivateSummary(i *discordgo.InteractionCreate) error {
 	}
 
 	_, err = b.mgr.SessionForGuild(gID).FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{Content: "Check your DM!"})
+	return err
+}
+
+func (b *Bot) SetWorld(i *discordgo.InteractionCreate) error {
+	guildID := i.GuildID
+	userID := i.Member.User.ID
+
+	// Fetch guild to check owner
+	guild, err := b.mgr.Gateway.Guild(guildID)
+	if err != nil {
+		return fmt.Errorf("could not fetch guild: %w", err)
+	}
+	if guild.OwnerID != userID {
+		return fmt.Errorf("only the server owner can use this command")
+	}
+
+	world := ""
+	for _, opt := range i.ApplicationCommandData().Options {
+		if opt.Name == "world" {
+			world = opt.StringValue()
+		}
+	}
+	if world == "" {
+		return fmt.Errorf("world name is required")
+	}
+
+	// TODO: save the world name for this guild in db
+
+	gID, err := stringsHelper.StrToInt64(guildID)
+	if err != nil {
+		return fmt.Errorf("could not parse guild id: %v", guildID)
+	}
+	_, err = b.mgr.SessionForGuild(gID).FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+		Content: fmt.Sprintf("Tibia world for this server set to: **%s**", world),
+	})
 	return err
 }
