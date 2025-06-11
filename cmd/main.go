@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	_ "go.uber.org/automaxprocs"
 	"go.uber.org/zap"
 
 	"spot-assistant/internal/core/booking"

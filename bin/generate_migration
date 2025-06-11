@@ -1,4 +1,4 @@
 atlas migrate diff $1 \
-  --url "postgres://${DATABASE_USER}:${DATABASE_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT}/${DATABASE_NAME}?sslmode=${DATABASE_SSL}" \
+  --dev-url "docker://postgres/12/dev" \
   --dir "file://internal/infrastructure/db/postgresql/migrations" \
   --to "file://internal/infrastructure/db/postgresql/schema.sql"

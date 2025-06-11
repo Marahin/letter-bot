@@ -1,3 +1,5 @@
+-- Add btree_gist extension
+CREATE EXTENSION IF NOT EXISTS btree_gist WITH SCHEMA public;
 -- Create "django_migrations" table
 CREATE TABLE "public"."django_migrations" ("id" bigserial NOT NULL, "app" character varying(255) NOT NULL, "name" character varying(255) NOT NULL, "applied" timestamptz NOT NULL, PRIMARY KEY ("id"));
 -- Create "django_session" table

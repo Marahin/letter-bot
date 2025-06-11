@@ -119,3 +119,4 @@ Contributors:
 
 * [patryk-fuhrman](https://github.com/patryk-fuhrman)
 * [pawcioma](https://github.com/pawcioma/)
+* [mariyusz](https://github.com/mariyusz)
