@@ -70,6 +70,8 @@ Letter bot originated within [Refugees](https://www.tibia.com/community/?subtopi
 * `docker` and `docker-compose` (unless you want to go bare-metal),
 * `make` (unless you want to run commands manually),
 * `go` (if you want to develop),
+* `atlas` to manage migrations https://atlasgo.io
+* `sqlc` to generate Go wrappers around SQL queries https://sqlc.dev/
 
 ### docker-compose
 
@@ -95,10 +97,12 @@ Letter bot originated within [Refugees](https://www.tibia.com/community/?subtopi
 
 ### Database and migrations
 
-If you change SQL schema in any way, remember to:
+* make changes in schema, 
+* `bin/generate_migration <migration_title>`
+* create new queries, if needed
+* `make sqlc-generate`
 
-* regenerate sqlc: `make sqlc-generate` - this generates Go wrapper around our queries,
-* run `docker-compose exec bot sh -c "bin/generate_migration <YOUR_MIGRATION_NAME>"` - so if you change a timestamp, you could name it `"users_timestamps"`.
+To apply migrations, run `docker-compose exec bot sh -c "bin/migrate"`.
 
 ### Contributing
 
