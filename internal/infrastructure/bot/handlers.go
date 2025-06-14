@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -43,14 +44,16 @@ func (b *Bot) GuildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
 
 		return
 	}
-
+	b.ConfigureWorldNameForGuild(guild.ID)
 	go b.TryUpdateGuildLetter(guild)
 	defer b.eventHandler.OnGuildCreate(MapGuild(g.Guild))
 }
 
 func (b *Bot) Ready(s *discordgo.Session, r *discordgo.Ready) {
 	b.log.Debug("Ready")
-
+	for _, g := range s.State.Guilds {
+		b.ConfigureWorldNameForGuild(g.ID)
+	}
 	b.StartTicking()
 
 	defer b.eventHandler.OnReady()
@@ -66,25 +69,14 @@ func (b *Bot) InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCr
 	b.log.With("duration", time.Since(tStart)).Debug("interaction handled")
 }
 
-func (b *Bot) TryRefresh() {
-	go func() {
-		if err := b.refresh(); err != nil {
-			b.log.Errorf("failed to refresh online players: %v", err)
-		}
-	}()
-}
-
-func (b *Bot) refresh() error {
-	return b.onlineCheckService.RefreshOnlinePlayers()
-}
-
 func (b *Bot) Tick() {
 	b.log.Debug("Tick")
 	b.log.Info("About to refresh online players")
-	b.TryRefresh()
 	guilds := b.GetGuilds()
 	for _, guild := range guilds {
 		guild := guild
+		b.ConfigureWorldNameForGuild(guild.ID)
+		go b.onlineCheckService.TryRefresh(guild.ID)
 		go b.TryUpdateGuildLetter(guild)
 	}
 
@@ -319,7 +311,14 @@ func (b *Bot) SetWorld(i *discordgo.InteractionCreate) error {
 		return fmt.Errorf("world name is required")
 	}
 
-	// TODO: save the world name for this guild in db
+	// Save or update the world name for this guild in the database
+	err = b.SetGuildWorld(guildID, world)
+	if err != nil {
+		return fmt.Errorf("failed to save world name: %w", err)
+	}
+
+	// Configure the online checker with the new world name
+	b.ConfigureWorldNameForGuild(guildID)
 
 	gID, err := stringsHelper.StrToInt64(guildID)
 	if err != nil {
@@ -329,4 +328,11 @@ func (b *Bot) SetWorld(i *discordgo.InteractionCreate) error {
 		Content: fmt.Sprintf("Tibia world for this server set to: **%s**", world),
 	})
 	return err
+}
+
+func (b *Bot) ConfigureWorldNameForGuild(guildID string) {
+	guildWorld, err := b.worldNameRepo.SelectGuildWorld(context.Background(), guildID)
+	if err == nil && guildWorld != nil && guildWorld.WorldName != "" {
+		b.onlineCheckService.ConfigureWorldName(guildID, guildWorld.WorldName)
+	}
 }

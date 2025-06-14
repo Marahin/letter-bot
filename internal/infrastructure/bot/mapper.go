@@ -7,11 +7,18 @@ import (
 	"spot-assistant/internal/core/dto/role"
 	"strconv"
 
-	"github.com/bwmarrin/discordgo"
 	"spot-assistant/internal/common/collections"
 	"spot-assistant/internal/common/strings"
 	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/reservation"
+	"spot-assistant/internal/core/dto/summary"
+
+	"github.com/bwmarrin/discordgo"
+)
+
+const (
+	EmojiOnline  = ":green_circle: "
+	EmojiOffline = ":red_circle: "
 )
 
 func MapChannel(input *discordgo.Channel) *discord.Channel {
@@ -124,4 +131,15 @@ func MapReservationWithSpotArrToChoice(input []*reservation.ReservationWithSpot)
 			Value: strconv.FormatInt(i.Reservation.ID, 10),
 		}
 	})
+}
+
+func MapOnlineStatus(status summary.OnlineStatus) string {
+	switch status {
+	case summary.Online:
+		return EmojiOnline
+	case summary.Offline:
+		return EmojiOffline
+	default:
+		return ""
+	}
 }

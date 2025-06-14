@@ -11,15 +11,16 @@ import (
 type Adapter struct {
 	log     *zap.SugaredLogger
 	api     ports.WorldApi
-	world   string
-	players []string
+	worlds  map[string]string
+	players map[string][]string
 	mutex   sync.RWMutex
 }
 
 func NewAdapter(api ports.WorldApi, world string) *Adapter {
 	return &Adapter{
-		api:   api,
-		world: world,
+		api:     api,
+		worlds:  make(map[string]string),
+		players: make(map[string][]string),
 	}
 }
 
@@ -29,5 +30,16 @@ func (a *Adapter) WithLogger(log *zap.SugaredLogger) *Adapter {
 }
 
 func (a *Adapter) IsConfigured() bool {
-	return a.api != nil && a.world != "" && a.api.GetBaseURL() != ""
+	a.mutex.RLock()
+	defer a.mutex.RUnlock()
+	if a.api == nil || a.api.GetBaseURL() == "" {
+		return false
+	}
+	// At least one world must be configured
+	for _, world := range a.worlds {
+		if world != "" {
+			return true
+		}
+	}
+	return false
 }

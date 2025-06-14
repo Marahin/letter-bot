@@ -24,6 +24,7 @@ import (
 	reservationRepository "spot-assistant/internal/infrastructure/reservation/postgresql/sqlc"
 	spotRepository "spot-assistant/internal/infrastructure/spot/postgresql/sqlc"
 	"spot-assistant/internal/infrastructure/worldapi"
+	worldNameRepository "spot-assistant/internal/infrastructure/worldname/postgresql/sqlc"
 )
 
 func main() {
@@ -56,13 +57,9 @@ func main() {
 	cancel()
 
 	// Online Checker
-	tibiaDataBaseURL := os.Getenv("WORLD_API_BASE_URL")
-	worldName := os.Getenv("WORLD_NAME")
+	tibiaDataBaseURL := os.Getenv("TIBIA_WORLD_API_BASE_URL")
 	worldApi := worldapi.NewHttpWorldService(tibiaDataBaseURL)
-	onlineChecker := onlinecheck.NewAdapter(worldApi, worldName).WithLogger(log)
-	if !onlineChecker.IsConfigured() {
-		log.Warn("Online checker is disabled: WORLD_API_BASE_URL or WORLD_NAME not set")
-	}
+	onlineChecker := onlinecheck.NewAdapter(worldApi, "").WithLogger(log)
 
 	// Summary
 	charter := chart.NewAdapter()
@@ -71,16 +68,21 @@ func main() {
 	// Infrastructure
 	reservationRepo := reservationRepository.NewReservationRepository(db).WithLogger(log)
 	spotRepo := spotRepository.NewSpotRepository(db)
+	worldNameRepo := worldNameRepository.NewWorldNameRepository(db)
 
 	// Discord
 	dcFormatter := formatter.NewFormatter()
-	botService := bot.NewManager(summaryService, reservationRepo, onlineChecker).WithFormatter(dcFormatter).WithLogger(log)
+	botService := bot.NewManager(summaryService, reservationRepo, worldNameRepo, onlineChecker).WithFormatter(dcFormatter).WithLogger(log)
 	communicationService := communication.NewAdapter(botService, botService).WithLogger(log)
 
 	// Bot
 	bookingService := booking.NewAdapter(spotRepo, reservationRepo, communicationService).WithLogger(log)
 	eventHandler := eventhandler.NewHandler(bookingService, reservationRepo, communicationService, summaryService)
 	err = botService.WithEventHandler(eventHandler).Run()
+
+	if !onlineChecker.IsConfigured() {
+		log.Warn("Online checker is disabled: WORLD_API_BASE_URL or any world name not set")
+	}
 	if err != nil {
 		panic(err)
 	}

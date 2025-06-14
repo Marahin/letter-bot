@@ -21,10 +21,10 @@ func TestMapReservation(t *testing.T) {
 		Author:  "test author",
 		StartAt: time.Now(),
 		EndAt:   time.Now().Add(2 * time.Hour),
+		GuildID: "guild1",
 	}
-
-	// mock IsOnline to return true for this author
-	mockOnlineCheckService.On("IsOnline", input.Author).Return(true)
+	// mock PlayerStatus to return Online for this author
+	mockOnlineCheckService.On("PlayerStatus", input.GuildID, input.Author).Return(dto.Online)
 
 	// when
 	res := adapter.MapReservation(input)
@@ -48,17 +48,18 @@ func TestMapReservations(t *testing.T) {
 			Author:  "test author",
 			StartAt: time.Now(),
 			EndAt:   time.Now().Add(2 * time.Hour),
+			GuildID: "guild1",
 		},
 		{
 			Author:  "test author 2",
 			StartAt: time.Now().Add(5 * time.Minute),
 			EndAt:   time.Now().Add(3 * time.Hour),
+			GuildID: "guild1",
 		},
 	}
-
-	// mock IsOnline for both authors
-	mockOnlineCheckService.On("IsOnline", input[0].Author).Return(true)
-	mockOnlineCheckService.On("IsOnline", input[1].Author).Return(false)
+	// mock PlayerStatus for both authors
+	mockOnlineCheckService.On("PlayerStatus", input[0].GuildID, input[0].Author).Return(dto.Online)
+	mockOnlineCheckService.On("PlayerStatus", input[1].GuildID, input[1].Author).Return(dto.Offline)
 
 	// when
 	res := adapter.MapReservations(input)

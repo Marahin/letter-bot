@@ -49,7 +49,10 @@ type BookingService interface {
 }
 
 type OnlineCheckService interface {
-	IsOnline(characterName string) bool
-	RefreshOnlinePlayers() error
+	IsOnline(guildID, characterName string) bool
+	PlayerStatus(guildID, characterName string) summary.OnlineStatus
+	RefreshOnlinePlayers(guildID string) error
 	IsConfigured() bool
+	TryRefresh(guildID string)
+	ConfigureWorldName(guildID, world string)
 }

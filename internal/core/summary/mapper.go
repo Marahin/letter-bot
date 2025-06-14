@@ -7,20 +7,12 @@ import (
 )
 
 func (a *Adapter) MapReservation(reservation *reservation.Reservation) *summary.Booking {
-	status := summary.Unknown
-	if a.onlineCheck != nil {
-		if a.onlineCheck.IsOnline(reservation.Author) {
-			status = summary.Online
-		} else {
-			status = summary.Offline
-		}
-	}
 	return &summary.Booking{
 		Author:          reservation.Author,
 		StartAt:         reservation.StartAt,
 		EndAt:           reservation.EndAt,
 		AuthorDiscordID: reservation.AuthorDiscordID,
-		Status:          status,
+		Status:          a.onlineCheck.PlayerStatus(reservation.GuildID, reservation.Author),
 	}
 }
 

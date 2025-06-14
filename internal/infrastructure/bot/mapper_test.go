@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"spot-assistant/internal/core/dto/reservation"
+	"spot-assistant/internal/core/dto/summary"
 )
 
 func TestMapChannel(t *testing.T) {
@@ -314,4 +315,24 @@ func TestMapReservationWithSpotArrToChoice(t *testing.T) {
 	result := res[0]
 	assert.Equal("2023-08-10 16:00 - 2023-08-10 18:00 test-spot", result.Name)
 	assert.Equal(strconv.FormatInt(input[0].Reservation.ID, 10), result.Value)
+}
+
+func TestMapOnlineStatus(t *testing.T) {
+	tests := []struct {
+		name     string
+		status   summary.OnlineStatus
+		expected string
+	}{
+		{"Online", summary.Online, EmojiOnline},
+		{"Offline", summary.Offline, EmojiOffline},
+		{"Unknown", summary.Unknown, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := MapOnlineStatus(tt.status)
+			assert := assert.New(t)
+			assert.Equal(tt.expected, got)
+		})
+	}
 }
