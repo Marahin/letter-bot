@@ -56,23 +56,26 @@ func main() {
 	}
 	cancel()
 
-	// Online Checker
-	tibiaDataBaseURL := os.Getenv("TIBIA_WORLD_API_BASE_URL")
-	worldApi := worldapi.NewHttpWorldService(tibiaDataBaseURL)
-	onlineChecker := onlinecheck.NewAdapter(worldApi, "").WithLogger(log)
-
-	// Summary
-	charter := chart.NewAdapter()
-	summaryService := summary.NewAdapter(charter, onlineChecker) // .WithLogger(log)
-
 	// Infrastructure
 	reservationRepo := reservationRepository.NewReservationRepository(db).WithLogger(log)
 	spotRepo := spotRepository.NewSpotRepository(db)
 	worldNameRepo := worldNameRepository.NewWorldNameRepository(db)
 
+	// Online Checker
+	tibiaDataBaseURL := os.Getenv("TIBIA_WORLD_API_BASE_URL")
+	worldApi := worldapi.NewHttpWorldService(tibiaDataBaseURL)
+	onlineChecker := onlinecheck.NewAdapter(worldApi, worldNameRepo).WithLogger(log)
+	if !onlineChecker.IsConfigured() {
+		log.Warn("Online checker is disabled: WORLD_API_BASE_URL not set")
+	}
+
+	// Summary
+	charter := chart.NewAdapter()
+	summaryService := summary.NewAdapter(charter, onlineChecker) // .WithLogger(log)
+
 	// Discord
 	dcFormatter := formatter.NewFormatter()
-	botService := bot.NewManager(summaryService, reservationRepo, worldNameRepo, onlineChecker).WithFormatter(dcFormatter).WithLogger(log)
+	botService := bot.NewManager(summaryService, reservationRepo, onlineChecker).WithFormatter(dcFormatter).WithLogger(log)
 	communicationService := communication.NewAdapter(botService, botService).WithLogger(log)
 
 	// Bot
@@ -80,9 +83,6 @@ func main() {
 	eventHandler := eventhandler.NewHandler(bookingService, reservationRepo, communicationService, summaryService)
 	err = botService.WithEventHandler(eventHandler).Run()
 
-	if !onlineChecker.IsConfigured() {
-		log.Warn("Online checker is disabled: WORLD_API_BASE_URL or any world name not set")
-	}
 	if err != nil {
 		panic(err)
 	}

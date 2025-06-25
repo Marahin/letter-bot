@@ -31,6 +31,5 @@ func (repo *WorldNameRepository) SelectGuildWorld(ctx context.Context, guildID s
 		ID:        res.ID,
 		GuildID:   res.GuildID,
 		WorldName: res.WorldName,
-		CreatedAt: res.CreatedAt.Time,
 	}, nil
 }

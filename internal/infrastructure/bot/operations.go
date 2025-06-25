@@ -463,10 +463,3 @@ func (b *Bot) OpenDM(m *member.Member) (*discord.Channel, error) {
 
 	return MapChannel(channel), nil
 }
-
-func (b *Bot) SetGuildWorld(guildID, world string) error {
-	if b.worldNameRepo == nil {
-		return fmt.Errorf("worldNameRepo is not configured")
-	}
-	return b.worldNameRepo.UpsertGuildWorld(context.Background(), guildID, world)
-}

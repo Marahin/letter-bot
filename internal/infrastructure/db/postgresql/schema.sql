@@ -837,5 +837,6 @@ CREATE TABLE public.guilds_world (
     id bigserial PRIMARY KEY,
     guild_id character varying(255) NOT NULL UNIQUE,
     world_name character varying(100) NOT NULL,
-    created_at timestamptz NOT NULL DEFAULT now()
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
 );

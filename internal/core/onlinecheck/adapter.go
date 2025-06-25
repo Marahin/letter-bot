@@ -1,26 +1,27 @@
 package onlinecheck
 
 import (
-	"sync"
-
 	"go.uber.org/zap"
+
+	cmap "github.com/orcaman/concurrent-map/v2"
 
 	"spot-assistant/internal/ports"
 )
 
 type Adapter struct {
-	log     *zap.SugaredLogger
-	api     ports.WorldApi
-	worlds  map[string]string
-	players map[string][]string
-	mutex   sync.RWMutex
+	log            *zap.SugaredLogger
+	api            ports.WorldApi
+	worldNameRepo  ports.WorldNameRepository
+	guildIdToWorld cmap.ConcurrentMap[string, string]
+	players        cmap.ConcurrentMap[string, []string]
 }
 
-func NewAdapter(api ports.WorldApi, world string) *Adapter {
+func NewAdapter(api ports.WorldApi, worldNameRepo ports.WorldNameRepository) *Adapter {
 	return &Adapter{
-		api:     api,
-		worlds:  make(map[string]string),
-		players: make(map[string][]string),
+		api:            api,
+		worldNameRepo:  worldNameRepo,
+		guildIdToWorld: cmap.New[string](),
+		players:        cmap.New[[]string](),
 	}
 }
 
@@ -30,16 +31,5 @@ func (a *Adapter) WithLogger(log *zap.SugaredLogger) *Adapter {
 }
 
 func (a *Adapter) IsConfigured() bool {
-	a.mutex.RLock()
-	defer a.mutex.RUnlock()
-	if a.api == nil || a.api.GetBaseURL() == "" {
-		return false
-	}
-	// At least one world must be configured
-	for _, world := range a.worlds {
-		if world != "" {
-			return true
-		}
-	}
-	return false
+	return a.api != nil && a.api.GetBaseURL() != ""
 }

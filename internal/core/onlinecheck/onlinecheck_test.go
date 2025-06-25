@@ -2,9 +2,13 @@ package onlinecheck
 
 import (
 	"errors"
+	"spot-assistant/internal/core/dto/guildsworld"
 	"spot-assistant/internal/core/dto/summary"
 	"testing"
 
+	"spot-assistant/internal/common/test/mocks"
+
+	cmap "github.com/orcaman/concurrent-map/v2"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap/zaptest"
 )
@@ -33,16 +37,19 @@ func TestRefreshOnlinePlayers_Success(t *testing.T) {
 	log := zaptest.NewLogger(t).Sugar()
 
 	a := &Adapter{
-		api:     mockAPI,
-		worlds:  map[string]string{"guild1": "Celesta"},
-		players: make(map[string][]string),
-		log:     log,
+		api:            mockAPI,
+		guildIdToWorld: cmap.New[string](),
+		players:        cmap.New[[]string](),
+		log:            log,
 	}
+	a.guildIdToWorld.Set("guild1", "Celesta")
 	// when
 	err := a.RefreshOnlinePlayers("guild1")
 	// then
+	players, ok := a.players.Get("Celesta")
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"Mariysz", "Asar Cham"}, a.players["Celesta"])
+	assert.True(t, ok)
+	assert.Equal(t, []string{"Mariysz", "Asar Cham"}, players)
 }
 
 func TestRefreshOnlinePlayers_Error(t *testing.T) {
@@ -53,11 +60,12 @@ func TestRefreshOnlinePlayers_Error(t *testing.T) {
 	log := zaptest.NewLogger(t).Sugar()
 
 	a := &Adapter{
-		api:     mockAPI,
-		worlds:  map[string]string{"guild1": "Celesta"},
-		players: make(map[string][]string),
-		log:     log,
+		api:            mockAPI,
+		guildIdToWorld: cmap.New[string](),
+		players:        cmap.New[[]string](),
+		log:            log,
 	}
+	a.guildIdToWorld.Set("guild1", "Celesta")
 	// when
 	err := a.RefreshOnlinePlayers("guild1")
 	// then
@@ -69,10 +77,12 @@ func TestIsOnline(t *testing.T) {
 	// given
 	log := zaptest.NewLogger(t).Sugar()
 	a := &Adapter{
-		worlds:  map[string]string{"guild1": "Celesta"},
-		players: map[string][]string{"Celesta": {"Mariysz", "Asar Cham"}},
-		log:     log,
+		guildIdToWorld: cmap.New[string](),
+		players:        cmap.New[[]string](),
+		log:            log,
 	}
+	a.guildIdToWorld.Set("guild1", "Celesta")
+	a.players.Set("Celesta", []string{"Mariysz", "Asar Cham"})
 
 	// then
 	assert.True(t, a.IsOnline("guild1", "Mariysz"))
@@ -86,15 +96,35 @@ func TestIsOnline(t *testing.T) {
 
 	assert.False(t, a.IsOnline("guild1", "Irnas"))
 	assert.False(t, a.IsOnline("guild1", "Kai Ens / Miodoelo")) // both offline
+
+	// test missing world
+	a2 := &Adapter{
+		guildIdToWorld: cmap.New[string](),
+		players:        cmap.New[[]string](),
+		log:            log,
+	}
+	a2.players.Set("Celesta", []string{"Mariysz", "Asar Cham"})
+	assert.False(t, a2.IsOnline("guild1", "Mariysz"))
+
+	// test missing players
+	a3 := &Adapter{
+		guildIdToWorld: cmap.New[string](),
+		players:        cmap.New[[]string](),
+		log:            log,
+	}
+	a3.guildIdToWorld.Set("guild1", "Celesta")
+	assert.False(t, a3.IsOnline("guild1", "Mariysz"))
 }
 
 func TestIsOnline_CaseSensitivity(t *testing.T) {
 	log := zaptest.NewLogger(t).Sugar()
 	a := &Adapter{
-		worlds:  map[string]string{"guild1": "Celesta"},
-		players: map[string][]string{"Celesta": {"Mariysz", "Asar Cham"}},
-		log:     log,
+		guildIdToWorld: cmap.New[string](),
+		players:        cmap.New[[]string](),
+		log:            log,
 	}
+	a.guildIdToWorld.Set("guild1", "Celesta")
+	a.players.Set("Celesta", []string{"Mariysz", "Asar Cham"})
 	assert.True(t, a.IsOnline("guild1", "mariysz"))
 	assert.True(t, a.IsOnline("guild1", "ASAR CHAM"))
 	assert.True(t, a.IsOnline("guild1", "Mariysz"))
@@ -124,21 +154,20 @@ func TestIsConfigured(t *testing.T) {
 			GetOnlinePlayerNames(string) ([]string, error)
 			GetBaseURL() string
 		}
-		worlds map[string]string
 		expect bool
 	}{
-		{"all valid", mockAPI, map[string]string{"guild1": "Celesta"}, true},
-		{"nil api", nil, map[string]string{"guild1": "Celesta"}, false},
-		{"empty worlds", mockAPI, map[string]string{}, false},
-		{"empty api url", mockAPIEmptyURL, map[string]string{"guild1": "Celesta"}, false},
+		{"all valid", mockAPI, true},
+		{"nil api", nil, false},
+		{"empty api url", mockAPIEmptyURL, false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			a := &Adapter{
-				api:    tt.api,
-				worlds: tt.worlds,
-				log:    log,
+				api:            tt.api,
+				guildIdToWorld: cmap.New[string](),
+				players:        cmap.New[[]string](),
+				log:            log,
 			}
 			assert.Equal(t, tt.expect, a.IsConfigured())
 		})
@@ -148,23 +177,27 @@ func TestIsConfigured(t *testing.T) {
 func TestConfigureWorldName(t *testing.T) {
 	log := zaptest.NewLogger(t).Sugar()
 	a := &Adapter{
-		worlds:  make(map[string]string),
-		players: make(map[string][]string),
-		log:     log,
+		guildIdToWorld: cmap.New[string](),
+		players:        cmap.New[[]string](),
+		log:            log,
 	}
 	guildID := "guild1"
 	world := "Celesta"
 	a.ConfigureWorldName(guildID, world)
-	assert.Equal(t, world, a.worlds[guildID])
+	val, ok := a.guildIdToWorld.Get(guildID)
+	assert.True(t, ok)
+	assert.Equal(t, world, val)
 }
 
 func TestPlayerStatus(t *testing.T) {
 	log := zaptest.NewLogger(t).Sugar()
 	a := &Adapter{
-		worlds:  map[string]string{"guild1": "Celesta"},
-		players: map[string][]string{"Celesta": {"Mariysz"}},
-		log:     log,
+		guildIdToWorld: cmap.New[string](),
+		players:        cmap.New[[]string](),
+		log:            log,
 	}
+	a.guildIdToWorld.Set("guild1", "Celesta")
+	a.players.Set("Celesta", []string{"Mariysz"})
 	assert.Equal(t, summary.Online, a.PlayerStatus("guild1", "Mariysz"))
 	assert.Equal(t, summary.Offline, a.PlayerStatus("guild1", "Unknown"))
 }
@@ -175,11 +208,138 @@ func TestTryRefresh(t *testing.T) {
 	}
 	log := zaptest.NewLogger(t).Sugar()
 	a := &Adapter{
-		api:     mockAPI,
-		worlds:  map[string]string{"guild1": "Celesta"},
-		players: make(map[string][]string),
-		log:     log,
+		api:            mockAPI,
+		guildIdToWorld: cmap.New[string](),
+		players:        cmap.New[[]string](),
+		log:            log,
 	}
+	a.guildIdToWorld.Set("guild1", "Celesta")
 	a.TryRefresh("guild1")
-	assert.Equal(t, []string{"Mariysz"}, a.players["Celesta"])
+	players, ok := a.players.Get("Celesta")
+	assert.True(t, ok)
+	assert.Equal(t, []string{"Mariysz"}, players)
+}
+
+func TestIsOnline_KeyMisses(t *testing.T) {
+	log := zaptest.NewLogger(t).Sugar()
+
+	// guildIdToWorld key missing
+	a := &Adapter{
+		guildIdToWorld: cmap.New[string](),
+		players:        cmap.New[[]string](),
+		log:            log,
+	}
+	a.players.Set("Celesta", []string{"Mariysz"})
+	assert.False(t, a.IsOnline("guild1", "Mariysz"))
+
+	// world is empty string
+	a2 := &Adapter{
+		guildIdToWorld: cmap.New[string](),
+		players:        cmap.New[[]string](),
+		log:            log,
+	}
+	a2.guildIdToWorld.Set("guild1", "")
+	a2.players.Set("", []string{"Mariysz"})
+	assert.False(t, a2.IsOnline("guild1", "Mariysz"))
+
+	// players key missing
+	a3 := &Adapter{
+		guildIdToWorld: cmap.New[string](),
+		players:        cmap.New[[]string](),
+		log:            log,
+	}
+	a3.guildIdToWorld.Set("guild1", "Celesta")
+	assert.False(t, a3.IsOnline("guild1", "Mariysz"))
+}
+
+func TestSetGuildWorld_Success(t *testing.T) {
+	log := zaptest.NewLogger(t).Sugar()
+	mockRepo := &mocks.MockWorldNameRepository{}
+	a := &Adapter{
+		guildIdToWorld: cmap.New[string](),
+		players:        cmap.New[[]string](),
+		log:            log,
+		worldNameRepo:  mockRepo,
+	}
+	guildID := "guild1"
+	world := "Celesta"
+	err := a.SetGuildWorld(guildID, world)
+	assert.NoError(t, err)
+	val, ok := a.guildIdToWorld.Get(guildID)
+	assert.True(t, ok)
+	assert.Equal(t, world, val)
+	assert.True(t, mockRepo.UpsertCalled)
+	assert.Equal(t, guildID, mockRepo.UpsertGuildID)
+	assert.Equal(t, world, mockRepo.UpsertWorld)
+}
+
+func TestSetGuildWorld_Error(t *testing.T) {
+	log := zaptest.NewLogger(t).Sugar()
+	mockRepo := &mocks.MockWorldNameRepository{UpsertErr: errors.New("db error")}
+	a := &Adapter{
+		guildIdToWorld: cmap.New[string](),
+		players:        cmap.New[[]string](),
+		log:            log,
+		worldNameRepo:  mockRepo,
+	}
+	err := a.SetGuildWorld("guild1", "Celesta")
+	assert.Error(t, err)
+}
+
+func TestSetGuildWorld_NilRepo(t *testing.T) {
+	log := zaptest.NewLogger(t).Sugar()
+	a := &Adapter{
+		guildIdToWorld: cmap.New[string](),
+		players:        cmap.New[[]string](),
+		log:            log,
+		worldNameRepo:  nil,
+	}
+	err := a.SetGuildWorld("guild1", "Celesta")
+	assert.Error(t, err)
+}
+
+func TestConfigureWorldNameForGuild_Success(t *testing.T) {
+	log := zaptest.NewLogger(t).Sugar()
+	mockRepo := &mocks.MockWorldNameRepository{
+		SelectWorld: &guildsworld.GuildsWorld{
+			GuildID:   "guild1",
+			WorldName: "Celesta",
+		},
+	}
+	a := &Adapter{
+		guildIdToWorld: cmap.New[string](),
+		players:        cmap.New[[]string](),
+		log:            log,
+		worldNameRepo:  mockRepo,
+	}
+	err := a.ConfigureWorldNameForGuild("guild1")
+	assert.NoError(t, err)
+	val, ok := a.guildIdToWorld.Get("guild1")
+	assert.True(t, ok)
+	assert.Equal(t, "Celesta", val)
+}
+
+func TestConfigureWorldNameForGuild_Error(t *testing.T) {
+	log := zaptest.NewLogger(t).Sugar()
+	mockRepo := &mocks.MockWorldNameRepository{SelectErr: errors.New("db error")}
+	a := &Adapter{
+		guildIdToWorld: cmap.New[string](),
+		players:        cmap.New[[]string](),
+		log:            log,
+		worldNameRepo:  mockRepo,
+	}
+	err := a.ConfigureWorldNameForGuild("guild1")
+	assert.Error(t, err)
+}
+
+func TestConfigureWorldNameForGuild_NilRepo(t *testing.T) {
+	log := zaptest.NewLogger(t).Sugar()
+	a := &Adapter{
+		guildIdToWorld: cmap.New[string](),
+		players:        cmap.New[[]string](),
+		log:            log,
+		worldNameRepo:  nil,
+	}
+	err := a.ConfigureWorldNameForGuild("guild1")
+	assert.Error(t, err)
 }

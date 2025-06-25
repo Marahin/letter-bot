@@ -55,4 +55,6 @@ type OnlineCheckService interface {
 	IsConfigured() bool
 	TryRefresh(guildID string)
 	ConfigureWorldName(guildID, world string)
+	SetGuildWorld(guildID, world string) error
+	ConfigureWorldNameForGuild(guildID string) error
 }

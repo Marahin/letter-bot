@@ -26,7 +26,6 @@ type cfg struct {
 type Bot struct {
 	summarySrv         ports.SummaryService
 	reservationRepo    ports.ReservationRepository
-	worldNameRepo      ports.WorldNameRepository
 	onlineCheckService ports.OnlineCheckService
 	eventHandler       ports.APIPort
 	mgr                *shards.Manager
@@ -44,7 +43,7 @@ func init() {
 	envconfig.MustProcess("bot", &Config)
 }
 
-func NewManager(summarySrv ports.SummaryService, reservationRepo ports.ReservationRepository, worldNameRepo ports.WorldNameRepository, checkOnlineSrv ports.OnlineCheckService) *Bot {
+func NewManager(summarySrv ports.SummaryService, reservationRepo ports.ReservationRepository, checkOnlineSrv ports.OnlineCheckService) *Bot {
 	mgr, err := shards.New("Bot " + Config.Token)
 	if err != nil {
 		panic(fmt.Errorf("could not create shards manager, %w", err))
@@ -57,7 +56,6 @@ func NewManager(summarySrv ports.SummaryService, reservationRepo ports.Reservati
 		channelLocks:       cmap.New[*sync.RWMutex](),
 		summarySrv:         summarySrv,
 		reservationRepo:    reservationRepo,
-		worldNameRepo:      worldNameRepo,
 		onlineCheckService: checkOnlineSrv,
 	}
 

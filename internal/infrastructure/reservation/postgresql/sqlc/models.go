@@ -87,6 +87,7 @@ type GuildsWorld struct {
 	GuildID   string
 	WorldName string
 	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
 }
 
 type WebReservation struct {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"spot-assistant/internal/core/dto/guildsworld"
 
@@ -43,13 +42,12 @@ func TestSelectGuildWorld(t *testing.T) {
 		ID:        1,
 		GuildID:   guildID,
 		WorldName: "Celesta",
-		CreatedAt: time.Now(),
 	}
 
-	rows := pgxmock.NewRows([]string{"id", "guild_id", "world_name", "created_at"}).
-		AddRow(expected.ID, expected.GuildID, expected.WorldName, expected.CreatedAt)
+	rows := pgxmock.NewRows([]string{"id", "guild_id", "world_name"}).
+		AddRow(expected.ID, expected.GuildID, expected.WorldName)
 
-	mock.ExpectQuery("SELECT id, guild_id, world_name, created_at FROM guilds_world").
+	mock.ExpectQuery("SELECT id, guild_id, world_name FROM guilds_world").
 		WithArgs(guildID).
 		WillReturnRows(rows)
 
@@ -58,7 +56,6 @@ func TestSelectGuildWorld(t *testing.T) {
 	assert.Equal(t, expected.ID, got.ID)
 	assert.Equal(t, expected.GuildID, got.GuildID)
 	assert.Equal(t, expected.WorldName, got.WorldName)
-	assert.WithinDuration(t, expected.CreatedAt, got.CreatedAt, time.Second)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -70,7 +67,7 @@ func TestSelectGuildWorld_NotFound(t *testing.T) {
 	repo := NewWorldNameRepository(mock)
 
 	guildID := "guild123"
-	mock.ExpectQuery("SELECT id, guild_id, world_name, created_at FROM guilds_world").
+	mock.ExpectQuery("SELECT id, guild_id, world_name FROM guilds_world").
 		WithArgs(guildID).
 		WillReturnError(errors.New("no rows in result set"))
 

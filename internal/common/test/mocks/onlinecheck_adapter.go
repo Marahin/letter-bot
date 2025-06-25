@@ -37,3 +37,13 @@ func (m *MockOnlineCheckService) TryRefresh(guildID string) {
 func (m *MockOnlineCheckService) ConfigureWorldName(guildID, world string) {
 	m.Called(guildID, world)
 }
+
+func (m *MockOnlineCheckService) SetGuildWorld(guildID, world string) error {
+	args := m.Called(guildID, world)
+	return args.Error(0)
+}
+
+func (m *MockOnlineCheckService) ConfigureWorldNameForGuild(guildID string) error {
+	args := m.Called(guildID)
+	return args.Error(0)
+}

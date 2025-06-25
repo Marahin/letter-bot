@@ -39,7 +39,11 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 	case "summary":
 		err = b.PrivateSummary(i)
 	case "world-set":
-		err = b.SetWorld(i)
+		if isAutocomplete {
+			err = b.WorldSetAutocomplete(i)
+		} else {
+			err = b.WorldSet(i)
+		}
 	default:
 		err = fmt.Errorf("missing handler for command: %s", name)
 	}
@@ -132,10 +136,11 @@ var commands = []*discordgo.ApplicationCommand{
 		Type:        discordgo.ChatApplicationCommand,
 		Options: []*discordgo.ApplicationCommandOption{
 			{
-				Name:        "world",
-				Description: "Tibia world name",
-				Type:        discordgo.ApplicationCommandOptionString,
-				Required:    true,
+				Name:         "world",
+				Description:  "Tibia world name",
+				Type:         discordgo.ApplicationCommandOptionString,
+				Required:     true,
+				Autocomplete: true,
 			},
 		},
 	},
