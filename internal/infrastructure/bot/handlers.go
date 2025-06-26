@@ -292,7 +292,10 @@ func (b *Bot) PrivateSummary(i *discordgo.InteractionCreate) error {
 	return err
 }
 
-func (b *Bot) WorldSet(i *discordgo.InteractionCreate) error {
+func (b *Bot) SetWorld(i *discordgo.InteractionCreate) error {
+	if i.Member == nil || i.Member.User == nil {
+		return fmt.Errorf("unable to determine user identity")
+	}
 	guildID := i.GuildID
 	userID := i.Member.User.ID
 
@@ -309,6 +312,7 @@ func (b *Bot) WorldSet(i *discordgo.InteractionCreate) error {
 	for _, opt := range i.ApplicationCommandData().Options {
 		if opt.Name == "world" {
 			world = opt.StringValue()
+			break
 		}
 	}
 	if world == "" {
@@ -316,17 +320,13 @@ func (b *Bot) WorldSet(i *discordgo.InteractionCreate) error {
 	}
 
 	// Validate world against the allowed list
-	valid := false
-	for _, w := range worlds.Worlds {
-		if strings.EqualFold(w, world) {
-			valid = true
-			world = w
-			break
-		}
-	}
-	if !valid {
+	existingWorld, idx := collections.PoorMansFind(worlds.Worlds, func(w string) bool {
+		return strings.EqualFold(w, world)
+	})
+	if idx == -1 {
 		return fmt.Errorf("invalid world name: %s, please select a valid Tibia world", world)
 	}
+	world = existingWorld
 
 	err = b.onlineCheckService.SetGuildWorld(guildID, world)
 	if err != nil {
@@ -349,7 +349,7 @@ func (b *Bot) WorldSet(i *discordgo.InteractionCreate) error {
 	return err
 }
 
-func (b *Bot) WorldSetAutocomplete(i *discordgo.InteractionCreate) error {
+func (b *Bot) SetWorldAutocomplete(i *discordgo.InteractionCreate) error {
 	var userInput string
 	for _, opt := range i.ApplicationCommandData().Options {
 		if opt.Focused && opt.Name == "world" {

@@ -2,11 +2,11 @@ package onlinecheck
 
 import (
 	"errors"
-	"spot-assistant/internal/core/dto/guildsworld"
-	"spot-assistant/internal/core/dto/summary"
 	"testing"
 
 	"spot-assistant/internal/common/test/mocks"
+	"spot-assistant/internal/core/dto/guildsworld"
+	"spot-assistant/internal/core/dto/summary"
 
 	cmap "github.com/orcaman/concurrent-map/v2"
 	"github.com/stretchr/testify/assert"

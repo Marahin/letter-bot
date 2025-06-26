@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"spot-assistant/internal/common/collections"
 	"spot-assistant/internal/core/dto/world"
 )
 
@@ -39,10 +40,9 @@ func (h *HttpWorldService) GetOnlinePlayerNames(worldName string) ([]string, err
 		return nil, fmt.Errorf("error decoding response: %w", err)
 	}
 
-	names := make([]string, len(data.World.OnlinePlayers))
-	for i, p := range data.World.OnlinePlayers {
-		names[i] = p.Name
-	}
+	names := collections.PoorMansMap(data.World.OnlinePlayers, func(p world.Player) string {
+		return p.Name
+	})
 
 	return names, nil
 }

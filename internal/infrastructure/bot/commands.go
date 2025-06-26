@@ -40,9 +40,9 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 		err = b.PrivateSummary(i)
 	case "world-set":
 		if isAutocomplete {
-			err = b.WorldSetAutocomplete(i)
+			err = b.SetWorldAutocomplete(i)
 		} else {
-			err = b.WorldSet(i)
+			err = b.SetWorld(i)
 		}
 	default:
 		err = fmt.Errorf("missing handler for command: %s", name)
