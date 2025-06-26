@@ -293,9 +293,6 @@ func (b *Bot) PrivateSummary(i *discordgo.InteractionCreate) error {
 }
 
 func (b *Bot) SetWorld(i *discordgo.InteractionCreate) error {
-	if i.Member == nil || i.Member.User == nil {
-		return fmt.Errorf("unable to determine user identity")
-	}
 	guildID := i.GuildID
 	userID := i.Member.User.ID
 
