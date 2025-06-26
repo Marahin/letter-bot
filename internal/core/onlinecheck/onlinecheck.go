@@ -8,6 +8,9 @@ import (
 )
 
 func (a *Adapter) RefreshOnlinePlayers(guildID string) error {
+	if !a.IsConfigured() {
+		return nil
+	}
 	world, ok := a.guildIdToWorld.Get(guildID)
 	if !ok || world == "" {
 		return nil

@@ -416,7 +416,7 @@ func (b *Bot) RegisterCommands(guild *guild.Guild) error {
 		}
 	}
 
-	_, err = session.ApplicationCommandBulkOverwrite(session.State.User.ID, guild.ID, commands)
+	_, err = session.ApplicationCommandBulkOverwrite(session.State.User.ID, guild.ID, b.getCommands())
 	return err
 }
 

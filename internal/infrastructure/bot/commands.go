@@ -72,76 +72,81 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 	}
 }
 
-var commands = []*discordgo.ApplicationCommand{
-	{
-		Name:        "book",
-		Description: "Book a respawn",
-		Type:        discordgo.ChatApplicationCommand,
-		Options: []*discordgo.ApplicationCommandOption{
-			{
-				Name:         "respawn",
-				Description:  "Name of the respawn",
-				Type:         discordgo.ApplicationCommandOptionString,
-				Required:     true,
-				Autocomplete: true,
-			},
-
-			{
-				Name:         "start-at",
-				Description:  "An hour the hunt shall start (e.g. 15:20)",
-				Type:         discordgo.ApplicationCommandOptionString,
-				Required:     true,
-				Autocomplete: true,
-			},
-
-			{
-				Name:         "end-at",
-				Description:  "An hour the hunt shall end (e.g. 17:20)",
-				Type:         discordgo.ApplicationCommandOptionString,
-				Required:     true,
-				Autocomplete: true,
-			},
-
-			{
-				Name:         "overbook",
-				Description:  "An hour the hunt shall end (e.g. 17:20)",
-				Type:         discordgo.ApplicationCommandOptionString,
-				Required:     false,
-				Autocomplete: true,
-			},
-		},
-	},
-	{
-		Name:        "unbook",
-		Description: "Cancel a respawn booking",
-		Type:        discordgo.ChatApplicationCommand,
-		Options: []*discordgo.ApplicationCommandOption{
-			{
-				Name:         "reservation",
-				Description:  "Reservation to be cancelled",
-				Type:         discordgo.ApplicationCommandOptionString,
-				Required:     true,
-				Autocomplete: true,
+func (b *Bot) getCommands() []*discordgo.ApplicationCommand {
+	commands := []*discordgo.ApplicationCommand{
+		{
+			Name:        "book",
+			Description: "Book a respawn",
+			Type:        discordgo.ChatApplicationCommand,
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:         "respawn",
+					Description:  "Name of the respawn",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
+				},
+				{
+					Name:         "start-at",
+					Description:  "An hour the hunt shall start (e.g. 15:20)",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
+				},
+				{
+					Name:         "end-at",
+					Description:  "An hour the hunt shall end (e.g. 17:20)",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
+				},
+				{
+					Name:         "overbook",
+					Description:  "Should try to overbook existing reservations",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     false,
+					Autocomplete: true,
+				},
 			},
 		},
-	},
-	{
-		Name:        "summary",
-		Description: "Request a summary snapshot",
-		Type:        discordgo.ChatApplicationCommand,
-	},
-	{ //it's intentionally not 'set-world' as it would appear alphabetically higher than summary and unbook - purely for UX - its only used once and only by owner
-		Name:        "world-set",
-		Description: "Set the Tibia world for this server (owner only)",
-		Type:        discordgo.ChatApplicationCommand,
-		Options: []*discordgo.ApplicationCommandOption{
-			{
-				Name:         "world",
-				Description:  "Tibia world name",
-				Type:         discordgo.ApplicationCommandOptionString,
-				Required:     true,
-				Autocomplete: true,
+		{
+			Name:        "unbook",
+			Description: "Cancel a respawn booking",
+			Type:        discordgo.ChatApplicationCommand,
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:         "reservation",
+					Description:  "Reservation to be cancelled",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
+				},
 			},
 		},
-	},
+		{
+			Name:        "summary",
+			Description: "Request a summary snapshot",
+			Type:        discordgo.ChatApplicationCommand,
+		},
+	}
+	// it's intentionally not 'set-world' as it would appear alphabetically higher than summary and unbook - purely for UX - its only used once and only by owner
+	// only register world-set if onlineCheckService is configured
+	if b.onlineCheckService != nil && b.onlineCheckService.IsConfigured() {
+		commands = append(commands, &discordgo.ApplicationCommand{
+			Name:        "world-set",
+			Description: "Set the Tibia world for this server (owner only)",
+			Type:        discordgo.ChatApplicationCommand,
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:         "world",
+					Description:  "Tibia world name",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
+				},
+			},
+		})
+	}
+
+	return commands
 }
