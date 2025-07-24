@@ -191,7 +191,9 @@ func TestConfigureWorldName(t *testing.T) {
 
 func TestPlayerStatus(t *testing.T) {
 	log := zaptest.NewLogger(t).Sugar()
+	mockAPI := &MockAPI{}
 	a := &Adapter{
+		api:            mockAPI, // ensure IsConfigured returns true
 		guildIdToWorld: cmap.New[string](),
 		players:        cmap.New[[]string](),
 		log:            log,
@@ -200,6 +202,25 @@ func TestPlayerStatus(t *testing.T) {
 	a.players.Set("Celesta", []string{"Mariysz"})
 	assert.Equal(t, summary.Online, a.PlayerStatus("guild1", "Mariysz"))
 	assert.Equal(t, summary.Offline, a.PlayerStatus("guild1", "Unknown"))
+
+	//not configured
+	a2 := &Adapter{
+		api:            nil, // IsConfigured returns false
+		guildIdToWorld: cmap.New[string](),
+		players:        cmap.New[[]string](),
+		log:            log,
+	}
+	assert.Equal(t, summary.Unknown, a2.PlayerStatus("guild1", "Mariysz"))
+
+	//world missing
+	a3 := &Adapter{
+		api:            mockAPI,
+		guildIdToWorld: cmap.New[string](),
+		players:        cmap.New[[]string](),
+		log:            log,
+	}
+	a3.guildIdToWorld.Set("guild1", "")
+	assert.Equal(t, summary.Unknown, a3.PlayerStatus("guild1", "Mariysz"))
 }
 
 func TestTryRefresh(t *testing.T) {

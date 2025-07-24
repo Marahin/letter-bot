@@ -66,7 +66,7 @@ func main() {
 	worldApi := worldapi.NewHttpWorldService(tibiaDataBaseURL)
 	onlineChecker := onlinecheck.NewAdapter(worldApi, worldNameRepo).WithLogger(log)
 	if !onlineChecker.IsConfigured() {
-		log.Warn("Online checker is disabled: WORLD_API_BASE_URL not set")
+		log.Warn("Online checker is disabled: TIBIA_WORLD_API_BASE_URL not set")
 	}
 
 	// Summary

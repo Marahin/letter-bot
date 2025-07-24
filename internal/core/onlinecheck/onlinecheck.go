@@ -49,6 +49,10 @@ func (a *Adapter) IsOnline(guildID, characterName string) bool {
 }
 
 func (a *Adapter) PlayerStatus(guildID, characterName string) summary.OnlineStatus {
+	world, worldOk := a.guildIdToWorld.Get(guildID)
+	if !a.IsConfigured() || !worldOk || world == "" {
+		return summary.Unknown
+	}
 	if a.IsOnline(guildID, characterName) {
 		return summary.Online
 	}
