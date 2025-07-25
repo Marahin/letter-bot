@@ -48,7 +48,7 @@ func (b *Bot) GuildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
 	if err := b.onlineCheckService.ConfigureWorldNameForGuild(guild.ID); err != nil {
 		b.log.Errorf("ConfigureWorldNameForGuild failed for guild %s: %v", guild.ID, err)
 	}
-	b.onlineCheckService.TryRefresh(guild.ID)
+	go b.onlineCheckService.TryRefresh(guild.ID)
 	go b.TryUpdateGuildLetter(guild)
 	defer b.eventHandler.OnGuildCreate(MapGuild(g.Guild))
 }
@@ -59,7 +59,6 @@ func (b *Bot) Ready(s *discordgo.Session, r *discordgo.Ready) {
 		if err := b.onlineCheckService.ConfigureWorldNameForGuild(g.ID); err != nil {
 			b.log.Errorf("ConfigureWorldNameForGuild failed for guild %s: %v", g.ID, err)
 		}
-		b.onlineCheckService.TryRefresh(g.ID)
 	}
 	b.StartTicking()
 
