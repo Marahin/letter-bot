@@ -134,16 +134,28 @@ func (a *Adapter) Book(request book.BookRequest) ([]*reservation.ClippedOrRemove
 			if err != nil {
 				return nil, err
 			}
+		
+			// Only block overbooking if the user does NOT have permissions
+			if !hasPermissions {
+				for _, conflict := range conflictingReservations {
+					if time.Now().Before(conflict.StartAt.Add(10 * time.Minute)) {
+						return nil, fmt.Errorf(
+							"Overbooking is only allowed 10 minutes after the reservation starts. Reservation starts at %s.",
+							conflict.StartAt.Format("15:04"),
+						)
+					}
+				}
+			}
 		}
-
+	
 		if !canOverbook(overbook, hasPermissions, conflictingReservations) {
+			// fallback: still enforce permission-based overbooking rules
 			return collections.PoorMansMap(conflictingReservations, func(r *reservation.Reservation) *reservation.ClippedOrRemovedReservation {
 				return &reservation.ClippedOrRemovedReservation{
 					Original: r,
 					New:      []*reservation.Reservation{r},
 				}
 			}), InsufficientPermissionsError
-
 		}
 	}
 
