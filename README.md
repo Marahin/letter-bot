@@ -70,6 +70,8 @@ Letter bot originated within [Refugees](https://www.tibia.com/community/?subtopi
 * `docker` and `docker-compose` (unless you want to go bare-metal),
 * `make` (unless you want to run commands manually),
 * `go` (if you want to develop),
+* `atlas` to manage migrations https://atlasgo.io
+* `sqlc` to generate Go wrappers around SQL queries https://sqlc.dev/
 
 ### docker-compose
 
@@ -95,10 +97,12 @@ Letter bot originated within [Refugees](https://www.tibia.com/community/?subtopi
 
 ### Database and migrations
 
-If you change SQL schema in any way, remember to:
+* make changes in schema, 
+* `bin/generate_migration <migration_title>`
+* create new queries, if needed
+* `make sqlc-generate`
 
-* regenerate sqlc: `make sqlc-generate` - this generates Go wrapper around our queries,
-* run `docker-compose exec bot sh -c "bin/generate_migration <YOUR_MIGRATION_NAME>"` - so if you change a timestamp, you could name it `"users_timestamps"`.
+To apply migrations, run `docker-compose exec bot sh -c "bin/migrate"`.
 
 ### Contributing
 
@@ -110,6 +114,14 @@ We will be very happy for each contribution.
 4. Create a pull request
 5. Wait for the review
 
+### TibiaData integration
+
+The bot has [TibiaData](https://tibiadata.com/) integration, which allows for showing online/offline indicators for players with reservations.
+
+In order to enable it, you need to set the `TIBIADATA_API_KEY` environment variable. 
+
+There are examples in [.env.sample](.env.sample) file, along with [docker-compose.yml](docker-compose.yml).
+
 ## Credits
 Letter-bot is one of many tools prototyped by (and for) [TibiaLoot.com](https://tibialoot.com)  
 
@@ -119,3 +131,4 @@ Contributors:
 
 * [patryk-fuhrman](https://github.com/patryk-fuhrman)
 * [pawcioma](https://github.com/pawcioma/)
+* [mariyusz](https://github.com/mariyusz)

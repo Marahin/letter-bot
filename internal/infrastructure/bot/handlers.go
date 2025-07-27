@@ -3,6 +3,7 @@ package bot
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -12,6 +13,7 @@ import (
 	"spot-assistant/internal/core/dto/book"
 	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/summary"
+	"spot-assistant/internal/core/worlds"
 )
 
 /*
@@ -43,14 +45,21 @@ func (b *Bot) GuildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
 
 		return
 	}
-
+	if err := b.onlineCheckService.ConfigureWorldNameForGuild(guild.ID); err != nil {
+		b.log.Errorf("ConfigureWorldNameForGuild failed for guild %s: %v", guild.ID, err)
+	}
+	go b.onlineCheckService.TryRefresh(guild.ID)
 	go b.TryUpdateGuildLetter(guild)
 	defer b.eventHandler.OnGuildCreate(MapGuild(g.Guild))
 }
 
 func (b *Bot) Ready(s *discordgo.Session, r *discordgo.Ready) {
 	b.log.Debug("Ready")
-
+	for _, g := range s.State.Guilds {
+		if err := b.onlineCheckService.ConfigureWorldNameForGuild(g.ID); err != nil {
+			b.log.Errorf("ConfigureWorldNameForGuild failed for guild %s: %v", g.ID, err)
+		}
+	}
 	b.StartTicking()
 
 	defer b.eventHandler.OnReady()
@@ -68,10 +77,11 @@ func (b *Bot) InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCr
 
 func (b *Bot) Tick() {
 	b.log.Debug("Tick")
-
+	b.log.Info("About to refresh online players")
 	guilds := b.GetGuilds()
 	for _, guild := range guilds {
 		guild := guild
+		go b.onlineCheckService.TryRefresh(guild.ID)
 		go b.TryUpdateGuildLetter(guild)
 	}
 
@@ -281,4 +291,82 @@ func (b *Bot) PrivateSummary(i *discordgo.InteractionCreate) error {
 
 	_, err = b.mgr.SessionForGuild(gID).FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{Content: "Check your DM!"})
 	return err
+}
+
+func (b *Bot) SetWorld(i *discordgo.InteractionCreate) error {
+	guildID := i.GuildID
+	userID := i.Member.User.ID
+
+	// Fetch guild to check owner
+	guild, err := b.mgr.Gateway.Guild(guildID)
+	if err != nil {
+		return fmt.Errorf("could not fetch guild: %w", err)
+	}
+	if guild.OwnerID != userID {
+		return fmt.Errorf("only the server owner can use this command")
+	}
+
+	world := ""
+	for _, opt := range i.ApplicationCommandData().Options {
+		if opt.Name == "world" {
+			world = opt.StringValue()
+			break
+		}
+	}
+	if world == "" {
+		return fmt.Errorf("world name is required")
+	}
+
+	// Validate world against the allowed list
+	existingWorld, idx := collections.PoorMansFind(worlds.Worlds, func(w string) bool {
+		return strings.EqualFold(w, world)
+	})
+	if idx == -1 {
+		return fmt.Errorf("invalid world name: %s, please select a valid Tibia world", world)
+	}
+	world = existingWorld
+
+	err = b.onlineCheckService.SetGuildWorld(guildID, world)
+	if err != nil {
+		return fmt.Errorf("failed to save world name: %w", err)
+	}
+
+	// Configure the online checker with the new world name
+	err = b.onlineCheckService.ConfigureWorldNameForGuild(guildID)
+	if err != nil {
+		b.log.Errorf("ConfigureWorldNameForGuild failed for guild %s: %v", guildID, err)
+	}
+
+	gID, err := stringsHelper.StrToInt64(guildID)
+	if err != nil {
+		return fmt.Errorf("could not parse guild id: %v", guildID)
+	}
+	_, err = b.mgr.SessionForGuild(gID).FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+		Content: fmt.Sprintf("Tibia world for this server set to: **%s**", world),
+	})
+	return err
+}
+
+func (b *Bot) SetWorldAutocomplete(i *discordgo.InteractionCreate) error {
+	var userInput string
+	for _, opt := range i.ApplicationCommandData().Options {
+		if opt.Focused && opt.Name == "world" {
+			userInput = opt.StringValue()
+			break
+		}
+	}
+
+	var filtered []*discordgo.ApplicationCommandOptionChoice
+	for _, w := range worlds.Worlds {
+		if userInput == "" || strings.Contains(strings.ToLower(w), strings.ToLower(userInput)) {
+			filtered = append(filtered, &discordgo.ApplicationCommandOptionChoice{Name: w, Value: w})
+		}
+		if len(filtered) >= 25 { // Discord max choices
+			break
+		}
+	}
+
+	return b.interactionRespond(i, &discordgo.InteractionResponseData{
+		Choices: filtered,
+	}, discordgo.InteractionApplicationCommandAutocompleteResult)
 }

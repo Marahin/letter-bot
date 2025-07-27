@@ -24,14 +24,15 @@ type cfg struct {
 }
 
 type Bot struct {
-	summarySrv      ports.SummaryService
-	reservationRepo ports.ReservationRepository
-	eventHandler    ports.APIPort
-	mgr             *shards.Manager
-	log             *zap.SugaredLogger
-	quit            chan struct{}
-	formatter       *formatter.DiscordFormatter
-	channelLocks    cmap.ConcurrentMap[string, *sync.RWMutex]
+	summarySrv         ports.SummaryService
+	reservationRepo    ports.ReservationRepository
+	onlineCheckService ports.OnlineCheckService
+	eventHandler       ports.APIPort
+	mgr                *shards.Manager
+	log                *zap.SugaredLogger
+	quit               chan struct{}
+	formatter          *formatter.DiscordFormatter
+	channelLocks       cmap.ConcurrentMap[string, *sync.RWMutex]
 }
 
 var (
@@ -42,7 +43,7 @@ func init() {
 	envconfig.MustProcess("bot", &Config)
 }
 
-func NewManager(summarySrv ports.SummaryService, reservationRepo ports.ReservationRepository) *Bot {
+func NewManager(summarySrv ports.SummaryService, reservationRepo ports.ReservationRepository, checkOnlineSrv ports.OnlineCheckService) *Bot {
 	mgr, err := shards.New("Bot " + Config.Token)
 	if err != nil {
 		panic(fmt.Errorf("could not create shards manager, %w", err))
@@ -50,11 +51,12 @@ func NewManager(summarySrv ports.SummaryService, reservationRepo ports.Reservati
 
 	mgr.Intent = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages | discordgo.IntentsGuildVoiceStates
 	bot := &Bot{
-		mgr:             mgr,
-		quit:            make(chan struct{}),
-		channelLocks:    cmap.New[*sync.RWMutex](),
-		summarySrv:      summarySrv,
-		reservationRepo: reservationRepo,
+		mgr:                mgr,
+		quit:               make(chan struct{}),
+		channelLocks:       cmap.New[*sync.RWMutex](),
+		summarySrv:         summarySrv,
+		reservationRepo:    reservationRepo,
+		onlineCheckService: checkOnlineSrv,
 	}
 
 	bot.mgr.AddHandler(bot.GuildCreate)

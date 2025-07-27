@@ -287,9 +287,11 @@ func (b *Bot) SendLetterMessage(guild *guild.Guild, channel *discord.Channel, su
 		writtenReservations := strings.Builder{}
 
 		for _, booking := range el.Bookings {
+			statusStr := MapOnlineStatus(booking.Status)
 			writtenReservations.WriteString(
 				fmt.Sprintf(
-					"**%s** - **%s** %s\n",
+					"%s**%s** - **%s** %s\n",
+					statusStr,
 					booking.StartAt.Format("15:04"),
 					booking.EndAt.Format("15:04"),
 					booking.Author,
@@ -414,7 +416,7 @@ func (b *Bot) RegisterCommands(guild *guild.Guild) error {
 		}
 	}
 
-	_, err = session.ApplicationCommandBulkOverwrite(session.State.User.ID, guild.ID, commands)
+	_, err = session.ApplicationCommandBulkOverwrite(session.State.User.ID, guild.ID, b.getCommands())
 	return err
 }
 

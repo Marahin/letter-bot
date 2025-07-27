@@ -5,13 +5,15 @@ import (
 )
 
 type Adapter struct {
-	service ports.ChartAdapter
+	service     ports.ChartAdapter
+	onlineCheck ports.OnlineCheckService
 	//log     *zap.SugaredLogger
 }
 
-func NewAdapter(srv ports.ChartAdapter) *Adapter {
+func NewAdapter(srv ports.ChartAdapter, onlineCheck ports.OnlineCheckService) *Adapter {
 	return &Adapter{
-		service: srv,
+		service:     srv,
+		onlineCheck: onlineCheck,
 	}
 }
 

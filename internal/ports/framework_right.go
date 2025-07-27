@@ -9,6 +9,7 @@ import (
 
 	"spot-assistant/internal/core/dto/book"
 	"spot-assistant/internal/core/dto/discord"
+	"spot-assistant/internal/core/dto/guildsworld"
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/spot"
 	"spot-assistant/internal/core/dto/summary"
@@ -65,6 +66,11 @@ type MemberRepository interface {
 	MemberHasRole(g *guild.Guild, m *member.Member, roleName string) bool
 }
 
+type WorldApi interface {
+	GetOnlinePlayerNames(worldName string) ([]string, error)
+	GetBaseURL() string
+}
+
 type ChartAdapter interface {
 	NewChart(values []float64, legend []string) ([]byte, error)
 }
@@ -76,4 +82,9 @@ type TextFormatter interface {
 	FormatOverbookedMemberNotification(member *member.Member,
 		request book.BookRequest,
 		res *reservation.ClippedOrRemovedReservation) string
+}
+
+type WorldNameRepository interface {
+	UpsertGuildWorld(ctx context.Context, guildID string, worldName string) error
+	SelectGuildWorld(ctx context.Context, guildID string) (*guildsworld.GuildsWorld, error)
 }

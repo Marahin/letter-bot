@@ -58,13 +58,20 @@ CREATE TABLE "public"."django_admin_log" ("id" serial NOT NULL, "action_time" ti
 CREATE INDEX "django_admin_log_content_type_id_c4bce8eb" ON "public"."django_admin_log" ("content_type_id");
 -- Create index "django_admin_log_user_id_c564eba6" to table: "django_admin_log"
 CREATE INDEX "django_admin_log_user_id_c564eba6" ON "public"."django_admin_log" ("user_id");
--- Create "web_spot" table
-CREATE TABLE "public"."web_spot" ("id" bigserial NOT NULL, "name" character varying(120) NOT NULL, "created_at" timestamptz NOT NULL, PRIMARY KEY ("id"));
--- Create "web_reservation" table
-CREATE TABLE "public"."web_reservation" ("id" bigserial NOT NULL, "author" character varying(200) NOT NULL, "created_at" timestamptz NOT NULL, "start_at" timestamptz NOT NULL, "end_at" timestamptz NOT NULL, "spot_id" bigint NOT NULL, "guild_id" character varying(255) NOT NULL, "author_discord_id" character varying(200) NOT NULL, PRIMARY KEY ("id"), CONSTRAINT "web_reservation_spot_id_6b297c19_fk_web_spot_id" FOREIGN KEY ("spot_id") REFERENCES "public"."web_spot" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION);
--- Create index "unique_reservation_time_and_space_per_guild" to table: "web_reservation"
-CREATE UNIQUE INDEX "unique_reservation_time_and_space_per_guild" ON "public"."web_reservation" ("start_at", "end_at", "spot_id", "guild_id");
--- Create index "web_reservation_spot_id_6b297c19" to table: "web_reservation"
-CREATE INDEX "web_reservation_spot_id_6b297c19" ON "public"."web_reservation" ("spot_id");
--- Create index "web_reservations_no_overlapping_ranges" to table: "web_reservation"
-CREATE INDEX "web_reservations_no_overlapping_ranges" ON "public"."web_reservation" USING gist ("spot_id", "guild_id", (tstzrange(start_at, end_at)));
+-- Modify "auth_permission" table
+ALTER TABLE "public"."auth_permission" ADD CONSTRAINT "auth_permission_content_type_id_codename_01ab375a_uniq" UNIQUE USING INDEX "auth_permission_content_type_id_codename_01ab375a_uniq", ALTER CONSTRAINT "auth_permission_content_type_id_2f476e4b_fk_django_co" DEFERRABLE INITIALLY DEFERRED;
+-- Modify "auth_group" table
+ALTER TABLE "public"."auth_group" ADD CONSTRAINT "auth_group_name_key" UNIQUE USING INDEX "auth_group_name_key";
+-- Modify "auth_group_permissions" table
+ALTER TABLE "public"."auth_group_permissions" ADD CONSTRAINT "auth_group_permissions_group_id_permission_id_0cd325b0_uniq" UNIQUE USING INDEX "auth_group_permissions_group_id_permission_id_0cd325b0_uniq", ALTER CONSTRAINT "auth_group_permissio_permission_id_84c5c92e_fk_auth_perm" DEFERRABLE INITIALLY DEFERRED, ALTER CONSTRAINT "auth_group_permissions_group_id_b120cbf9_fk_auth_group_id" DEFERRABLE INITIALLY DEFERRED;
+-- Modify "auth_user" table
+ALTER TABLE "public"."auth_user" ADD CONSTRAINT "auth_user_username_key" UNIQUE USING INDEX "auth_user_username_key";
+-- Modify "auth_user_groups" table
+ALTER TABLE "public"."auth_user_groups" ADD CONSTRAINT "auth_user_groups_user_id_group_id_94350c0c_uniq" UNIQUE USING INDEX "auth_user_groups_user_id_group_id_94350c0c_uniq", ALTER CONSTRAINT "auth_user_groups_group_id_97559544_fk_auth_group_id" DEFERRABLE INITIALLY DEFERRED, ALTER CONSTRAINT "auth_user_groups_user_id_6a12ed8b_fk_auth_user_id" DEFERRABLE INITIALLY DEFERRED;
+-- Modify "auth_user_user_permissions" table
+ALTER TABLE "public"."auth_user_user_permissions" ADD CONSTRAINT "auth_user_user_permissions_user_id_permission_id_14a6b632_uniq" UNIQUE USING INDEX "auth_user_user_permissions_user_id_permission_id_14a6b632_uniq", ALTER CONSTRAINT "auth_user_user_permi_permission_id_1fbb5f2c_fk_auth_perm" DEFERRABLE INITIALLY DEFERRED, ALTER CONSTRAINT "auth_user_user_permissions_user_id_a95ead1b_fk_auth_user_id" DEFERRABLE INITIALLY DEFERRED;
+-- Modify "django_admin_log" table
+ALTER TABLE "public"."django_admin_log" ALTER CONSTRAINT "django_admin_log_content_type_id_c4bce8eb_fk_django_co" DEFERRABLE INITIALLY DEFERRED, ALTER CONSTRAINT "django_admin_log_user_id_c564eba6_fk_auth_user_id" DEFERRABLE INITIALLY DEFERRED;
+-- Modify "django_content_type" table
+ALTER TABLE "public"."django_content_type" ADD CONSTRAINT "django_content_type_app_label_model_76bd3d3b_uniq" UNIQUE USING INDEX "django_content_type_app_label_model_76bd3d3b_uniq";
+

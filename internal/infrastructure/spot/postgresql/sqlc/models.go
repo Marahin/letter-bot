@@ -82,6 +82,14 @@ type DjangoSession struct {
 	ExpireDate  pgtype.Timestamptz
 }
 
+type GuildsWorld struct {
+	ID        int64
+	GuildID   string
+	WorldName string
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}
+
 type WebReservation struct {
 	ID              int64
 	Author          string

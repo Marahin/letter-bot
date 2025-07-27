@@ -14,6 +14,7 @@ require (
 	github.com/sqlc-dev/sqlc v1.26.0
 	github.com/stretchr/testify v1.8.4
 	github.com/vicanso/go-charts/v2 v2.6.1
+	go.uber.org/automaxprocs v1.6.0
 	go.uber.org/zap v1.26.0
 )
 

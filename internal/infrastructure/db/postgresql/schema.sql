@@ -26,7 +26,6 @@ SET row_security = off;
 --
 -- Name: btree_gist; Type: EXTENSION; Schema: -; Owner: -
 --
-
 CREATE EXTENSION IF NOT EXISTS btree_gist WITH SCHEMA public;
 
 
@@ -834,3 +833,10 @@ ALTER TABLE ONLY public.web_reservation
 -- PostgreSQL database dump complete
 --
 
+CREATE TABLE public.guilds_world (
+    id bigserial PRIMARY KEY,
+    guild_id character varying(255) NOT NULL UNIQUE,
+    world_name character varying(100) NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+);

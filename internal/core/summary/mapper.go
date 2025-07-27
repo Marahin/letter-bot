@@ -12,6 +12,7 @@ func (a *Adapter) MapReservation(reservation *reservation.Reservation) *summary.
 		StartAt:         reservation.StartAt,
 		EndAt:           reservation.EndAt,
 		AuthorDiscordID: reservation.AuthorDiscordID,
+		Status:          a.onlineCheck.PlayerStatus(reservation.GuildID, reservation.Author),
 	}
 }
 

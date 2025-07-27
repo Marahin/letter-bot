@@ -26,3 +26,10 @@ services:
       - ./:/app
     env_file:
       - .env
+# Uncomment the following lines to enable the tibiadata service
+# Credits to https://github.com/TibiaData
+#  tibiadata:
+#    image: ghcr.io/tibiadata/tibiadata-api-go:latest
+#    restart: always
+#    ports:
+#      - 8080:8080
