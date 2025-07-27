@@ -7,7 +7,7 @@ func (b *Bot) baseEmbed() *discordgo.MessageEmbed {
 		URL:         "https://tibialoot.com",
 		Type:        discordgo.EmbedTypeRich,
 		Title:       "TibiaLoot.com - Spot Assistant",
-		Description: "Current and upcoming hunts. Times are in **Europe/Berlin**.",
+		Description: "Current and upcoming hunts. Times are in **Europe/Berlin**. \n :green_circle: **Online** \n :red_circle: **Offline**",
 	}
 }
 
