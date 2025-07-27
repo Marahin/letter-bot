@@ -5,3 +5,5 @@ coverage.out
 
 .idea
 .env
+.env.local
+.env.prod
