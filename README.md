@@ -120,7 +120,7 @@ The bot has [TibiaData](https://tibiadata.com/) integration, which allows for sh
 
 In order to enable it, you need to set the `TIBIADATA_API_KEY` environment variable. 
 
-There are examples in [env.sample](env.sample) file, along with [docker-compose.yml](docker-compose.yml).
+There are examples in [.env.sample](.env.sample) file, along with [docker-compose.yml](docker-compose.yml).
 
 ## Credits
 Letter-bot is one of many tools prototyped by (and for) [TibiaLoot.com](https://tibialoot.com)  
