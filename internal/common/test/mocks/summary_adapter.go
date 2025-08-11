@@ -16,3 +16,9 @@ func (a *MockSummaryService) PrepareSummary(reservations []*reservation.Reservat
 
 	return args.Get(0).(*dto.Summary), args.Error(1)
 }
+
+func (a *MockSummaryService) PrepareSpotSummary(reservations []*reservation.ReservationWithSpot, spotName string) (*dto.Summary, error) {
+	args := a.Called(reservations, spotName)
+
+	return args.Get(0).(*dto.Summary), args.Error(1)
+}

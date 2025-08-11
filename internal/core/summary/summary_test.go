@@ -186,3 +186,36 @@ func TestPrepareSummaryTruncated(t *testing.T) {
 		}
 	}
 }
+
+func TestPrepareSpotSummarySuccess(t *testing.T) {
+	assert := assert.New(t)
+	mockChartAdapter := new(mocks.MockChartAdapter)
+	mockOnlineCheckService := new(mocks.MockOnlineCheckService)
+	adapter := NewAdapter(mockChartAdapter, mockOnlineCheckService)
+
+	input := []*reservation.ReservationWithSpot{
+		{Reservation: reservation.Reservation{Author: "a", StartAt: time.Now(), EndAt: time.Now().Add(time.Hour), GuildID: "g"}, Spot: reservation.Spot{Name: "Cobra Bastion"}},
+		{Reservation: reservation.Reservation{Author: "b", StartAt: time.Now(), EndAt: time.Now().Add(time.Hour), GuildID: "g"}, Spot: reservation.Spot{Name: "Flimsy"}},
+	}
+	// mock player status
+	mockOnlineCheckService.On("PlayerStatus", "g", "a").Return(dto.Offline)
+	mockOnlineCheckService.On("PlayerStatus", "g", "b").Return(dto.Offline)
+
+	// need to assert that the chart is created
+	mockChartAdapter.On("NewChart", mock.AnythingOfType("[]float64"), mock.AnythingOfType("[]string")).Return([]byte{1}, nil)
+
+	summ, err := adapter.PrepareSpotSummary(input, "Flimsy")
+	assert.NoError(err)
+	assert.Len(summ.Ledger, 1)
+	assert.Equal("Flimsy", summ.Ledger[0].Spot)
+}
+
+func TestPrepareSpotSummaryNoReservations(t *testing.T) {
+	assert := assert.New(t)
+	mockChartAdapter := new(mocks.MockChartAdapter)
+	mockOnlineCheckService := new(mocks.MockOnlineCheckService)
+	adapter := NewAdapter(mockChartAdapter, mockOnlineCheckService)
+	input := []*reservation.ReservationWithSpot{}
+	_, err := adapter.PrepareSpotSummary(input, "gamma")
+	assert.Error(err)
+}

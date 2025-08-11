@@ -13,6 +13,14 @@ func (a *Handler) OnPrivateSummary(request summary.PrivateSummaryRequest) error 
 		return err
 	}
 
+	if request.SpotName != "" {
+		summ, err := a.summarySrv.PrepareSpotSummary(res, request.SpotName)
+		if err != nil {
+			return err
+		}
+		return a.commSrv.SendPrivateSummary(request, summ)
+	}
+
 	if len(res) == 0 {
 		return nil
 	}

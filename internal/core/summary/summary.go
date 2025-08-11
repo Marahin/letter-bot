@@ -3,6 +3,7 @@ package summary
 import (
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	commonStrings "spot-assistant/internal/common/strings"
@@ -54,6 +55,23 @@ func (a *Adapter) PrepareSummary(reservations []*reservation.ReservationWithSpot
 	sum.Ledger = ledger
 
 	return sum, nil
+}
+
+func (a *Adapter) PrepareSpotSummary(reservations []*reservation.ReservationWithSpot, spotName string) (*dto.Summary, error) {
+	if spotName == "" {
+		return nil, fmt.Errorf("spot name required")
+	}
+	spotNameLower := strings.ToLower(spotName)
+	filtered := make([]*reservation.ReservationWithSpot, 0, len(reservations))
+	for _, r := range reservations {
+		if strings.ToLower(r.Spot.Name) == spotNameLower {
+			filtered = append(filtered, r)
+		}
+	}
+	if len(filtered) == 0 {
+		return nil, fmt.Errorf("no reservations for %s", spotName)
+	}
+	return a.PrepareSummary(filtered)
 }
 
 func (a *Adapter) mapToSpotsToReservations(reservations []*reservation.ReservationWithSpot) map[string][]*reservation.Reservation {

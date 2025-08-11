@@ -38,6 +38,12 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 		}
 	case "summary":
 		err = b.PrivateSummary(i)
+	case "spot-summary":
+		if isAutocomplete {
+			err = b.SpotSummaryAutocomplete(i)
+		} else {
+			err = b.SpotSummary(i)
+		}
 	case "world-set":
 		if isAutocomplete {
 			err = b.SetWorldAutocomplete(i)
@@ -127,6 +133,20 @@ func (b *Bot) getCommands() []*discordgo.ApplicationCommand {
 			Name:        "summary",
 			Description: "Request a summary snapshot",
 			Type:        discordgo.ChatApplicationCommand,
+		},
+		{
+			Name:        "spot-summary",
+			Description: "Request a summary snapshot for a specific respawn (DM)",
+			Type:        discordgo.ChatApplicationCommand,
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:         "respawn",
+					Description:  "Name of the respawn",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
+				},
+			},
 		},
 	}
 	// it's intentionally not 'set-world' as it would appear alphabetically higher than summary and unbook - purely for UX - its only used once and only by owner

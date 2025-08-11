@@ -30,6 +30,7 @@ type CommunicationService interface {
 
 type SummaryService interface {
 	PrepareSummary(reservations []*reservation.ReservationWithSpot) (*summary.Summary, error)
+	PrepareSpotSummary(reservations []*reservation.ReservationWithSpot, spotName string) (*summary.Summary, error)
 }
 
 type BookingService interface {
