@@ -37,12 +37,10 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 			err = b.Unbook(i)
 		}
 	case "summary":
-		err = b.PrivateSummary(i)
-	case "spot-summary":
 		if isAutocomplete {
-			err = b.SpotSummaryAutocomplete(i)
+			err = b.SummaryAutocomplete(i)
 		} else {
-			err = b.SpotSummary(i)
+			err = b.PrivateSummary(i)
 		}
 	case "world-set":
 		if isAutocomplete {
@@ -131,19 +129,14 @@ func (b *Bot) getCommands() []*discordgo.ApplicationCommand {
 		},
 		{
 			Name:        "summary",
-			Description: "Request a summary snapshot",
-			Type:        discordgo.ChatApplicationCommand,
-		},
-		{
-			Name:        "spot-summary",
-			Description: "Request a summary snapshot for a specific respawn (DM)",
+			Description: "Request a summary snapshot (optionally for a specific respawn)",
 			Type:        discordgo.ChatApplicationCommand,
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Name:         "respawn",
-					Description:  "Name of the respawn",
+					Description:  "Name of the respawn (optional)",
 					Type:         discordgo.ApplicationCommandOptionString,
-					Required:     true,
+					Required:     false,
 					Autocomplete: true,
 				},
 			},

@@ -316,3 +316,64 @@ func TestCreateAndDeleteConflictingWithTwoConflictingButSecondOneFromTheSameAuth
 		return r.Original
 	}))
 }
+
+func newReservationWithSpotRows() *pgxmock.Rows {
+	return pgxmock.NewRows([]string{
+		// web_spot
+		"id", "name", "created_at",
+		// web_reservation
+		"id", "author", "created_at", "start_at", "end_at", "spot_id", "guild_id", "author_discord_id",
+	})
+}
+
+func TestSelectUpcomingReservationsWithSpotForSpot_FiltersBySpotAndGuild(t *testing.T) {
+	assert := assert.New(t)
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mock.Close()
+
+	// Expect the query with guildID and spot name (lower)
+	mock.ExpectQuery("(?i)select\\s+web_spot\\.id,\\s+web_spot\\.name").
+		WithArgs("guild-1", "Flimsy").
+		WillReturnRows(newReservationWithSpotRows().
+			AddRow(
+				int64(10), "Flimsy", time.Now(),
+				int64(101), "Mariysz", time.Now(), time.Now(), time.Now().Add(time.Hour), int64(10), "guild-1", "mariysz#1",
+			).
+			AddRow(
+				int64(10), "Flimsy", time.Now(),
+				int64(102), "Asar", time.Now(), time.Now().Add(time.Hour), time.Now().Add(2*time.Hour), int64(10), "guild-1", "asar#1",
+			))
+
+	repo := NewReservationRepository(mock)
+
+	res, err := repo.SelectUpcomingReservationsWithSpotForSpot(context.Background(), "guild-1", "Flimsy")
+	assert.NoError(err)
+	assert.Len(res, 2)
+	for _, r := range res {
+		assert.Equal("Flimsy", r.Spot.Name)
+		assert.Equal("guild-1", r.GuildID)
+	}
+	assert.NoError(mock.ExpectationsWereMet())
+}
+
+func TestSelectUpcomingReservationsWithSpotForSpot_EmptyWhenNoMatches(t *testing.T) {
+	assert := assert.New(t)
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mock.Close()
+
+	mock.ExpectQuery("(?i)select\\s+web_spot\\.id,\\s+web_spot\\.name").
+		WithArgs("guild-1", "Unknown").
+		WillReturnRows(newReservationWithSpotRows())
+
+	repo := NewReservationRepository(mock)
+	res, err := repo.SelectUpcomingReservationsWithSpotForSpot(context.Background(), "guild-1", "Unknown")
+	assert.NoError(err)
+	assert.Len(res, 0)
+	assert.NoError(mock.ExpectationsWereMet())
+}

@@ -281,21 +281,6 @@ func (b *Bot) PrivateSummary(i *discordgo.InteractionCreate) error {
 		return err
 	}
 
-	err = b.eventHandler.OnPrivateSummary(summary.PrivateSummaryRequest{
-		GuildID: gID,
-		UserID:  uID,
-	})
-	if err != nil {
-		return err
-	}
-
-	_, err = b.mgr.SessionForGuild(gID).FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{Content: "Check your DM!"})
-	return err
-}
-
-func (b *Bot) SpotSummary(i *discordgo.InteractionCreate) error {
-	b.log.Debug("SpotSummary")
-
 	var spotName string
 	for _, opt := range i.ApplicationCommandData().Options {
 		if opt.Name == "respawn" {
@@ -303,20 +288,6 @@ func (b *Bot) SpotSummary(i *discordgo.InteractionCreate) error {
 			break
 		}
 	}
-	if spotName == "" {
-		return fmt.Errorf("respawn name is required")
-	}
-
-	gID, err := stringsHelper.StrToInt64(i.GuildID)
-	if err != nil {
-		return err
-	}
-
-	uID, err := stringsHelper.StrToInt64(i.Member.User.ID)
-	if err != nil {
-		return err
-	}
-
 	err = b.eventHandler.OnPrivateSummary(summary.PrivateSummaryRequest{
 		GuildID:  gID,
 		UserID:   uID,
@@ -326,12 +297,16 @@ func (b *Bot) SpotSummary(i *discordgo.InteractionCreate) error {
 		return err
 	}
 
-	_, err = b.mgr.SessionForGuild(gID).FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{Content: fmt.Sprintf("Check your DM for %s!", spotName)})
+	msg := "Check your DM!"
+	if spotName != "" {
+		msg = "Check your DM for " + spotName + "!"
+	}
+	_, err = b.mgr.SessionForGuild(gID).FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{Content: msg})
 	return err
 }
 
-func (b *Bot) SpotSummaryAutocomplete(i *discordgo.InteractionCreate) error {
-	b.log.Debug("SpotSummaryAutocomplete")
+func (b *Bot) SummaryAutocomplete(i *discordgo.InteractionCreate) error {
+	b.log.Debug("SummaryAutocomplete")
 
 	var spotFilter string
 	for _, opt := range i.ApplicationCommandData().Options {

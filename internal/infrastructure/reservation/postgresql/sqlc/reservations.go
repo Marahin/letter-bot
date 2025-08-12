@@ -2,15 +2,17 @@ package sqlc
 
 import (
 	"context"
-	"go.uber.org/zap"
 	"spot-assistant/internal/core/dto/guild"
 	"spot-assistant/internal/core/dto/member"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
+	"go.uber.org/zap"
+
 	"spot-assistant/internal/common/errors"
 	"spot-assistant/internal/core/dto/reservation"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type DBTXWrapper interface {
@@ -115,6 +117,37 @@ func (t *ReservationRepository) SelectUpcomingReservationsWithSpot(ctx context.C
 		reservationsWithSpots[i] = mappedRes
 	}
 
+	return reservationsWithSpots, nil
+}
+
+func (t *ReservationRepository) SelectUpcomingReservationsWithSpotForSpot(ctx context.Context, guildId, spotName string) ([]*reservation.ReservationWithSpot, error) {
+	res, err := t.q.SelectReservationsWithSpotsForSpot(ctx, SelectReservationsWithSpotsForSpotParams{
+		GuildID: guildId,
+		Lower:   spotName,
+	})
+	if err != nil {
+		return []*reservation.ReservationWithSpot{}, err
+	}
+	reservationsWithSpots := make([]*reservation.ReservationWithSpot, len(res))
+	for i, reservationWithSpotRow := range res {
+		mappedRes := &reservation.ReservationWithSpot{
+			Reservation: reservation.Reservation{
+				ID:              reservationWithSpotRow.WebReservation.ID,
+				Author:          reservationWithSpotRow.WebReservation.Author,
+				CreatedAt:       reservationWithSpotRow.WebReservation.CreatedAt.Time,
+				StartAt:         reservationWithSpotRow.WebReservation.StartAt.Time,
+				EndAt:           reservationWithSpotRow.WebReservation.EndAt.Time,
+				SpotID:          reservationWithSpotRow.WebReservation.SpotID,
+				GuildID:         reservationWithSpotRow.WebReservation.GuildID,
+				AuthorDiscordID: reservationWithSpotRow.WebReservation.AuthorDiscordID,
+			},
+			Spot: reservation.Spot{
+				ID:   reservationWithSpotRow.WebSpot.ID,
+				Name: reservationWithSpotRow.WebSpot.Name,
+			},
+		}
+		reservationsWithSpots[i] = mappedRes
+	}
 	return reservationsWithSpots, nil
 }
 
