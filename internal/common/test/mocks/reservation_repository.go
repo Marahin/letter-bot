@@ -25,6 +25,11 @@ func (a *MockReservationRepo) SelectUpcomingReservationsWithSpot(ctx context.Con
 	return args.Get(0).([]*reservation.ReservationWithSpot), args.Error(1)
 }
 
+func (a *MockReservationRepo) SelectUpcomingReservationsWithSpotForSpot(ctx context.Context, guildId, spotName string) ([]*reservation.ReservationWithSpot, error) {
+	args := a.Called(ctx, guildId, spotName)
+	return args.Get(0).([]*reservation.ReservationWithSpot), args.Error(1)
+}
+
 func (a *MockReservationRepo) SelectOverlappingReservations(ctx context.Context, spot string, startAt time.Time, endAt time.Time, guildId string) ([]*reservation.Reservation, error) {
 	args := a.Called(ctx, spot, startAt, endAt, guildId)
 

@@ -2,19 +2,38 @@ package eventhandler
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
+	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/summary"
 )
 
 func (a *Handler) OnPrivateSummary(request summary.PrivateSummaryRequest) error {
-	res, err := a.db.SelectUpcomingReservationsWithSpot(context.Background(), strconv.FormatInt(request.GuildID, 10))
-	if err != nil {
-		return err
-	}
+	ctx := context.Background()
+	guildIDStr := strconv.FormatInt(request.GuildID, 10)
 
-	if len(res) == 0 {
-		return nil
+	var (
+		res []*reservation.ReservationWithSpot
+		err error
+	)
+
+	if request.SpotName != "" {
+		res, err = a.db.SelectUpcomingReservationsWithSpotForSpot(ctx, guildIDStr, request.SpotName)
+		if err != nil {
+			return err
+		}
+		if len(res) == 0 {
+			return fmt.Errorf("no reservations for %s", request.SpotName)
+		}
+	} else {
+		res, err = a.db.SelectUpcomingReservationsWithSpot(ctx, guildIDStr)
+		if err != nil {
+			return err
+		}
+		if len(res) == 0 {
+			return nil
+		}
 	}
 
 	summ, err := a.summarySrv.PrepareSummary(res)

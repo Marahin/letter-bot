@@ -63,6 +63,14 @@ from web_reservation
   inner join web_spot on web_reservation.spot_id = web_spot.id
 where end_at >= now()
   AND guild_id = $1;
+-- name: SelectReservationsWithSpotsForSpot :many
+select sqlc.embed(web_spot),
+  sqlc.embed(web_reservation)
+from web_reservation
+  inner join web_spot on web_reservation.spot_id = web_spot.id
+where end_at >= now()
+  AND guild_id = $1
+  AND lower(web_spot.name) = lower($2);
 -- name: DeleteReservation :exec
 DELETE FROM web_reservation
 WHERE web_reservation.id = $1;
