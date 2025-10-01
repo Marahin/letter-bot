@@ -30,9 +30,9 @@ func TestAdapter_NotifyOverbookedMember(t *testing.T) {
 			AuthorDiscordID: "conflicting-author-id",
 		},
 	}
-	memberOperations := new(mocks.MockBot)
+	memberOperations := mocks.NewMockMemberRepository(t)
 	memberOperations.On("GetMemberByGuildAndId", guild, res.Original.AuthorDiscordID).Return(member, nil).Once()
-	botOperations := new(mocks.MockBot)
+	botOperations := mocks.NewMockBotPort(t)
 	botOperations.On("SendDMOverbookedNotification", member, request, res).Return(nil).Once()
 	adapter := NewAdapter(botOperations, memberOperations)
 

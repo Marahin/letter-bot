@@ -203,7 +203,7 @@ func TestPlayerStatus(t *testing.T) {
 	assert.Equal(t, summary.Online, a.PlayerStatus("guild1", "Mariysz"))
 	assert.Equal(t, summary.Offline, a.PlayerStatus("guild1", "Unknown"))
 
-	//not configured
+	// not configured
 	a2 := &Adapter{
 		api:            nil, // IsConfigured returns false
 		guildIdToWorld: cmap.New[string](),
@@ -212,7 +212,7 @@ func TestPlayerStatus(t *testing.T) {
 	}
 	assert.Equal(t, summary.Unknown, a2.PlayerStatus("guild1", "Mariysz"))
 
-	//world missing
+	// world missing
 	a3 := &Adapter{
 		api:            mockAPI,
 		guildIdToWorld: cmap.New[string](),
@@ -275,7 +275,8 @@ func TestIsOnline_KeyMisses(t *testing.T) {
 
 func TestSetGuildWorld_Success(t *testing.T) {
 	log := zaptest.NewLogger(t).Sugar()
-	mockRepo := &mocks.MockWorldNameRepository{}
+	mockRepo := mocks.NewMockWorldNameRepository(t)
+	mockRepo.On("UpsertGuildWorld", mocks.ContextMock, "guild1", "Celesta").Return(nil)
 	a := &Adapter{
 		guildIdToWorld: cmap.New[string](),
 		players:        cmap.New[[]string](),
@@ -289,14 +290,12 @@ func TestSetGuildWorld_Success(t *testing.T) {
 	val, ok := a.guildIdToWorld.Get(guildID)
 	assert.True(t, ok)
 	assert.Equal(t, world, val)
-	assert.True(t, mockRepo.UpsertCalled)
-	assert.Equal(t, guildID, mockRepo.UpsertGuildID)
-	assert.Equal(t, world, mockRepo.UpsertWorld)
 }
 
 func TestSetGuildWorld_Error(t *testing.T) {
 	log := zaptest.NewLogger(t).Sugar()
-	mockRepo := &mocks.MockWorldNameRepository{UpsertErr: errors.New("db error")}
+	mockRepo := mocks.NewMockWorldNameRepository(t)
+	mockRepo.On("UpsertGuildWorld", mocks.ContextMock, "guild1", "Celesta").Return(errors.New("something went wrong"))
 	a := &Adapter{
 		guildIdToWorld: cmap.New[string](),
 		players:        cmap.New[[]string](),
@@ -321,12 +320,11 @@ func TestSetGuildWorld_NilRepo(t *testing.T) {
 
 func TestConfigureWorldNameForGuild_Success(t *testing.T) {
 	log := zaptest.NewLogger(t).Sugar()
-	mockRepo := &mocks.MockWorldNameRepository{
-		SelectWorld: &guildsworld.GuildsWorld{
-			GuildID:   "guild1",
-			WorldName: "Celesta",
-		},
-	}
+	mockRepo := mocks.NewMockWorldNameRepository(t)
+	mockRepo.On("SelectGuildWorld", mocks.ContextMock, "guild1").Return(&guildsworld.GuildsWorld{
+		GuildID:   "guild1",
+		WorldName: "Celesta",
+	}, nil)
 	a := &Adapter{
 		guildIdToWorld: cmap.New[string](),
 		players:        cmap.New[[]string](),
@@ -342,7 +340,8 @@ func TestConfigureWorldNameForGuild_Success(t *testing.T) {
 
 func TestConfigureWorldNameForGuild_Error(t *testing.T) {
 	log := zaptest.NewLogger(t).Sugar()
-	mockRepo := &mocks.MockWorldNameRepository{SelectErr: errors.New("db error")}
+	mockRepo := mocks.NewMockWorldNameRepository(t)
+	mockRepo.On("SelectGuildWorld", mocks.ContextMock, "guild1").Return(nil, errors.New("db error"))
 	a := &Adapter{
 		guildIdToWorld: cmap.New[string](),
 		players:        cmap.New[[]string](),

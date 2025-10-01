@@ -12,9 +12,10 @@ import (
 func TestLogError(t *testing.T) {
 	// given
 	assert := assert.New(t)
-	mockLogEntry := new(mocks.MockLogAdapter)
+	// new(mocks.MockLogAdapter)
+	mockLogEntry := mocks.NewMockLogEntry(t)
 	inputErr := errors.New("test error")
-	mockLogEntry.On("Error", inputErr).Return()
+	mockLogEntry.On("Error", []interface{}{inputErr}).Return()
 
 	// when
 	LogError(mockLogEntry, inputErr)

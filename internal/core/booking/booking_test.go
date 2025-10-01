@@ -23,8 +23,8 @@ import (
 func TestFindAvailableSpotsWithNoFilter(t *testing.T) {
 	// given
 	assert := assert.New(t)
-	mockSpotRepo := new(mocks.MockSpotRepo)
-	adapter := NewAdapter(mockSpotRepo, new(mocks.MockReservationRepo), new(mocks.MockCommunicationService))
+	mockSpotRepo := mocks.NewMockSpotRepository(t)
+	adapter := NewAdapter(mockSpotRepo, mocks.NewMockReservationRepository(t), mocks.NewMockCommunicationService(t))
 	spots := []*spot.Spot{
 		{
 			Name: "test-1",
@@ -50,8 +50,8 @@ func TestFindAvailableSpotsWithNoFilter(t *testing.T) {
 func TestFindAvailableSpotsWithFilter(t *testing.T) {
 	// given
 	assert := assert.New(t)
-	mockSpotRepo := new(mocks.MockSpotRepo)
-	adapter := NewAdapter(mockSpotRepo, new(mocks.MockReservationRepo), new(mocks.MockCommunicationService))
+	mockSpotRepo := mocks.NewMockSpotRepository(t)
+	adapter := NewAdapter(mockSpotRepo, mocks.NewMockReservationRepository(t), mocks.NewMockCommunicationService(t))
 	spots := []*spot.Spot{
 		{
 			Name: "test-1",
@@ -77,7 +77,7 @@ func TestGetSuggestedHoursWithNoFilter(t *testing.T) {
 	// given
 	tBase := time.Date(2023, 8, 19, 15, 0, 0, 0, time.Now().Location())
 	assert := assert.New(t)
-	adapter := NewAdapter(new(mocks.MockSpotRepo), new(mocks.MockReservationRepo), new(mocks.MockCommunicationService))
+	adapter := NewAdapter(mocks.NewMockSpotRepository(t), mocks.NewMockReservationRepository(t), mocks.NewMockCommunicationService(t))
 
 	// when
 	res := adapter.GetSuggestedHours(tBase, "")
@@ -94,7 +94,7 @@ func TestGetSuggestedHoursWithFilter(t *testing.T) {
 	// given
 	tBase := time.Date(2023, 8, 19, 15, 0, 0, 0, time.Now().Location())
 	assert := assert.New(t)
-	adapter := NewAdapter(new(mocks.MockSpotRepo), new(mocks.MockReservationRepo), new(mocks.MockCommunicationService))
+	adapter := NewAdapter(mocks.NewMockSpotRepository(t), mocks.NewMockReservationRepository(t), mocks.NewMockCommunicationService(t))
 
 	// when
 	res := adapter.GetSuggestedHours(tBase, "30")
@@ -111,7 +111,7 @@ func TestGetSuggestedHoursWithFilterWithSpecificHour(t *testing.T) {
 	// given
 	tBase := time.Date(2023, 8, 19, 15, 0, 0, 0, time.Now().Location())
 	assert := assert.New(t)
-	adapter := NewAdapter(new(mocks.MockSpotRepo), new(mocks.MockReservationRepo), new(mocks.MockCommunicationService))
+	adapter := NewAdapter(mocks.NewMockSpotRepository(t), mocks.NewMockReservationRepository(t), mocks.NewMockCommunicationService(t))
 
 	// when
 	res := adapter.GetSuggestedHours(tBase, "15:20")
@@ -145,14 +145,14 @@ func TestUnbook(t *testing.T) {
 			GuildID:         "test-id"},
 		Spot: reservation.Spot{},
 	}
-	reservationService := new(mocks.MockReservationRepo)
+	reservationService := mocks.NewMockReservationRepository(t)
 	reservationService.On(
 		"FindReservationWithSpot",
 		mocks.ContextMock,
 		reservation.Reservation.ID, guild.ID, member.ID).Return(reservation, nil)
 	reservationService.On("DeletePresentMemberReservation", mocks.ContextMock, guild, member, reservation.Reservation.ID).Return(nil)
-	communicationOperations := new(mocks.MockCommunicationService)
-	adapter := NewAdapter(new(mocks.MockSpotRepo), reservationService, communicationOperations)
+	communicationOperations := mocks.NewMockCommunicationService(t)
+	adapter := NewAdapter(mocks.NewMockSpotRepository(t), reservationService, communicationOperations)
 
 	// when
 	res, err := adapter.Unbook(guild, member, reservation.Reservation.ID)
@@ -186,12 +186,12 @@ func TestUnbookAutocomplete(t *testing.T) {
 			},
 			Spot: reservation.Spot{},
 		}}
-	reservationService := new(mocks.MockReservationRepo)
+	reservationService := mocks.NewMockReservationRepository(t)
 	reservationService.On(
 		"SelectUpcomingMemberReservationsWithSpots",
 		mocks.ContextMock,
 		guild, member).Return(reservations, nil)
-	adapter := NewAdapter(new(mocks.MockSpotRepo), reservationService, new(mocks.MockCommunicationService))
+	adapter := NewAdapter(mocks.NewMockSpotRepository(t), reservationService, mocks.NewMockCommunicationService(t))
 
 	// when
 	res, err := adapter.UnbookAutocomplete(guild, member, "")
@@ -239,12 +239,12 @@ func TestUnbookAutocompleteWithFilterMatching(t *testing.T) {
 				Name: "Library",
 			},
 		}}
-	reservationService := new(mocks.MockReservationRepo)
+	reservationService := mocks.NewMockReservationRepository(t)
 	reservationService.On(
 		"SelectUpcomingMemberReservationsWithSpots",
 		mocks.ContextMock,
 		guild, member).Return(reservations, nil)
-	adapter := NewAdapter(new(mocks.MockSpotRepo), reservationService, new(mocks.MockCommunicationService))
+	adapter := NewAdapter(mocks.NewMockSpotRepository(t), reservationService, mocks.NewMockCommunicationService(t))
 
 	// when
 	res, err := adapter.UnbookAutocomplete(guild, member, "Library")
@@ -273,13 +273,13 @@ func TestBook(t *testing.T) {
 		ID:        1,
 		CreatedAt: time.Now(),
 	}
-	spotService := new(mocks.MockSpotRepo)
+	spotService := mocks.NewMockSpotRepository(t)
 	spotService.On("SelectAllSpots", mocks.ContextMock).Return([]*spot.Spot{spotInput}, nil)
-	reservationService := new(mocks.MockReservationRepo)
+	reservationService := mocks.NewMockReservationRepository(t)
 	reservationService.On("SelectOverlappingReservations", mocks.ContextMock, spotInput.Name, startAt, endAt, guild.ID).Return([]*reservation.Reservation{}, nil)
 	reservationService.On("SelectUpcomingMemberReservationsWithSpots", mocks.ContextMock, guild, member).Return([]*reservation.ReservationWithSpot{}, nil)
 	reservationService.On("CreateAndDeleteConflicting", mocks.ContextMock, member, guild, []*reservation.Reservation{}, spotInput.ID, startAt, endAt).Return([]*reservation.ClippedOrRemovedReservation{}, nil)
-	adapter := NewAdapter(spotService, reservationService, new(mocks.MockCommunicationService))
+	adapter := NewAdapter(spotService, reservationService, mocks.NewMockCommunicationService(t))
 
 	// when
 	res, err := adapter.Book(book.BookRequest{
@@ -315,11 +315,11 @@ func TestBookFailOnSpotRepo(t *testing.T) {
 		ID:        1,
 		CreatedAt: time.Now(),
 	}
-	spotService := new(mocks.MockSpotRepo)
+	spotService := mocks.NewMockSpotRepository(t)
 	spotService.On("SelectAllSpots", mocks.ContextMock).Return([]*spot.Spot{spotInput}, errors.New("test-error"))
-	reservationService := new(mocks.MockReservationRepo)
+	reservationService := mocks.NewMockReservationRepository(t)
 
-	adapter := NewAdapter(spotService, reservationService, new(mocks.MockCommunicationService))
+	adapter := NewAdapter(spotService, reservationService, mocks.NewMockCommunicationService(t))
 
 	// when
 	_, err := adapter.Book(book.BookRequest{
@@ -354,10 +354,10 @@ func TestBookFailOnUnknownSpot(t *testing.T) {
 		ID:        1,
 		CreatedAt: time.Now(),
 	}
-	spotService := new(mocks.MockSpotRepo)
+	spotService := mocks.NewMockSpotRepository(t)
 	spotService.On("SelectAllSpots", mocks.ContextMock).Return([]*spot.Spot{spotOutput}, nil)
-	reservationService := new(mocks.MockReservationRepo)
-	adapter := NewAdapter(spotService, reservationService, new(mocks.MockCommunicationService))
+	reservationService := mocks.NewMockReservationRepository(t)
+	adapter := NewAdapter(spotService, reservationService, mocks.NewMockCommunicationService(t))
 
 	// when
 	res, err := adapter.Book(book.BookRequest{
@@ -431,13 +431,13 @@ func TestBookOnMultizoneCase(t *testing.T) {
 	}
 	startAt := time.Date(currentYear, currentMonth, currentDay, 16, 0, 0, 0, time.UTC)
 	endAt := time.Date(currentYear, currentMonth, currentDay, 17, 0, 0, 0, time.UTC)
-	spotService := new(mocks.MockSpotRepo)
+	spotService := mocks.NewMockSpotRepository(t)
 	spotService.On("SelectAllSpots", mocks.ContextMock).Return([]*spot.Spot{spotInput}, nil)
-	reservationService := new(mocks.MockReservationRepo)
+	reservationService := mocks.NewMockReservationRepository(t)
 	reservationService.On("SelectOverlappingReservations", mocks.ContextMock, spotInput.Name, startAt, endAt, guild.ID).Return([]*reservation.Reservation{}, nil)
 	reservationService.On("SelectUpcomingMemberReservationsWithSpots", mocks.ContextMock, guild, member).Return(existingReservations, nil)
 	reservationService.On("CreateAndDeleteConflicting", mocks.ContextMock, member, guild, []*reservation.Reservation{}, spotInput.ID, startAt, endAt).Return([]*reservation.ClippedOrRemovedReservation{}, nil)
-	adapter := NewAdapter(spotService, reservationService, new(mocks.MockCommunicationService))
+	adapter := NewAdapter(spotService, reservationService, mocks.NewMockCommunicationService(t))
 
 	// when
 	res, err := adapter.Book(book.BookRequest{Member: member, Guild: guild, Spot: spotInput.Name, StartAt: startAt, EndAt: endAt})
@@ -476,12 +476,12 @@ func TestBookFailOnOverbookAuthorsReservation(t *testing.T) {
 			AuthorDiscordID: member.ID,
 		},
 	}
-	spotService := new(mocks.MockSpotRepo)
+	spotService := mocks.NewMockSpotRepository(t)
 	spotService.On("SelectAllSpots", mocks.ContextMock).Return([]*spot.Spot{spotInput}, nil)
-	reservationService := new(mocks.MockReservationRepo)
+	reservationService := mocks.NewMockReservationRepository(t)
 	reservationService.On("SelectOverlappingReservations", mocks.ContextMock, spotInput.Name, startAt, endAt, guild.ID).Return(conflictingReservations, nil)
 	reservationService.On("SelectUpcomingMemberReservationsWithSpots", mocks.ContextMock, guild, member).Return([]*reservation.ReservationWithSpot{}, nil)
-	adapter := NewAdapter(spotService, reservationService, new(mocks.MockCommunicationService))
+	adapter := NewAdapter(spotService, reservationService, mocks.NewMockCommunicationService(t))
 
 	// when
 	res, err := adapter.Book(book.BookRequest{Member: member, Guild: guild, Spot: spotInput.Name, StartAt: startAt, EndAt: endAt, Overbook: true, HasPermissions: true})
