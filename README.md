@@ -122,6 +122,38 @@ In order to enable it, you need to set the `TIBIADATA_API_KEY` environment varia
 
 There are examples in [.env.sample](.env.sample) file, along with [docker-compose.yml](docker-compose.yml).
 
+### Metrics
+
+The bot exposes Prometheus metrics via an internal HTTP server.
+
+- Endpoint: `/metrics`
+- Address: configured by `METRICS_ADDR` (default `:2112`)
+- Implementation: Prometheus client, wired by infrastructure HTTP server
+
+Exposed metrics
+
+- `letter_bot_discord_slash_command_invocations_total{guild_id,command}`: total slash command invocations per guild and command.
+- `letter_bot_booking_overbook_invocations_total{guild_id}`: total `book` invocations with the `overbook` flag per guild.
+- `letter_bot_discord_command_errors_total{guild_id,command}`: total command handler errors per guild and command.
+- `letter_bot_reservations_upcoming_count{guild_id}`: gauge with the current number of upcoming reservations per guild.
+
+Examples
+
+- All slash commands: `sum(letter_bot_discord_slash_command_invocations_total)`
+- Per guild: `sum by (guild_id) (letter_bot_discord_slash_command_invocations_total)`
+- Errors per command/guild: `sum by (guild_id, command) (letter_bot_discord_command_errors_total)`
+- Overbook counts: `sum by (guild_id) (letter_bot_booking_overbook_invocations_total)`
+- Upcoming total: `sum(letter_bot_reservations_upcoming_count)`
+
+### Kubernetes Health Checks
+
+Two HTTP endpoints are provided for container health probes:
+
+- `/livez`: liveness probe. Returns 200 when the bot process is running; 503 otherwise.
+- `/readyz`: readiness probe. Returns 200 when the bot is running and database ping succeeds; 503 otherwise.
+
+Configure your probes to hit these endpoints on the same port as metrics (default `:2112`, configurable with `METRICS_ADDR`).
+
 ## Credits
 Letter-bot is one of many tools prototyped by (and for) [TibiaLoot.com](https://tibialoot.com)  
 

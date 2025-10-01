@@ -21,6 +21,9 @@ import (
 	"spot-assistant/internal/infrastructure/chart"
 	"spot-assistant/internal/infrastructure/db/postgresql"
 	"spot-assistant/internal/infrastructure/eventhandler"
+	healthadapter "spot-assistant/internal/infrastructure/health"
+	infrahttp "spot-assistant/internal/infrastructure/http"
+	prommetrics "spot-assistant/internal/infrastructure/metrics/prometheus"
 	reservationRepository "spot-assistant/internal/infrastructure/reservation/postgresql/sqlc"
 	spotRepository "spot-assistant/internal/infrastructure/spot/postgresql/sqlc"
 	"spot-assistant/internal/infrastructure/worldapi"
@@ -81,6 +84,19 @@ func main() {
 	// Bot
 	bookingService := booking.NewAdapter(spotRepo, reservationRepo, communicationService).WithLogger(log)
 	eventHandler := eventhandler.NewHandler(bookingService, reservationRepo, communicationService, summaryService)
+
+	// Metrics
+	metrics := prommetrics.New()
+	botService.WithMetrics(metrics)
+	eventHandler.WithMetrics(metrics)
+
+	// Expose Prometheus metrics + health endpoints via infrastructure HTTP server
+	metricsAddr := os.Getenv("METRICS_ADDR")
+	server := infrahttp.NewMetricsServer(metricsAddr, log)
+	health := healthadapter.NewAdapter(db, botService).WithLogger(log)
+	server.WithHealthProvider(health)
+	server.Start()
+
 	err = botService.WithEventHandler(eventHandler).Run()
 
 	if err != nil {

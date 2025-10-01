@@ -13,6 +13,11 @@ func (a *Handler) OnPrivateSummary(request summary.PrivateSummaryRequest) error 
 		return err
 	}
 
+	// metrics: update gauge for upcoming reservations in this guild
+	if a.metrics != nil {
+		a.metrics.SetUpcomingReservations(strconv.FormatInt(request.GuildID, 10), len(res))
+	}
+
 	if len(res) == 0 {
 		return nil
 	}

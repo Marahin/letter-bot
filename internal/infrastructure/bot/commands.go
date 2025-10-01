@@ -9,66 +9,75 @@ import (
 )
 
 func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
-	var err error
 	name := i.ApplicationCommandData().Name
 	isAutocomplete := i.Type == discordgo.InteractionApplicationCommandAutocomplete
 	log := b.log.With("interaction_name", name, "isAutocomplete", isAutocomplete)
 
-	if !isAutocomplete {
-		err = b.interactionRespond(i, &discordgo.InteractionResponseData{}, discordgo.InteractionResponseDeferredChannelMessageWithSource)
-		if err != nil {
-			b.log.Error(fmt.Errorf("could not send a deferred response: %w", err))
-
-			return
+	if isAutocomplete {
+		if err := b.handleAutocomplete(i); err != nil {
+			log.Error(err)
 		}
+		return
 	}
 
-	switch name {
-	case "book":
-		if isAutocomplete {
-			err = b.BookAutocomplete(i)
-		} else {
-			err = b.Book(i)
-		}
-	case "unbook":
-		if isAutocomplete {
-			err = b.UnbookAutocomplete(i)
-		} else {
-			err = b.Unbook(i)
-		}
-	case "summary":
-		err = b.PrivateSummary(i)
-	case "world-set":
-		if isAutocomplete {
-			err = b.SetWorldAutocomplete(i)
-		} else {
-			err = b.SetWorld(i)
-		}
-	default:
-		err = fmt.Errorf("missing handler for command: %s", name)
+	// metrics: count non-autocomplete slash command invocations
+	if b.metrics != nil {
+		b.metrics.IncSlashCommand(i.GuildID, name)
 	}
+
+	// Send deferred response for slash commands
+	if err := b.interactionRespond(i, &discordgo.InteractionResponseData{}, discordgo.InteractionResponseDeferredChannelMessageWithSource); err != nil {
+		b.log.Error(fmt.Errorf("could not send a deferred response: %w", err))
+		return
+	}
+
+	err := b.handleSlash(i)
 
 	if err != nil {
 		log.Error(err)
-
-		if !isAutocomplete {
-			webhookParams := &discordgo.WebhookParams{
-				Content: b.formatter.FormatGenericError(err),
-			}
-
-			gID, err := strings.StrToInt64(i.GuildID)
-			if err != nil {
-				b.log.Errorf("could not translate guildID: %s", err)
-				return
-			}
-
-			dcSession := b.mgr.SessionForGuild(gID)
-			_, err = dcSession.FollowupMessageCreate(i.Interaction, false, webhookParams)
-
-			if err != nil {
-				b.log.Errorf("could not respond with an error message: %s", err)
-			}
+		if b.metrics != nil {
+			b.metrics.IncCommandError(i.GuildID, name)
 		}
+		webhookParams := &discordgo.WebhookParams{Content: b.formatter.FormatGenericError(err)}
+		gID, convErr := strings.StrToInt64(i.GuildID)
+		if convErr != nil {
+			b.log.Errorf("could not translate guildID: %s", convErr)
+			return
+		}
+		dcSession := b.mgr.SessionForGuild(gID)
+		if _, respErr := dcSession.FollowupMessageCreate(i.Interaction, false, webhookParams); respErr != nil {
+			b.log.Errorf("could not respond with an error message: %s", respErr)
+		}
+	}
+}
+
+// duplicate helpers removed
+
+func (b *Bot) handleSlash(i *discordgo.InteractionCreate) error {
+	switch i.ApplicationCommandData().Name {
+	case "book":
+		return b.Book(i)
+	case "unbook":
+		return b.Unbook(i)
+	case "summary":
+		return b.PrivateSummary(i)
+	case "world-set":
+		return b.SetWorld(i)
+	default:
+		return fmt.Errorf("missing handler for command: %s", i.ApplicationCommandData().Name)
+	}
+}
+
+func (b *Bot) handleAutocomplete(i *discordgo.InteractionCreate) error {
+	switch i.ApplicationCommandData().Name {
+	case "book":
+		return b.BookAutocomplete(i)
+	case "unbook":
+		return b.UnbookAutocomplete(i)
+	case "world-set":
+		return b.SetWorldAutocomplete(i)
+	default:
+		return fmt.Errorf("missing handler for command: %s", i.ApplicationCommandData().Name)
 	}
 }
 

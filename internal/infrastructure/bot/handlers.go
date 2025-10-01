@@ -109,6 +109,11 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 		return errors.New("book command requires 3 arguments")
 	}
 
+	// metrics: track overbook flag usage
+	if overbook && b.metrics != nil {
+		b.metrics.IncOverbook(i.GuildID)
+	}
+
 	startAtStr := sanitizeTimeFormat(i.ApplicationCommandData().Options[1].StringValue())
 	startAt, err := time.Parse(stringsHelper.DcTimeFormat, startAtStr)
 	if err != nil {
