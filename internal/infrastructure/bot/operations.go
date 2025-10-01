@@ -243,10 +243,10 @@ func (b *Bot) UpdateGuildLetter(guild *guild.Guild) error {
 		return err
 	}
 
-	// metrics: update gauge of upcoming reservations
-	if b.metrics != nil {
-		b.metrics.SetUpcomingReservations(guild.ID, len(reservationsWithSpots))
-	}
+    // metrics: update gauge of upcoming reservations
+    if b.metrics != nil {
+        b.metrics.SetUpcomingReservations(guild.ID, guild.Name, len(reservationsWithSpots))
+    }
 
 	sum, err := b.summarySrv.PrepareSummary(reservationsWithSpots)
 	if err != nil {

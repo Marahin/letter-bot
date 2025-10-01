@@ -28,7 +28,7 @@ type MockMetricsPort struct {
 }
 
 type MockMetricsPort_Expecter struct {
-	mock *mock.Mock
+    mock *mock.Mock
 }
 
 func (_m *MockMetricsPort) EXPECT() *MockMetricsPort_Expecter {
@@ -36,9 +36,9 @@ func (_m *MockMetricsPort) EXPECT() *MockMetricsPort_Expecter {
 }
 
 // IncCommandError provides a mock function for the type MockMetricsPort
-func (_mock *MockMetricsPort) IncCommandError(guildID string, command string) {
-	_mock.Called(guildID, command)
-	return
+func (_mock *MockMetricsPort) IncCommandError(guildID string, guildName string, command string) {
+    _mock.Called(guildID, guildName, command)
+    return
 }
 
 // MockMetricsPort_IncCommandError_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IncCommandError'
@@ -48,27 +48,33 @@ type MockMetricsPort_IncCommandError_Call struct {
 
 // IncCommandError is a helper method to define mock.On call
 //   - guildID string
+//   - guildName string
 //   - command string
-func (_e *MockMetricsPort_Expecter) IncCommandError(guildID interface{}, command interface{}) *MockMetricsPort_IncCommandError_Call {
-	return &MockMetricsPort_IncCommandError_Call{Call: _e.mock.On("IncCommandError", guildID, command)}
+func (_e *MockMetricsPort_Expecter) IncCommandError(guildID interface{}, guildName interface{}, command interface{}) *MockMetricsPort_IncCommandError_Call {
+    return &MockMetricsPort_IncCommandError_Call{Call: _e.mock.On("IncCommandError", guildID, guildName, command)}
 }
 
-func (_c *MockMetricsPort_IncCommandError_Call) Run(run func(guildID string, command string)) *MockMetricsPort_IncCommandError_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
+func (_c *MockMetricsPort_IncCommandError_Call) Run(run func(guildID string, guildName string, command string)) *MockMetricsPort_IncCommandError_Call {
+    _c.Call.Run(func(args mock.Arguments) {
+        var arg0 string
+        if args[0] != nil {
+            arg0 = args[0].(string)
+        }
+        var arg1 string
+        if args[1] != nil {
+            arg1 = args[1].(string)
+        }
+        var arg2 string
+        if args[2] != nil {
+            arg2 = args[2].(string)
+        }
+        run(
+            arg0,
+            arg1,
+            arg2,
+        )
+    })
+    return _c
 }
 
 func (_c *MockMetricsPort_IncCommandError_Call) Return() *MockMetricsPort_IncCommandError_Call {
@@ -76,15 +82,15 @@ func (_c *MockMetricsPort_IncCommandError_Call) Return() *MockMetricsPort_IncCom
 	return _c
 }
 
-func (_c *MockMetricsPort_IncCommandError_Call) RunAndReturn(run func(guildID string, command string)) *MockMetricsPort_IncCommandError_Call {
-	_c.Run(run)
-	return _c
+func (_c *MockMetricsPort_IncCommandError_Call) RunAndReturn(run func(guildID string, guildName string, command string)) *MockMetricsPort_IncCommandError_Call {
+    _c.Run(run)
+    return _c
 }
 
 // IncOverbook provides a mock function for the type MockMetricsPort
-func (_mock *MockMetricsPort) IncOverbook(guildID string) {
-	_mock.Called(guildID)
-	return
+func (_mock *MockMetricsPort) IncOverbook(guildID string, guildName string) {
+    _mock.Called(guildID, guildName)
+    return
 }
 
 // MockMetricsPort_IncOverbook_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IncOverbook'
@@ -94,21 +100,24 @@ type MockMetricsPort_IncOverbook_Call struct {
 
 // IncOverbook is a helper method to define mock.On call
 //   - guildID string
-func (_e *MockMetricsPort_Expecter) IncOverbook(guildID interface{}) *MockMetricsPort_IncOverbook_Call {
-	return &MockMetricsPort_IncOverbook_Call{Call: _e.mock.On("IncOverbook", guildID)}
+//   - guildName string
+func (_e *MockMetricsPort_Expecter) IncOverbook(guildID interface{}, guildName interface{}) *MockMetricsPort_IncOverbook_Call {
+    return &MockMetricsPort_IncOverbook_Call{Call: _e.mock.On("IncOverbook", guildID, guildName)}
 }
 
-func (_c *MockMetricsPort_IncOverbook_Call) Run(run func(guildID string)) *MockMetricsPort_IncOverbook_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
+func (_c *MockMetricsPort_IncOverbook_Call) Run(run func(guildID string, guildName string)) *MockMetricsPort_IncOverbook_Call {
+    _c.Call.Run(func(args mock.Arguments) {
+        var arg0 string
+        if args[0] != nil {
+            arg0 = args[0].(string)
+        }
+        var arg1 string
+        if args[1] != nil {
+            arg1 = args[1].(string)
+        }
+        run(arg0, arg1)
+    })
+    return _c
 }
 
 func (_c *MockMetricsPort_IncOverbook_Call) Return() *MockMetricsPort_IncOverbook_Call {
@@ -116,15 +125,15 @@ func (_c *MockMetricsPort_IncOverbook_Call) Return() *MockMetricsPort_IncOverboo
 	return _c
 }
 
-func (_c *MockMetricsPort_IncOverbook_Call) RunAndReturn(run func(guildID string)) *MockMetricsPort_IncOverbook_Call {
-	_c.Run(run)
-	return _c
+func (_c *MockMetricsPort_IncOverbook_Call) RunAndReturn(run func(guildID string, guildName string)) *MockMetricsPort_IncOverbook_Call {
+    _c.Run(run)
+    return _c
 }
 
 // IncSlashCommand provides a mock function for the type MockMetricsPort
-func (_mock *MockMetricsPort) IncSlashCommand(guildID string, command string) {
-	_mock.Called(guildID, command)
-	return
+func (_mock *MockMetricsPort) IncSlashCommand(guildID string, guildName string, command string) {
+    _mock.Called(guildID, guildName, command)
+    return
 }
 
 // MockMetricsPort_IncSlashCommand_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IncSlashCommand'
@@ -134,27 +143,33 @@ type MockMetricsPort_IncSlashCommand_Call struct {
 
 // IncSlashCommand is a helper method to define mock.On call
 //   - guildID string
+//   - guildName string
 //   - command string
-func (_e *MockMetricsPort_Expecter) IncSlashCommand(guildID interface{}, command interface{}) *MockMetricsPort_IncSlashCommand_Call {
-	return &MockMetricsPort_IncSlashCommand_Call{Call: _e.mock.On("IncSlashCommand", guildID, command)}
+func (_e *MockMetricsPort_Expecter) IncSlashCommand(guildID interface{}, guildName interface{}, command interface{}) *MockMetricsPort_IncSlashCommand_Call {
+    return &MockMetricsPort_IncSlashCommand_Call{Call: _e.mock.On("IncSlashCommand", guildID, guildName, command)}
 }
 
-func (_c *MockMetricsPort_IncSlashCommand_Call) Run(run func(guildID string, command string)) *MockMetricsPort_IncSlashCommand_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
+func (_c *MockMetricsPort_IncSlashCommand_Call) Run(run func(guildID string, guildName string, command string)) *MockMetricsPort_IncSlashCommand_Call {
+    _c.Call.Run(func(args mock.Arguments) {
+        var arg0 string
+        if args[0] != nil {
+            arg0 = args[0].(string)
+        }
+        var arg1 string
+        if args[1] != nil {
+            arg1 = args[1].(string)
+        }
+        var arg2 string
+        if args[2] != nil {
+            arg2 = args[2].(string)
+        }
+        run(
+            arg0,
+            arg1,
+            arg2,
+        )
+    })
+    return _c
 }
 
 func (_c *MockMetricsPort_IncSlashCommand_Call) Return() *MockMetricsPort_IncSlashCommand_Call {
@@ -162,15 +177,15 @@ func (_c *MockMetricsPort_IncSlashCommand_Call) Return() *MockMetricsPort_IncSla
 	return _c
 }
 
-func (_c *MockMetricsPort_IncSlashCommand_Call) RunAndReturn(run func(guildID string, command string)) *MockMetricsPort_IncSlashCommand_Call {
-	_c.Run(run)
-	return _c
+func (_c *MockMetricsPort_IncSlashCommand_Call) RunAndReturn(run func(guildID string, guildName string, command string)) *MockMetricsPort_IncSlashCommand_Call {
+    _c.Run(run)
+    return _c
 }
 
 // SetUpcomingReservations provides a mock function for the type MockMetricsPort
-func (_mock *MockMetricsPort) SetUpcomingReservations(guildID string, count int) {
-	_mock.Called(guildID, count)
-	return
+func (_mock *MockMetricsPort) SetUpcomingReservations(guildID string, guildName string, count int) {
+    _mock.Called(guildID, guildName, count)
+    return
 }
 
 // MockMetricsPort_SetUpcomingReservations_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetUpcomingReservations'
@@ -180,27 +195,33 @@ type MockMetricsPort_SetUpcomingReservations_Call struct {
 
 // SetUpcomingReservations is a helper method to define mock.On call
 //   - guildID string
+//   - guildName string
 //   - count int
-func (_e *MockMetricsPort_Expecter) SetUpcomingReservations(guildID interface{}, count interface{}) *MockMetricsPort_SetUpcomingReservations_Call {
-	return &MockMetricsPort_SetUpcomingReservations_Call{Call: _e.mock.On("SetUpcomingReservations", guildID, count)}
+func (_e *MockMetricsPort_Expecter) SetUpcomingReservations(guildID interface{}, guildName interface{}, count interface{}) *MockMetricsPort_SetUpcomingReservations_Call {
+    return &MockMetricsPort_SetUpcomingReservations_Call{Call: _e.mock.On("SetUpcomingReservations", guildID, guildName, count)}
 }
 
-func (_c *MockMetricsPort_SetUpcomingReservations_Call) Run(run func(guildID string, count int)) *MockMetricsPort_SetUpcomingReservations_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 int
-		if args[1] != nil {
-			arg1 = args[1].(int)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
+func (_c *MockMetricsPort_SetUpcomingReservations_Call) Run(run func(guildID string, guildName string, count int)) *MockMetricsPort_SetUpcomingReservations_Call {
+    _c.Call.Run(func(args mock.Arguments) {
+        var arg0 string
+        if args[0] != nil {
+            arg0 = args[0].(string)
+        }
+        var arg1 string
+        if args[1] != nil {
+            arg1 = args[1].(string)
+        }
+        var arg2 int
+        if args[2] != nil {
+            arg2 = args[2].(int)
+        }
+        run(
+            arg0,
+            arg1,
+            arg2,
+        )
+    })
+    return _c
 }
 
 func (_c *MockMetricsPort_SetUpcomingReservations_Call) Return() *MockMetricsPort_SetUpcomingReservations_Call {
@@ -208,7 +229,7 @@ func (_c *MockMetricsPort_SetUpcomingReservations_Call) Return() *MockMetricsPor
 	return _c
 }
 
-func (_c *MockMetricsPort_SetUpcomingReservations_Call) RunAndReturn(run func(guildID string, count int)) *MockMetricsPort_SetUpcomingReservations_Call {
-	_c.Run(run)
-	return _c
+func (_c *MockMetricsPort_SetUpcomingReservations_Call) RunAndReturn(run func(guildID string, guildName string, count int)) *MockMetricsPort_SetUpcomingReservations_Call {
+    _c.Run(run)
+    return _c
 }

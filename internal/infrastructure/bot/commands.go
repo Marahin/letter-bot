@@ -20,10 +20,16 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 		return
 	}
 
-	// metrics: count non-autocomplete slash command invocations
-	if b.metrics != nil {
-		b.metrics.IncSlashCommand(i.GuildID, name)
-	}
+    // metrics: count non-autocomplete slash command invocations
+    if b.metrics != nil {
+        var guildName string
+        if gID, convErr := strings.StrToInt64(i.GuildID); convErr == nil {
+            if g, err := b.GetGuild(gID); err == nil && g != nil {
+                guildName = g.Name
+            }
+        }
+        b.metrics.IncSlashCommand(i.GuildID, guildName, name)
+    }
 
 	// Send deferred response for slash commands
 	if err := b.interactionRespond(i, &discordgo.InteractionResponseData{}, discordgo.InteractionResponseDeferredChannelMessageWithSource); err != nil {
@@ -35,9 +41,15 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 
 	if err != nil {
 		log.Error(err)
-		if b.metrics != nil {
-			b.metrics.IncCommandError(i.GuildID, name)
-		}
+            if b.metrics != nil {
+                var guildName string
+                if gID, convErr := strings.StrToInt64(i.GuildID); convErr == nil {
+                    if g, err := b.GetGuild(gID); err == nil && g != nil {
+                        guildName = g.Name
+                    }
+                }
+                b.metrics.IncCommandError(i.GuildID, guildName, name)
+            }
 		webhookParams := &discordgo.WebhookParams{Content: b.formatter.FormatGenericError(err)}
 		gID, convErr := strings.StrToInt64(i.GuildID)
 		if convErr != nil {

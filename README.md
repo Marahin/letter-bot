@@ -127,7 +127,7 @@ There are examples in [.env.sample](.env.sample) file, along with [docker-compos
 The bot exposes Prometheus metrics via an internal HTTP server.
 
 - Endpoint: `/metrics`
-- Address: configured by `METRICS_ADDR` (default `:2112`)
+- Address: configured by `METRICS_ADDR`
 - Implementation: Prometheus client, wired by infrastructure HTTP server
 
 Exposed metrics

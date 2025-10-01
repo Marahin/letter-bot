@@ -43,11 +43,11 @@ func (s *Server) Start() {
 	}()
 }
 
-// NewMetricsServer constructs a Server pre-configured with Prometheus /metrics handler.
-func NewMetricsServer(addr string, log *zap.SugaredLogger) *Server {
-	srv := NewServer(addr, log)
-	srv.Mux().Handle("/metrics", promhttp.Handler())
-	return srv
+// NewServerWithMetrics constructs a Server pre-configured with Prometheus /metrics handler.
+func NewServerWithMetrics(addr string, log *zap.SugaredLogger) *Server {
+    srv := NewServer(addr, log)
+    srv.Mux().Handle("/metrics", promhttp.Handler())
+    return srv
 }
 
 // CheckFunc is a function that returns nil if the check passes.
