@@ -142,7 +142,7 @@ func (a *Adapter) Book(request book.BookRequest) ([]*reservation.ClippedOrRemove
 					Original: r,
 					New:      []*reservation.Reservation{r},
 				}
-			}), InsufficientPermissionsError
+			}), ErrInsufficientPermissions
 
 		}
 	}

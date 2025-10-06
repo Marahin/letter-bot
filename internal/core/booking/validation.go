@@ -2,8 +2,9 @@ package booking
 
 import (
 	"errors"
-	"spot-assistant/internal/core/dto/member"
 	"time"
+
+	"spot-assistant/internal/core/dto/member"
 
 	"spot-assistant/internal/common/collections"
 	"spot-assistant/internal/core/dto/reservation"
@@ -51,7 +52,7 @@ func validateHuntLengthForMultiFloorRespawns(spotName string, upcomingAuthorRese
 	})
 
 	if totalReservationsTime > MaximumReservationLength {
-		return errors.New("You can only book 3 hours of reservations within 24 hour window")
+		return errors.New("you can only book 3 hours of reservations within 24 hour window")
 	}
 
 	return nil

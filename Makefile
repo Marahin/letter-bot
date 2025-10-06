@@ -6,6 +6,7 @@ REGISTRY ?= registry.marahin.pl
 
 install-bins:
 	@go install github.com/fzipp/gocyclo/cmd/gocyclo@v0.6.0
+	@go install honnef.co/go/tools/cmd/staticcheck@latest
 	@go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.26.0
 	@go install github.com/vektra/mockery/v3@v3.5.4
 
@@ -30,7 +31,7 @@ sqlc-diff:
 	@sqlc diff -f internal/infrastructure/spot/postgresql/sqlc.yaml
 	@sqlc diff -f internal/infrastructure/worldname/postgresql/sqlc.yaml
 
-test: install-dependencies sqlc-diff go-vet gocyclo
+test: install-dependencies sqlc-diff lint
 	@echo "INFO: Running tests"
 	@go test -cover -race -coverprofile=coverage.out ./...
 
@@ -38,18 +39,30 @@ test-coverage: test
 	@echo "INFO: Generating test coverage report"
 	@go tool cover -html=coverage.out
 
+# Run go vet
 go-vet:
 	@echo "INFO: Running go vet"
 	@go vet ./...
 
+# Check for high cyclomatic complexity
 gocyclo:
 	@echo "INFO: Running gocyclo"
 	@output=$$(gocyclo -over 15 .) ; \
-	if [ $$? -ne 0 ]; then \
-		echo "Gocyclo complexity complaints: "; \
-		echo $$output; \
+	if [ "$$output" != "" ]; then \
+		echo "Gocyclo complexity complaints:"; \
+		echo "$$output"; \
 		exit 1; \
 	fi
+
+staticcheck:
+	@echo "INFO: Running staticcheck"
+	@staticcheck ./...
+
+# Run golint across the codebase
+lint: install-dependencies
+	@echo "INFO: Running golint"
+
+	@make -s go-vet gocyclo staticcheck
 
 sqlc-generate:
 	@echo "INFO: Generating sqlc"

@@ -2,13 +2,13 @@ package booking
 
 import (
 	"fmt"
-	"spot-assistant/internal/core/dto/discord"
 	"time"
 
+	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/reservation"
 )
 
-var InsufficientPermissionsError = fmt.Errorf("there are conflicting reservations which prevented booking this reservation. If you would like to overbook them, ensure you have a @%s role, then repeat the command and set 'overbook' parameter to 'true'", discord.PrivilegedRole)
+var ErrInsufficientPermissions = fmt.Errorf("there are conflicting reservations which prevented booking this reservation. If you would like to overbook them, ensure you have a @%s role, then repeat the command and set 'overbook' parameter to 'true'", discord.PrivilegedRole)
 
 func canOverbook(attemptsToOverbook bool, hasPermissions bool, conflictingReservations []*reservation.Reservation) bool {
 	return (attemptsToOverbook && isPotentiallyAbandonedReservation(conflictingReservations)) ||
