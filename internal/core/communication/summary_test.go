@@ -19,8 +19,8 @@ func TestAdapter_SendGuildSummary(t *testing.T) {
 	guild := &guild.Guild{}
 	summary := &summary.Summary{}
 	summaryCh := &discord.Channel{}
-	memberOperations := new(mocks.MockBot)
-	botOperations := new(mocks.MockBot)
+	memberOperations := mocks.NewMockMemberRepository(t)
+	botOperations := mocks.NewMockBotPort(t)
 	botOperations.On("FindChannelByName", guild, discord.SummaryChannel).Return(summaryCh, nil).Once()
 	botOperations.On("SendLetterMessage", guild, summaryCh, summary).Return(nil).Once()
 	adapter := NewAdapter(botOperations, memberOperations)
@@ -42,7 +42,7 @@ func TestAdapter_SendPrivateSummary(t *testing.T) {
 		UserID: 123,
 	}
 	summary := &summary.Summary{}
-	botOperations := new(mocks.MockBot)
+	botOperations := mocks.NewMockBotPort(t)
 	botOperations.On("OpenDM", &member.Member{ID: strconv.FormatInt(request.UserID, 10)}).Return(dmChannel, nil).Once()
 	botOperations.On("SendLetterMessage", nilptrGuild, dmChannel, summary).Return(nil).Once()
 	adapter := NewAdapter(botOperations, nil)

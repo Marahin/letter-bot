@@ -6,9 +6,9 @@ import (
 	"spot-assistant/internal/core/dto/reservation"
 )
 
-/* 
-	This function takes a slice of reservations and merges some of them when they overlap and have the same spot (with different side or floor) 
-*/ 
+/*
+	This function takes a slice of reservations and merges some of them when they overlap and have the same spot (with different side or floor)
+*/
 func reduceAllAuthorReservationsByLongestPerSpot(reservations []*reservation.ReservationWithSpot) []*reservation.ReservationWithSpot {
 	reducedReservations := []*reservation.ReservationWithSpot{reservations[0]}
 
@@ -76,7 +76,7 @@ func reduceAllAuthorReservationsByLongestPerSpot(reservations []*reservation.Res
 							re.EndAt = firstOne.EndAt
 
 							break
-						// When sooner reservation ends before the later one ends
+							// When sooner reservation ends before the later one ends
 						} else {
 							firstOne.EndAt = lastOne.EndAt
 							re.StartAt = firstOne.StartAt
@@ -84,20 +84,20 @@ func reduceAllAuthorReservationsByLongestPerSpot(reservations []*reservation.Res
 
 							break
 						}
-					// When sooner reservation ends before the later one starts
+						// When sooner reservation ends before the later one starts
 					} else {
-						// When it is the last item from reduced slice 
+						// When it is the last item from reduced slice
 						if i == len(reducedReservations)-1 {
 							reducedReservations = append(reducedReservations, r)
 						}
 					}
-				// When both start and end time is equal in compared reservations
+					// When both start and end time is equal in compared reservations
 				} else {
 					break
 				}
-			// When spot in compared reservations is not the same
+				// When spot in compared reservations is not the same
 			} else {
-				// When it is the last item from reduced slice 
+				// When it is the last item from reduced slice
 				if i == len(reducedReservations)-1 {
 					reducedReservations = append(reducedReservations, r)
 				}
