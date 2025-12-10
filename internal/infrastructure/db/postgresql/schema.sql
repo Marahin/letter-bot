@@ -353,7 +353,8 @@ CREATE TABLE public.web_reservation (
     end_at timestamp with time zone NOT NULL,
     spot_id bigint NOT NULL,
     guild_id character varying(255) NOT NULL,
-    author_discord_id character varying(200) NOT NULL
+    author_discord_id character varying(200) NOT NULL,
+    notification_sent boolean DEFAULT false NOT NULL
 );
 
 

@@ -471,3 +471,34 @@ func (b *Bot) OpenDM(m *member.Member) (*discord.Channel, error) {
 
 	return MapChannel(channel), nil
 }
+
+func (b *Bot) SendReservationStartsNotifications(guild *guild.Guild) {
+	reservations, err := b.reservationRepo.SelectReservationsForReservationStartsNotification(context.Background(), guild.ID)
+	if err != nil {
+		b.log.Errorf("could not fetch reservations for notification: %s", err)
+		return
+	}
+
+	for _, reservation := range reservations {
+		member, err := b.GetMemberByGuildAndId(guild, reservation.Reservation.AuthorDiscordID)
+		if err != nil {
+			b.log.Errorf("could not fetch member %s for notification: %s", reservation.Reservation.AuthorDiscordID, err)
+			continue
+		}
+
+		if err := b.SendDMReservationStartsNotification(member, reservation.Spot.Name, reservation.Reservation.StartAt); err != nil {
+			b.log.Errorf("could not send DM to %s: %s", member.Username, err)
+		}
+
+		// Always update the notification status to avoid retrying and spamming logic in case of temporary failures
+		err = b.reservationRepo.UpdateReservationStartsNotificationSent(context.Background(), reservation.Reservation.ID)
+		if err != nil {
+			b.log.Errorf("could not update reservation %d notification sent status: %s", reservation.Reservation.ID, err)
+		}
+	}
+}
+
+func (b *Bot) SendDMReservationStartsNotification(member *member.Member, spotName string, startAt time.Time) error {
+	message := b.formatter.FormatReservationStartsNotificationMessage(spotName, startAt, time.Now())
+	return b.SendDM(member, message)
+}
