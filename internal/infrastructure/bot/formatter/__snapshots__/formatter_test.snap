@@ -37,6 +37,11 @@ Following reservations are conflicting **and have been shortened or removed**:
 ---
 
 [TestDiscordFormatter_FormatOverbookedMemberNotification - 1]
-Your reservation was overbooked by <@!test-id>
+Your reservation was overbooked by test-nick (test-username)
+* <@!test-id>  has been clipped to: 2021-01-01 00:00 - 2021-01-01 01:10, 2021-01-01 01:30 - 2021-01-01 02:00
+---
+
+[TestDiscordFormatter_FormatOverbookedMemberNotificationWithoutName - 1]
+Your reservation was overbooked by test-username
 * <@!test-id>  has been clipped to: 2021-01-01 00:00 - 2021-01-01 01:10, 2021-01-01 01:30 - 2021-01-01 02:00
 ---
