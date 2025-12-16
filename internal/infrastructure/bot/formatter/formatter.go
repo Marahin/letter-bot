@@ -89,13 +89,6 @@ func (f *DiscordFormatter) FormatBookResponse(response book.BookResponse) string
 	return message.String()
 }
 
-func (f *DiscordFormatter) FormatMemberName(m *member.Member) string {
-	if m.Nick != "" {
-		return fmt.Sprintf("%s (%s)", m.Nick, m.Username)
-	}
-	return m.Username
-}
-
 func (f *DiscordFormatter) FormatOverbookedMemberNotification(
 	member *member.Member,
 	request book.BookRequest,
@@ -103,7 +96,7 @@ func (f *DiscordFormatter) FormatOverbookedMemberNotification(
 ) string {
 	var msgBody strings.Builder
 
-	msgBody.WriteString(fmt.Sprintf("Your reservation was overbooked by %s\n", f.FormatMemberName(request.Member)))
+	msgBody.WriteString(fmt.Sprintf("Your reservation was overbooked by %s\n", fmt.Sprintf("%s (<@!%s>)", request.Member.Nick, request.Member.ID)))
 	msgBody.WriteString(fmt.Sprintf("* %s %s ", fmt.Sprintf("<@!%s>", member.ID), request.Spot))
 	if len(res.New) > 0 { // The reservation has been modified, but not entirely removed - lets notify the user!
 		msgBody.WriteString("has been clipped to: ")
