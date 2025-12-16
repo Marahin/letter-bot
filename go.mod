@@ -12,7 +12,7 @@ require (
 	github.com/pashagolub/pgxmock/v3 v3.2.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/servusdei2018/shards/v2 v2.2.1
-	github.com/sqlc-dev/sqlc v1.29.0
+	github.com/sqlc-dev/sqlc v1.26.0
 	github.com/stretchr/testify v1.11.1
 	github.com/vicanso/go-charts/v2 v2.6.1
 	go.uber.org/automaxprocs v1.6.0

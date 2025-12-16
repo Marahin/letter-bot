@@ -7,7 +7,7 @@ REGISTRY ?= registry.marahin.pl
 install-bins:
 	@go install github.com/fzipp/gocyclo/cmd/gocyclo@v0.6.0
 	@go install honnef.co/go/tools/cmd/staticcheck@latest
-	@go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.29.0
+	@go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.26.0
 	@go install github.com/vektra/mockery/v3@v3.5.4
 
 go-mod:
