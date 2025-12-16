@@ -159,8 +159,9 @@ func TestDiscordFormatter_FormatOverbookedMemberNotification(t *testing.T) {
 	// given
 	formatter := NewFormatter()
 	member := &member.Member{
-		ID:   "test-id",
-		Nick: "test-nick",
+		ID:       "test-id",
+		Nick:     "test-nick",
+		Username: "test-username",
 	}
 	request := book.BookRequest{
 		Member: member,
