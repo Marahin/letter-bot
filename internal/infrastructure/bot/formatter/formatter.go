@@ -2,6 +2,7 @@ package formatter
 
 import (
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -113,6 +114,10 @@ func (f *DiscordFormatter) FormatOverbookedMemberNotification(
 }
 
 func (f *DiscordFormatter) FormatReservationStartsNotificationMessage(spotName string, startAt time.Time, now time.Time) string {
-	minutesLeft := int(startAt.Sub(now).Minutes())
-	return fmt.Sprintf("Your hunt at **%s** starts in **%d** minutes (**%s**)!", spotName, minutesLeft, startAt.Format(stringsHelper.DcLongTimeFormat))
+	var msgBody strings.Builder
+	minutesLeft := int(math.Ceil(startAt.Sub(now).Minutes()))
+	msgBody.WriteString(fmt.Sprintf("Your hunt at **%s** starts in **%d** minutes (**%s** server time)!\n", spotName, minutesLeft, startAt.Format(stringsHelper.DcLongTimeFormat)))
+	msgBody.WriteString("Please make sure you are there on time!\n")
+	msgBody.WriteString("If you cannot make it, please cancel your reservation as soon as possible.")
+	return msgBody.String()
 }

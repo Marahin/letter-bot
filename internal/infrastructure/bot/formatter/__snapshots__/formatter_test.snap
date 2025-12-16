@@ -42,5 +42,7 @@ Your reservation was overbooked by test-nick (<@!test-id>)
 ---
 
 [TestDiscordFormatter_FormatReservationStartsNotificationMessage - 1]
-Your hunt at **Test Spot** starts in **45** minutes (**2023-10-27 20:00**)!
+Your hunt at **Test Spot** starts in **45** minutes (**2023-10-27 20:00** server time)!
+Please make sure you are there on time!
+If you cannot make it, please cancel your reservation as soon as possible.
 ---

@@ -198,7 +198,7 @@ func TestDiscordFormatter_FormatReservationStartsNotificationMessage(t *testing.
 	formatter := NewFormatter()
 	spotName := "Test Spot"
 	startAt := time.Date(2023, 10, 27, 20, 00, 0, 0, time.UTC)
-	now := startAt.Add(-45 * time.Minute)
+	now := time.Date(2023, 10, 27, 19, 15, 20, 0, time.UTC)
 
 	// when
 	output := formatter.FormatReservationStartsNotificationMessage(spotName, startAt, now)
