@@ -113,7 +113,7 @@ func (f *DiscordFormatter) FormatOverbookedMemberNotification(
 	return msgBody.String()
 }
 
-func (f *DiscordFormatter) FormatReservationStartsNotificationMessage(spotName string, startAt time.Time, now time.Time) string {
+func (f *DiscordFormatter) FormatUpcomingReservationNotificationMessage(spotName string, startAt time.Time, now time.Time) string {
 	var msgBody strings.Builder
 	minutesLeft := int(math.Ceil(startAt.Sub(now).Minutes()))
 	msgBody.WriteString(fmt.Sprintf("Your hunt at **%s** starts in **%d** minutes (**%s** server time)!\n", spotName, minutesLeft, startAt.Format(stringsHelper.DcLongTimeFormat)))

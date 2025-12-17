@@ -13,6 +13,7 @@ import (
 	"spot-assistant/internal/core/communication"
 	"spot-assistant/internal/core/onlinecheck"
 	"spot-assistant/internal/core/summary"
+	"spot-assistant/internal/core/upcomingreservation"
 
 	"spot-assistant/internal/common/version"
 
@@ -80,6 +81,8 @@ func main() {
 	dcFormatter := formatter.NewFormatter()
 	botService := bot.NewManager(summaryService, reservationRepo, onlineChecker).WithFormatter(dcFormatter).WithLogger(log)
 	communicationService := communication.NewAdapter(botService, botService).WithLogger(log)
+	upcomingReservationSrv := upcomingreservation.NewAdapter(reservationRepo, botService, communicationService).WithLogger(log)
+	botService.WithUpcomingReservationService(upcomingReservationSrv)
 
 	// Bot
 	bookingService := booking.NewAdapter(spotRepo, reservationRepo, communicationService).WithLogger(log)
@@ -92,7 +95,7 @@ func main() {
 
 	// Expose Prometheus metrics + health endpoints via infrastructure HTTP server
 	metricsAddr := os.Getenv("METRICS_ADDR")
-    server := infrahttp.NewServerWithMetrics(metricsAddr, log)
+	server := infrahttp.NewServerWithMetrics(metricsAddr, log)
 	health := healthadapter.NewAdapter(db, botService).WithLogger(log)
 	server.WithHealthProvider(health)
 	server.Start()

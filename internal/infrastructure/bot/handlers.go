@@ -86,7 +86,7 @@ func (b *Bot) Tick() {
 		guild := guild
 		go b.onlineCheckService.TryRefresh(guild.ID)
 		go b.TryUpdateGuildLetter(guild)
-		go b.SendReservationStartsNotifications(guild)
+		go b.TryNotifyUpcomingReservations(guild)
 	}
 }
 

@@ -53,6 +53,9 @@ type BotPort interface {
 	// SendDMOverbookedNotification sends a DM to a member about overbooking.
 	SendDMOverbookedNotification(member *member.Member, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) error
 
+	// SendDMUpcomingReservationNotification sends a DM to a member about reservation start.
+	SendDMUpcomingReservationNotification(member *member.Member, spotName string, startAt time.Time) error
+
 	// OpenDM opens a DM channel with a member.
 	OpenDM(m *member.Member) (*discord.Channel, error)
 }
@@ -85,9 +88,14 @@ type TextFormatter interface {
 	FormatOverbookedMemberNotification(member *member.Member,
 		request book.BookRequest,
 		res *reservation.ClippedOrRemovedReservation) string
+	FormatUpcomingReservationNotificationMessage(spotName string, startAt time.Time, now time.Time) string
 }
 
 type WorldNameRepository interface {
 	UpsertGuildWorld(ctx context.Context, guildID string, worldName string) error
 	SelectGuildWorld(ctx context.Context, guildID string) (*guildsworld.GuildsWorld, error)
+}
+
+type UpcomingReservationService interface {
+	NotifyUpcomingReservations(ctx context.Context, g *guild.Guild) error
 }
