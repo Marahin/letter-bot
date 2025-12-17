@@ -16,6 +16,7 @@ type PromMetrics struct {
 	ticks                *prom.CounterVec
 	messagesSent         *prom.CounterVec
 	messagesDeleted      *prom.CounterVec
+	upcomingNotifsSent   *prom.CounterVec
 }
 
 // New creates and registers Prometheus metrics using the default registry.
@@ -63,9 +64,15 @@ func New() *PromMetrics {
 			Name:      "messages_deleted_total",
 			Help:      "Total number of messages deleted by the bot.",
 		}, []string{"channel_id", "channel_name"}),
+		upcomingNotifsSent: prom.NewCounterVec(prom.CounterOpts{
+			Namespace: "letter_bot",
+			Subsystem: "reservations",
+			Name:      "upcoming_reservation_notifications_sent_total",
+			Help:      "Total number of upcoming reservation notifications sent.",
+		}, []string{"guild_id", "guild_name"}),
 	}
 
-	prom.MustRegister(m.slashCommands, m.overbookInvocations, m.commandErrors, m.upcomingReservations, m.ticks, m.messagesSent, m.messagesDeleted)
+	prom.MustRegister(m.slashCommands, m.overbookInvocations, m.commandErrors, m.upcomingReservations, m.ticks, m.messagesSent, m.messagesDeleted, m.upcomingNotifsSent)
 
 	return m
 }
@@ -108,6 +115,11 @@ func (m *PromMetrics) IncMessagesSent(channelID, channelName string) {
 // AddMessagesDeleted adds to counter of messages deleted by the bot.
 func (m *PromMetrics) AddMessagesDeleted(channelID, channelName string, count int) {
 	m.messagesDeleted.WithLabelValues(channelID, channelName).Add(float64(count))
+}
+
+// IncUpcomingReservationNotificationSent increments counter of upcoming reservation notifications sent.
+func (m *PromMetrics) IncUpcomingReservationNotificationSent(guildID, guildName string) {
+	m.upcomingNotifsSent.WithLabelValues(guildID, guildName).Inc()
 }
 
 // helper to quiet import usage in some contexts

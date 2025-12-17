@@ -54,7 +54,7 @@ type BotPort interface {
 	SendDMOverbookedNotification(member *member.Member, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) error
 
 	// SendDMUpcomingReservationNotification sends a DM to a member about reservation start.
-	SendDMUpcomingReservationNotification(member *member.Member, spotName string, startAt time.Time) error
+	SendDMUpcomingReservationNotification(guild *guild.Guild, member *member.Member, spotName string, startAt time.Time) error
 
 	// OpenDM opens a DM channel with a member.
 	OpenDM(m *member.Member) (*discord.Channel, error)

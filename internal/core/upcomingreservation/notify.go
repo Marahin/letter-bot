@@ -27,7 +27,7 @@ func (a *Adapter) processReservationNotification(g *guild.Guild, res *reservatio
 		return
 	}
 
-	if err := a.commService.NotifyUpcomingReservation(member, res.Spot.Name, res.Reservation.StartAt); err != nil {
+	if err := a.commService.NotifyUpcomingReservation(g, member, res.Spot.Name, res.Reservation.StartAt); err != nil {
 		a.log.Errorf("could not send DM to %s: %s", member.Username, err)
 		return
 	}

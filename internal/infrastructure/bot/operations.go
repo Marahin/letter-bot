@@ -479,7 +479,11 @@ func (b *Bot) TryNotifyUpcomingReservations(guild *guild.Guild) {
 	}
 }
 
-func (b *Bot) SendDMUpcomingReservationNotification(member *member.Member, spotName string, startAt time.Time) error {
+func (b *Bot) SendDMUpcomingReservationNotification(guild *guild.Guild, member *member.Member, spotName string, startAt time.Time) error {
 	message := b.formatter.FormatUpcomingReservationNotificationMessage(spotName, startAt, time.Now())
-	return b.SendDM(member, message)
+	err := b.SendDM(member, message)
+	if err == nil {
+		defer b.metrics.IncUpcomingReservationNotificationSent(guild.ID, guild.Name)
+	}
+	return err
 }

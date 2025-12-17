@@ -43,7 +43,7 @@ func TestNotifyUpcomingReservationsSuccess(t *testing.T) {
 	m := &member.Member{Username: "User 1"}
 	mockMemberRepo.EXPECT().GetMemberByGuildAndId(g, "user-1").Return(m, nil).Once()
 
-	mockCommService.EXPECT().NotifyUpcomingReservation(m, "Spot 1", resWithSpot.Reservation.StartAt).Return(nil).Once()
+	mockCommService.EXPECT().NotifyUpcomingReservation(g, m, "Spot 1", resWithSpot.Reservation.StartAt).Return(nil).Once()
 
 	completionSignal := make(chan struct{})
 	mockResRepo.EXPECT().UpdateReservationStartsNotificationSent(mock.Anything, int64(1)).
@@ -152,8 +152,8 @@ func TestNotifyUpcomingReservationsFailOnNotification(t *testing.T) {
 	mockMemberRepo.EXPECT().GetMemberByGuildAndId(g, "user-3").Return(m, nil).Once()
 
 	notifyCalled := make(chan struct{})
-	mockCommService.EXPECT().NotifyUpcomingReservation(m, "Spot 3", resWithSpot.Reservation.StartAt).
-		Run(func(member *member.Member, spotName string, startAt time.Time) {
+	mockCommService.EXPECT().NotifyUpcomingReservation(g, m, "Spot 3", resWithSpot.Reservation.StartAt).
+		Run(func(guild *guild.Guild, member *member.Member, spotName string, startAt time.Time) {
 			close(notifyCalled)
 		}).
 		Return(errors.New("dm closed")).Once()
@@ -197,7 +197,7 @@ func TestNotifyUpcomingReservationsFailOnStatusUpdate(t *testing.T) {
 	m := &member.Member{Username: "User 4"}
 	mockMemberRepo.EXPECT().GetMemberByGuildAndId(g, "user-4").Return(m, nil).Once()
 
-	mockCommService.EXPECT().NotifyUpcomingReservation(m, "Spot 4", resWithSpot.Reservation.StartAt).Return(nil).Once()
+	mockCommService.EXPECT().NotifyUpcomingReservation(g, m, "Spot 4", resWithSpot.Reservation.StartAt).Return(nil).Once()
 
 	updateCalled := make(chan struct{})
 	mockResRepo.EXPECT().UpdateReservationStartsNotificationSent(mock.Anything, int64(4)).
