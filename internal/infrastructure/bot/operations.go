@@ -471,3 +471,19 @@ func (b *Bot) OpenDM(m *member.Member) (*discord.Channel, error) {
 
 	return MapChannel(channel), nil
 }
+
+func (b *Bot) TryNotifyUpcomingReservations(guild *guild.Guild) {
+	err := b.upcomingReservationSrv.NotifyUpcomingReservations(context.Background(), guild)
+	if err != nil {
+		b.log.Errorf("could not notify upcoming reservations: %s", err)
+	}
+}
+
+func (b *Bot) SendDMUpcomingReservationNotification(guild *guild.Guild, member *member.Member, spotName string, startAt time.Time) error {
+	message := b.formatter.FormatUpcomingReservationNotificationMessage(spotName, startAt, time.Now())
+	err := b.SendDM(member, message)
+	if err == nil {
+		defer b.metrics.IncUpcomingReservationNotificationSent(guild.ID, guild.Name)
+	}
+	return err
+}

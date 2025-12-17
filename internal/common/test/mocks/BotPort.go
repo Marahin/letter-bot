@@ -11,6 +11,7 @@ import (
 	"spot-assistant/internal/core/dto/member"
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/summary"
+	"time"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -275,6 +276,75 @@ func (_c *MockBotPort_SendDMOverbookedNotification_Call) Return(err error) *Mock
 }
 
 func (_c *MockBotPort_SendDMOverbookedNotification_Call) RunAndReturn(run func(member1 *member.Member, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) error) *MockBotPort_SendDMOverbookedNotification_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SendDMUpcomingReservationNotification provides a mock function for the type MockBotPort
+func (_mock *MockBotPort) SendDMUpcomingReservationNotification(guild1 *guild.Guild, member1 *member.Member, spotName string, startAt time.Time) error {
+	ret := _mock.Called(guild1, member1, spotName, startAt)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SendDMUpcomingReservationNotification")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(*guild.Guild, *member.Member, string, time.Time) error); ok {
+		r0 = returnFunc(guild1, member1, spotName, startAt)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockBotPort_SendDMUpcomingReservationNotification_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SendDMUpcomingReservationNotification'
+type MockBotPort_SendDMUpcomingReservationNotification_Call struct {
+	*mock.Call
+}
+
+// SendDMUpcomingReservationNotification is a helper method to define mock.On call
+//   - guild1 *guild.Guild
+//   - member1 *member.Member
+//   - spotName string
+//   - startAt time.Time
+func (_e *MockBotPort_Expecter) SendDMUpcomingReservationNotification(guild1 interface{}, member1 interface{}, spotName interface{}, startAt interface{}) *MockBotPort_SendDMUpcomingReservationNotification_Call {
+	return &MockBotPort_SendDMUpcomingReservationNotification_Call{Call: _e.mock.On("SendDMUpcomingReservationNotification", guild1, member1, spotName, startAt)}
+}
+
+func (_c *MockBotPort_SendDMUpcomingReservationNotification_Call) Run(run func(guild1 *guild.Guild, member1 *member.Member, spotName string, startAt time.Time)) *MockBotPort_SendDMUpcomingReservationNotification_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *guild.Guild
+		if args[0] != nil {
+			arg0 = args[0].(*guild.Guild)
+		}
+		var arg1 *member.Member
+		if args[1] != nil {
+			arg1 = args[1].(*member.Member)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 time.Time
+		if args[3] != nil {
+			arg3 = args[3].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockBotPort_SendDMUpcomingReservationNotification_Call) Return(err error) *MockBotPort_SendDMUpcomingReservationNotification_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockBotPort_SendDMUpcomingReservationNotification_Call) RunAndReturn(run func(guild1 *guild.Guild, member1 *member.Member, spotName string, startAt time.Time) error) *MockBotPort_SendDMUpcomingReservationNotification_Call {
 	_c.Call.Return(run)
 	return _c
 }
