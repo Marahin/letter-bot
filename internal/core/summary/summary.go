@@ -56,7 +56,6 @@ func (a *Adapter) PrepareSummary(reservations []*reservation.ReservationWithSpot
 	return sum, nil
 }
 
-
 func (a *Adapter) mapToSpotsToReservations(reservations []*reservation.ReservationWithSpot) map[string][]*reservation.Reservation {
 	spotsToReservations := map[string][]*reservation.Reservation{}
 

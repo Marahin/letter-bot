@@ -10,7 +10,9 @@ import (
 )
 
 func (a *Handler) OnPrivateSummary(request summary.PrivateSummaryRequest) error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), DefaultInteractionTimeout)
+	defer cancel()
+
 	guildIDStr := strconv.FormatInt(request.GuildID, 10)
 
 	var (

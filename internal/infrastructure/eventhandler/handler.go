@@ -1,8 +1,12 @@
 package eventhandler
 
 import (
+	"time"
+
 	"spot-assistant/internal/ports"
 )
+
+const DefaultInteractionTimeout = 15 * time.Second
 
 type Handler struct {
 	bookingSrv ports.BookingService

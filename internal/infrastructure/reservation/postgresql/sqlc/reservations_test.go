@@ -335,7 +335,7 @@ func TestSelectUpcomingReservationsWithSpotForSpot_FiltersBySpotAndGuild(t *test
 	defer mock.Close()
 
 	// Expect the query with guildID and spot name (lower)
-	mock.ExpectQuery("(?i)select\\s+web_spot\\.id,\\s+web_spot\\.name").
+	mock.ExpectQuery("select web_spot.id, web_spot.name").
 		WithArgs("guild-1", "Flimsy").
 		WillReturnRows(newReservationWithSpotRows().
 			AddRow(
@@ -367,7 +367,7 @@ func TestSelectUpcomingReservationsWithSpotForSpot_EmptyWhenNoMatches(t *testing
 	}
 	defer mock.Close()
 
-	mock.ExpectQuery("(?i)select\\s+web_spot\\.id,\\s+web_spot\\.name").
+	mock.ExpectQuery("select web_spot.id, web_spot.name").
 		WithArgs("guild-1", "Unknown").
 		WillReturnRows(newReservationWithSpotRows())
 

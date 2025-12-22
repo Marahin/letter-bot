@@ -2,17 +2,16 @@ package sqlc
 
 import (
 	"context"
-	"spot-assistant/internal/core/dto/guild"
-	"spot-assistant/internal/core/dto/member"
 	"time"
-
-	"go.uber.org/zap"
-
-	"spot-assistant/internal/common/errors"
-	"spot-assistant/internal/core/dto/reservation"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"go.uber.org/zap"
+
+	"spot-assistant/internal/common/errors"
+	"spot-assistant/internal/core/dto/guild"
+	"spot-assistant/internal/core/dto/member"
+	"spot-assistant/internal/core/dto/reservation"
 )
 
 type DBTXWrapper interface {
@@ -48,16 +47,8 @@ func (t *ReservationRepository) Find(ctx context.Context, id int64) (*reservatio
 		return nil, err
 	}
 
-	return &reservation.Reservation{
-		ID:              res.ID,
-		Author:          res.Author,
-		CreatedAt:       res.CreatedAt.Time,
-		StartAt:         res.StartAt.Time,
-		EndAt:           res.EndAt.Time,
-		SpotID:          res.SpotID,
-		GuildID:         res.GuildID,
-		AuthorDiscordID: res.AuthorDiscordID,
-	}, nil
+	r := mapWebReservation(res)
+	return &r, nil
 }
 
 func (t *ReservationRepository) FindReservationWithSpot(ctx context.Context, id int64, guildID, authorDiscordID string) (*reservation.ReservationWithSpot, error) {
@@ -71,22 +62,7 @@ func (t *ReservationRepository) FindReservationWithSpot(ctx context.Context, id 
 		return nil, err
 	}
 
-	return &reservation.ReservationWithSpot{
-		Spot: reservation.Spot{
-			ID:   res.WebSpot.ID,
-			Name: res.WebSpot.Name,
-		},
-		Reservation: reservation.Reservation{
-			ID:              res.WebReservation.ID,
-			Author:          res.WebReservation.Author,
-			AuthorDiscordID: res.WebReservation.AuthorDiscordID,
-			CreatedAt:       res.WebReservation.CreatedAt.Time,
-			StartAt:         res.WebReservation.StartAt.Time,
-			EndAt:           res.WebReservation.EndAt.Time,
-			SpotID:          res.WebReservation.SpotID,
-			GuildID:         res.WebReservation.GuildID,
-		},
-	}, nil
+	return mapReservationWithSpot(res.WebReservation, res.WebSpot), nil
 }
 
 func (t *ReservationRepository) SelectUpcomingReservationsWithSpot(ctx context.Context, guildId string) ([]*reservation.ReservationWithSpot, error) {
@@ -97,24 +73,7 @@ func (t *ReservationRepository) SelectUpcomingReservationsWithSpot(ctx context.C
 
 	reservationsWithSpots := make([]*reservation.ReservationWithSpot, len(res))
 	for i, reservationWithSpotRow := range res {
-		mappedRes := &reservation.ReservationWithSpot{
-			Reservation: reservation.Reservation{
-				ID:              reservationWithSpotRow.WebReservation.ID,
-				Author:          reservationWithSpotRow.WebReservation.Author,
-				CreatedAt:       reservationWithSpotRow.WebReservation.CreatedAt.Time,
-				StartAt:         reservationWithSpotRow.WebReservation.StartAt.Time,
-				EndAt:           reservationWithSpotRow.WebReservation.EndAt.Time,
-				SpotID:          reservationWithSpotRow.WebReservation.SpotID,
-				GuildID:         reservationWithSpotRow.WebReservation.GuildID,
-				AuthorDiscordID: reservationWithSpotRow.WebReservation.AuthorDiscordID,
-			},
-			Spot: reservation.Spot{
-				ID:   reservationWithSpotRow.WebSpot.ID,
-				Name: reservationWithSpotRow.WebSpot.Name,
-			},
-		}
-
-		reservationsWithSpots[i] = mappedRes
+		reservationsWithSpots[i] = mapReservationWithSpot(reservationWithSpotRow.WebReservation, reservationWithSpotRow.WebSpot)
 	}
 
 	return reservationsWithSpots, nil
@@ -130,23 +89,7 @@ func (t *ReservationRepository) SelectUpcomingReservationsWithSpotForSpot(ctx co
 	}
 	reservationsWithSpots := make([]*reservation.ReservationWithSpot, len(res))
 	for i, reservationWithSpotRow := range res {
-		mappedRes := &reservation.ReservationWithSpot{
-			Reservation: reservation.Reservation{
-				ID:              reservationWithSpotRow.WebReservation.ID,
-				Author:          reservationWithSpotRow.WebReservation.Author,
-				CreatedAt:       reservationWithSpotRow.WebReservation.CreatedAt.Time,
-				StartAt:         reservationWithSpotRow.WebReservation.StartAt.Time,
-				EndAt:           reservationWithSpotRow.WebReservation.EndAt.Time,
-				SpotID:          reservationWithSpotRow.WebReservation.SpotID,
-				GuildID:         reservationWithSpotRow.WebReservation.GuildID,
-				AuthorDiscordID: reservationWithSpotRow.WebReservation.AuthorDiscordID,
-			},
-			Spot: reservation.Spot{
-				ID:   reservationWithSpotRow.WebSpot.ID,
-				Name: reservationWithSpotRow.WebSpot.Name,
-			},
-		}
-		reservationsWithSpots[i] = mappedRes
+		reservationsWithSpots[i] = mapReservationWithSpot(reservationWithSpotRow.WebReservation, reservationWithSpotRow.WebSpot)
 	}
 	return reservationsWithSpots, nil
 }
@@ -264,22 +207,7 @@ func (t *ReservationRepository) SelectUpcomingMemberReservationsWithSpots(ctx co
 
 	reservations := make([]*reservation.ReservationWithSpot, len(res))
 	for i, row := range res {
-		reservations[i] = &reservation.ReservationWithSpot{
-			Spot: reservation.Spot{
-				ID:   row.WebSpot.ID,
-				Name: row.WebSpot.Name,
-			},
-			Reservation: reservation.Reservation{
-				ID:              row.WebReservation.ID,
-				Author:          row.WebReservation.Author,
-				AuthorDiscordID: row.WebReservation.AuthorDiscordID,
-				CreatedAt:       row.WebReservation.CreatedAt.Time,
-				StartAt:         row.WebReservation.StartAt.Time,
-				EndAt:           row.WebReservation.EndAt.Time,
-				SpotID:          row.WebReservation.SpotID,
-				GuildID:         row.WebReservation.GuildID,
-			},
-		}
+		reservations[i] = mapReservationWithSpot(row.WebReservation, row.WebSpot)
 	}
 
 	return reservations, nil
@@ -365,4 +293,31 @@ func (t *ReservationRepository) createOverbookedLeftovers(
 	}
 
 	return leftoverReservations, nil
+}
+
+func mapWebReservation(res WebReservation) reservation.Reservation {
+	return reservation.Reservation{
+		ID:              res.ID,
+		Author:          res.Author,
+		CreatedAt:       res.CreatedAt.Time,
+		StartAt:         res.StartAt.Time,
+		EndAt:           res.EndAt.Time,
+		SpotID:          res.SpotID,
+		GuildID:         res.GuildID,
+		AuthorDiscordID: res.AuthorDiscordID,
+	}
+}
+
+func mapWebSpot(spot WebSpot) reservation.Spot {
+	return reservation.Spot{
+		ID:   spot.ID,
+		Name: spot.Name,
+	}
+}
+
+func mapReservationWithSpot(res WebReservation, spot WebSpot) *reservation.ReservationWithSpot {
+	return &reservation.ReservationWithSpot{
+		Reservation: mapWebReservation(res),
+		Spot:        mapWebSpot(spot),
+	}
 }

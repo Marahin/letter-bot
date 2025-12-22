@@ -1,6 +1,7 @@
 package eventhandler
 
 import (
+	"context"
 	"errors"
 	"strconv"
 	"testing"
@@ -13,6 +14,7 @@ import (
 	"spot-assistant/internal/common/test/mocks"
 	"spot-assistant/internal/core/dto/book"
 	"spot-assistant/internal/core/dto/reservation"
+	"spot-assistant/internal/core/dto/summary"
 )
 
 func TestHandler_OnBookWhenSuccessfulWithNoConflicting(t *testing.T) {
@@ -169,4 +171,41 @@ func TestHandler_OnBookAutocompleteSpotField(t *testing.T) {
 	// assert
 	assert.Nil(err)
 	assert.Exactly(book.BookAutocompleteResponse{"spot1", "spot2"}, res)
+}
+
+func TestHandler_OnPrivateSummary(t *testing.T) {
+	// given
+	assert := assert.New(t)
+	mockRepo := new(mocks.MockReservationRepo)
+	mockSummarySrv := new(mocks.MockSummaryService)
+	mockCommSrv := new(mocks.MockCommunicationService)
+
+	adapter := NewHandler(
+		new(mocks.MockBookingService),
+		mockRepo,
+		mockCommSrv,
+		mockSummarySrv,
+	)
+
+	// context with deadline
+	mockRepo.On("SelectUpcomingReservationsWithSpot", mock.MatchedBy(func(ctx context.Context) bool {
+		deadline, ok := ctx.Deadline()
+		return ok && time.Until(deadline) > 0
+	}), "123").Return([]*reservation.ReservationWithSpot{}, nil)
+
+	mockSummarySrv.On("PrepareSummary", mock.Anything).Return(summary.Summary{}, nil)
+	mockCommSrv.On("SendPrivateSummary", mock.Anything, mock.Anything).Return(nil)
+
+	request := summary.PrivateSummaryRequest{
+		GuildID:  123,
+		UserID:   456,
+		SpotName: "",
+	}
+
+	// when
+	err := adapter.OnPrivateSummary(request)
+
+	// assert
+	assert.Nil(err)
+	mockRepo.AssertExpectations(t)
 }
