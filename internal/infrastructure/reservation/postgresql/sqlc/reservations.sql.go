@@ -78,7 +78,7 @@ func (q *Queries) DeletePresentMemberReservation(ctx context.Context, arg Delete
 
 const deleteReservation = `-- name: DeleteReservation :exec
 DELETE FROM web_reservation
-WHERE web_reservation.id = $1
+WHERE id = $1
 `
 
 func (q *Queries) DeleteReservation(ctx context.Context, id int64) error {
@@ -314,4 +314,22 @@ func (q *Queries) SelectUpcomingMemberReservationsWithSpots(ctx context.Context,
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateReservation = `-- name: UpdateReservation :exec
+UPDATE web_reservation
+SET start_at = $1,
+  end_at = $2
+WHERE id = $3
+`
+
+type UpdateReservationParams struct {
+	StartAt pgtype.Timestamptz
+	EndAt   pgtype.Timestamptz
+	ID      int64
+}
+
+func (q *Queries) UpdateReservation(ctx context.Context, arg UpdateReservationParams) error {
+	_, err := q.db.Exec(ctx, updateReservation, arg.StartAt, arg.EndAt, arg.ID)
+	return err
 }

@@ -29,6 +29,9 @@ type ReservationRepository interface {
 	// Deletes one of the upcoming member reservations in a given guild. Returns error if operation
 	// did not succeed.
 	DeletePresentMemberReservation(ctx context.Context, g *guild.Guild, m *member.Member, reservationId int64) error
+
+	// UpdateReservation updates the start and end time of a reservation.
+	UpdateReservation(ctx context.Context, id int64, startAt time.Time, endAt time.Time) error
 }
 
 type SpotRepository interface {
