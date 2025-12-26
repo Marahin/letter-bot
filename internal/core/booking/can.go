@@ -18,12 +18,12 @@ func canOverbook(attemptsToOverbook bool, hasPermissions bool, conflictingReserv
 
 // This is an edge case, where we check:
 // if there is only one overlapping reservation,
-// and if it started,
+// and if it started at least 10 minutes ago,
 // and if it hasn't ended,
 // and it contains our reservation request and time
 func isPotentiallyAbandonedReservation(overlappingReservations []*reservation.Reservation) bool {
 	return len(overlappingReservations) == 1 &&
-		overlappingReservations[0].StartAt.Before(time.Now()) &&
+		overlappingReservations[0].StartAt.Add(10*time.Minute).Before(time.Now()) &&
 		(overlappingReservations[0].EndAt.After(time.Now()) ||
 			overlappingReservations[0].EndAt.Equal(time.Now()))
 }
