@@ -19,20 +19,13 @@ import (
 
 var HourRegex = regexp.MustCompile(`(\d{2}:\d{2})`)
 
-// Returns spots filtered by filter, if non-zero length.
+// FindAvailableSpots returns a list of spot names matching the given filter.
+// If the filter is empty, it returns a default list of spots (e.g., top 15).
 func (a *Adapter) FindAvailableSpots(filter string) ([]string, error) {
-	spots, err := a.spotRepo.SelectAllSpots(context.Background())
+	spots, err := a.spotRepo.SelectSpotsByNameCaseInsensitiveLike(context.Background(), strings.TrimSpace(filter))
 	if err != nil {
 		return []string{}, fmt.Errorf("could not fetch spots matching your query: %w", err)
 	}
-
-	if len(filter) > 0 {
-		spots = collections.PoorMansFilter(spots, func(spot *spot.Spot) bool {
-			return strings.Contains(strings.ToLower(spot.Name), strings.ToLower(filter))
-		})
-	}
-
-	spots = collections.Truncate(spots, 15)
 
 	return collections.PoorMansMap(spots, func(s *spot.Spot) string {
 		return s.Name
@@ -98,16 +91,9 @@ func (a *Adapter) Book(request book.BookRequest) ([]*reservation.ClippedOrRemove
 		"endAt", endAt,
 	).Info("booking request")
 
-	spots, err := a.spotRepo.SelectAllSpots(context.Background())
+	spot, err := a.spotRepo.SelectSpotByName(context.Background(), spotName)
 	if err != nil {
-		return nil, fmt.Errorf("could not fetch spots: %w", err)
-	}
-
-	spot, _ := collections.PoorMansFind(spots, func(s *spot.Spot) bool {
-		return s.Name == spotName
-	})
-	if spot == nil {
-		return nil, fmt.Errorf("could not find spot called %s", spotName)
+		return nil, fmt.Errorf("could not find spot called %s: %w", spotName, err)
 	}
 
 	if err = validateHuntLength(endAt.Sub(startAt)); err != nil {
