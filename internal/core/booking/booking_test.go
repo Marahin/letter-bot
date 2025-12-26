@@ -490,3 +490,50 @@ func TestBookFailOnOverbookAuthorsReservation(t *testing.T) {
 	assert.NotNil(err)
 	assert.Empty(res)
 }
+
+func TestBook_PostMerge(t *testing.T) {
+	assert := assert.New(t)
+	guild := &guild2.Guild{ID: "test-id"}
+	member := &member2.Member{ID: "test-member"}
+	spotInput := &spot.Spot{Name: "Prison -1", ID: 1}
+
+	today := time.Now()
+	existingStart := time.Date(today.Year(), today.Month(), today.Day(), 16, 0, 0, 0, time.UTC)
+	existingEnd := time.Date(today.Year(), today.Month(), today.Day(), 17, 0, 0, 0, time.UTC)
+	requestStart := existingEnd
+	requestEnd := time.Date(today.Year(), today.Month(), today.Day(), 18, 0, 0, 0, time.UTC)
+
+	spotRepo := mocks.NewMockSpotRepository(t)
+	spotRepo.On("SelectAllSpots", mocks.ContextMock).Return([]*spot.Spot{spotInput}, nil)
+
+	repo := mocks.NewMockReservationRepository(t)
+
+	existingRes := []*reservation.ReservationWithSpot{
+		{Reservation: reservation.Reservation{ID: 10, StartAt: existingStart, EndAt: existingEnd, SpotID: 1}, Spot: reservation.Spot{ID: 1, Name: "Prison -1"}},
+	}
+	repo.On("SelectUpcomingMemberReservationsWithSpots", mocks.ContextMock, guild, member).Return(existingRes, nil).Once()
+	repo.On("SelectOverlappingReservations", mocks.ContextMock, spotInput.Name, requestStart, requestEnd, guild.ID).Return([]*reservation.Reservation{}, nil).Once()
+	repo.On("CreateAndDeleteConflicting", mocks.ContextMock, member, guild, []*reservation.Reservation{}, int64(1), requestStart, requestEnd).Return([]*reservation.ClippedOrRemovedReservation{}, nil).Once()
+
+	updatedResList := []*reservation.ReservationWithSpot{
+		{Reservation: reservation.Reservation{ID: 10, StartAt: existingStart, EndAt: existingEnd, SpotID: 1}, Spot: reservation.Spot{ID: 1, Name: "Prison -1"}},
+		{Reservation: reservation.Reservation{ID: 11, StartAt: requestStart, EndAt: requestEnd, SpotID: 1}, Spot: reservation.Spot{ID: 1, Name: "Prison -1"}},
+	}
+	repo.On("SelectUpcomingMemberReservationsWithSpots", mocks.ContextMock, guild, member).Return(updatedResList, nil).Once()
+	repo.On("UpdateReservation", mocks.ContextMock, int64(10), existingStart, requestEnd).Return(nil).Once()
+	repo.On("DeletePresentMemberReservation", mocks.ContextMock, guild, member, int64(11)).Return(nil).Once()
+
+	adapter := NewAdapter(spotRepo, repo, mocks.NewMockCommunicationService(t))
+
+	_, err := adapter.Book(book.BookRequest{
+		Member:         member,
+		Guild:          guild,
+		Spot:           spotInput.Name,
+		StartAt:        requestStart,
+		EndAt:          requestEnd,
+		Overbook:       true,
+		HasPermissions: true,
+	})
+
+	assert.Nil(err)
+}
