@@ -99,3 +99,139 @@ func (_c *MockSpotRepository_SelectAllSpots_Call) RunAndReturn(run func(ctx cont
 	_c.Call.Return(run)
 	return _c
 }
+
+// SelectSpotByName provides a mock function for the type MockSpotRepository
+func (_mock *MockSpotRepository) SelectSpotByName(ctx context.Context, name string) (*spot.Spot, error) {
+	ret := _mock.Called(ctx, name)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SelectSpotByName")
+	}
+
+	var r0 *spot.Spot
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*spot.Spot, error)); ok {
+		return returnFunc(ctx, name)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *spot.Spot); ok {
+		r0 = returnFunc(ctx, name)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*spot.Spot)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, name)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockSpotRepository_SelectSpotByName_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SelectSpotByName'
+type MockSpotRepository_SelectSpotByName_Call struct {
+	*mock.Call
+}
+
+// SelectSpotByName is a helper method to define mock.On call
+//   - ctx context.Context
+//   - name string
+func (_e *MockSpotRepository_Expecter) SelectSpotByName(ctx interface{}, name interface{}) *MockSpotRepository_SelectSpotByName_Call {
+	return &MockSpotRepository_SelectSpotByName_Call{Call: _e.mock.On("SelectSpotByName", ctx, name)}
+}
+
+func (_c *MockSpotRepository_SelectSpotByName_Call) Run(run func(ctx context.Context, name string)) *MockSpotRepository_SelectSpotByName_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSpotRepository_SelectSpotByName_Call) Return(spot1 *spot.Spot, err error) *MockSpotRepository_SelectSpotByName_Call {
+	_c.Call.Return(spot1, err)
+	return _c
+}
+
+func (_c *MockSpotRepository_SelectSpotByName_Call) RunAndReturn(run func(ctx context.Context, name string) (*spot.Spot, error)) *MockSpotRepository_SelectSpotByName_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SelectSpotsByNameCaseInsensitiveLike provides a mock function for the type MockSpotRepository
+func (_mock *MockSpotRepository) SelectSpotsByNameCaseInsensitiveLike(ctx context.Context, namePattern string) ([]*spot.Spot, error) {
+	ret := _mock.Called(ctx, namePattern)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SelectSpotsByNameCaseInsensitiveLike")
+	}
+
+	var r0 []*spot.Spot
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) ([]*spot.Spot, error)); ok {
+		return returnFunc(ctx, namePattern)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) []*spot.Spot); ok {
+		r0 = returnFunc(ctx, namePattern)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*spot.Spot)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, namePattern)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockSpotRepository_SelectSpotsByNameCaseInsensitiveLike_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SelectSpotsByNameCaseInsensitiveLike'
+type MockSpotRepository_SelectSpotsByNameCaseInsensitiveLike_Call struct {
+	*mock.Call
+}
+
+// SelectSpotsByNameCaseInsensitiveLike is a helper method to define mock.On call
+//   - ctx context.Context
+//   - namePattern string
+func (_e *MockSpotRepository_Expecter) SelectSpotsByNameCaseInsensitiveLike(ctx interface{}, namePattern interface{}) *MockSpotRepository_SelectSpotsByNameCaseInsensitiveLike_Call {
+	return &MockSpotRepository_SelectSpotsByNameCaseInsensitiveLike_Call{Call: _e.mock.On("SelectSpotsByNameCaseInsensitiveLike", ctx, namePattern)}
+}
+
+func (_c *MockSpotRepository_SelectSpotsByNameCaseInsensitiveLike_Call) Run(run func(ctx context.Context, namePattern string)) *MockSpotRepository_SelectSpotsByNameCaseInsensitiveLike_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSpotRepository_SelectSpotsByNameCaseInsensitiveLike_Call) Return(spots []*spot.Spot, err error) *MockSpotRepository_SelectSpotsByNameCaseInsensitiveLike_Call {
+	_c.Call.Return(spots, err)
+	return _c
+}
+
+func (_c *MockSpotRepository_SelectSpotsByNameCaseInsensitiveLike_Call) RunAndReturn(run func(ctx context.Context, namePattern string) ([]*spot.Spot, error)) *MockSpotRepository_SelectSpotsByNameCaseInsensitiveLike_Call {
+	_c.Call.Return(run)
+	return _c
+}

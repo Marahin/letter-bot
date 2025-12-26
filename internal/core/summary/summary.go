@@ -28,21 +28,22 @@ func (a *Adapter) PrepareSummary(reservations []*reservation.ReservationWithSpot
 
 	spotsToReservations := a.mapToSpotsToReservations(reservations)
 
+	spotsToCounts := make(map[string]float64, len(spotsToReservations))
+	spotNamesAlphabetically := make([]string, 0, len(spotsToReservations))
+
+	for spotName, resList := range spotsToReservations {
+		spotsToCounts[spotName] = float64(len(resList))
+		spotNamesAlphabetically = append(spotNamesAlphabetically, spotName)
+	}
+
 	// Chart generation
-	spotsToCounts := a.mapToSpotsToCounts(spotsToReservations)
 	sum.LegendValues = a.mapToLegendValues(spotsToCounts)
 	img, err := a.newChart(sum.LegendValues)
 	if err != nil {
 		return nil, err
 	}
-
 	sum.Chart = img
 
-	// Ledger preparation
-	spotNamesAlphabetically := make([]string, 0, len(spotsToReservations))
-	for k := range spotsToReservations {
-		spotNamesAlphabetically = append(spotNamesAlphabetically, k)
-	}
 	slices.Sort(spotNamesAlphabetically)
 	ledger := make(dto.Ledger, len(spotNamesAlphabetically))
 	for i, spotName := range spotNamesAlphabetically {
@@ -77,13 +78,4 @@ func (a *Adapter) mapToSpotsToReservations(reservations []*reservation.Reservati
 	}
 
 	return spotsToReservations
-}
-
-func (a *Adapter) mapToSpotsToCounts(spotsToReservations map[string][]*reservation.Reservation) map[string]float64 {
-	spotsToCounts := map[string]float64{}
-	for spot, val := range spotsToReservations {
-		spotsToCounts[spot] = float64(len(val))
-	}
-
-	return spotsToCounts
 }

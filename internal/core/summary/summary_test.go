@@ -74,7 +74,10 @@ func TestPrepareSummary(t *testing.T) {
 		},
 	}
 	spotsToReservations := adapter.mapToSpotsToReservations(input)
-	spotsToCounts := adapter.mapToSpotsToCounts(spotsToReservations)
+	spotsToCounts := make(map[string]float64)
+	for spot, val := range spotsToReservations {
+		spotsToCounts[spot] = float64(len(val))
+	}
 	lvs := adapter.mapToLegendValues(spotsToCounts)
 	legend := collections.PoorMansMap(lvs, func(lv dto.LegendValue) string {
 		return lv.Legend
