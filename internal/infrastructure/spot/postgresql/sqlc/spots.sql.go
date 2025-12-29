@@ -37,3 +37,45 @@ func (q *Queries) SelectAllSpots(ctx context.Context) ([]WebSpot, error) {
 	}
 	return items, nil
 }
+
+const selectSpotByName = `-- name: SelectSpotByName :one
+SELECT id, name, created_at
+FROM web_spot
+WHERE lower(name) = lower($1)
+LIMIT 1
+`
+
+func (q *Queries) SelectSpotByName(ctx context.Context, name string) (WebSpot, error) {
+	row := q.db.QueryRow(ctx, selectSpotByName, name)
+	var i WebSpot
+	err := row.Scan(&i.ID, &i.Name, &i.CreatedAt)
+	return i, err
+}
+
+const selectSpotsByNameCaseInsensitiveLike = `-- name: SelectSpotsByNameCaseInsensitiveLike :many
+SELECT id, name, created_at
+FROM web_spot
+WHERE lower(name) LIKE '%' || lower($1) || '%'
+ORDER BY name
+LIMIT 15
+`
+
+func (q *Queries) SelectSpotsByNameCaseInsensitiveLike(ctx context.Context, namePattern string) ([]WebSpot, error) {
+	rows, err := q.db.Query(ctx, selectSpotsByNameCaseInsensitiveLike, namePattern)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []WebSpot
+	for rows.Next() {
+		var i WebSpot
+		if err := rows.Scan(&i.ID, &i.Name, &i.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

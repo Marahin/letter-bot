@@ -13,7 +13,7 @@ type Adapter struct {
 	api            ports.WorldApi
 	worldNameRepo  ports.WorldNameRepository
 	guildIdToWorld cmap.ConcurrentMap[string, string]
-	players        cmap.ConcurrentMap[string, []string]
+	players        cmap.ConcurrentMap[string, map[string]struct{}]
 }
 
 func NewAdapter(api ports.WorldApi, worldNameRepo ports.WorldNameRepository) *Adapter {
@@ -21,7 +21,7 @@ func NewAdapter(api ports.WorldApi, worldNameRepo ports.WorldNameRepository) *Ad
 		api:            api,
 		worldNameRepo:  worldNameRepo,
 		guildIdToWorld: cmap.New[string](),
-		players:        cmap.New[[]string](),
+		players:        cmap.New[map[string]struct{}](),
 	}
 }
 

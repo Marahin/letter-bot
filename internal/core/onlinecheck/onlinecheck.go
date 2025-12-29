@@ -20,7 +20,12 @@ func (a *Adapter) RefreshOnlinePlayers(guildID string) error {
 		return err
 	}
 	a.log.Infof("API call for '%s' (guild %s)", world, guildID)
-	a.players.Set(world, players)
+
+	playersMap := make(map[string]struct{}, len(players))
+	for _, p := range players {
+		playersMap[p] = struct{}{}
+	}
+	a.players.Set(world, playersMap)
 	return nil
 }
 
@@ -38,11 +43,8 @@ func (a *Adapter) IsOnline(guildID, characterName string) bool {
 	}
 
 	for _, candidate := range names {
-		candidate = strings.ToLower(candidate)
-		for _, name := range players {
-			if strings.ToLower(name) == candidate {
-				return true
-			}
+		if _, ok := players[candidate]; ok {
+			return true
 		}
 	}
 	return false
