@@ -2,8 +2,6 @@ APP ?= spot-assistant-bot
 TAG ?= $(shell git rev-parse --short HEAD)
 REGISTRY ?= registry.marahin.pl
 
-.PHONY: install-dependencies install-bins go-mod
-
 install-bins:
 	@go install github.com/fzipp/gocyclo/cmd/gocyclo@v0.6.0
 	@go install honnef.co/go/tools/cmd/staticcheck@latest
@@ -82,3 +80,15 @@ build: install-dependencies sqlc-generate test
 build-only:
 	@echo "INFO: Building version: ${TAG}"
 	@CGO_ENABLED=0 go build -o ./bin/${APP} -ldflags="-X spot-assistant/internal/common/version.Version=${TAG}" cmd/main.go
+
+bench: install-dependencies go-vet gocyclo
+	@echo "INFO: Running benchmarks"
+	@go test -bench='.' -benchmem ./...> _bench.out
+	benchstat _bench.out
+	@rm _bench.out
+
+bench-long: install-dependencies go-vet gocyclo
+	@echo "INFO: Running long benchmarks. Go make a coffee!"
+	@go test -bench='.' -count=6 -timeout=5m -benchmem ./...> _bench.out
+	benchstat _bench.out
+	@rm _bench.out
