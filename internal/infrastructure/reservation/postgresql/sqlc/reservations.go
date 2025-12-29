@@ -2,15 +2,17 @@ package sqlc
 
 import (
 	"context"
-	"go.uber.org/zap"
 	"spot-assistant/internal/core/dto/guild"
 	"spot-assistant/internal/core/dto/member"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
+	"go.uber.org/zap"
+
 	"spot-assistant/internal/common/errors"
 	"spot-assistant/internal/core/dto/reservation"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type DBTXWrapper interface {
@@ -332,4 +334,12 @@ func (t *ReservationRepository) createOverbookedLeftovers(
 	}
 
 	return leftoverReservations, nil
+}
+
+func (t *ReservationRepository) UpdateReservation(ctx context.Context, id int64, startAt time.Time, endAt time.Time) error {
+	return t.q.UpdateReservation(ctx, UpdateReservationParams{
+		StartAt: pgtype.Timestamptz{Time: startAt, Valid: true},
+		EndAt:   pgtype.Timestamptz{Time: endAt, Valid: true},
+		ID:      id,
+	})
 }

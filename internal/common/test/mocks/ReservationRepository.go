@@ -583,3 +583,68 @@ func (_c *MockReservationRepository_SelectUpcomingReservationsWithSpot_Call) Run
 	_c.Call.Return(run)
 	return _c
 }
+
+// UpdateReservation provides a mock function for the type MockReservationRepository
+func (_mock *MockReservationRepository) UpdateReservation(ctx context.Context, id int64, startAt time.Time, endAt time.Time) error {
+	ret := _mock.Called(ctx, id, startAt, endAt)
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int64, time.Time, time.Time) error); ok {
+		r0 = returnFunc(ctx, id, startAt, endAt)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockReservationRepository_UpdateReservation_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateReservation'
+type MockReservationRepository_UpdateReservation_Call struct {
+	*mock.Call
+}
+
+// UpdateReservation is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id int64
+//   - startAt time.Time
+//   - endAt time.Time
+func (_e *MockReservationRepository_Expecter) UpdateReservation(ctx interface{}, id interface{}, startAt interface{}, endAt interface{}) *MockReservationRepository_UpdateReservation_Call {
+	return &MockReservationRepository_UpdateReservation_Call{Call: _e.mock.On("UpdateReservation", ctx, id, startAt, endAt)}
+}
+
+func (_c *MockReservationRepository_UpdateReservation_Call) Run(run func(ctx context.Context, id int64, startAt time.Time, endAt time.Time)) *MockReservationRepository_UpdateReservation_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int64
+		if args[1] != nil {
+			arg1 = args[1].(int64)
+		}
+		var arg2 time.Time
+		if args[2] != nil {
+			arg2 = args[2].(time.Time)
+		}
+		var arg3 time.Time
+		if args[3] != nil {
+			arg3 = args[3].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockReservationRepository_UpdateReservation_Call) Return(_a0 error) *MockReservationRepository_UpdateReservation_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockReservationRepository_UpdateReservation_Call) RunAndReturn(run func(context.Context, int64, time.Time, time.Time) error) *MockReservationRepository_UpdateReservation_Call {
+	_c.Call.Return(run)
+	return _c
+}

@@ -65,4 +65,9 @@ where end_at >= now()
   AND guild_id = $1;
 -- name: DeleteReservation :exec
 DELETE FROM web_reservation
-WHERE web_reservation.id = $1;
+WHERE id = $1;
+-- name: UpdateReservation :exec
+UPDATE web_reservation
+SET start_at = @start_at,
+  end_at = @end_at
+WHERE id = @id;
