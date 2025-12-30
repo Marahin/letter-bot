@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"sync"
+	"sync/atomic"
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
@@ -28,11 +29,14 @@ type Bot struct {
 	reservationRepo    ports.ReservationRepository
 	onlineCheckService ports.OnlineCheckService
 	eventHandler       ports.APIPort
+	metrics            ports.MetricsPort
 	mgr                *shards.Manager
 	log                *zap.SugaredLogger
 	quit               chan struct{}
 	formatter          *formatter.DiscordFormatter
 	channelLocks       cmap.ConcurrentMap[string, *sync.RWMutex]
+	started            atomic.Bool
+	stopped            atomic.Bool
 }
 
 var (
@@ -75,6 +79,12 @@ func (b *Bot) WithFormatter(formatter *formatter.DiscordFormatter) *Bot {
 	return b
 }
 
+// WithMetrics sets metrics collector implementation.
+func (b *Bot) WithMetrics(m ports.MetricsPort) *Bot {
+	b.metrics = m
+	return b
+}
+
 // WithEVentHandler sets bot's event handler to the provided port
 func (b *Bot) WithEventHandler(port ports.APIPort) ports.BotPort {
 	b.eventHandler = port
@@ -93,6 +103,7 @@ func (b *Bot) Run() error {
 	if err != nil {
 		return err
 	}
+	b.started.Store(true)
 
 	// Wait here until CTRL-C or other term signal is received.
 	b.log.Info("bot is now running")
@@ -106,6 +117,7 @@ func (b *Bot) Run() error {
 	if err != nil {
 		return err
 	}
+	b.stopped.Store(true)
 
 	b.log.Info("shard manager stopped. Bot is shut down.")
 	return nil
@@ -114,6 +126,11 @@ func (b *Bot) Run() error {
 func (b *Bot) Shutdown() error {
 	close(b.quit) // Tell other goroutines, such as ticker, to shut down
 	return b.mgr.Shutdown()
+}
+
+// IsRunning indicates whether the bot started successfully and hasn't been stopped yet.
+func (b *Bot) IsRunning() bool {
+	return b.started.Load() && !b.stopped.Load()
 }
 
 func (b *Bot) interactionRespond(i *discordgo.InteractionCreate, responseData *discordgo.InteractionResponseData, responseType discordgo.InteractionResponseType) error {

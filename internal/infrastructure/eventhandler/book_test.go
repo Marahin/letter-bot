@@ -33,9 +33,9 @@ func TestHandler_OnBookWhenSuccessfulWithNoConflicting(t *testing.T) {
 	bookingOperations.On("Book", request).Return([]*reservation.ClippedOrRemovedReservation{}, nil)
 	adapter := NewHandler(
 		bookingOperations,
-		new(mocks.MockReservationRepo),
-		new(mocks.MockCommunicationService),
-		new(mocks.MockSummaryService),
+		mocks.NewMockReservationRepository(t),
+		mocks.NewMockCommunicationService(t),
+		mocks.NewMockSummaryService(t),
 	)
 
 	// when
@@ -63,9 +63,9 @@ func TestHandler_OnBookWhenOnUnsuccessful(t *testing.T) {
 	bookingOperations.On("Book", request).Return([]*reservation.ClippedOrRemovedReservation{}, errors.New("error"))
 	adapter := NewHandler(
 		bookingOperations,
-		new(mocks.MockReservationRepo),
-		new(mocks.MockCommunicationService),
-		new(mocks.MockSummaryService),
+		mocks.NewMockReservationRepository(t),
+		mocks.NewMockCommunicationService(t),
+		mocks.NewMockSummaryService(t),
 	)
 
 	// when
@@ -82,9 +82,9 @@ func TestHandler_OnBookAutocompleteOverbookField(t *testing.T) {
 	assert := assert.New(t)
 	adapter := NewHandler(
 		new(mocks.MockBookingService),
-		new(mocks.MockReservationRepo),
-		new(mocks.MockCommunicationService),
-		new(mocks.MockSummaryService),
+		mocks.NewMockReservationRepository(t),
+		mocks.NewMockCommunicationService(t),
+		mocks.NewMockSummaryService(t),
 	)
 	request := book.BookAutocompleteRequest{
 		Field: book.BookAutocompleteOverbook,
@@ -105,9 +105,9 @@ func TestHandler_OnBookAutocompleteStartAtField(t *testing.T) {
 	bookingOperations.On("GetSuggestedHours", mock.MatchedBy(mocks.TimeMatchedCloseTo), "").Return([]string{"01:00", "02:00"})
 	adapter := NewHandler(
 		bookingOperations,
-		new(mocks.MockReservationRepo),
-		new(mocks.MockCommunicationService),
-		new(mocks.MockSummaryService),
+		mocks.NewMockReservationRepository(t),
+		mocks.NewMockCommunicationService(t),
+		mocks.NewMockSummaryService(t),
 	)
 	request := book.BookAutocompleteRequest{
 		Field: book.BookAutocompleteStartAt,
@@ -132,9 +132,9 @@ func TestHandler_OnBookAutocompleteEndAtField(t *testing.T) {
 	)), "").Return([]string{"03:00", "04:00"})
 	adapter := NewHandler(
 		bookingOperations,
-		new(mocks.MockReservationRepo),
-		new(mocks.MockCommunicationService),
-		new(mocks.MockSummaryService),
+		mocks.NewMockReservationRepository(t),
+		mocks.NewMockCommunicationService(t),
+		mocks.NewMockSummaryService(t),
 	)
 	request := book.BookAutocompleteRequest{
 		Field: book.BookAutocompleteEndAt,
@@ -156,9 +156,9 @@ func TestHandler_OnBookAutocompleteSpotField(t *testing.T) {
 	bookingOperations.On("FindAvailableSpots", "asdf").Return([]string{"spot1", "spot2"}, nil)
 	adapter := NewHandler(
 		bookingOperations,
-		new(mocks.MockReservationRepo),
-		new(mocks.MockCommunicationService),
-		new(mocks.MockSummaryService),
+		mocks.NewMockReservationRepository(t),
+		mocks.NewMockCommunicationService(t),
+		mocks.NewMockSummaryService(t),
 	)
 	request := book.BookAutocompleteRequest{
 		Field: book.BookAutocompleteSpot,
@@ -176,7 +176,7 @@ func TestHandler_OnBookAutocompleteSpotField(t *testing.T) {
 func TestHandler_OnPrivateSummary(t *testing.T) {
 	// given
 	assert := assert.New(t)
-	mockRepo := new(mocks.MockReservationRepo)
+	mockRepo := new(mocks.MockReservationRepository)
 	mockSummarySrv := new(mocks.MockSummaryService)
 	mockCommSrv := new(mocks.MockCommunicationService)
 

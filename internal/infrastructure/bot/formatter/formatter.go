@@ -95,10 +95,8 @@ func (f *DiscordFormatter) FormatOverbookedMemberNotification(
 	res *reservation.ClippedOrRemovedReservation,
 ) string {
 	var msgBody strings.Builder
-	msgBody.WriteString(fmt.Sprintf(
-		"Your reservation was overbooked by %s\n",
-		fmt.Sprintf("<@!%s>", request.Member.ID),
-	))
+
+	msgBody.WriteString(fmt.Sprintf("Your reservation was overbooked by %s (<@!%s>)\n", request.Member.Nick, request.Member.ID))
 	msgBody.WriteString(fmt.Sprintf("* %s %s ", fmt.Sprintf("<@!%s>", member.ID), request.Spot))
 	if len(res.New) > 0 { // The reservation has been modified, but not entirely removed - lets notify the user!
 		msgBody.WriteString("has been clipped to: ")

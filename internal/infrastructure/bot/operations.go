@@ -10,17 +10,16 @@ import (
 	"sync"
 	"time"
 
-	"spot-assistant/internal/core/dto/book"
-	"spot-assistant/internal/core/dto/guild"
-	"spot-assistant/internal/core/dto/member"
-	"spot-assistant/internal/core/dto/reservation"
-	"spot-assistant/internal/core/dto/role"
-
 	"github.com/bwmarrin/discordgo"
 
 	"spot-assistant/internal/common/collections"
 	stringsHelper "spot-assistant/internal/common/strings"
+	"spot-assistant/internal/core/dto/book"
 	"spot-assistant/internal/core/dto/discord"
+	"spot-assistant/internal/core/dto/guild"
+	"spot-assistant/internal/core/dto/member"
+	"spot-assistant/internal/core/dto/reservation"
+	"spot-assistant/internal/core/dto/role"
 	"spot-assistant/internal/core/dto/summary"
 )
 
@@ -81,7 +80,14 @@ func (b *Bot) CleanChannel(g *guild.Guild, channel *discord.Channel) error {
 		return msg.ID
 	})
 
-	return b.mgr.SessionForGuild(gID).ChannelMessagesBulkDelete(channel.ID, messageIds)
+	err = b.mgr.SessionForGuild(gID).ChannelMessagesBulkDelete(channel.ID, messageIds)
+	if err != nil {
+		return err
+	}
+
+	defer b.metrics.AddMessagesDeleted(channel.ID, channel.Name, len(messages))
+
+	return nil
 }
 
 func (b *Bot) EnsureChannel(guild *guild.Guild) error {
@@ -213,18 +219,6 @@ func (b *Bot) GetGuild(id int64) (*guild.Guild, error) {
 	return MapGuild(guild), nil
 }
 
-// SendChannelMessage sends a message to a channel in a guild.
-func (b *Bot) SendChannelMessage(guild *guild.Guild, channel *discord.Channel, message string) error {
-	gID, err := stringsHelper.StrToInt64(guild.ID)
-	if err != nil {
-		return err
-	}
-
-	dcSession := b.mgr.SessionForGuild(gID)
-	_, err = dcSession.ChannelMessageSend(channel.ID, message)
-	return err
-}
-
 func (b *Bot) TryUpdateGuildLetter(guild *guild.Guild) {
 	err := b.UpdateGuildLetter(guild)
 	if err != nil {
@@ -241,6 +235,11 @@ func (b *Bot) UpdateGuildLetter(guild *guild.Guild) error {
 	reservationsWithSpots, err := b.reservationRepo.SelectUpcomingReservationsWithSpot(context.Background(), guild.ID)
 	if err != nil {
 		return err
+	}
+
+	// metrics: update gauge of upcoming reservations
+	if b.metrics != nil {
+		b.metrics.SetUpcomingReservations(guild.ID, guild.Name, len(reservationsWithSpots))
 	}
 
 	sum, err := b.summarySrv.PrepareSummary(reservationsWithSpots)
@@ -331,12 +330,14 @@ func (b *Bot) SendLetterMessage(guild *guild.Guild, channel *discord.Channel, su
 		if err != nil {
 			return err
 		}
+		defer b.metrics.IncMessagesSent(channel.ID, channel.Name)
 	}
 
 	_, err := dcSession.ChannelFileSend(channel.ID, "spots.png", bytes.NewReader(sum.Chart))
 	if err != nil {
 		return err
 	}
+	defer b.metrics.IncMessagesSent(channel.ID, channel.Name)
 
 	// It seems that discord applies the same validation to 1 embed and to bulk sent embeds,
 	// without treating them as separate messages. Because of that, we're gonna need to send embeds 1 by 1.
@@ -349,6 +350,8 @@ func (b *Bot) SendLetterMessage(guild *guild.Guild, channel *discord.Channel, su
 		if err != nil {
 			b.log.Errorf("something went wrong when sending embed: %s", err)
 		}
+
+		defer b.metrics.IncMessagesSent(channel.ID, channel.Name)
 	}
 
 	return err
@@ -364,7 +367,12 @@ func (b *Bot) SendDM(member *member.Member, message string) error {
 		channel.ID,
 		message)
 
-	return err
+	if err != nil {
+		return err
+	}
+	defer b.metrics.IncMessagesSent(channel.ID, member.Username)
+
+	return nil
 }
 
 func (b *Bot) GetMemberByGuildAndId(guild *guild.Guild, memberID string) (*member.Member, error) {

@@ -74,6 +74,9 @@ func (b *Bot) InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCr
 }
 
 func (b *Bot) Tick() {
+	defer b.metrics.IncTicks()
+	defer b.eventHandler.OnTick()
+
 	b.log.Info("About to refresh online players")
 	guilds := b.GetGuilds()
 	for _, guild := range guilds {
@@ -81,8 +84,6 @@ func (b *Bot) Tick() {
 		go b.onlineCheckService.TryRefresh(guild.ID)
 		go b.TryUpdateGuildLetter(guild)
 	}
-
-	defer b.eventHandler.OnTick()
 }
 
 func (b *Bot) Book(i *discordgo.InteractionCreate) error {
@@ -104,6 +105,15 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 		break
 	default:
 		return errors.New("book command requires 3 arguments")
+	}
+
+	// metrics: track overbook flag usage
+	if overbook && b.metrics != nil {
+		var guildName string
+		if g, err := b.GetGuild(gID); err == nil && g != nil {
+			guildName = g.Name
+		}
+		b.metrics.IncOverbook(i.GuildID, guildName)
 	}
 
 	startAtStr := sanitizeTimeFormat(i.ApplicationCommandData().Options[1].StringValue())

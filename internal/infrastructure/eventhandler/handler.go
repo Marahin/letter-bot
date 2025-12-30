@@ -13,6 +13,7 @@ type Handler struct {
 	db         ports.ReservationRepository
 	commSrv    ports.CommunicationService
 	summarySrv ports.SummaryService
+	metrics    ports.MetricsPort
 }
 
 func NewHandler(bookingSrv ports.BookingService, db ports.ReservationRepository, commSrv ports.CommunicationService, summarySrv ports.SummaryService) *Handler {
@@ -22,4 +23,9 @@ func NewHandler(bookingSrv ports.BookingService, db ports.ReservationRepository,
 		commSrv:    commSrv,
 		summarySrv: summarySrv,
 	}
+}
+
+func (h *Handler) WithMetrics(m ports.MetricsPort) *Handler {
+	h.metrics = m
+	return h
 }
