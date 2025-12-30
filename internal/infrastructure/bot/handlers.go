@@ -54,7 +54,6 @@ func (b *Bot) GuildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
 }
 
 func (b *Bot) Ready(s *discordgo.Session, r *discordgo.Ready) {
-	b.log.Debug("Ready")
 	for _, g := range s.State.Guilds {
 		if err := b.onlineCheckService.ConfigureWorldNameForGuild(g.ID); err != nil {
 			b.log.Errorf("ConfigureWorldNameForGuild failed for guild %s: %v", g.ID, err)
@@ -67,7 +66,6 @@ func (b *Bot) Ready(s *discordgo.Session, r *discordgo.Ready) {
 
 // InteractionCreate this is the entry point when a slash command is invoked.
 func (b *Bot) InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	b.log.Debug("InteractionCreate")
 	tStart := time.Now()
 
 	b.handleCommand(i)
@@ -76,7 +74,6 @@ func (b *Bot) InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCr
 }
 
 func (b *Bot) Tick() {
-	b.log.Debug("Tick")
 	defer b.metrics.IncTicks()
 	defer b.eventHandler.OnTick()
 
@@ -279,8 +276,6 @@ func (b *Bot) UnbookAutocomplete(i *discordgo.InteractionCreate) error {
 }
 
 func (b *Bot) PrivateSummary(i *discordgo.InteractionCreate) error {
-	b.log.Debug("PrivateSummary")
-
 	gID, err := stringsHelper.StrToInt64(i.GuildID)
 	if err != nil {
 		return err
@@ -291,9 +286,17 @@ func (b *Bot) PrivateSummary(i *discordgo.InteractionCreate) error {
 		return err
 	}
 
+	var spotName string
+	for _, opt := range i.ApplicationCommandData().Options {
+		if opt.Name == "respawn" {
+			spotName = opt.StringValue()
+			break
+		}
+	}
 	err = b.eventHandler.OnPrivateSummary(summary.PrivateSummaryRequest{
-		GuildID: gID,
-		UserID:  uID,
+		GuildID:  gID,
+		UserID:   uID,
+		SpotName: spotName,
 	})
 	if err != nil {
 		return err
@@ -301,6 +304,31 @@ func (b *Bot) PrivateSummary(i *discordgo.InteractionCreate) error {
 
 	_, err = b.mgr.SessionForGuild(gID).FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{Content: "Check your DM!"})
 	return err
+}
+
+func (b *Bot) SummaryAutocomplete(i *discordgo.InteractionCreate) error {
+	var spotFilter string
+	for _, opt := range i.ApplicationCommandData().Options {
+		if opt.Focused && opt.Name == "respawn" {
+			spotFilter = opt.StringValue()
+			break
+		}
+	}
+
+	response, err := b.eventHandler.OnBookAutocomplete(book.BookAutocompleteRequest{
+		Field: book.BookAutocompleteSpot,
+		Value: spotFilter,
+	})
+	if err != nil {
+		return err
+	}
+
+	choices := make([]*discordgo.ApplicationCommandOptionChoice, 0, len(response))
+	for _, v := range response {
+		choices = append(choices, &discordgo.ApplicationCommandOptionChoice{Name: v, Value: v})
+	}
+
+	return b.interactionRespond(i, &discordgo.InteractionResponseData{Choices: choices}, discordgo.InteractionApplicationCommandAutocompleteResult)
 }
 
 func (b *Bot) SetWorld(i *discordgo.InteractionCreate) error {

@@ -20,16 +20,16 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 		return
 	}
 
-    // metrics: count non-autocomplete slash command invocations
-    if b.metrics != nil {
-        var guildName string
-        if gID, convErr := strings.StrToInt64(i.GuildID); convErr == nil {
-            if g, err := b.GetGuild(gID); err == nil && g != nil {
-                guildName = g.Name
-            }
-        }
-        b.metrics.IncSlashCommand(i.GuildID, guildName, name)
-    }
+	// metrics: count non-autocomplete slash command invocations
+	if b.metrics != nil {
+		var guildName string
+		if gID, convErr := strings.StrToInt64(i.GuildID); convErr == nil {
+			if g, err := b.GetGuild(gID); err == nil && g != nil {
+				guildName = g.Name
+			}
+		}
+		b.metrics.IncSlashCommand(i.GuildID, guildName, name)
+	}
 
 	// Send deferred response for slash commands
 	if err := b.interactionRespond(i, &discordgo.InteractionResponseData{}, discordgo.InteractionResponseDeferredChannelMessageWithSource); err != nil {
@@ -41,15 +41,15 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 
 	if err != nil {
 		log.Error(err)
-            if b.metrics != nil {
-                var guildName string
-                if gID, convErr := strings.StrToInt64(i.GuildID); convErr == nil {
-                    if g, err := b.GetGuild(gID); err == nil && g != nil {
-                        guildName = g.Name
-                    }
-                }
-                b.metrics.IncCommandError(i.GuildID, guildName, name)
-            }
+		if b.metrics != nil {
+			var guildName string
+			if gID, convErr := strings.StrToInt64(i.GuildID); convErr == nil {
+				if g, err := b.GetGuild(gID); err == nil && g != nil {
+					guildName = g.Name
+				}
+			}
+			b.metrics.IncCommandError(i.GuildID, guildName, name)
+		}
 		webhookParams := &discordgo.WebhookParams{Content: b.formatter.FormatGenericError(err)}
 		gID, convErr := strings.StrToInt64(i.GuildID)
 		if convErr != nil {
@@ -88,6 +88,8 @@ func (b *Bot) handleAutocomplete(i *discordgo.InteractionCreate) error {
 		return b.UnbookAutocomplete(i)
 	case "world-set":
 		return b.SetWorldAutocomplete(i)
+	case "summary":
+		return b.SummaryAutocomplete(i)
 	default:
 		return fmt.Errorf("missing handler for command: %s", i.ApplicationCommandData().Name)
 	}
@@ -146,8 +148,17 @@ func (b *Bot) getCommands() []*discordgo.ApplicationCommand {
 		},
 		{
 			Name:        "summary",
-			Description: "Request a summary snapshot",
+			Description: "Request a summary snapshot (optionally for a specific respawn)",
 			Type:        discordgo.ChatApplicationCommand,
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:         "respawn",
+					Description:  "Name of the respawn (optional)",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     false,
+					Autocomplete: true,
+				},
+			},
 		},
 	}
 	// it's intentionally not 'set-world' as it would appear alphabetically higher than summary and unbook - purely for UX - its only used once and only by owner
