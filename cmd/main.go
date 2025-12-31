@@ -92,7 +92,7 @@ func main() {
 
 	// Expose Prometheus metrics + health endpoints via infrastructure HTTP server
 	metricsAddr := os.Getenv("METRICS_ADDR")
-    server := infrahttp.NewServerWithMetrics(metricsAddr, log)
+	server := infrahttp.NewServerWithMetrics(metricsAddr, log)
 	health := healthadapter.NewAdapter(db, botService).WithLogger(log)
 	server.WithHealthProvider(health)
 	server.Start()

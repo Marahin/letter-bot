@@ -7,7 +7,7 @@ import (
 )
 
 /*
-	This function takes a slice of reservations and merges some of them when they overlap and have the same spot (with different side or floor)
+This function takes a slice of reservations and merges some of them when they overlap and have the same spot (with different side or floor)
 */
 func reduceAllAuthorReservationsByLongestPerSpot(reservations []*reservation.ReservationWithSpot) []*reservation.ReservationWithSpot {
 	reducedReservations := []*reservation.ReservationWithSpot{reservations[0]}
