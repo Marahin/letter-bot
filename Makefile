@@ -29,6 +29,10 @@ sqlc-diff:
 	@sqlc diff -f internal/infrastructure/spot/postgresql/sqlc.yaml
 	@sqlc diff -f internal/infrastructure/worldname/postgresql/sqlc.yaml
 
+migrations-validate:
+	@echo "INFO: Validating migrations"
+	@atlas migrate validate --dir "file://internal/infrastructure/db/postgresql/migrations"
+
 test: install-dependencies sqlc-diff lint
 	@echo "INFO: Running tests"
 	@go test -cover -race -coverprofile=coverage.out ./...
@@ -41,6 +45,15 @@ test-coverage: test
 go-vet:
 	@echo "INFO: Running go vet"
 	@go vet ./...
+
+# Check formatting
+fmt-check:
+	@echo "INFO: Checking formatting"
+	@if [ -n "$$(gofmt -l .)" ]; then \
+		echo "ERROR: The following files are not formatted:"; \
+		gofmt -l .; \
+		exit 1; \
+	fi
 
 # Check for high cyclomatic complexity
 gocyclo:
@@ -58,9 +71,9 @@ staticcheck:
 
 # Run golint across the codebase
 lint: install-dependencies
-	@echo "INFO: Running golint"
+	@echo "INFO: Running lint"
 
-	@make -s go-vet gocyclo staticcheck
+	@make -s fmt-check go-vet gocyclo staticcheck
 
 sqlc-generate:
 	@echo "INFO: Generating sqlc"
