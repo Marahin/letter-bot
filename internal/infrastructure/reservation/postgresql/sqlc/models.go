@@ -91,14 +91,15 @@ type GuildsWorld struct {
 }
 
 type WebReservation struct {
-	ID              int64
-	Author          string
-	CreatedAt       pgtype.Timestamptz
-	StartAt         pgtype.Timestamptz
-	EndAt           pgtype.Timestamptz
-	SpotID          int64
-	GuildID         string
-	AuthorDiscordID string
+	ID               int64
+	Author           string
+	CreatedAt        pgtype.Timestamptz
+	StartAt          pgtype.Timestamptz
+	EndAt            pgtype.Timestamptz
+	SpotID           int64
+	GuildID          string
+	AuthorDiscordID  string
+	NotificationSent bool
 }
 
 type WebSpot struct {

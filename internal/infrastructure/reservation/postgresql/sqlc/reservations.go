@@ -321,3 +321,36 @@ func mapReservationWithSpot(res WebReservation, spot WebSpot) *reservation.Reser
 		Spot:        mapWebSpot(spot),
 	}
 }
+
+func (t *ReservationRepository) SelectReservationsForReservationStartsNotification(ctx context.Context, guildID string) ([]*reservation.ReservationWithSpot, error) {
+	res, err := t.q.SelectReservationsForReservationStartsNotification(ctx)
+	if err != nil {
+		return []*reservation.ReservationWithSpot{}, err
+	}
+
+	reservations := make([]*reservation.ReservationWithSpot, len(res))
+	for i, row := range res {
+		reservations[i] = &reservation.ReservationWithSpot{
+			Spot: reservation.Spot{
+				ID:   row.WebSpot.ID,
+				Name: row.WebSpot.Name,
+			},
+			Reservation: reservation.Reservation{
+				ID:              row.WebReservation.ID,
+				Author:          row.WebReservation.Author,
+				AuthorDiscordID: row.WebReservation.AuthorDiscordID,
+				CreatedAt:       row.WebReservation.CreatedAt.Time,
+				StartAt:         row.WebReservation.StartAt.Time,
+				EndAt:           row.WebReservation.EndAt.Time,
+				SpotID:          row.WebReservation.SpotID,
+				GuildID:         row.WebReservation.GuildID,
+			},
+		}
+	}
+
+	return reservations, nil
+}
+
+func (t *ReservationRepository) UpdateReservationStartsNotificationSent(ctx context.Context, id int64) error {
+	return t.q.UpdateReservationStartsNotificationSent(ctx, id)
+}

@@ -368,6 +368,52 @@ func (_c *MockMetricsPort_IncTicks_Call) RunAndReturn(run func()) *MockMetricsPo
 	return _c
 }
 
+// IncUpcomingReservationNotificationSent provides a mock function for the type MockMetricsPort
+func (_mock *MockMetricsPort) IncUpcomingReservationNotificationSent(guildID string, guildName string) {
+	_mock.Called(guildID, guildName)
+	return
+}
+
+// MockMetricsPort_IncUpcomingReservationNotificationSent_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IncUpcomingReservationNotificationSent'
+type MockMetricsPort_IncUpcomingReservationNotificationSent_Call struct {
+	*mock.Call
+}
+
+// IncUpcomingReservationNotificationSent is a helper method to define mock.On call
+//   - guildID string
+//   - guildName string
+func (_e *MockMetricsPort_Expecter) IncUpcomingReservationNotificationSent(guildID interface{}, guildName interface{}) *MockMetricsPort_IncUpcomingReservationNotificationSent_Call {
+	return &MockMetricsPort_IncUpcomingReservationNotificationSent_Call{Call: _e.mock.On("IncUpcomingReservationNotificationSent", guildID, guildName)}
+}
+
+func (_c *MockMetricsPort_IncUpcomingReservationNotificationSent_Call) Run(run func(guildID string, guildName string)) *MockMetricsPort_IncUpcomingReservationNotificationSent_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockMetricsPort_IncUpcomingReservationNotificationSent_Call) Return() *MockMetricsPort_IncUpcomingReservationNotificationSent_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockMetricsPort_IncUpcomingReservationNotificationSent_Call) RunAndReturn(run func(guildID string, guildName string)) *MockMetricsPort_IncUpcomingReservationNotificationSent_Call {
+	_c.Run(run)
+	return _c
+}
+
 // SetUpcomingReservations provides a mock function for the type MockMetricsPort
 func (_mock *MockMetricsPort) SetUpcomingReservations(guildID string, guildName string, count int) {
 	_mock.Called(guildID, guildName, count)

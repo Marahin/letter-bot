@@ -13,6 +13,7 @@ import (
 	"spot-assistant/internal/core/communication"
 	"spot-assistant/internal/core/onlinecheck"
 	"spot-assistant/internal/core/summary"
+	"spot-assistant/internal/core/upcomingreservation"
 
 	"spot-assistant/internal/common/version"
 
@@ -80,6 +81,8 @@ func main() {
 	dcFormatter := formatter.NewFormatter()
 	botService := bot.NewManager(summaryService, reservationRepo, onlineChecker).WithFormatter(dcFormatter).WithLogger(log)
 	communicationService := communication.NewAdapter(botService, botService).WithLogger(log)
+	upcomingReservationSrv := upcomingreservation.NewAdapter(reservationRepo, botService, communicationService, onlineChecker).WithLogger(log)
+	botService.WithUpcomingReservationService(upcomingReservationSrv)
 
 	// Bot
 	bookingService := booking.NewAdapter(spotRepo, reservationRepo, communicationService).WithLogger(log)

@@ -2,7 +2,9 @@ package formatter
 
 import (
 	"fmt"
+	"math"
 	"strings"
+	"time"
 
 	"spot-assistant/internal/core/dto/member"
 
@@ -108,5 +110,14 @@ func (f *DiscordFormatter) FormatOverbookedMemberNotification(
 		msgBody.WriteString(fmt.Sprintf("has been entirely removed (originally: **%s - %s**)", res.Original.StartAt.Format(stringsHelper.DcLongTimeFormat), res.Original.EndAt.Format(stringsHelper.DcLongTimeFormat)))
 	}
 
+	return msgBody.String()
+}
+
+func (f *DiscordFormatter) FormatUpcomingReservationNotificationMessage(spotName string, startAt time.Time, now time.Time) string {
+	var msgBody strings.Builder
+	minutesLeft := int(math.Ceil(startAt.Sub(now).Minutes()))
+	msgBody.WriteString(fmt.Sprintf("Your hunt at **%s** starts in **%d** minutes (**%s** server time)!\n", spotName, minutesLeft, startAt.Format(stringsHelper.DcLongTimeFormat)))
+	msgBody.WriteString("Please make sure you are there on time!\n")
+	msgBody.WriteString("If you cannot make it, please cancel your reservation as soon as possible.")
 	return msgBody.String()
 }

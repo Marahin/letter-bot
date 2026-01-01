@@ -31,4 +31,8 @@ type MetricsPort interface {
 
 	// AddMessagesDeleted increments counter of messages deleted by the bot.
 	AddMessagesDeleted(channelID, channelName string, count int)
+
+	// IncUpcomingReservationNotificationSent increments counter of upcoming reservation notifications sent.
+	// Labels: guild_id, guild_name
+	IncUpcomingReservationNotificationSent(guildID, guildName string)
 }
