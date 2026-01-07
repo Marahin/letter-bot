@@ -23,7 +23,7 @@ func (a *Adapter) RefreshOnlinePlayers(guildID string) error {
 
 	playersMap := make(map[string]struct{}, len(players))
 	for _, p := range players {
-		playersMap[p] = struct{}{}
+		playersMap[strings.ToLower(p)] = struct{}{}
 	}
 	a.players.Set(world, playersMap)
 	return nil
@@ -43,7 +43,7 @@ func (a *Adapter) IsOnline(guildID, characterName string) bool {
 	}
 
 	for _, candidate := range names {
-		if _, ok := players[candidate]; ok {
+		if _, ok := players[strings.ToLower(candidate)]; ok {
 			return true
 		}
 	}
