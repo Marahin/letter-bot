@@ -50,8 +50,8 @@ func TestRefreshOnlinePlayers_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, ok)
 	expected := map[string]struct{}{
-		"Mariysz":   {},
-		"Asar Cham": {},
+		"mariysz":   {},
+		"asar cham": {},
 	}
 	assert.Equal(t, expected, players)
 }
@@ -87,8 +87,8 @@ func TestIsOnline(t *testing.T) {
 	}
 	a.guildIdToWorld.Set("guild1", "Celesta")
 	a.players.Set("Celesta", map[string]struct{}{
-		"Mariysz":   {},
-		"Asar Cham": {},
+		"mariysz":   {},
+		"asar cham": {},
 	})
 
 	// then
@@ -111,8 +111,8 @@ func TestIsOnline(t *testing.T) {
 		log:            log,
 	}
 	a2.players.Set("Celesta", map[string]struct{}{
-		"Mariysz":   {},
-		"Asar Cham": {},
+		"mariysz":   {},
+		"asar cham": {},
 	})
 	assert.False(t, a2.IsOnline("guild1", "Mariysz"))
 
@@ -191,7 +191,7 @@ func TestPlayerStatus(t *testing.T) {
 		log:            log,
 	}
 	a.guildIdToWorld.Set("guild1", "Celesta")
-	a.players.Set("Celesta", map[string]struct{}{"Mariysz": {}})
+	a.players.Set("Celesta", map[string]struct{}{"mariysz": {}})
 	assert.Equal(t, summary.Online, a.PlayerStatus("guild1", "Mariysz"))
 	assert.Equal(t, summary.Offline, a.PlayerStatus("guild1", "Unknown"))
 
@@ -230,7 +230,7 @@ func TestTryRefresh(t *testing.T) {
 	a.TryRefresh("guild1")
 	players, ok := a.players.Get("Celesta")
 	assert.True(t, ok)
-	assert.Equal(t, map[string]struct{}{"Mariysz": {}}, players)
+	assert.Equal(t, map[string]struct{}{"mariysz": {}}, players)
 }
 
 func TestIsOnline_KeyMisses(t *testing.T) {
@@ -242,7 +242,7 @@ func TestIsOnline_KeyMisses(t *testing.T) {
 		players:        cmap.New[map[string]struct{}](),
 		log:            log,
 	}
-	a.players.Set("Celesta", map[string]struct{}{"Mariysz": {}})
+	a.players.Set("Celesta", map[string]struct{}{"mariysz": {}})
 	assert.False(t, a.IsOnline("guild1", "Mariysz"))
 
 	// world is empty string
@@ -252,7 +252,7 @@ func TestIsOnline_KeyMisses(t *testing.T) {
 		log:            log,
 	}
 	a2.guildIdToWorld.Set("guild1", "")
-	a2.players.Set("", map[string]struct{}{"Mariysz": {}})
+	a2.players.Set("", map[string]struct{}{"mariysz": {}})
 	assert.False(t, a2.IsOnline("guild1", "Mariysz"))
 
 	// players key missing
@@ -263,6 +263,24 @@ func TestIsOnline_KeyMisses(t *testing.T) {
 	}
 	a3.guildIdToWorld.Set("guild1", "Celesta")
 	assert.False(t, a3.IsOnline("guild1", "Mariysz"))
+}
+
+func TestIsOnline_CaseSensitivity(t *testing.T) {
+	log := zaptest.NewLogger(t).Sugar()
+	a := &Adapter{
+		guildIdToWorld: cmap.New[string](),
+		players:        cmap.New[map[string]struct{}](),
+		log:            log,
+	}
+	a.guildIdToWorld.Set("guild1", "Celesta")
+	a.players.Set("Celesta", map[string]struct{}{"mariysz": {}, "asar cham": {}})
+	assert.True(t, a.IsOnline("guild1", "mariysz"))
+	assert.True(t, a.IsOnline("guild1", "ASAR CHAM"))
+	assert.True(t, a.IsOnline("guild1", "Mariysz"))
+	assert.True(t, a.IsOnline("guild1", "Asar Cham"))
+	assert.True(t, a.IsOnline("guild1", "mariysz / asar cham"))
+	assert.True(t, a.IsOnline("guild1", "ASAR CHAM / MARIYSZ"))
+	assert.True(t, a.IsOnline("guild1", "Mariysz / ASAR CHAM"))
 }
 
 func TestSetGuildWorld_Success(t *testing.T) {
