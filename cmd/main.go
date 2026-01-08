@@ -81,7 +81,7 @@ func main() {
 	dcFormatter := formatter.NewFormatter()
 	botService := bot.NewManager(summaryService, reservationRepo, onlineChecker).WithFormatter(dcFormatter).WithLogger(log)
 	communicationService := communication.NewAdapter(botService, botService).WithLogger(log)
-	upcomingReservationSrv := upcomingreservation.NewAdapter(reservationRepo, botService, communicationService, onlineChecker).WithLogger(log)
+	upcomingReservationSrv := upcomingreservation.NewAdapter(reservationRepo, botService, communicationService).WithLogger(log)
 	botService.WithUpcomingReservationService(upcomingReservationSrv)
 
 	// Bot

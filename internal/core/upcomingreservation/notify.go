@@ -27,11 +27,9 @@ func (a *Adapter) processReservationNotification(g *guild.Guild, res *reservatio
 		return
 	}
 
-	if !a.onlineCheckService.IsOnline(g.ID, member.Nick) {
-		if err := a.commService.NotifyUpcomingReservation(g, member, res.Spot.Name, res.Reservation.StartAt); err != nil {
-			a.log.Errorf("could not send DM to %s: %s", member.Username, err)
-			return
-		}
+	if err := a.commService.NotifyUpcomingReservation(g, member, res.Spot.Name, res.Reservation.StartAt); err != nil {
+		a.log.Errorf("could not send DM to %s: %s", member.Username, err)
+		return
 	}
 
 	if err := a.reservationRepo.UpdateReservationStartsNotificationSent(context.Background(), res.Reservation.ID); err != nil {

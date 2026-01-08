@@ -23,9 +23,8 @@ func TestNotifyUpcomingReservationsSuccess(t *testing.T) {
 	mockResRepo := mocks.NewMockReservationRepository(t)
 	mockMemberRepo := mocks.NewMockMemberRepository(t)
 	mockCommService := mocks.NewMockCommunicationService(t)
-	mockOnlineCheckService := mocks.NewMockOnlineCheckService(t)
 	logger := zap.NewNop().Sugar()
-	adapter := upcomingreservation.NewAdapter(mockResRepo, mockMemberRepo, mockCommService, mockOnlineCheckService).WithLogger(logger)
+	adapter := upcomingreservation.NewAdapter(mockResRepo, mockMemberRepo, mockCommService).WithLogger(logger)
 	g := &guild.Guild{ID: "test-guild-id"}
 	ctx := context.Background()
 
@@ -43,8 +42,6 @@ func TestNotifyUpcomingReservationsSuccess(t *testing.T) {
 
 	m := &member.Member{Username: "User 1"}
 	mockMemberRepo.EXPECT().GetMemberByGuildAndId(g, "user-1").Return(m, nil).Once()
-
-	mockOnlineCheckService.EXPECT().IsOnline(g.ID, m.Nick).Return(false).Once()
 
 	mockCommService.EXPECT().NotifyUpcomingReservation(g, m, "Spot 1", resWithSpot.Reservation.StartAt).Return(nil).Once()
 
@@ -74,9 +71,8 @@ func TestNotifyUpcomingReservationsFailOnRepoSelection(t *testing.T) {
 	mockResRepo := mocks.NewMockReservationRepository(t)
 	mockMemberRepo := mocks.NewMockMemberRepository(t)
 	mockCommService := mocks.NewMockCommunicationService(t)
-	mockOnlineCheckService := mocks.NewMockOnlineCheckService(t)
 	logger := zap.NewNop().Sugar()
-	adapter := upcomingreservation.NewAdapter(mockResRepo, mockMemberRepo, mockCommService, mockOnlineCheckService).WithLogger(logger)
+	adapter := upcomingreservation.NewAdapter(mockResRepo, mockMemberRepo, mockCommService).WithLogger(logger)
 	g := &guild.Guild{ID: "test-guild-id"}
 	ctx := context.Background()
 
@@ -96,9 +92,8 @@ func TestNotifyUpcomingReservationsFailOnMemberLookup(t *testing.T) {
 	mockResRepo := mocks.NewMockReservationRepository(t)
 	mockMemberRepo := mocks.NewMockMemberRepository(t)
 	mockCommService := mocks.NewMockCommunicationService(t)
-	mockOnlineCheckService := mocks.NewMockOnlineCheckService(t)
 	logger := zap.NewNop().Sugar()
-	adapter := upcomingreservation.NewAdapter(mockResRepo, mockMemberRepo, mockCommService, mockOnlineCheckService).WithLogger(logger)
+	adapter := upcomingreservation.NewAdapter(mockResRepo, mockMemberRepo, mockCommService).WithLogger(logger)
 	g := &guild.Guild{ID: "test-guild-id"}
 	ctx := context.Background()
 
@@ -136,9 +131,8 @@ func TestNotifyUpcomingReservationsFailOnNotification(t *testing.T) {
 	mockResRepo := mocks.NewMockReservationRepository(t)
 	mockMemberRepo := mocks.NewMockMemberRepository(t)
 	mockCommService := mocks.NewMockCommunicationService(t)
-	mockOnlineCheckService := mocks.NewMockOnlineCheckService(t)
 	logger := zap.NewNop().Sugar()
-	adapter := upcomingreservation.NewAdapter(mockResRepo, mockMemberRepo, mockCommService, mockOnlineCheckService).WithLogger(logger)
+	adapter := upcomingreservation.NewAdapter(mockResRepo, mockMemberRepo, mockCommService).WithLogger(logger)
 	g := &guild.Guild{ID: "test-guild-id"}
 	ctx := context.Background()
 
@@ -156,8 +150,6 @@ func TestNotifyUpcomingReservationsFailOnNotification(t *testing.T) {
 
 	m := &member.Member{Username: "User 3"}
 	mockMemberRepo.EXPECT().GetMemberByGuildAndId(g, "user-3").Return(m, nil).Once()
-
-	mockOnlineCheckService.EXPECT().IsOnline(g.ID, m.Nick).Return(false).Once()
 
 	notifyCalled := make(chan struct{})
 	mockCommService.EXPECT().NotifyUpcomingReservation(g, m, "Spot 3", resWithSpot.Reservation.StartAt).
@@ -185,9 +177,9 @@ func TestNotifyUpcomingReservationsFailOnStatusUpdate(t *testing.T) {
 	mockResRepo := mocks.NewMockReservationRepository(t)
 	mockMemberRepo := mocks.NewMockMemberRepository(t)
 	mockCommService := mocks.NewMockCommunicationService(t)
-	mockOnlineCheckService := mocks.NewMockOnlineCheckService(t)
+
 	logger := zap.NewNop().Sugar()
-	adapter := upcomingreservation.NewAdapter(mockResRepo, mockMemberRepo, mockCommService, mockOnlineCheckService).WithLogger(logger)
+	adapter := upcomingreservation.NewAdapter(mockResRepo, mockMemberRepo, mockCommService).WithLogger(logger)
 	g := &guild.Guild{ID: "test-guild-id"}
 	ctx := context.Background()
 
@@ -205,8 +197,6 @@ func TestNotifyUpcomingReservationsFailOnStatusUpdate(t *testing.T) {
 
 	m := &member.Member{Username: "User 4"}
 	mockMemberRepo.EXPECT().GetMemberByGuildAndId(g, "user-4").Return(m, nil).Once()
-
-	mockOnlineCheckService.EXPECT().IsOnline(g.ID, m.Nick).Return(false).Once()
 
 	mockCommService.EXPECT().NotifyUpcomingReservation(g, m, "Spot 4", resWithSpot.Reservation.StartAt).Return(nil).Once()
 
@@ -227,54 +217,5 @@ func TestNotifyUpcomingReservationsFailOnStatusUpdate(t *testing.T) {
 		// Success
 	case <-time.After(2 * time.Second):
 		t.Fatal("timeout waiting for update status attempt")
-	}
-}
-
-func TestNotifyUpcomingReservationsSkipIfOnline(t *testing.T) {
-	// given
-	assert := assert.New(t)
-	mockResRepo := mocks.NewMockReservationRepository(t)
-	mockMemberRepo := mocks.NewMockMemberRepository(t)
-	mockCommService := mocks.NewMockCommunicationService(t)
-	mockOnlineCheckService := mocks.NewMockOnlineCheckService(t)
-	logger := zap.NewNop().Sugar()
-	adapter := upcomingreservation.NewAdapter(mockResRepo, mockMemberRepo, mockCommService, mockOnlineCheckService).WithLogger(logger)
-	g := &guild.Guild{ID: "test-guild-id"}
-	ctx := context.Background()
-
-	resWithSpot := &reservation.ReservationWithSpot{
-		Reservation: reservation.Reservation{
-			ID:              1,
-			AuthorDiscordID: "user-1",
-			StartAt:         time.Now().Add(10 * time.Minute),
-		},
-		Spot: reservation.Spot{Name: "Spot 1"},
-	}
-	reservations := []*reservation.ReservationWithSpot{resWithSpot}
-
-	mockResRepo.EXPECT().SelectReservationsForReservationStartsNotification(ctx, g.ID).Return(reservations, nil).Once()
-
-	m := &member.Member{Username: "User 1", Nick: "CharName"}
-	mockMemberRepo.EXPECT().GetMemberByGuildAndId(g, "user-1").Return(m, nil).Once()
-
-	mockOnlineCheckService.EXPECT().IsOnline(g.ID, "CharName").Return(true).Once()
-
-	updateCalled := make(chan struct{})
-	mockResRepo.EXPECT().UpdateReservationStartsNotificationSent(mock.Anything, int64(1)).
-		Run(func(ctx context.Context, id int64) {
-			close(updateCalled)
-		}).
-		Return(nil).Once()
-
-	// when
-	err := adapter.NotifyUpcomingReservations(ctx, g)
-
-	// assert
-	assert.NoError(err)
-	select {
-	case <-updateCalled:
-		// Success
-	case <-time.After(2 * time.Second):
-		t.Fatal("timeout waiting for update status")
 	}
 }

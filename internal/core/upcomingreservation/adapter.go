@@ -7,19 +7,17 @@ import (
 )
 
 type Adapter struct {
-	log                *zap.SugaredLogger
-	reservationRepo    ports.ReservationRepository
-	memberRepo         ports.MemberRepository
-	commService        ports.CommunicationService
-	onlineCheckService ports.OnlineCheckService
+	log             *zap.SugaredLogger
+	reservationRepo ports.ReservationRepository
+	memberRepo      ports.MemberRepository
+	commService     ports.CommunicationService
 }
 
-func NewAdapter(reservationRepo ports.ReservationRepository, memberRepo ports.MemberRepository, commService ports.CommunicationService, onlineCheckService ports.OnlineCheckService) *Adapter {
+func NewAdapter(reservationRepo ports.ReservationRepository, memberRepo ports.MemberRepository, commService ports.CommunicationService) *Adapter {
 	return &Adapter{
-		reservationRepo:    reservationRepo,
-		memberRepo:         memberRepo,
-		commService:        commService,
-		onlineCheckService: onlineCheckService,
+		reservationRepo: reservationRepo,
+		memberRepo:      memberRepo,
+		commService:     commService,
 	}
 }
 
