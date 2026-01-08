@@ -25,18 +25,19 @@ type cfg struct {
 }
 
 type Bot struct {
-	summarySrv         ports.SummaryService
-	reservationRepo    ports.ReservationRepository
-	onlineCheckService ports.OnlineCheckService
-	eventHandler       ports.APIPort
-	metrics            ports.MetricsPort
-	mgr                *shards.Manager
-	log                *zap.SugaredLogger
-	quit               chan struct{}
-	formatter          *formatter.DiscordFormatter
-	channelLocks       cmap.ConcurrentMap[string, *sync.RWMutex]
-	started            atomic.Bool
-	stopped            atomic.Bool
+	summarySrv             ports.SummaryService
+	reservationRepo        ports.ReservationRepository
+	onlineCheckService     ports.OnlineCheckService
+	upcomingReservationSrv ports.UpcomingReservationService
+	eventHandler           ports.APIPort
+	metrics                ports.MetricsPort
+	mgr                    *shards.Manager
+	log                    *zap.SugaredLogger
+	quit                   chan struct{}
+	formatter              *formatter.DiscordFormatter
+	channelLocks           cmap.ConcurrentMap[string, *sync.RWMutex]
+	started                atomic.Bool
+	stopped                atomic.Bool
 }
 
 var (
@@ -71,6 +72,11 @@ func NewManager(summarySrv ports.SummaryService, reservationRepo ports.Reservati
 }
 
 func (b *Bot) WithHttpClient(client *http.Client) {
+}
+
+func (b *Bot) WithUpcomingReservationService(upcomingReservationSrv ports.UpcomingReservationService) *Bot {
+	b.upcomingReservationSrv = upcomingReservationSrv
+	return b
 }
 
 func (b *Bot) WithFormatter(formatter *formatter.DiscordFormatter) *Bot {

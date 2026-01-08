@@ -24,6 +24,7 @@ type CommunicationService interface {
 	NotifyOverbookedMember(
 		request book.BookRequest,
 		res *reservation.ClippedOrRemovedReservation)
+	NotifyUpcomingReservation(guild *guild.Guild, member *member.Member, spotName string, startAt time.Time) error
 	SendGuildSummary(guild *guild.Guild, summary *summary.Summary) error
 	SendPrivateSummary(request summary.PrivateSummaryRequest, summary *summary.Summary) error
 }
