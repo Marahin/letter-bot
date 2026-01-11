@@ -21,6 +21,7 @@ import (
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/role"
 	"spot-assistant/internal/core/dto/summary"
+	"spot-assistant/internal/core/summarytracker"
 )
 
 // Starts internal ticker, that will trigger bot's emission
@@ -247,114 +248,7 @@ func (b *Bot) UpdateGuildLetter(guild *guild.Guild) error {
 		return err
 	}
 
-	return b.SendLetterMessage(guild, summaryChannel, sum)
-}
-
-// SendLetterMessage sends a message to a guild channel,
-// or in a DM if guild is nil.
-func (b *Bot) SendLetterMessage(guild *guild.Guild, channel *discord.Channel, sum *summary.Summary) error {
-	if len(sum.Ledger) == 0 {
-		return fmt.Errorf("SendLetterMessage requires at least 1 ledger entry to be present")
-	}
-
-	// Do not allow for asynchronous modification
-	// of the same channel - this leads to doubled summaries
-	mutex, ok := b.channelLocks.Get(channel.ID)
-	if !ok {
-		mutex = &sync.RWMutex{}
-		b.channelLocks.Set(channel.ID, mutex)
-	}
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	// dcSession := b.mgr.SessionForGuild(gId)
-	var dcSession *discordgo.Session
-	if channel.Type == discord.ChannelTypeDM {
-		dcSession = b.mgr.SessionForDM()
-	} else {
-		// Grab a session for this guild
-		gID, err := stringsHelper.StrToInt64(guild.ID)
-		if err != nil {
-			return fmt.Errorf("could not parse guild ID: %w", err)
-		}
-
-		dcSession = b.mgr.SessionForGuild(gID)
-	}
-
-	// Transfrom into lines of text describing reservation
-	fields := collections.PoorMansMap(sum.Ledger, func(el summary.LedgerEntry) *discordgo.MessageEmbedField {
-		writtenReservations := strings.Builder{}
-
-		for _, booking := range el.Bookings {
-			statusStr := MapOnlineStatus(booking.Status)
-			writtenReservations.WriteString(
-				fmt.Sprintf(
-					"%s**%s** - **%s** %s\n",
-					statusStr,
-					booking.StartAt.Format("15:04"),
-					booking.EndAt.Format("15:04"),
-					booking.Author,
-				),
-			)
-		}
-
-		value := writtenReservations.String()
-		name := fmt.Sprintf("**`%s`**", el.Spot)
-
-		return &discordgo.MessageEmbedField{
-			Name:   name,
-			Value:  value,
-			Inline: true,
-		}
-	})
-	footer := MapFooter(sum.Footer)
-
-	// Discord seems to have a limit of embeds per message
-	// this means we should limit ourselves to send maximum 20 embeds
-	// per message; and continue sending messages until we're done
-	batchLimit := int(math.Min(13.0, float64(len(fields))))
-	batches := collections.PoorMansPartition(fields, batchLimit)
-	embeds := collections.PoorMansMap(batches, func(batch []*discordgo.MessageEmbedField) *discordgo.MessageEmbed {
-		return b.newEmbed(sum.Title, sum.URL, sum.Description, batch, footer)
-	})
-
-	if channel.Type != discord.ChannelTypeDM {
-		err := b.CleanChannel(guild, channel)
-		if err != nil {
-			return err
-		}
-	}
-
-	if sum.PreMessage != "" {
-		_, err := dcSession.ChannelMessageSend(channel.ID, sum.PreMessage)
-		if err != nil {
-			return err
-		}
-		defer b.metrics.IncMessagesSent(channel.ID, channel.Name)
-	}
-
-	_, err := dcSession.ChannelFileSend(channel.ID, "spots.png", bytes.NewReader(sum.Chart))
-	if err != nil {
-		return err
-	}
-	defer b.metrics.IncMessagesSent(channel.ID, channel.Name)
-
-	// It seems that discord applies the same validation to 1 embed and to bulk sent embeds,
-	// without treating them as separate messages. Because of that, we're gonna need to send embeds 1 by 1.
-	// _, err = dcSession.ChannelMessageSendEmbeds(channel.ID, embeds)
-	// if err != nil {
-	// 	return err
-	// }
-	for _, embed := range embeds {
-		_, err = dcSession.ChannelMessageSendEmbed(channel.ID, embed)
-		if err != nil {
-			b.log.Errorf("something went wrong when sending embed: %s", err)
-		}
-
-		defer b.metrics.IncMessagesSent(channel.ID, channel.Name)
-	}
-
-	return err
+	return b.SendLetterMessageGuildChannel(guild, summaryChannel, sum)
 }
 
 func (b *Bot) SendDM(member *member.Member, message string) error {
@@ -470,4 +364,200 @@ func (b *Bot) OpenDM(m *member.Member) (*discord.Channel, error) {
 	}
 
 	return MapChannel(channel), nil
+}
+
+func (b *Bot) createEmbedsFromSummary(sum *summary.Summary) []*discordgo.MessageEmbed {
+	fields := collections.PoorMansMap(sum.Ledger, func(el summary.LedgerEntry) *discordgo.MessageEmbedField {
+		writtenReservations := strings.Builder{}
+		for _, booking := range el.Bookings {
+			statusStr := MapOnlineStatus(booking.Status)
+			fmt.Fprintf(&writtenReservations, "%s**%s** - **%s** %s\n",
+				statusStr,
+				booking.StartAt.Format("15:04"),
+				booking.EndAt.Format("15:04"),
+				booking.Author)
+		}
+		return &discordgo.MessageEmbedField{
+			Name:   fmt.Sprintf("**`%s`**", el.Spot),
+			Value:  writtenReservations.String(),
+			Inline: true,
+		}
+	})
+
+	batchLimit := int(math.Min(13.0, float64(len(fields))))
+	batches := collections.PoorMansPartition(fields, batchLimit)
+	footer := MapFooter(sum.Footer)
+
+	return collections.PoorMansMap(batches, func(batch []*discordgo.MessageEmbedField) *discordgo.MessageEmbed {
+		return b.newEmbed(sum.Title, sum.URL, sum.Description, batch, footer)
+	})
+}
+
+func (b *Bot) SendLetterMessageDM(channel *discord.Channel, sum *summary.Summary) error {
+	if len(sum.Ledger) == 0 {
+		return fmt.Errorf("SendLetterMessageDM requires at least 1 ledger entry to be present")
+	}
+
+	b.log.Debugf("Sending DM summary to channel %s (%d ledger entries)", channel.ID, len(sum.Ledger))
+
+	mutex, ok := b.channelLocks.Get(channel.ID)
+	if !ok {
+		mutex = &sync.RWMutex{}
+		b.channelLocks.Set(channel.ID, mutex)
+	}
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	dcSession := b.mgr.SessionForDM()
+	embeds := b.createEmbedsFromSummary(sum)
+
+	if sum.PreMessage != "" {
+		if _, err := dcSession.ChannelMessageSend(channel.ID, sum.PreMessage); err != nil {
+			return err
+		}
+		defer b.metrics.IncMessagesSent(channel.ID, channel.Name)
+	}
+
+	if _, err := dcSession.ChannelFileSend(channel.ID, "spots.png", bytes.NewReader(sum.Chart)); err != nil {
+		return err
+	}
+	defer b.metrics.IncMessagesSent(channel.ID, channel.Name)
+
+	for _, embed := range embeds {
+		if _, err := dcSession.ChannelMessageSendEmbed(channel.ID, embed); err != nil {
+			b.log.Errorf("failed to send embed: %s", err)
+		}
+		defer b.metrics.IncMessagesSent(channel.ID, channel.Name)
+	}
+
+	return nil
+}
+
+func (b *Bot) SendLetterMessageGuildChannel(guild *guild.Guild, channel *discord.Channel, sum *summary.Summary) error {
+	if len(sum.Ledger) == 0 {
+		return fmt.Errorf("SendLetterMessageGuildChannel requires at least 1 ledger entry to be present")
+	}
+
+	b.log.Debugf("Sending guild summary to channel %s in guild %s (%d ledger entries)", channel.ID, guild.ID, len(sum.Ledger))
+
+	gID, err := stringsHelper.StrToInt64(guild.ID)
+	if err != nil {
+		return fmt.Errorf("could not parse guild ID: %w", err)
+	}
+
+	dcSession := b.mgr.SessionForGuild(gID)
+	embeds := b.createEmbedsFromSummary(sum)
+	ctx := context.Background()
+
+	trackedMsgs, err := b.summaryTrackerSrv.GetTrackedMessages(ctx, guild.ID, channel.ID)
+	if err != nil {
+		b.log.Warnf("Failed to get tracked messages for channel %s, falling back to fresh send: %v", channel.ID, err)
+		return b.sendFreshMessages(guild, channel, sum, dcSession, embeds)
+	}
+
+	var existingPreMsg *summarytracker.TrackedMessage
+	existingEmbeds := make([]*summarytracker.TrackedMessage, 0)
+	for _, msg := range trackedMsgs {
+		switch msg.MessageType {
+		case "pre_message":
+			existingPreMsg = msg
+		case "embed":
+			existingEmbeds = append(existingEmbeds, msg)
+		}
+	}
+
+	if sum.PreMessage != "" {
+		if existingPreMsg != nil {
+			if _, err := dcSession.ChannelMessageEdit(channel.ID, existingPreMsg.MessageID, sum.PreMessage); err != nil {
+				b.log.Warnf("Failed to edit pre-message %s, falling back to fresh send: %v", existingPreMsg.MessageID, err)
+				return b.sendFreshMessages(guild, channel, sum, dcSession, embeds)
+			}
+			b.summaryTrackerSrv.UpdateTimestamp(ctx, existingPreMsg.ID)
+		} else {
+			b.log.Warnf("Pre-message required but not tracked, falling back to fresh send")
+			return b.sendFreshMessages(guild, channel, sum, dcSession, embeds)
+		}
+	}
+
+	return b.processEmbedUpdates(ctx, guild, channel, sum, dcSession, embeds, existingEmbeds)
+}
+
+func (b *Bot) processEmbedUpdates(ctx context.Context, guild *guild.Guild, channel *discord.Channel, sum *summary.Summary, dcSession *discordgo.Session, embeds []*discordgo.MessageEmbed, existingEmbeds []*summarytracker.TrackedMessage) error {
+	commonLen := min(len(existingEmbeds), len(embeds))
+
+	b.log.Debugf("Editing %d embeds, adding %d new, deleting %d old",
+		commonLen,
+		max(0, len(embeds)-commonLen),
+		max(0, len(existingEmbeds)-commonLen))
+
+	// 1. Update existing messages (where both slices have an element)
+	for i := range commonLen {
+		edit := discordgo.NewMessageEdit(channel.ID, existingEmbeds[i].MessageID)
+		edit.SetEmbeds([]*discordgo.MessageEmbed{embeds[i]})
+
+		if _, err := dcSession.ChannelMessageEditComplex(edit); err != nil {
+			b.log.Warnf("Failed to edit embed %d (msg %s), falling back to fresh send: %v", i, existingEmbeds[i].MessageID, err)
+			return b.sendFreshMessages(guild, channel, sum, dcSession, embeds)
+		} else {
+			b.summaryTrackerSrv.UpdateTimestamp(ctx, existingEmbeds[i].ID)
+		}
+	}
+
+	// 2. Add new embeds (if embeds > existingEmbeds)
+	for i := commonLen; i < len(embeds); i++ {
+		msg, err := dcSession.ChannelMessageSendEmbed(channel.ID, embeds[i])
+		if err != nil {
+			b.log.Warnf("Failed to send new embed %d, falling back to fresh send: %v", i, err)
+			return b.sendFreshMessages(guild, channel, sum, dcSession, embeds)
+		}
+		b.summaryTrackerSrv.TrackMessage(ctx, guild.ID, channel.ID, msg.ID, "embed", i)
+		defer b.metrics.IncMessagesSent(channel.ID, channel.Name)
+	}
+
+	// 3. Delete extra embeds (if existingEmbeds > embeds)
+	for i := commonLen; i < len(existingEmbeds); i++ {
+		if err := dcSession.ChannelMessageDelete(channel.ID, existingEmbeds[i].MessageID); err != nil {
+			b.log.Warnf("Failed to delete old embed %d (msg %s), falling back to fresh send: %v", i, existingEmbeds[i].MessageID, err)
+			return b.sendFreshMessages(guild, channel, sum, dcSession, embeds)
+		}
+		b.summaryTrackerSrv.DeleteMessage(ctx, existingEmbeds[i].ID)
+	}
+
+	b.log.Infof("Successfully updated summary in channel %s (edited %d, added %d, deleted %d embeds)",
+		channel.ID, commonLen, max(0, len(embeds)-commonLen), max(0, len(existingEmbeds)-commonLen))
+	return nil
+}
+
+func (b *Bot) sendFreshMessages(guild *guild.Guild, channel *discord.Channel, sum *summary.Summary, dcSession *discordgo.Session, embeds []*discordgo.MessageEmbed) error {
+	ctx := context.Background()
+
+	b.log.Infof("Sending fresh messages to channel %s (clean slate)", channel.ID)
+
+	if err := b.CleanChannel(guild, channel); err != nil {
+		return err
+	}
+
+	b.summaryTrackerSrv.DeleteAllForChannel(ctx, guild.ID, channel.ID)
+
+	if sum.PreMessage != "" {
+		msg, err := dcSession.ChannelMessageSend(channel.ID, sum.PreMessage)
+		if err != nil {
+			b.log.Errorf("failed to send pre-message: %s", err)
+			return err
+		}
+		b.summaryTrackerSrv.TrackMessage(ctx, guild.ID, channel.ID, msg.ID, "pre_message", 0)
+		b.metrics.IncMessagesSent(channel.ID, channel.Name)
+	}
+
+	for order, embed := range embeds {
+		msg, err := dcSession.ChannelMessageSendEmbed(channel.ID, embed)
+		if err != nil {
+			b.log.Errorf("failed to send embed: %s", err)
+			return err
+		}
+		b.summaryTrackerSrv.TrackMessage(ctx, guild.ID, channel.ID, msg.ID, "embed", order)
+		b.metrics.IncMessagesSent(channel.ID, channel.Name)
+	}
+
+	return nil
 }

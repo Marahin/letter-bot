@@ -840,3 +840,31 @@ CREATE TABLE public.guilds_world (
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+CREATE TABLE public.summary_messages (
+    id bigint NOT NULL,
+    guild_id character varying(255) NOT NULL,
+    channel_id character varying(255) NOT NULL,
+    message_id character varying(255) NOT NULL,
+    message_type character varying(50) NOT NULL,
+    message_order integer NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE SEQUENCE public.summary_messages_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+ALTER SEQUENCE public.summary_messages_id_seq OWNED BY public.summary_messages.id;
+
+ALTER TABLE ONLY public.summary_messages ALTER COLUMN id SET DEFAULT nextval('public.summary_messages_id_seq'::regclass);
+
+ALTER TABLE ONLY public.summary_messages ADD CONSTRAINT summary_messages_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.summary_messages ADD CONSTRAINT summary_messages_guild_channel_type_order_uniq UNIQUE (guild_id, channel_id, message_type, message_order);
+
+CREATE INDEX summary_messages_guild_id_idx ON public.summary_messages USING btree (guild_id);

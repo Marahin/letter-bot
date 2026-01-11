@@ -22,7 +22,7 @@ func TestAdapter_SendGuildSummary(t *testing.T) {
 	memberOperations := mocks.NewMockMemberRepository(t)
 	botOperations := mocks.NewMockBotPort(t)
 	botOperations.On("FindChannelByName", guild, discord.SummaryChannel).Return(summaryCh, nil).Once()
-	botOperations.On("SendLetterMessage", guild, summaryCh, summary).Return(nil).Once()
+	botOperations.On("SendLetterMessageGuildChannel", guild, summaryCh, summary).Return(nil).Once()
 	adapter := NewAdapter(botOperations, memberOperations)
 
 	// when
@@ -36,7 +36,6 @@ func TestAdapter_SendGuildSummary(t *testing.T) {
 func TestAdapter_SendPrivateSummary(t *testing.T) {
 	// given
 	assert := assert.New(t)
-	var nilptrGuild *guild.Guild
 	dmChannel := &discord.Channel{}
 	request := summary.PrivateSummaryRequest{
 		UserID: 123,
@@ -44,7 +43,7 @@ func TestAdapter_SendPrivateSummary(t *testing.T) {
 	summary := &summary.Summary{}
 	botOperations := mocks.NewMockBotPort(t)
 	botOperations.On("OpenDM", &member.Member{ID: strconv.FormatInt(request.UserID, 10)}).Return(dmChannel, nil).Once()
-	botOperations.On("SendLetterMessage", nilptrGuild, dmChannel, summary).Return(nil).Once()
+	botOperations.On("SendLetterMessageDM", dmChannel, summary).Return(nil).Once()
 	adapter := NewAdapter(botOperations, nil)
 
 	// when

@@ -38,6 +38,52 @@ func (_m *MockSummaryService) EXPECT() *MockSummaryService_Expecter {
 	return &MockSummaryService_Expecter{mock: &_m.Mock}
 }
 
+// BaseSummary provides a mock function for the type MockSummaryService
+func (_mock *MockSummaryService) BaseSummary() *summary.Summary {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for BaseSummary")
+	}
+
+	var r0 *summary.Summary
+	if returnFunc, ok := ret.Get(0).(func() *summary.Summary); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*summary.Summary)
+		}
+	}
+	return r0
+}
+
+// MockSummaryService_BaseSummary_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BaseSummary'
+type MockSummaryService_BaseSummary_Call struct {
+	*mock.Call
+}
+
+// BaseSummary is a helper method to define mock.On call
+func (_e *MockSummaryService_Expecter) BaseSummary() *MockSummaryService_BaseSummary_Call {
+	return &MockSummaryService_BaseSummary_Call{Call: _e.mock.On("BaseSummary")}
+}
+
+func (_c *MockSummaryService_BaseSummary_Call) Run(run func()) *MockSummaryService_BaseSummary_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockSummaryService_BaseSummary_Call) Return(summary1 *summary.Summary) *MockSummaryService_BaseSummary_Call {
+	_c.Call.Return(summary1)
+	return _c
+}
+
+func (_c *MockSummaryService_BaseSummary_Call) RunAndReturn(run func() *summary.Summary) *MockSummaryService_BaseSummary_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // PrepareSummary provides a mock function for the type MockSummaryService
 func (_mock *MockSummaryService) PrepareSummary(reservations []*reservation.ReservationWithSpot) (*summary.Summary, error) {
 	ret := _mock.Called(reservations)

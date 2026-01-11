@@ -13,6 +13,7 @@ import (
 	"spot-assistant/internal/core/communication"
 	"spot-assistant/internal/core/onlinecheck"
 	"spot-assistant/internal/core/summary"
+	"spot-assistant/internal/core/summarytracker"
 
 	"spot-assistant/internal/common/version"
 
@@ -26,6 +27,7 @@ import (
 	prommetrics "spot-assistant/internal/infrastructure/metrics/prometheus"
 	reservationRepository "spot-assistant/internal/infrastructure/reservation/postgresql/sqlc"
 	spotRepository "spot-assistant/internal/infrastructure/spot/postgresql/sqlc"
+	summaryTrackerRepository "spot-assistant/internal/infrastructure/summarytracker/postgresql/sqlc"
 	"spot-assistant/internal/infrastructure/worldapi"
 	worldNameRepository "spot-assistant/internal/infrastructure/worldname/postgresql/sqlc"
 )
@@ -63,6 +65,7 @@ func main() {
 	reservationRepo := reservationRepository.NewReservationRepository(db).WithLogger(log)
 	spotRepo := spotRepository.NewSpotRepository(db)
 	worldNameRepo := worldNameRepository.NewWorldNameRepository(db)
+	summaryTrackerRepo := summaryTrackerRepository.NewSummaryMessagesRepository(db)
 
 	// Online Checker
 	tibiaDataBaseURL := os.Getenv("TIBIA_WORLD_API_BASE_URL")
@@ -75,10 +78,12 @@ func main() {
 	// Summary
 	charter := chart.NewAdapter()
 	summaryService := summary.NewAdapter(charter, onlineChecker) // .WithLogger(log)
+	summaryTrackerService := summarytracker.NewService(summaryTrackerRepo)
 
 	// Discord
 	dcFormatter := formatter.NewFormatter()
 	botService := bot.NewManager(summaryService, reservationRepo, onlineChecker).WithFormatter(dcFormatter).WithLogger(log)
+	botService = botService.WithSummaryTracker(summaryTrackerService)
 	communicationService := communication.NewAdapter(botService, botService).WithLogger(log)
 
 	// Bot

@@ -90,6 +90,17 @@ type GuildsWorld struct {
 	UpdatedAt pgtype.Timestamptz
 }
 
+type SummaryMessage struct {
+	ID           int64
+	GuildID      string
+	ChannelID    string
+	MessageID    string
+	MessageType  string
+	MessageOrder int32
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+}
+
 type WebReservation struct {
 	ID              int64
 	Author          string

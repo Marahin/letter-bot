@@ -28,6 +28,7 @@ sqlc-diff:
 	@sqlc diff -f internal/infrastructure/reservation/postgresql/sqlc.yaml
 	@sqlc diff -f internal/infrastructure/spot/postgresql/sqlc.yaml
 	@sqlc diff -f internal/infrastructure/worldname/postgresql/sqlc.yaml
+	@sqlc diff -f internal/infrastructure/summarytracker/postgresql/sqlc.yaml
 
 migrations-validate:
 	@echo "INFO: Validating migrations"
@@ -80,12 +81,14 @@ sqlc-generate:
 	@sqlc generate -f internal/infrastructure/reservation/postgresql/sqlc.yaml
 	@sqlc generate -f internal/infrastructure/spot/postgresql/sqlc.yaml
 	@sqlc generate -f internal/infrastructure/worldname/postgresql/sqlc.yaml
+	@sqlc generate -f internal/infrastructure/summarytracker/postgresql/sqlc.yaml
 
 sqlc-vet:
 	@echo "INFO: Running sqlc vet"
 	@sqlc vet -f internal/infrastructure/reservation/postgresql/sqlc.yaml
 	@sqlc vet -f internal/infrastructure/spot/postgresql/sqlc.yaml
 	@sqlc vet -f internal/infrastructure/worldname/postgresql/sqlc.yaml
+	@sqlc vet -f internal/infrastructure/summarytracker/postgresql/sqlc.yaml
 
 build: install-dependencies sqlc-generate test
 	@make build-only

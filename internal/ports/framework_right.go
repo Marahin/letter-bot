@@ -50,9 +50,11 @@ type BotPort interface {
 	// FindChannelByName finds a channel by name in a given guild.
 	FindChannelByName(g *guild.Guild, channelName string) (*discord.Channel, error)
 
-	// SendLetterMessage sends a message to a guild channel
-	// or a DM if guild is empty.
-	SendLetterMessage(g *guild.Guild, ch *discord.Channel, sum *summary.Summary) error
+	// SendLetterMessageGuildChannel sends a message to a guild channel
+	SendLetterMessageGuildChannel(g *guild.Guild, ch *discord.Channel, sum *summary.Summary) error
+
+	// SendLetterMessageDM sends a message to a DM channel
+	SendLetterMessageDM(ch *discord.Channel, sum *summary.Summary) error
 
 	// SendDMOverbookedNotification sends a DM to a member about overbooking.
 	SendDMOverbookedNotification(member *member.Member, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) error

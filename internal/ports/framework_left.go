@@ -1,12 +1,15 @@
 package ports
 
 import (
+	"context"
+	"time"
+
 	"spot-assistant/internal/core/dto/book"
 	"spot-assistant/internal/core/dto/guild"
 	"spot-assistant/internal/core/dto/member"
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/summary"
-	"time"
+	"spot-assistant/internal/core/summarytracker"
 )
 
 type APIPort interface {
@@ -30,6 +33,15 @@ type CommunicationService interface {
 
 type SummaryService interface {
 	PrepareSummary(reservations []*reservation.ReservationWithSpot) (*summary.Summary, error)
+	BaseSummary() *summary.Summary
+}
+
+type SummaryTrackerService interface {
+	GetTrackedMessages(ctx context.Context, guildID, channelID string) ([]*summarytracker.TrackedMessage, error)
+	TrackMessage(ctx context.Context, guildID, channelID, messageID string, messageType summarytracker.MessageType, messageOrder int) error
+	DeleteMessage(ctx context.Context, id int64) error
+	DeleteAllForChannel(ctx context.Context, guildID, channelID string) error
+	UpdateTimestamp(ctx context.Context, id int64) error
 }
 
 type BookingService interface {

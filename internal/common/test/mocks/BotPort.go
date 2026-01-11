@@ -279,12 +279,69 @@ func (_c *MockBotPort_SendDMOverbookedNotification_Call) RunAndReturn(run func(m
 	return _c
 }
 
-// SendLetterMessage provides a mock function for the type MockBotPort
-func (_mock *MockBotPort) SendLetterMessage(g *guild.Guild, ch *discord.Channel, sum *summary.Summary) error {
+// SendLetterMessageDM provides a mock function for the type MockBotPort
+func (_mock *MockBotPort) SendLetterMessageDM(ch *discord.Channel, sum *summary.Summary) error {
+	ret := _mock.Called(ch, sum)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SendLetterMessageDM")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(*discord.Channel, *summary.Summary) error); ok {
+		r0 = returnFunc(ch, sum)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockBotPort_SendLetterMessageDM_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SendLetterMessageDM'
+type MockBotPort_SendLetterMessageDM_Call struct {
+	*mock.Call
+}
+
+// SendLetterMessageDM is a helper method to define mock.On call
+//   - ch *discord.Channel
+//   - sum *summary.Summary
+func (_e *MockBotPort_Expecter) SendLetterMessageDM(ch interface{}, sum interface{}) *MockBotPort_SendLetterMessageDM_Call {
+	return &MockBotPort_SendLetterMessageDM_Call{Call: _e.mock.On("SendLetterMessageDM", ch, sum)}
+}
+
+func (_c *MockBotPort_SendLetterMessageDM_Call) Run(run func(ch *discord.Channel, sum *summary.Summary)) *MockBotPort_SendLetterMessageDM_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *discord.Channel
+		if args[0] != nil {
+			arg0 = args[0].(*discord.Channel)
+		}
+		var arg1 *summary.Summary
+		if args[1] != nil {
+			arg1 = args[1].(*summary.Summary)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockBotPort_SendLetterMessageDM_Call) Return(err error) *MockBotPort_SendLetterMessageDM_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockBotPort_SendLetterMessageDM_Call) RunAndReturn(run func(ch *discord.Channel, sum *summary.Summary) error) *MockBotPort_SendLetterMessageDM_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SendLetterMessageGuildChannel provides a mock function for the type MockBotPort
+func (_mock *MockBotPort) SendLetterMessageGuildChannel(g *guild.Guild, ch *discord.Channel, sum *summary.Summary) error {
 	ret := _mock.Called(g, ch, sum)
 
 	if len(ret) == 0 {
-		panic("no return value specified for SendLetterMessage")
+		panic("no return value specified for SendLetterMessageGuildChannel")
 	}
 
 	var r0 error
@@ -296,20 +353,20 @@ func (_mock *MockBotPort) SendLetterMessage(g *guild.Guild, ch *discord.Channel,
 	return r0
 }
 
-// MockBotPort_SendLetterMessage_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SendLetterMessage'
-type MockBotPort_SendLetterMessage_Call struct {
+// MockBotPort_SendLetterMessageGuildChannel_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SendLetterMessageGuildChannel'
+type MockBotPort_SendLetterMessageGuildChannel_Call struct {
 	*mock.Call
 }
 
-// SendLetterMessage is a helper method to define mock.On call
+// SendLetterMessageGuildChannel is a helper method to define mock.On call
 //   - g *guild.Guild
 //   - ch *discord.Channel
 //   - sum *summary.Summary
-func (_e *MockBotPort_Expecter) SendLetterMessage(g interface{}, ch interface{}, sum interface{}) *MockBotPort_SendLetterMessage_Call {
-	return &MockBotPort_SendLetterMessage_Call{Call: _e.mock.On("SendLetterMessage", g, ch, sum)}
+func (_e *MockBotPort_Expecter) SendLetterMessageGuildChannel(g interface{}, ch interface{}, sum interface{}) *MockBotPort_SendLetterMessageGuildChannel_Call {
+	return &MockBotPort_SendLetterMessageGuildChannel_Call{Call: _e.mock.On("SendLetterMessageGuildChannel", g, ch, sum)}
 }
 
-func (_c *MockBotPort_SendLetterMessage_Call) Run(run func(g *guild.Guild, ch *discord.Channel, sum *summary.Summary)) *MockBotPort_SendLetterMessage_Call {
+func (_c *MockBotPort_SendLetterMessageGuildChannel_Call) Run(run func(g *guild.Guild, ch *discord.Channel, sum *summary.Summary)) *MockBotPort_SendLetterMessageGuildChannel_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 *guild.Guild
 		if args[0] != nil {
@@ -332,12 +389,12 @@ func (_c *MockBotPort_SendLetterMessage_Call) Run(run func(g *guild.Guild, ch *d
 	return _c
 }
 
-func (_c *MockBotPort_SendLetterMessage_Call) Return(err error) *MockBotPort_SendLetterMessage_Call {
+func (_c *MockBotPort_SendLetterMessageGuildChannel_Call) Return(err error) *MockBotPort_SendLetterMessageGuildChannel_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *MockBotPort_SendLetterMessage_Call) RunAndReturn(run func(g *guild.Guild, ch *discord.Channel, sum *summary.Summary) error) *MockBotPort_SendLetterMessage_Call {
+func (_c *MockBotPort_SendLetterMessageGuildChannel_Call) RunAndReturn(run func(g *guild.Guild, ch *discord.Channel, sum *summary.Summary) error) *MockBotPort_SendLetterMessageGuildChannel_Call {
 	_c.Call.Return(run)
 	return _c
 }

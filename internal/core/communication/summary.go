@@ -20,7 +20,7 @@ func (a *Adapter) SendGuildSummary(guild *guild.Guild, summary *summary.Summary)
 		return err
 	}
 
-	return a.bot.SendLetterMessage(guild, summaryChannel, summary)
+	return a.bot.SendLetterMessageGuildChannel(guild, summaryChannel, summary)
 }
 
 func (a *Adapter) SendPrivateSummary(request summary.PrivateSummaryRequest, summary *summary.Summary) error {
@@ -29,5 +29,5 @@ func (a *Adapter) SendPrivateSummary(request summary.PrivateSummaryRequest, summ
 		return err
 	}
 
-	return a.bot.SendLetterMessage(nil, dmChannel, summary)
+	return a.bot.SendLetterMessageDM(dmChannel, summary)
 }

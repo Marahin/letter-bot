@@ -26,6 +26,7 @@ type cfg struct {
 
 type Bot struct {
 	summarySrv         ports.SummaryService
+	summaryTrackerSrv  ports.SummaryTrackerService
 	reservationRepo    ports.ReservationRepository
 	onlineCheckService ports.OnlineCheckService
 	eventHandler       ports.APIPort
@@ -94,6 +95,12 @@ func (b *Bot) WithEventHandler(port ports.APIPort) ports.BotPort {
 func (b *Bot) WithLogger(log *zap.SugaredLogger) *Bot {
 	b.log = log.With("layer", "infrastructure", "name", "bot")
 
+	return b
+}
+
+// WithSummaryTracker sets the summary tracker service
+func (b *Bot) WithSummaryTracker(srv ports.SummaryTrackerService) *Bot {
+	b.summaryTrackerSrv = srv
 	return b
 }
 
