@@ -73,4 +73,9 @@ where end_at >= now()
   AND lower(web_spot.name) = lower($2);
 -- name: DeleteReservation :exec
 DELETE FROM web_reservation
-WHERE web_reservation.id = $1;
+WHERE id = $1;
+-- name: UpdateReservation :exec
+UPDATE web_reservation
+SET start_at = @start_at,
+  end_at = @end_at
+WHERE id = @id;

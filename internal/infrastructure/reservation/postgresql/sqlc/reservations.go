@@ -226,6 +226,26 @@ func (t *ReservationRepository) DeletePresentMemberReservation(ctx context.Conte
 	return nil
 }
 
+func (t *ReservationRepository) UpdateReservation(ctx context.Context, id int64, startAt time.Time, endAt time.Time) error {
+	startAtInput := pgtype.Timestamptz{}
+	err := startAtInput.Scan(startAt)
+	if err != nil {
+		return err
+	}
+
+	endAtInput := pgtype.Timestamptz{}
+	err = endAtInput.Scan(endAt)
+	if err != nil {
+		return err
+	}
+
+	return t.q.UpdateReservation(ctx, UpdateReservationParams{
+		StartAt: startAtInput,
+		EndAt:   endAtInput,
+		ID:      id,
+	})
+}
+
 // createOverbookedLeftovers creates up to two reservations from overbooked reservation leftovers.
 // If overbooked reservation starts before new reservation, a reservation is created from overbooked reservation start time till new reservation start time.
 // If overbooked reservation ends after new reservation, a reservation is created from new reservation end time till overbooked reservation end time.
