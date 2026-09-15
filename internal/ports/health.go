@@ -11,6 +11,8 @@ type HealthPort interface {
 // RuntimeStatus exposes minimal runtime status used for liveness.
 type RuntimeStatus interface {
 	IsRunning() bool
+	// GatewayHealthy returns an error when the Discord gateway is frozen.
+	GatewayHealthy() error
 }
 
 // DBPinger abstracts a minimal database Ping method used for readiness.

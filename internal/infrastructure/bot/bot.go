@@ -8,6 +8,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/kelseyhightower/envconfig"
@@ -18,6 +19,42 @@ import (
 	"spot-assistant/internal/infrastructure/bot/formatter"
 	"spot-assistant/internal/ports"
 )
+
+const (
+	shardConnectAttempts = 5
+	shardBackoffBase     = 2 * time.Second
+	shardBackoffCap      = 30 * time.Second
+)
+
+// newShardManager is a seam so tests can stub shards.New.
+var newShardManager = func(token string) (*shards.Manager, error) {
+	return shards.New(token)
+}
+
+func shardBackoff(attempt int) time.Duration {
+	delay := shardBackoffBase << attempt
+	if delay > shardBackoffCap || delay <= 0 {
+		return shardBackoffCap
+	}
+	return delay
+}
+
+// connectManager retries create with backoff, sleeping between attempts only.
+// It returns the last error after exhausting attempts.
+func connectManager(create func(string) (*shards.Manager, error), token string, attempts int, delay func(attempt int) time.Duration) (*shards.Manager, error) {
+	var err error
+	for attempt := 0; attempt < attempts; attempt++ {
+		var mgr *shards.Manager
+		mgr, err = create(token)
+		if err == nil {
+			return mgr, nil
+		}
+		if attempt < attempts-1 {
+			time.Sleep(delay(attempt))
+		}
+	}
+	return nil, err
+}
 
 type cfg struct {
 	Token           string
@@ -48,9 +85,9 @@ func init() {
 }
 
 func NewManager(summarySrv ports.SummaryService, reservationRepo ports.ReservationRepository, checkOnlineSrv ports.OnlineCheckService) *Bot {
-	mgr, err := shards.New("Bot " + Config.Token)
+	mgr, err := connectManager(newShardManager, "Bot "+Config.Token, shardConnectAttempts, shardBackoff)
 	if err != nil {
-		panic(fmt.Errorf("could not create shards manager, %w", err))
+		panic(fmt.Errorf("could not create shards manager after %d attempts: %w", shardConnectAttempts, err))
 	}
 
 	mgr.Intent = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages | discordgo.IntentsGuildVoiceStates

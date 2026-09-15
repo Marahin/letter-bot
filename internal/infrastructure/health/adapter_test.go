@@ -20,12 +20,21 @@ func TestLive_ReflectsRuntimeStatus(t *testing.T) {
 	// then
 	assert.Error(t, err)
 
-	// when: running
+	// when: running, gateway healthy
 	rt.ExpectedCalls = nil // reset expectations for next call
 	rt.On("IsRunning").Return(true)
+	rt.On("GatewayHealthy").Return(nil)
 	err = adapter.Live()
 	// then
 	assert.NoError(t, err)
+
+	// when: running, gateway frozen
+	rt.ExpectedCalls = nil
+	rt.On("IsRunning").Return(true)
+	rt.On("GatewayHealthy").Return(errors.New("gateway heartbeat ack is 123s stale"))
+	err = adapter.Live()
+	// then
+	assert.Error(t, err)
 }
 
 func TestReady_ChecksDBAndRuntime(t *testing.T) {
@@ -37,6 +46,7 @@ func TestReady_ChecksDBAndRuntime(t *testing.T) {
 	// when: db ok, runtime ok
 	db.On("Ping", mock.Anything).Return(nil)
 	rt.On("IsRunning").Return(true)
+	rt.On("GatewayHealthy").Return(nil)
 	err := adapter.Ready()
 	// then
 	assert.NoError(t, err)
@@ -45,7 +55,6 @@ func TestReady_ChecksDBAndRuntime(t *testing.T) {
 	db.ExpectedCalls = nil
 	rt.ExpectedCalls = nil
 	db.On("Ping", mock.Anything).Return(errors.New("db down"))
-	rt.On("IsRunning").Return(true)
 	err = adapter.Ready()
 	// then
 	assert.Error(t, err)
@@ -55,6 +64,16 @@ func TestReady_ChecksDBAndRuntime(t *testing.T) {
 	rt.ExpectedCalls = nil
 	db.On("Ping", mock.Anything).Return(nil)
 	rt.On("IsRunning").Return(false)
+	err = adapter.Ready()
+	// then
+	assert.Error(t, err)
+
+	// when: db ok, runtime running, gateway frozen
+	db.ExpectedCalls = nil
+	rt.ExpectedCalls = nil
+	db.On("Ping", mock.Anything).Return(nil)
+	rt.On("IsRunning").Return(true)
+	rt.On("GatewayHealthy").Return(errors.New("gateway heartbeat ack is 123s stale"))
 	err = adapter.Ready()
 	// then
 	assert.Error(t, err)

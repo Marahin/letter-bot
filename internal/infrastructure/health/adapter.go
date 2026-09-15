@@ -30,6 +30,9 @@ func (a *Adapter) Live() error {
 	if a.runtime == nil || !a.runtime.IsRunning() {
 		return fmt.Errorf("bot not running")
 	}
+	if err := a.runtime.GatewayHealthy(); err != nil {
+		return err
+	}
 	return nil
 }
 
