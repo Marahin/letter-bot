@@ -35,6 +35,50 @@ func (_m *MockRuntimeStatus) EXPECT() *MockRuntimeStatus_Expecter {
 	return &MockRuntimeStatus_Expecter{mock: &_m.Mock}
 }
 
+// GatewayHealthy provides a mock function for the type MockRuntimeStatus
+func (_mock *MockRuntimeStatus) GatewayHealthy() error {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GatewayHealthy")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func() error); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockRuntimeStatus_GatewayHealthy_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GatewayHealthy'
+type MockRuntimeStatus_GatewayHealthy_Call struct {
+	*mock.Call
+}
+
+// GatewayHealthy is a helper method to define mock.On call
+func (_e *MockRuntimeStatus_Expecter) GatewayHealthy() *MockRuntimeStatus_GatewayHealthy_Call {
+	return &MockRuntimeStatus_GatewayHealthy_Call{Call: _e.mock.On("GatewayHealthy")}
+}
+
+func (_c *MockRuntimeStatus_GatewayHealthy_Call) Run(run func()) *MockRuntimeStatus_GatewayHealthy_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockRuntimeStatus_GatewayHealthy_Call) Return(err error) *MockRuntimeStatus_GatewayHealthy_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockRuntimeStatus_GatewayHealthy_Call) RunAndReturn(run func() error) *MockRuntimeStatus_GatewayHealthy_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // IsRunning provides a mock function for the type MockRuntimeStatus
 func (_mock *MockRuntimeStatus) IsRunning() bool {
 	ret := _mock.Called()
