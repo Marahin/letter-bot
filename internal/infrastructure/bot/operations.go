@@ -17,6 +17,7 @@ import (
 	"spot-assistant/internal/core/dto/book"
 	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/guild"
+	"spot-assistant/internal/core/dto/guildconfig"
 	"spot-assistant/internal/core/dto/member"
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/role"
@@ -90,42 +91,15 @@ func (b *Bot) CleanChannel(g *guild.Guild, channel *discord.Channel) error {
 	return nil
 }
 
-func (b *Bot) EnsureChannel(guild *guild.Guild) error {
-	letterSummaryChannelFound := false
-	letterChannelFound := false
-
-	g, err := b.mgr.Gateway.Guild(guild.ID)
-	if err != nil {
-
-		return err
-	}
-
-	channels, err := b.mgr.Gateway.GuildChannels(g.ID)
+// EnsureChannel creates the legacy channels that the guild settings leave empty and that do not exist.
+func (b *Bot) EnsureChannel(guild *guild.Guild, cfg *guildconfig.Config) error {
+	channels, err := b.mgr.Gateway.GuildChannels(guild.ID)
 	if err != nil {
 		return err
 	}
 
-	for _, ch := range channels {
-		if ch.Name == discord.SummaryChannel {
-			letterSummaryChannelFound = true
-		}
-
-		if ch.Name == discord.CommandChannel {
-			letterChannelFound = true
-		}
-	}
-
-	if !letterSummaryChannelFound {
-		_, err := b.mgr.Gateway.GuildChannelCreate(g.ID, discord.SummaryChannel, discordgo.ChannelTypeGuildText)
-		if err != nil {
-			return err
-		}
-	}
-
-	if !letterChannelFound {
-		_, err := b.mgr.Gateway.GuildChannelCreate(g.ID, discord.CommandChannel, discordgo.ChannelTypeGuildText)
-		if err != nil {
-
+	for _, name := range legacyChannelsToCreate(cfg, channels) {
+		if _, err := b.mgr.Gateway.GuildChannelCreate(guild.ID, name, discordgo.ChannelTypeGuildText); err != nil {
 			return err
 		}
 	}
@@ -198,12 +172,12 @@ func (b *Bot) GetGuilds() []*guild.Guild {
 		for _, poorGuild := range shard.Session.State.Guilds {
 			guild, err := shard.Session.Guild(poorGuild.ID)
 			if err != nil {
-				b.log.With("guild.ID", guild.ID).Errorf("could not download guild data: %s", err)
+				b.log.With("guild.ID", poorGuild.ID).Errorf("could not download guild data: %s", err)
 
 				continue
 			}
 
-			guilds = append(guilds, shard.Session.State.Guilds...)
+			guilds = append(guilds, guild)
 		}
 	}
 
@@ -227,7 +201,20 @@ func (b *Bot) TryUpdateGuildLetter(guild *guild.Guild) {
 }
 
 func (b *Bot) UpdateGuildLetter(guild *guild.Guild) error {
-	summaryChannel, err := b.FindChannelByName(guild, discord.SummaryChannel)
+	cfg, err := b.guildConfig(context.Background(), guild.ID)
+	if err != nil {
+		return err
+	}
+
+	return b.updateGuildLetter(guild, cfg)
+}
+
+func (b *Bot) updateGuildLetter(guild *guild.Guild, cfg *guildconfig.Config) error {
+	if !cfg.IsPremium() {
+		return nil
+	}
+
+	summaryChannel, err := b.summaryChannel(guild, cfg)
 	if err != nil {
 		return err
 	}

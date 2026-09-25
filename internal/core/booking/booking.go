@@ -19,10 +19,10 @@ import (
 
 var HourRegex = regexp.MustCompile(`(\d{2}:\d{2})`)
 
-// FindAvailableSpots returns a list of spot names matching the given filter.
+// FindAvailableSpots returns the names of the active guild spots matching the given filter.
 // If the filter is empty, it returns a default list of spots (e.g., top 15).
-func (a *Adapter) FindAvailableSpots(filter string) ([]string, error) {
-	spots, err := a.spotRepo.SelectSpotsByNameCaseInsensitiveLike(context.Background(), strings.TrimSpace(filter))
+func (a *Adapter) FindAvailableSpots(guildID, filter string) ([]string, error) {
+	spots, err := a.spotRepo.SelectGuildSpotsLike(context.Background(), guildID, strings.TrimSpace(filter))
 	if err != nil {
 		return []string{}, fmt.Errorf("could not fetch spots matching your query: %w", err)
 	}
@@ -91,7 +91,7 @@ func (a *Adapter) Book(request book.BookRequest) ([]*reservation.ClippedOrRemove
 		"endAt", endAt,
 	).Info("booking request")
 
-	spot, err := a.spotRepo.SelectSpotByName(context.Background(), spotName)
+	spot, err := a.spotRepo.SelectGuildSpotByName(context.Background(), guild.ID, spotName)
 	if err != nil {
 		return nil, fmt.Errorf("could not find spot called %s: %w", spotName, err)
 	}
@@ -105,11 +105,11 @@ func (a *Adapter) Book(request book.BookRequest) ([]*reservation.ClippedOrRemove
 		return nil, fmt.Errorf("could not select upcoming member reservations: %w", err)
 	}
 
-	if err = validateHuntLengthForMultiFloorRespawns(spotName, upcomingAuthorReservations, startAt, endAt); err != nil {
+	if err = validateHuntLengthForMultiFloorRespawns(spot.Name, upcomingAuthorReservations, startAt, endAt); err != nil {
 		return nil, err
 	}
 
-	conflictingReservations, err := a.reservationRepo.SelectOverlappingReservations(context.Background(), spotName, startAt, endAt, guild.ID)
+	conflictingReservations, err := a.reservationRepo.SelectOverlappingReservations(context.Background(), spot.ID, startAt, endAt, guild.ID)
 	if err != nil {
 		return nil, fmt.Errorf("could not select overlapping reservations: %w", err)
 	}

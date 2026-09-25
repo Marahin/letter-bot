@@ -1,9 +1,12 @@
 package bot
 
 import (
+	"context"
+	"errors"
 	"fmt"
 
 	"spot-assistant/internal/common/strings"
+	"spot-assistant/internal/core/dto/guildconfig"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -13,22 +16,30 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 	isAutocomplete := i.Type == discordgo.InteractionApplicationCommandAutocomplete
 	log := b.log.With("interaction_name", name, "isAutocomplete", isAutocomplete)
 
+	cfg, err := b.guildConfig(context.Background(), i.GuildID)
+	if err != nil {
+		log.Errorf("could not load guild config: %s", err)
+		if !isAutocomplete {
+			b.respondEphemeral(i, b.formatter.FormatGenericError(errors.New("could not load the server settings, please try again")))
+		}
+		return
+	}
+
 	if isAutocomplete {
-		if err := b.handleAutocomplete(i); err != nil {
+		if err := b.respondAutocomplete(i, cfg); err != nil {
 			log.Error(err)
 		}
 		return
 	}
 
+	if reply := commandGateReply(cfg, name, i.ChannelID, Config.WebBaseURL); reply != "" {
+		b.respondEphemeral(i, reply)
+		return
+	}
+
 	// metrics: count non-autocomplete slash command invocations
 	if b.metrics != nil {
-		var guildName string
-		if gID, convErr := strings.StrToInt64(i.GuildID); convErr == nil {
-			if g, err := b.GetGuild(gID); err == nil && g != nil {
-				guildName = g.Name
-			}
-		}
-		b.metrics.IncSlashCommand(i.GuildID, guildName, name)
+		b.metrics.IncSlashCommand(i.GuildID, b.guildName(i.GuildID), name)
 	}
 
 	// Send deferred response for slash commands
@@ -37,18 +48,12 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 		return
 	}
 
-	err := b.handleSlash(i)
+	err = b.handleSlash(i, cfg)
 
 	if err != nil {
 		log.Error(err)
 		if b.metrics != nil {
-			var guildName string
-			if gID, convErr := strings.StrToInt64(i.GuildID); convErr == nil {
-				if g, err := b.GetGuild(gID); err == nil && g != nil {
-					guildName = g.Name
-				}
-			}
-			b.metrics.IncCommandError(i.GuildID, guildName, name)
+			b.metrics.IncCommandError(i.GuildID, b.guildName(i.GuildID), name)
 		}
 		webhookParams := &discordgo.WebhookParams{Content: b.formatter.FormatGenericError(err)}
 		gID, convErr := strings.StrToInt64(i.GuildID)
@@ -63,12 +68,41 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 	}
 }
 
+func (b *Bot) guildName(guildID string) string {
+	gID, err := strings.StrToInt64(guildID)
+	if err != nil {
+		return ""
+	}
+	g, err := b.GetGuild(gID)
+	if err != nil || g == nil {
+		return ""
+	}
+	return g.Name
+}
+
+func (b *Bot) respondAutocomplete(i *discordgo.InteractionCreate, cfg *guildconfig.Config) error {
+	if !cfg.IsPremium() {
+		return b.interactionRespond(i, &discordgo.InteractionResponseData{Choices: []*discordgo.ApplicationCommandOptionChoice{}}, discordgo.InteractionApplicationCommandAutocompleteResult)
+	}
+	return b.handleAutocomplete(i)
+}
+
 // duplicate helpers removed
 
-func (b *Bot) handleSlash(i *discordgo.InteractionCreate) error {
+func (b *Bot) respondEphemeral(i *discordgo.InteractionCreate, content string) {
+	err := b.interactionRespond(i, &discordgo.InteractionResponseData{
+		Content: content,
+		Flags:   discordgo.MessageFlagsEphemeral,
+	}, discordgo.InteractionResponseChannelMessageWithSource)
+	if err != nil {
+		b.log.Errorf("could not send an ephemeral response: %s", err)
+	}
+}
+
+func (b *Bot) handleSlash(i *discordgo.InteractionCreate, cfg *guildconfig.Config) error {
 	switch i.ApplicationCommandData().Name {
 	case "book":
-		return b.Book(i)
+		return b.Book(i, cfg)
 	case "unbook":
 		return b.Unbook(i)
 	case "summary":

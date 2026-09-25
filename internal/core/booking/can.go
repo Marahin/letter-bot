@@ -1,6 +1,7 @@
 package booking
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -8,7 +9,9 @@ import (
 	"spot-assistant/internal/core/dto/reservation"
 )
 
-var ErrInsufficientPermissions = fmt.Errorf("there are conflicting reservations which prevented booking this reservation. If you would like to overbook them, ensure you have a @%s role, then repeat the command and set 'overbook' parameter to 'true'", discord.PrivilegedRole)
+var ErrInsufficientPermissions = fmt.Errorf("there are conflicting reservations which prevented booking this reservation. If you would like to overbook them, ensure you hold an overbook rank (or the @%s role), then repeat the command and set 'overbook' parameter to 'true'", discord.PrivilegedRole)
+
+var ErrReserveNotAllowed = errors.New("you do not hold a rank that is allowed to book respawns on this server")
 
 func canOverbook(attemptsToOverbook bool, hasPermissions bool, conflictingReservations []*reservation.Reservation) bool {
 	return (attemptsToOverbook && isPotentiallyAbandonedReservation(conflictingReservations)) ||

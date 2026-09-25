@@ -1,0 +1,74 @@
+package bot
+
+import (
+	"context"
+	"errors"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+
+	"spot-assistant/internal/common/test/mocks"
+	"spot-assistant/internal/core/dto/book"
+	"spot-assistant/internal/core/dto/guild"
+	"spot-assistant/internal/core/dto/member"
+	"spot-assistant/internal/core/dto/reservation"
+	notify "spot-assistant/internal/infrastructure/notify/postgresql"
+)
+
+func TestNotifyHandler_ForwardsGuildSignals(t *testing.T) {
+	// given
+	guilds := mocks.NewMockGuildActions(t)
+	h := NewNotifyHandler(guilds, mocks.NewMockCommunicationService(t))
+	ctx := context.Background()
+	guilds.On("RefreshGuildLetter", "g1").Once()
+	guilds.On("SyncGuild", ctx, "g2").Return(nil).Once()
+	guilds.On("SyncGuild", ctx, "g3").Return(errors.New("missing access")).Once()
+	guilds.On("ApplyGuildConfig", ctx, "g4").Once()
+
+	// when
+	h.OnSummaryRefresh(ctx, "g1")
+	h.OnGuildResync(ctx, "g2")
+	h.OnGuildResync(ctx, "g3")
+	h.OnGuildConfig(ctx, "g4")
+
+	// then: expectations are asserted on cleanup
+}
+
+func TestNotifyHandler_OnOverbooked(t *testing.T) {
+	// given
+	comm := mocks.NewMockCommunicationService(t)
+	h := NewNotifyHandler(mocks.NewMockGuildActions(t), comm)
+	start := time.Date(2026, 9, 26, 20, 0, 0, 0, time.UTC)
+	request := book.BookRequest{
+		Guild:   &guild.Guild{ID: "g1"},
+		Member:  &member.Member{ID: "m1", Nick: "Knight", Username: "knight"},
+		Spot:    "Hero Cave",
+		StartAt: start,
+		EndAt:   start.Add(time.Hour),
+	}
+	res := &reservation.ClippedOrRemovedReservation{
+		Original: &reservation.Reservation{ID: 7, AuthorDiscordID: "m2", StartAt: start, EndAt: start.Add(2 * time.Hour)},
+	}
+	payload, err := notify.NewOverbookedPayload(request, res).Encode()
+	assert.NoError(t, err)
+	comm.On("NotifyOverbookedMember", mock.MatchedBy(func(r book.BookRequest) bool {
+		return r.Guild.ID == "g1" && r.Member.ID == "m1" && r.Spot == "Hero Cave"
+	}), mock.MatchedBy(func(r *reservation.ClippedOrRemovedReservation) bool {
+		return r.Original.ID == 7 && r.Original.AuthorDiscordID == "m2"
+	})).Once()
+
+	// when
+	h.OnOverbooked(context.Background(), payload)
+
+	// then: expectations are asserted on cleanup
+}
+
+func TestNotifyHandler_OnOverbooked_IgnoresMalformedPayload(t *testing.T) {
+	// given
+	h := NewNotifyHandler(mocks.NewMockGuildActions(t), mocks.NewMockCommunicationService(t))
+
+	// when / then: the communication service is not called
+	h.OnOverbooked(context.Background(), []byte("{not json"))
+}

@@ -7,8 +7,6 @@ package sqlc
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const archiveSpot = `-- name: ArchiveSpot :execrows
@@ -155,41 +153,6 @@ func (q *Queries) RestoreSpot(ctx context.Context, arg RestoreSpotParams) (int64
 	return result.RowsAffected(), nil
 }
 
-const selectAllSpots = `-- name: SelectAllSpots :many
-SELECT
-    id,
-    name,
-    created_at
-FROM
-    web_spot
-`
-
-type SelectAllSpotsRow struct {
-	ID        int64
-	Name      string
-	CreatedAt pgtype.Timestamptz
-}
-
-func (q *Queries) SelectAllSpots(ctx context.Context) ([]SelectAllSpotsRow, error) {
-	rows, err := q.db.Query(ctx, selectAllSpots)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []SelectAllSpotsRow
-	for rows.Next() {
-		var i SelectAllSpotsRow
-		if err := rows.Scan(&i.ID, &i.Name, &i.CreatedAt); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const selectGuildSpotByID = `-- name: SelectGuildSpotByID :one
 SELECT id, name, created_at, guild_id, archived_at
 FROM web_spot
@@ -313,60 +276,6 @@ func (q *Queries) SelectGuildSpotsLike(ctx context.Context, arg SelectGuildSpots
 			&i.GuildID,
 			&i.ArchivedAt,
 		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const selectSpotByName = `-- name: SelectSpotByName :one
-SELECT id, name, created_at
-FROM web_spot
-WHERE lower(name) = lower($1)
-LIMIT 1
-`
-
-type SelectSpotByNameRow struct {
-	ID        int64
-	Name      string
-	CreatedAt pgtype.Timestamptz
-}
-
-func (q *Queries) SelectSpotByName(ctx context.Context, name string) (SelectSpotByNameRow, error) {
-	row := q.db.QueryRow(ctx, selectSpotByName, name)
-	var i SelectSpotByNameRow
-	err := row.Scan(&i.ID, &i.Name, &i.CreatedAt)
-	return i, err
-}
-
-const selectSpotsByNameCaseInsensitiveLike = `-- name: SelectSpotsByNameCaseInsensitiveLike :many
-SELECT id, name, created_at
-FROM web_spot
-WHERE lower(name) LIKE '%' || lower($1) || '%'
-ORDER BY name
-LIMIT 15
-`
-
-type SelectSpotsByNameCaseInsensitiveLikeRow struct {
-	ID        int64
-	Name      string
-	CreatedAt pgtype.Timestamptz
-}
-
-func (q *Queries) SelectSpotsByNameCaseInsensitiveLike(ctx context.Context, namePattern string) ([]SelectSpotsByNameCaseInsensitiveLikeRow, error) {
-	rows, err := q.db.Query(ctx, selectSpotsByNameCaseInsensitiveLike, namePattern)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []SelectSpotsByNameCaseInsensitiveLikeRow
-	for rows.Next() {
-		var i SelectSpotsByNameCaseInsensitiveLikeRow
-		if err := rows.Scan(&i.ID, &i.Name, &i.CreatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

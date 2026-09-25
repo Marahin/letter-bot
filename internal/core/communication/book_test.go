@@ -34,7 +34,7 @@ func TestAdapter_NotifyOverbookedMember(t *testing.T) {
 	memberOperations.On("GetMemberByGuildAndId", guild, res.Original.AuthorDiscordID).Return(member, nil).Once()
 	botOperations := mocks.NewMockBotPort(t)
 	botOperations.On("SendDMOverbookedNotification", member, request, res).Return(nil).Once()
-	adapter := NewAdapter(botOperations, memberOperations)
+	adapter := NewAdapter(botOperations, memberOperations, mocks.NewMockGuildConfigRepository(t))
 
 	// when
 	adapter.NotifyOverbookedMember(request, res)

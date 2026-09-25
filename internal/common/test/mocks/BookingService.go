@@ -113,8 +113,8 @@ func (_c *MockBookingService_Book_Call) RunAndReturn(run func(request book.BookR
 }
 
 // FindAvailableSpots provides a mock function for the type MockBookingService
-func (_mock *MockBookingService) FindAvailableSpots(filter string) ([]string, error) {
-	ret := _mock.Called(filter)
+func (_mock *MockBookingService) FindAvailableSpots(guildID string, filter string) ([]string, error) {
+	ret := _mock.Called(guildID, filter)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindAvailableSpots")
@@ -122,18 +122,18 @@ func (_mock *MockBookingService) FindAvailableSpots(filter string) ([]string, er
 
 	var r0 []string
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string) ([]string, error)); ok {
-		return returnFunc(filter)
+	if returnFunc, ok := ret.Get(0).(func(string, string) ([]string, error)); ok {
+		return returnFunc(guildID, filter)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string) []string); ok {
-		r0 = returnFunc(filter)
+	if returnFunc, ok := ret.Get(0).(func(string, string) []string); ok {
+		r0 = returnFunc(guildID, filter)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]string)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
-		r1 = returnFunc(filter)
+	if returnFunc, ok := ret.Get(1).(func(string, string) error); ok {
+		r1 = returnFunc(guildID, filter)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -146,19 +146,25 @@ type MockBookingService_FindAvailableSpots_Call struct {
 }
 
 // FindAvailableSpots is a helper method to define mock.On call
+//   - guildID string
 //   - filter string
-func (_e *MockBookingService_Expecter) FindAvailableSpots(filter any) *MockBookingService_FindAvailableSpots_Call {
-	return &MockBookingService_FindAvailableSpots_Call{Call: _e.mock.On("FindAvailableSpots", filter)}
+func (_e *MockBookingService_Expecter) FindAvailableSpots(guildID any, filter any) *MockBookingService_FindAvailableSpots_Call {
+	return &MockBookingService_FindAvailableSpots_Call{Call: _e.mock.On("FindAvailableSpots", guildID, filter)}
 }
 
-func (_c *MockBookingService_FindAvailableSpots_Call) Run(run func(filter string)) *MockBookingService_FindAvailableSpots_Call {
+func (_c *MockBookingService_FindAvailableSpots_Call) Run(run func(guildID string, filter string)) *MockBookingService_FindAvailableSpots_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
 			arg0 = args[0].(string)
 		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -169,7 +175,7 @@ func (_c *MockBookingService_FindAvailableSpots_Call) Return(strings []string, e
 	return _c
 }
 
-func (_c *MockBookingService_FindAvailableSpots_Call) RunAndReturn(run func(filter string) ([]string, error)) *MockBookingService_FindAvailableSpots_Call {
+func (_c *MockBookingService_FindAvailableSpots_Call) RunAndReturn(run func(guildID string, filter string) ([]string, error)) *MockBookingService_FindAvailableSpots_Call {
 	_c.Call.Return(run)
 	return _c
 }

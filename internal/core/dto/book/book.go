@@ -20,8 +20,9 @@ const (
 
 // Request for autocompletion during Booking process
 type BookAutocompleteRequest struct {
-	Field BookAutocompleteFocus
-	Value string
+	GuildID string
+	Field   BookAutocompleteFocus
+	Value   string
 }
 
 // Response for autocompletion during booking process

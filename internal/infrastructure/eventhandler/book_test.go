@@ -153,7 +153,7 @@ func TestHandler_OnBookAutocompleteSpotField(t *testing.T) {
 	// given
 	assert := assert.New(t)
 	bookingOperations := new(mocks.MockBookingService)
-	bookingOperations.On("FindAvailableSpots", "asdf").Return([]string{"spot1", "spot2"}, nil)
+	bookingOperations.On("FindAvailableSpots", "guild-1", "asdf").Return([]string{"spot1", "spot2"}, nil)
 	adapter := NewHandler(
 		bookingOperations,
 		mocks.NewMockReservationRepository(t),
@@ -161,8 +161,9 @@ func TestHandler_OnBookAutocompleteSpotField(t *testing.T) {
 		mocks.NewMockSummaryService(t),
 	)
 	request := book.BookAutocompleteRequest{
-		Field: book.BookAutocompleteSpot,
-		Value: "asdf",
+		GuildID: "guild-1",
+		Field:   book.BookAutocompleteSpot,
+		Value:   "asdf",
 	}
 
 	// when

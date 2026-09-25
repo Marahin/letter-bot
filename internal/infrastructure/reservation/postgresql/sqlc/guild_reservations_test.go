@@ -272,3 +272,24 @@ func TestSelectKnownAuthors_Error(t *testing.T) {
 	assert.Error(t, err)
 	assert.Empty(t, authors)
 }
+
+func TestSelectOverlappingReservations_FiltersBySpotID(t *testing.T) {
+	// given
+	mock := newReservationMock(t)
+	start := time.Date(2026, 9, 26, 20, 0, 0, 0, time.UTC)
+	end := start.Add(2 * time.Hour)
+	mock.ExpectQuery("AND web_reservation.spot_id = \\$3").
+		WithArgs(start, end, int64(2), "guild-1").
+		WillReturnRows(pgxmock.NewRows([]string{"id", "author", "author_discord_id", "start_at", "end_at", "guild_id"}).
+			AddRow(int64(7), "Other", "222", start, end, "guild-1"))
+	repo := NewReservationRepository(mock)
+
+	// when
+	res, err := repo.SelectOverlappingReservations(context.Background(), 2, start, end, "guild-1")
+
+	// then
+	require.NoError(t, err)
+	require.Len(t, res, 1)
+	assert.Equal(t, int64(7), res[0].ID)
+	assert.Equal(t, start, res[0].StartAt)
+}

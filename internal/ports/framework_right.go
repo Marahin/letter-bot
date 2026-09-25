@@ -23,7 +23,8 @@ type ReservationRepository interface {
 	FindReservationWithSpot(ctx context.Context, id int64, guildID, authorDiscordID string) (*reservation.ReservationWithSpot, error)
 	SelectUpcomingReservationsWithSpot(ctx context.Context, guildId string) ([]*reservation.ReservationWithSpot, error)
 	SelectUpcomingReservationsWithSpotForSpot(ctx context.Context, guildId, spotName string) ([]*reservation.ReservationWithSpot, error)
-	SelectOverlappingReservations(ctx context.Context, spot string, startAt time.Time, endAt time.Time, guildId string) ([]*reservation.Reservation, error)
+	// SelectOverlappingReservations returns the upcoming reservations of the spot that overlap [startAt, endAt].
+	SelectOverlappingReservations(ctx context.Context, spotID int64, startAt time.Time, endAt time.Time, guildId string) ([]*reservation.Reservation, error)
 	SelectUpcomingMemberReservationsWithSpots(ctx context.Context, guild *guild.Guild, member *member.Member) ([]*reservation.ReservationWithSpot, error)
 
 	// Creates a new reservation, and removes or shorten any existing conflicting reservations.
@@ -60,15 +61,6 @@ type ReservationRepository interface {
 }
 
 type SpotRepository interface {
-	// SelectAllSpots returns all spots.
-	SelectAllSpots(ctx context.Context) ([]*spot.Spot, error)
-
-	// SelectSpotByName returns a spot by name.
-	SelectSpotByName(ctx context.Context, name string) (*spot.Spot, error)
-
-	// SelectSpotsByNameCaseInsensitiveLike returns spots matching the name pattern.
-	SelectSpotsByNameCaseInsensitiveLike(ctx context.Context, namePattern string) ([]*spot.Spot, error)
-
 	// SelectGuildSpots returns the guild spots ordered by name.
 	SelectGuildSpots(ctx context.Context, guildID string, includeArchived bool) ([]*spot.Spot, error)
 
@@ -111,6 +103,9 @@ type BotPort interface {
 
 	// FindChannelByName finds a channel by name in a given guild.
 	FindChannelByName(g *guild.Guild, channelName string) (*discord.Channel, error)
+
+	// FindChannelById finds a channel by id in a given guild.
+	FindChannelById(g *guild.Guild, channelId string) (*discord.Channel, error)
 
 	// SendLetterMessage sends a message to a guild channel
 	// or a DM if guild is empty.

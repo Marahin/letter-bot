@@ -35,14 +35,13 @@ SELECT web_reservation.id,
   web_reservation.end_at,
   web_reservation.guild_id
 FROM web_reservation
-  INNER JOIN web_spot ON web_reservation.spot_id = web_spot.id
 WHERE web_reservation.end_at >= now()
   AND tstzrange(@start_at, @end_at, '[]') && tstzrange(
     web_reservation.start_at,
     web_reservation.end_at,
     '[]'
   )
-  AND lower(web_spot.name) = lower(@respawn)
+  AND web_reservation.spot_id = @spot_id
   AND web_reservation.guild_id = @guild_id;
 -- name: CreateReservation :one
 INSERT INTO web_reservation (

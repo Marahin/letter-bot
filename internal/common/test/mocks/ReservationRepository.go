@@ -711,8 +711,8 @@ func (_c *MockReservationRepository_SelectKnownAuthors_Call) RunAndReturn(run fu
 }
 
 // SelectOverlappingReservations provides a mock function for the type MockReservationRepository
-func (_mock *MockReservationRepository) SelectOverlappingReservations(ctx context.Context, spot string, startAt time.Time, endAt time.Time, guildId string) ([]*reservation.Reservation, error) {
-	ret := _mock.Called(ctx, spot, startAt, endAt, guildId)
+func (_mock *MockReservationRepository) SelectOverlappingReservations(ctx context.Context, spotID int64, startAt time.Time, endAt time.Time, guildId string) ([]*reservation.Reservation, error) {
+	ret := _mock.Called(ctx, spotID, startAt, endAt, guildId)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SelectOverlappingReservations")
@@ -720,18 +720,18 @@ func (_mock *MockReservationRepository) SelectOverlappingReservations(ctx contex
 
 	var r0 []*reservation.Reservation
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, time.Time, time.Time, string) ([]*reservation.Reservation, error)); ok {
-		return returnFunc(ctx, spot, startAt, endAt, guildId)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int64, time.Time, time.Time, string) ([]*reservation.Reservation, error)); ok {
+		return returnFunc(ctx, spotID, startAt, endAt, guildId)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, time.Time, time.Time, string) []*reservation.Reservation); ok {
-		r0 = returnFunc(ctx, spot, startAt, endAt, guildId)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int64, time.Time, time.Time, string) []*reservation.Reservation); ok {
+		r0 = returnFunc(ctx, spotID, startAt, endAt, guildId)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*reservation.Reservation)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, time.Time, time.Time, string) error); ok {
-		r1 = returnFunc(ctx, spot, startAt, endAt, guildId)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int64, time.Time, time.Time, string) error); ok {
+		r1 = returnFunc(ctx, spotID, startAt, endAt, guildId)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -745,23 +745,23 @@ type MockReservationRepository_SelectOverlappingReservations_Call struct {
 
 // SelectOverlappingReservations is a helper method to define mock.On call
 //   - ctx context.Context
-//   - spot string
+//   - spotID int64
 //   - startAt time.Time
 //   - endAt time.Time
 //   - guildId string
-func (_e *MockReservationRepository_Expecter) SelectOverlappingReservations(ctx any, spot any, startAt any, endAt any, guildId any) *MockReservationRepository_SelectOverlappingReservations_Call {
-	return &MockReservationRepository_SelectOverlappingReservations_Call{Call: _e.mock.On("SelectOverlappingReservations", ctx, spot, startAt, endAt, guildId)}
+func (_e *MockReservationRepository_Expecter) SelectOverlappingReservations(ctx any, spotID any, startAt any, endAt any, guildId any) *MockReservationRepository_SelectOverlappingReservations_Call {
+	return &MockReservationRepository_SelectOverlappingReservations_Call{Call: _e.mock.On("SelectOverlappingReservations", ctx, spotID, startAt, endAt, guildId)}
 }
 
-func (_c *MockReservationRepository_SelectOverlappingReservations_Call) Run(run func(ctx context.Context, spot string, startAt time.Time, endAt time.Time, guildId string)) *MockReservationRepository_SelectOverlappingReservations_Call {
+func (_c *MockReservationRepository_SelectOverlappingReservations_Call) Run(run func(ctx context.Context, spotID int64, startAt time.Time, endAt time.Time, guildId string)) *MockReservationRepository_SelectOverlappingReservations_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 int64
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(int64)
 		}
 		var arg2 time.Time
 		if args[2] != nil {
@@ -791,7 +791,7 @@ func (_c *MockReservationRepository_SelectOverlappingReservations_Call) Return(r
 	return _c
 }
 
-func (_c *MockReservationRepository_SelectOverlappingReservations_Call) RunAndReturn(run func(ctx context.Context, spot string, startAt time.Time, endAt time.Time, guildId string) ([]*reservation.Reservation, error)) *MockReservationRepository_SelectOverlappingReservations_Call {
+func (_c *MockReservationRepository_SelectOverlappingReservations_Call) RunAndReturn(run func(ctx context.Context, spotID int64, startAt time.Time, endAt time.Time, guildId string) ([]*reservation.Reservation, error)) *MockReservationRepository_SelectOverlappingReservations_Call {
 	_c.Call.Return(run)
 	return _c
 }

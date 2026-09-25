@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -10,10 +11,14 @@ import (
 
 	"spot-assistant/internal/common/collections"
 	stringsHelper "spot-assistant/internal/common/strings"
+	"spot-assistant/internal/core/booking"
 	"spot-assistant/internal/core/dto/book"
-	"spot-assistant/internal/core/dto/discord"
+	"spot-assistant/internal/core/dto/guild"
+	"spot-assistant/internal/core/dto/guildconfig"
 	"spot-assistant/internal/core/dto/summary"
+	"spot-assistant/internal/core/permission"
 	"spot-assistant/internal/core/worlds"
+	"spot-assistant/internal/ports"
 )
 
 /*
@@ -22,35 +27,93 @@ System events that are initialized by Discord.
 */
 
 func (b *Bot) GuildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
-	b.log.With("event", "GuildCreate", "guild_name", g.Name, "g.ID", g.ID).Info("guild created")
+	log := b.log.With("event", "GuildCreate", "guild_name", g.Name, "g.ID", g.ID)
+	log.Info("guild created")
 	guild := MapGuild(g.Guild)
-	// Register commands
-	err := b.RegisterCommands(guild)
+	ctx := context.Background()
+
+	cfg, err := b.guildConfigs.UpsertPresence(ctx, guild.ID, guild.Name, guild.Icon, guild.OwnerID)
 	if err != nil {
-		b.log.Errorf("could not overwrite commands: %s", err)
+		log.Errorf("could not store guild presence: %s", err)
+	}
+
+	err = b.RegisterCommands(guild)
+	if err != nil {
+		log.Errorf("could not overwrite commands: %s", err)
 
 		return
 	}
-	//
-	err = b.EnsureChannel(guild)
-	if err != nil {
-		b.log.Errorf("could not ensure channels: %s", err)
 
-		return
+	if err := b.syncer.Sync(ctx, guild.ID); err != nil {
+		log.Errorf("could not sync guild channels and roles: %s", err)
 	}
-	//
-	err = b.EnsureRoles(guild)
-	if err != nil {
-		b.log.Errorf("could not ensure roles: %s", err)
 
-		return
-	}
 	if err := b.onlineCheckService.ConfigureWorldNameForGuild(guild.ID); err != nil {
-		b.log.Errorf("ConfigureWorldNameForGuild failed for guild %s: %v", guild.ID, err)
+		log.Errorf("ConfigureWorldNameForGuild failed for guild %s: %v", guild.ID, err)
 	}
+
+	if cfg == nil || !cfg.IsPremium() {
+		log.Info("guild is not premium, the bot stays inactive")
+
+		return
+	}
+
+	if err := b.setupPremiumGuild(guild, cfg); err != nil {
+		log.Error(err)
+
+		return
+	}
+
 	go b.onlineCheckService.TryRefresh(guild.ID)
 	go b.TryUpdateGuildLetter(guild)
 	defer b.eventHandler.OnGuildCreate(MapGuild(g.Guild))
+}
+
+func (b *Bot) GuildUpdate(s *discordgo.Session, g *discordgo.GuildUpdate) {
+	if _, err := b.guildConfigs.UpsertPresence(context.Background(), g.ID, g.Name, g.Icon, g.OwnerID); err != nil {
+		b.log.With("event", "GuildUpdate", "g.ID", g.ID).Errorf("could not store guild presence: %s", err)
+	}
+}
+
+func (b *Bot) GuildDelete(s *discordgo.Session, g *discordgo.GuildDelete) {
+	// Unavailable means a Discord outage, not that the bot left the guild.
+	if g.Unavailable {
+		return
+	}
+	if err := b.guildConfigs.SetBotPresent(context.Background(), g.ID, false); err != nil && !errors.Is(err, ports.ErrNotFound) {
+		b.log.With("event", "GuildDelete", "g.ID", g.ID).Errorf("could not mark the bot absent: %s", err)
+	}
+}
+
+func (b *Bot) ChannelCreate(s *discordgo.Session, c *discordgo.ChannelCreate) {
+	b.scheduleSync(c.GuildID)
+}
+
+func (b *Bot) ChannelUpdate(s *discordgo.Session, c *discordgo.ChannelUpdate) {
+	b.scheduleSync(c.GuildID)
+}
+
+func (b *Bot) ChannelDelete(s *discordgo.Session, c *discordgo.ChannelDelete) {
+	b.scheduleSync(c.GuildID)
+}
+
+func (b *Bot) GuildRoleCreate(s *discordgo.Session, r *discordgo.GuildRoleCreate) {
+	b.scheduleSync(r.GuildID)
+}
+
+func (b *Bot) GuildRoleUpdate(s *discordgo.Session, r *discordgo.GuildRoleUpdate) {
+	b.scheduleSync(r.GuildID)
+}
+
+func (b *Bot) GuildRoleDelete(s *discordgo.Session, r *discordgo.GuildRoleDelete) {
+	b.scheduleSync(r.GuildID)
+}
+
+func (b *Bot) scheduleSync(guildID string) {
+	if guildID == "" {
+		return
+	}
+	b.syncer.Schedule(guildID)
 }
 
 func (b *Bot) Ready(s *discordgo.Session, r *discordgo.Ready) {
@@ -77,16 +140,44 @@ func (b *Bot) Tick() {
 	defer b.metrics.IncTicks()
 	defer b.eventHandler.OnTick()
 
+	ctx := context.Background()
 	b.log.Info("About to refresh online players")
 	guilds := b.GetGuilds()
+	ids := collections.PoorMansMap(guilds, func(g *guild.Guild) string { return g.ID })
+	cfgs, err := b.guildConfigsByID(ctx, ids)
+	if err != nil {
+		b.log.Errorf("could not load guild configs, skipping summaries: %s", err)
+	}
 	for _, guild := range guilds {
-		guild := guild
+		cfg, ok := cfgs[guild.ID]
+		if !ok || !cfg.IsPremium() {
+			continue
+		}
 		go b.onlineCheckService.TryRefresh(guild.ID)
-		go b.TryUpdateGuildLetter(guild)
+		go func() {
+			if err := b.updateGuildLetter(guild, cfg); err != nil {
+				b.log.Errorf("could not update guild letter: %s", err)
+			}
+		}()
+	}
+
+	b.processResyncRequests(ctx)
+}
+
+func (b *Bot) processResyncRequests(ctx context.Context) {
+	guildIDs, err := b.guildConfigs.ListResyncRequested(ctx)
+	if err != nil {
+		b.log.Errorf("could not list guild resync requests: %s", err)
+		return
+	}
+	for _, guildID := range guildIDs {
+		if err := b.syncer.Sync(ctx, guildID); err != nil {
+			b.log.With("guild.ID", guildID).Errorf("could not sync guild: %s", err)
+		}
 	}
 }
 
-func (b *Bot) Book(i *discordgo.InteractionCreate) error {
+func (b *Bot) Book(i *discordgo.InteractionCreate, cfg *guildconfig.Config) error {
 	b.log.Info("Book")
 	interaction := i.Interaction
 	tNow := time.Now()
@@ -147,13 +238,17 @@ func (b *Bot) Book(i *discordgo.InteractionCreate) error {
 	}
 
 	member := MapMember(i.Member)
+	caps := permission.Resolve(*cfg, memberSubject(guild, member))
+	if !caps.Reserve {
+		return booking.ErrReserveNotAllowed
+	}
 	request := book.BookRequest{
 		Member:         member,
 		Guild:          guild,
 		Spot:           i.ApplicationCommandData().Options[0].StringValue(),
 		StartAt:        startAt,
 		EndAt:          endAt,
-		HasPermissions: b.MemberHasRole(guild, member, discord.PrivilegedRole),
+		HasPermissions: caps.Overbook,
 		Overbook:       overbook,
 	}
 
@@ -188,8 +283,9 @@ func (b *Bot) BookAutocomplete(i *discordgo.InteractionCreate) error {
 	}
 
 	response, err := b.eventHandler.OnBookAutocomplete(book.BookAutocompleteRequest{
-		Field: book.BookAutocompleteFocus(index),
-		Value: selectedOption.StringValue(),
+		GuildID: i.GuildID,
+		Field:   book.BookAutocompleteFocus(index),
+		Value:   selectedOption.StringValue(),
 	})
 	if err != nil {
 		return err
@@ -316,8 +412,9 @@ func (b *Bot) SummaryAutocomplete(i *discordgo.InteractionCreate) error {
 	}
 
 	response, err := b.eventHandler.OnBookAutocomplete(book.BookAutocompleteRequest{
-		Field: book.BookAutocompleteSpot,
-		Value: spotFilter,
+		GuildID: i.GuildID,
+		Field:   book.BookAutocompleteSpot,
+		Value:   spotFilter,
 	})
 	if err != nil {
 		return err

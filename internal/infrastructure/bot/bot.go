@@ -21,6 +21,7 @@ import (
 )
 
 const (
+	summaryRefreshDelay  = 3 * time.Second
 	shardConnectAttempts = 5
 	shardBackoffBase     = 2 * time.Second
 	shardBackoffCap      = 30 * time.Second
@@ -59,12 +60,17 @@ func connectManager(create func(string) (*shards.Manager, error), token string, 
 type cfg struct {
 	Token           string
 	CharactersLimit int `default:"5000"`
+	// WebBaseURL is read from BOT_WEB_BASE_URL, else WEB_BASE_URL. It is optional.
+	WebBaseURL string `envconfig:"WEB_BASE_URL"`
 }
 
 type Bot struct {
 	summarySrv         ports.SummaryService
 	reservationRepo    ports.ReservationRepository
 	onlineCheckService ports.OnlineCheckService
+	guildConfigs       ports.GuildConfigRepository
+	syncer             *GuildSyncer
+	summaryRefresh     *debouncer
 	eventHandler       ports.APIPort
 	metrics            ports.MetricsPort
 	mgr                *shards.Manager
@@ -98,9 +104,18 @@ func NewManager(summarySrv ports.SummaryService, reservationRepo ports.Reservati
 		summarySrv:         summarySrv,
 		reservationRepo:    reservationRepo,
 		onlineCheckService: checkOnlineSrv,
+		summaryRefresh:     newDebouncer(summaryRefreshDelay),
 	}
 
 	bot.mgr.AddHandler(bot.GuildCreate)
+	bot.mgr.AddHandler(bot.GuildUpdate)
+	bot.mgr.AddHandler(bot.GuildDelete)
+	bot.mgr.AddHandler(bot.ChannelCreate)
+	bot.mgr.AddHandler(bot.ChannelUpdate)
+	bot.mgr.AddHandler(bot.ChannelDelete)
+	bot.mgr.AddHandler(bot.GuildRoleCreate)
+	bot.mgr.AddHandler(bot.GuildRoleUpdate)
+	bot.mgr.AddHandler(bot.GuildRoleDelete)
 	bot.mgr.AddHandler(bot.Ready)
 	bot.mgr.AddHandler(bot.InteractionCreate)
 
@@ -113,6 +128,16 @@ func (b *Bot) WithHttpClient(client *http.Client) {
 func (b *Bot) WithFormatter(formatter *formatter.DiscordFormatter) *Bot {
 	b.formatter = formatter
 
+	return b
+}
+
+// WithGuildRepositories sets the guild configuration store and the channel and role sync.
+func (b *Bot) WithGuildRepositories(configs ports.GuildConfigRepository, channels ports.GuildChannelRepository, roles ports.GuildRoleRepository) *Bot {
+	b.guildConfigs = configs
+	b.syncer = NewGuildSyncer(b.mgr.Gateway, channels, roles, configs)
+	if b.log != nil {
+		b.syncer.WithLogger(b.log)
+	}
 	return b
 }
 
@@ -130,6 +155,9 @@ func (b *Bot) WithEventHandler(port ports.APIPort) ports.BotPort {
 
 func (b *Bot) WithLogger(log *zap.SugaredLogger) *Bot {
 	b.log = log.With("layer", "infrastructure", "name", "bot")
+	if b.syncer != nil {
+		b.syncer.WithLogger(log)
+	}
 
 	return b
 }

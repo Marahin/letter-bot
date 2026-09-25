@@ -331,21 +331,20 @@ SELECT web_reservation.id,
   web_reservation.end_at,
   web_reservation.guild_id
 FROM web_reservation
-  INNER JOIN web_spot ON web_reservation.spot_id = web_spot.id
 WHERE web_reservation.end_at >= now()
   AND tstzrange($1, $2, '[]') && tstzrange(
     web_reservation.start_at,
     web_reservation.end_at,
     '[]'
   )
-  AND lower(web_spot.name) = lower($3)
+  AND web_reservation.spot_id = $3
   AND web_reservation.guild_id = $4
 `
 
 type SelectOverlappingReservationsParams struct {
 	StartAt interface{}
 	EndAt   interface{}
-	Respawn string
+	SpotID  int64
 	GuildID string
 }
 
@@ -362,7 +361,7 @@ func (q *Queries) SelectOverlappingReservations(ctx context.Context, arg SelectO
 	rows, err := q.db.Query(ctx, selectOverlappingReservations,
 		arg.StartAt,
 		arg.EndAt,
-		arg.Respawn,
+		arg.SpotID,
 		arg.GuildID,
 	)
 	if err != nil {

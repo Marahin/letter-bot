@@ -51,6 +51,74 @@ func (_m *MockBotPort) EXPECT() *MockBotPort_Expecter {
 	return &MockBotPort_Expecter{mock: &_m.Mock}
 }
 
+// FindChannelById provides a mock function for the type MockBotPort
+func (_mock *MockBotPort) FindChannelById(g *guild.Guild, channelId string) (*discord.Channel, error) {
+	ret := _mock.Called(g, channelId)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindChannelById")
+	}
+
+	var r0 *discord.Channel
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(*guild.Guild, string) (*discord.Channel, error)); ok {
+		return returnFunc(g, channelId)
+	}
+	if returnFunc, ok := ret.Get(0).(func(*guild.Guild, string) *discord.Channel); ok {
+		r0 = returnFunc(g, channelId)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*discord.Channel)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(*guild.Guild, string) error); ok {
+		r1 = returnFunc(g, channelId)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockBotPort_FindChannelById_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindChannelById'
+type MockBotPort_FindChannelById_Call struct {
+	*mock.Call
+}
+
+// FindChannelById is a helper method to define mock.On call
+//   - g *guild.Guild
+//   - channelId string
+func (_e *MockBotPort_Expecter) FindChannelById(g any, channelId any) *MockBotPort_FindChannelById_Call {
+	return &MockBotPort_FindChannelById_Call{Call: _e.mock.On("FindChannelById", g, channelId)}
+}
+
+func (_c *MockBotPort_FindChannelById_Call) Run(run func(g *guild.Guild, channelId string)) *MockBotPort_FindChannelById_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *guild.Guild
+		if args[0] != nil {
+			arg0 = args[0].(*guild.Guild)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockBotPort_FindChannelById_Call) Return(channel *discord.Channel, err error) *MockBotPort_FindChannelById_Call {
+	_c.Call.Return(channel, err)
+	return _c
+}
+
+func (_c *MockBotPort_FindChannelById_Call) RunAndReturn(run func(g *guild.Guild, channelId string) (*discord.Channel, error)) *MockBotPort_FindChannelById_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindChannelByName provides a mock function for the type MockBotPort
 func (_mock *MockBotPort) FindChannelByName(g *guild.Guild, channelName string) (*discord.Channel, error) {
 	ret := _mock.Called(g, channelName)

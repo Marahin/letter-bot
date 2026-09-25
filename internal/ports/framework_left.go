@@ -1,6 +1,7 @@
 package ports
 
 import (
+	"context"
 	"spot-assistant/internal/core/dto/book"
 	"spot-assistant/internal/core/dto/guild"
 	"spot-assistant/internal/core/dto/member"
@@ -33,8 +34,8 @@ type SummaryService interface {
 }
 
 type BookingService interface {
-	// Returns available spots based on optional filter, or an error.
-	FindAvailableSpots(filter string) ([]string, error)
+	// Returns available guild spots based on optional filter, or an error.
+	FindAvailableSpots(guildID, filter string) ([]string, error)
 
 	// Returns suggested hours based on base time and optional filter.
 	GetSuggestedHours(time.Time, string) []string
@@ -57,4 +58,13 @@ type OnlineCheckService interface {
 	ConfigureWorldName(guildID, world string)
 	SetGuildWorld(guildID, world string) error
 	ConfigureWorldNameForGuild(guildID string) error
+}
+
+// NotifyHandler reacts to the signals the web sends to the bot through Postgres NOTIFY.
+// Every signal is best-effort: the bot tick recovers a missed one.
+type NotifyHandler interface {
+	OnSummaryRefresh(ctx context.Context, guildID string)
+	OnGuildResync(ctx context.Context, guildID string)
+	OnGuildConfig(ctx context.Context, guildID string)
+	OnOverbooked(ctx context.Context, payload []byte)
 }

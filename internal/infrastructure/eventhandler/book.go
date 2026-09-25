@@ -30,7 +30,7 @@ func (a *Handler) OnBookAutocomplete(request book.BookAutocompleteRequest) (book
 	case book.BookAutocompleteEndAt:
 		return a.bookingSrv.GetSuggestedHours(time.Now().Add(2*time.Hour), request.Value), nil
 	case book.BookAutocompleteSpot:
-		return a.bookingSrv.FindAvailableSpots(request.Value)
+		return a.bookingSrv.FindAvailableSpots(request.GuildID, request.Value)
 	default:
 		return []string{}, fmt.Errorf("autocomplete not implemented for %v", request.Field)
 	}

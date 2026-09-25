@@ -21,9 +21,11 @@ import (
 	"spot-assistant/internal/infrastructure/chart"
 	"spot-assistant/internal/infrastructure/db/postgresql"
 	"spot-assistant/internal/infrastructure/eventhandler"
+	guildRepository "spot-assistant/internal/infrastructure/guild/postgresql/sqlc"
 	healthadapter "spot-assistant/internal/infrastructure/health"
 	infrahttp "spot-assistant/internal/infrastructure/http"
 	prommetrics "spot-assistant/internal/infrastructure/metrics/prometheus"
+	notifypg "spot-assistant/internal/infrastructure/notify/postgresql"
 	reservationRepository "spot-assistant/internal/infrastructure/reservation/postgresql/sqlc"
 	spotRepository "spot-assistant/internal/infrastructure/spot/postgresql/sqlc"
 	"spot-assistant/internal/infrastructure/worldapi"
@@ -63,6 +65,9 @@ func main() {
 	reservationRepo := reservationRepository.NewReservationRepository(db).WithLogger(log)
 	spotRepo := spotRepository.NewSpotRepository(db)
 	worldNameRepo := worldNameRepository.NewWorldNameRepository(db)
+	guildConfigRepo := guildRepository.NewGuildConfigRepository(db)
+	guildChannelRepo := guildRepository.NewGuildChannelRepository(db)
+	guildRoleRepo := guildRepository.NewGuildRoleRepository(db)
 
 	// Online Checker
 	tibiaDataBaseURL := os.Getenv("TIBIA_WORLD_API_BASE_URL")
@@ -78,8 +83,11 @@ func main() {
 
 	// Discord
 	dcFormatter := formatter.NewFormatter()
-	botService := bot.NewManager(summaryService, reservationRepo, onlineChecker).WithFormatter(dcFormatter).WithLogger(log)
-	communicationService := communication.NewAdapter(botService, botService).WithLogger(log)
+	botService := bot.NewManager(summaryService, reservationRepo, onlineChecker).
+		WithGuildRepositories(guildConfigRepo, guildChannelRepo, guildRoleRepo).
+		WithFormatter(dcFormatter).
+		WithLogger(log)
+	communicationService := communication.NewAdapter(botService, botService, guildConfigRepo).WithLogger(log)
 
 	// Bot
 	bookingService := booking.NewAdapter(spotRepo, reservationRepo, communicationService).WithLogger(log)
@@ -96,6 +104,11 @@ func main() {
 	health := healthadapter.NewAdapter(db, botService).WithLogger(log)
 	server.WithHealthProvider(health)
 	server.Start()
+
+	listenCtx, stopListening := context.WithCancel(context.Background())
+	defer stopListening()
+	notifyHandler := bot.NewNotifyHandler(botService, communicationService).WithLogger(log)
+	go notifypg.NewListener(postgresql.Dsn(), log).Listen(listenCtx, notifyHandler)
 
 	err = botService.WithEventHandler(eventHandler).Run()
 

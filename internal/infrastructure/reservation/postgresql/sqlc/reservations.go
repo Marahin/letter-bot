@@ -95,11 +95,11 @@ func (t *ReservationRepository) SelectUpcomingReservationsWithSpotForSpot(ctx co
 	return reservationsWithSpots, nil
 }
 
-func (t *ReservationRepository) SelectOverlappingReservations(ctx context.Context, spot string, startAt time.Time, endAt time.Time, guildId string) ([]*reservation.Reservation, error) {
+func (t *ReservationRepository) SelectOverlappingReservations(ctx context.Context, spotID int64, startAt time.Time, endAt time.Time, guildId string) ([]*reservation.Reservation, error) {
 	res, err := t.q.SelectOverlappingReservations(ctx, SelectOverlappingReservationsParams{
 		StartAt: startAt,
 		EndAt:   endAt,
-		Respawn: spot,
+		SpotID:  spotID,
 		GuildID: guildId,
 	})
 	if err != nil {
