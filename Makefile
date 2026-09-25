@@ -18,7 +18,7 @@ install-bins:
 	@go install github.com/fzipp/gocyclo/cmd/gocyclo@v0.6.0
 	@go install honnef.co/go/tools/cmd/staticcheck@latest
 	@go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.26.0
-	@go install github.com/vektra/mockery/v3@v3.5.4
+	@go install github.com/vektra/mockery/v3@v3.8.0
 	@go install github.com/a-h/templ/cmd/templ@$(TEMPL_VERSION)
 
 go-mod:
@@ -77,6 +77,8 @@ sqlc-diff:
 	@sqlc diff -f internal/infrastructure/reservation/postgresql/sqlc.yaml
 	@sqlc diff -f internal/infrastructure/spot/postgresql/sqlc.yaml
 	@sqlc diff -f internal/infrastructure/worldname/postgresql/sqlc.yaml
+	@sqlc diff -f internal/infrastructure/guild/postgresql/sqlc.yaml
+	@sqlc diff -f internal/infrastructure/webuser/postgresql/sqlc.yaml
 
 migrations-validate:
 	@echo "INFO: Validating migrations"
@@ -133,12 +135,16 @@ sqlc-generate:
 	@sqlc generate -f internal/infrastructure/reservation/postgresql/sqlc.yaml
 	@sqlc generate -f internal/infrastructure/spot/postgresql/sqlc.yaml
 	@sqlc generate -f internal/infrastructure/worldname/postgresql/sqlc.yaml
+	@sqlc generate -f internal/infrastructure/guild/postgresql/sqlc.yaml
+	@sqlc generate -f internal/infrastructure/webuser/postgresql/sqlc.yaml
 
 sqlc-vet:
 	@echo "INFO: Running sqlc vet"
 	@sqlc vet -f internal/infrastructure/reservation/postgresql/sqlc.yaml
 	@sqlc vet -f internal/infrastructure/spot/postgresql/sqlc.yaml
 	@sqlc vet -f internal/infrastructure/worldname/postgresql/sqlc.yaml
+	@sqlc vet -f internal/infrastructure/guild/postgresql/sqlc.yaml
+	@sqlc vet -f internal/infrastructure/webuser/postgresql/sqlc.yaml
 
 build: install-dependencies sqlc-generate test
 	@make build-only

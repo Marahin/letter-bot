@@ -14,10 +14,19 @@ func NewMockChartAdapter(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockChartAdapter {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockChartAdapter{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -71,7 +80,7 @@ type MockChartAdapter_NewChart_Call struct {
 // NewChart is a helper method to define mock.On call
 //   - values []float64
 //   - legend []string
-func (_e *MockChartAdapter_Expecter) NewChart(values interface{}, legend interface{}) *MockChartAdapter_NewChart_Call {
+func (_e *MockChartAdapter_Expecter) NewChart(values any, legend any) *MockChartAdapter_NewChart_Call {
 	return &MockChartAdapter_NewChart_Call{Call: _e.mock.On("NewChart", values, legend)}
 }
 

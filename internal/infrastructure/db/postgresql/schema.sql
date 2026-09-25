@@ -840,3 +840,98 @@ CREATE TABLE public.guilds_world (
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+CREATE TABLE public.guilds (
+    guild_id text PRIMARY KEY,
+    name text NOT NULL DEFAULT '',
+    icon text NOT NULL DEFAULT '',
+    owner_id text NOT NULL DEFAULT '',
+    bot_present boolean NOT NULL DEFAULT false,
+    premium boolean NOT NULL DEFAULT false,
+    premium_forever boolean NOT NULL DEFAULT false,
+    command_channel_id text NOT NULL DEFAULT '',
+    summary_channel_id text NOT NULL DEFAULT '',
+    manage_role_ids text[] NOT NULL DEFAULT '{}',
+    view_role_ids text[] NOT NULL DEFAULT '{}',
+    reserve_role_ids text[] NOT NULL DEFAULT '{}',
+    overbook_role_ids text[] NOT NULL DEFAULT '{}',
+    resync_requested_at timestamptz,
+    synced_at timestamptz,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE public.guild_channels (
+    guild_id text NOT NULL REFERENCES public.guilds(guild_id) ON DELETE CASCADE,
+    channel_id text NOT NULL,
+    name text NOT NULL DEFAULT '',
+    type integer NOT NULL DEFAULT 0,
+    parent_id text NOT NULL DEFAULT '',
+    position integer NOT NULL DEFAULT 0,
+    PRIMARY KEY (guild_id, channel_id)
+);
+
+CREATE TABLE public.guild_roles (
+    guild_id text NOT NULL REFERENCES public.guilds(guild_id) ON DELETE CASCADE,
+    role_id text NOT NULL,
+    name text NOT NULL DEFAULT '',
+    color integer NOT NULL DEFAULT 0,
+    position integer NOT NULL DEFAULT 0,
+    PRIMARY KEY (guild_id, role_id)
+);
+
+ALTER TABLE public.web_spot ADD COLUMN guild_id character varying(255), ADD COLUMN archived_at timestamptz;
+
+CREATE UNIQUE INDEX web_spot_guild_active_name_uidx ON public.web_spot USING btree (guild_id, lower((name)::text)) WHERE (archived_at IS NULL);
+CREATE INDEX web_reservation_guild_start_idx ON public.web_reservation USING btree (guild_id, start_at);
+CREATE INDEX web_reservation_guild_spot_start_idx ON public.web_reservation USING btree (guild_id, spot_id, start_at);
+
+CREATE TABLE public.web_users (
+    discord_user_id text PRIMARY KEY,
+    username text NOT NULL,
+    global_name text NOT NULL DEFAULT '',
+    avatar text NOT NULL DEFAULT '',
+    access_token text NOT NULL DEFAULT '',
+    refresh_token text NOT NULL DEFAULT '',
+    token_expiry timestamptz,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE public.web_sessions (
+    token text PRIMARY KEY,
+    data bytea NOT NULL,
+    expiry timestamptz NOT NULL
+);
+
+CREATE TABLE public.highscore_runs (
+    id bigserial PRIMARY KEY,
+    world character varying(100) NOT NULL,
+    observed_at timestamptz NOT NULL,
+    fetched_at timestamptz NOT NULL,
+    pages integer NOT NULL,
+    rows integer NOT NULL
+);
+
+CREATE TABLE public.highscore_snapshots (
+    id bigserial PRIMARY KEY,
+    world character varying(100) NOT NULL,
+    character_key text NOT NULL,
+    character_name text NOT NULL,
+    level integer NOT NULL,
+    experience bigint NOT NULL,
+    vocation text NOT NULL DEFAULT '',
+    observed_at timestamptz NOT NULL
+);
+
+CREATE TABLE public.reservation_experience (
+    reservation_id bigint NOT NULL REFERENCES public.web_reservation(id) ON DELETE CASCADE,
+    character_key text NOT NULL,
+    character_name text NOT NULL,
+    start_experience bigint,
+    end_experience bigint,
+    gain bigint,
+    status text NOT NULL,
+    computed_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (reservation_id, character_key)
+);

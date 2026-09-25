@@ -23,9 +23,11 @@ const (
 
 func MapChannel(input *discordgo.Channel) *discord.Channel {
 	return &discord.Channel{
-		ID:   input.ID,
-		Name: input.Name,
-		Type: discord.ChannelType(input.Type),
+		ID:       input.ID,
+		Name:     input.Name,
+		Type:     discord.ChannelType(input.Type),
+		ParentID: input.ParentID,
+		Position: input.Position,
 	}
 }
 
@@ -34,6 +36,8 @@ func mapRole(input *discordgo.Role) *role.Role {
 		ID:          input.ID,
 		Name:        input.Name,
 		Permissions: input.Permissions,
+		Position:    input.Position,
+		Color:       input.Color,
 	}
 }
 
@@ -49,9 +53,11 @@ func MapRoles(input []*discordgo.Role) []*role.Role {
 
 func MapGuild(input *discordgo.Guild) *guild.Guild {
 	return &guild.Guild{
-		Roles: MapRoles(input.Roles),
-		ID:    input.ID,
-		Name:  input.Name,
+		Roles:   MapRoles(input.Roles),
+		ID:      input.ID,
+		Name:    input.Name,
+		Icon:    input.Icon,
+		OwnerID: input.OwnerID,
 	}
 }
 
@@ -81,10 +87,11 @@ func MapMember(input *discordgo.Member) *member.Member {
 	}
 
 	return &member.Member{
-		ID:       input.User.ID,
-		Nick:     input.Nick,
-		Username: input.User.Username,
-		Roles:    input.Roles,
+		ID:          input.User.ID,
+		Nick:        input.Nick,
+		Username:    input.User.Username,
+		Roles:       input.Roles,
+		Permissions: input.Permissions,
 	}
 }
 

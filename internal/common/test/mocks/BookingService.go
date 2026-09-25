@@ -20,10 +20,19 @@ func NewMockBookingService(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockBookingService {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockBookingService{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -76,7 +85,7 @@ type MockBookingService_Book_Call struct {
 
 // Book is a helper method to define mock.On call
 //   - request book.BookRequest
-func (_e *MockBookingService_Expecter) Book(request interface{}) *MockBookingService_Book_Call {
+func (_e *MockBookingService_Expecter) Book(request any) *MockBookingService_Book_Call {
 	return &MockBookingService_Book_Call{Call: _e.mock.On("Book", request)}
 }
 
@@ -138,7 +147,7 @@ type MockBookingService_FindAvailableSpots_Call struct {
 
 // FindAvailableSpots is a helper method to define mock.On call
 //   - filter string
-func (_e *MockBookingService_Expecter) FindAvailableSpots(filter interface{}) *MockBookingService_FindAvailableSpots_Call {
+func (_e *MockBookingService_Expecter) FindAvailableSpots(filter any) *MockBookingService_FindAvailableSpots_Call {
 	return &MockBookingService_FindAvailableSpots_Call{Call: _e.mock.On("FindAvailableSpots", filter)}
 }
 
@@ -192,7 +201,7 @@ type MockBookingService_GetSuggestedHours_Call struct {
 // GetSuggestedHours is a helper method to define mock.On call
 //   - time1 time.Time
 //   - s string
-func (_e *MockBookingService_Expecter) GetSuggestedHours(time1 interface{}, s interface{}) *MockBookingService_GetSuggestedHours_Call {
+func (_e *MockBookingService_Expecter) GetSuggestedHours(time1 any, s any) *MockBookingService_GetSuggestedHours_Call {
 	return &MockBookingService_GetSuggestedHours_Call{Call: _e.mock.On("GetSuggestedHours", time1, s)}
 }
 
@@ -261,7 +270,7 @@ type MockBookingService_Unbook_Call struct {
 //   - g *guild.Guild
 //   - m *member.Member
 //   - reservationId int64
-func (_e *MockBookingService_Expecter) Unbook(g interface{}, m interface{}, reservationId interface{}) *MockBookingService_Unbook_Call {
+func (_e *MockBookingService_Expecter) Unbook(g any, m any, reservationId any) *MockBookingService_Unbook_Call {
 	return &MockBookingService_Unbook_Call{Call: _e.mock.On("Unbook", g, m, reservationId)}
 }
 
@@ -335,7 +344,7 @@ type MockBookingService_UnbookAutocomplete_Call struct {
 //   - g *guild.Guild
 //   - m *member.Member
 //   - filter string
-func (_e *MockBookingService_Expecter) UnbookAutocomplete(g interface{}, m interface{}, filter interface{}) *MockBookingService_UnbookAutocomplete_Call {
+func (_e *MockBookingService_Expecter) UnbookAutocomplete(g any, m any, filter any) *MockBookingService_UnbookAutocomplete_Call {
 	return &MockBookingService_UnbookAutocomplete_Call{Call: _e.mock.On("UnbookAutocomplete", g, m, filter)}
 }
 

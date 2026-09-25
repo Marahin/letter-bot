@@ -19,10 +19,19 @@ func NewMockAPIPort(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockAPIPort {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockAPIPort{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -73,7 +82,7 @@ type MockAPIPort_OnBook_Call struct {
 
 // OnBook is a helper method to define mock.On call
 //   - bookRequest book.BookRequest
-func (_e *MockAPIPort_Expecter) OnBook(bookRequest interface{}) *MockAPIPort_OnBook_Call {
+func (_e *MockAPIPort_Expecter) OnBook(bookRequest any) *MockAPIPort_OnBook_Call {
 	return &MockAPIPort_OnBook_Call{Call: _e.mock.On("OnBook", bookRequest)}
 }
 
@@ -135,7 +144,7 @@ type MockAPIPort_OnBookAutocomplete_Call struct {
 
 // OnBookAutocomplete is a helper method to define mock.On call
 //   - bookAutocompleteRequest book.BookAutocompleteRequest
-func (_e *MockAPIPort_Expecter) OnBookAutocomplete(bookAutocompleteRequest interface{}) *MockAPIPort_OnBookAutocomplete_Call {
+func (_e *MockAPIPort_Expecter) OnBookAutocomplete(bookAutocompleteRequest any) *MockAPIPort_OnBookAutocomplete_Call {
 	return &MockAPIPort_OnBookAutocomplete_Call{Call: _e.mock.On("OnBookAutocomplete", bookAutocompleteRequest)}
 }
 
@@ -175,7 +184,7 @@ type MockAPIPort_OnGuildCreate_Call struct {
 
 // OnGuildCreate is a helper method to define mock.On call
 //   - guild1 *guild.Guild
-func (_e *MockAPIPort_Expecter) OnGuildCreate(guild1 interface{}) *MockAPIPort_OnGuildCreate_Call {
+func (_e *MockAPIPort_Expecter) OnGuildCreate(guild1 any) *MockAPIPort_OnGuildCreate_Call {
 	return &MockAPIPort_OnGuildCreate_Call{Call: _e.mock.On("OnGuildCreate", guild1)}
 }
 
@@ -226,7 +235,7 @@ type MockAPIPort_OnPrivateSummary_Call struct {
 
 // OnPrivateSummary is a helper method to define mock.On call
 //   - privateSummaryRequest summary.PrivateSummaryRequest
-func (_e *MockAPIPort_Expecter) OnPrivateSummary(privateSummaryRequest interface{}) *MockAPIPort_OnPrivateSummary_Call {
+func (_e *MockAPIPort_Expecter) OnPrivateSummary(privateSummaryRequest any) *MockAPIPort_OnPrivateSummary_Call {
 	return &MockAPIPort_OnPrivateSummary_Call{Call: _e.mock.On("OnPrivateSummary", privateSummaryRequest)}
 }
 
@@ -354,7 +363,7 @@ type MockAPIPort_OnUnbook_Call struct {
 
 // OnUnbook is a helper method to define mock.On call
 //   - request book.UnbookRequest
-func (_e *MockAPIPort_Expecter) OnUnbook(request interface{}) *MockAPIPort_OnUnbook_Call {
+func (_e *MockAPIPort_Expecter) OnUnbook(request any) *MockAPIPort_OnUnbook_Call {
 	return &MockAPIPort_OnUnbook_Call{Call: _e.mock.On("OnUnbook", request)}
 }
 
@@ -414,7 +423,7 @@ type MockAPIPort_OnUnbookAutocomplete_Call struct {
 
 // OnUnbookAutocomplete is a helper method to define mock.On call
 //   - request book.UnbookAutocompleteRequest
-func (_e *MockAPIPort_Expecter) OnUnbookAutocomplete(request interface{}) *MockAPIPort_OnUnbookAutocomplete_Call {
+func (_e *MockAPIPort_Expecter) OnUnbookAutocomplete(request any) *MockAPIPort_OnUnbookAutocomplete_Call {
 	return &MockAPIPort_OnUnbookAutocomplete_Call{Call: _e.mock.On("OnUnbookAutocomplete", request)}
 }
 

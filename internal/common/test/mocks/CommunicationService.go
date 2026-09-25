@@ -19,10 +19,19 @@ func NewMockCommunicationService(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockCommunicationService {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockCommunicationService{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -54,7 +63,7 @@ type MockCommunicationService_NotifyOverbookedMember_Call struct {
 // NotifyOverbookedMember is a helper method to define mock.On call
 //   - request book.BookRequest
 //   - res *reservation.ClippedOrRemovedReservation
-func (_e *MockCommunicationService_Expecter) NotifyOverbookedMember(request interface{}, res interface{}) *MockCommunicationService_NotifyOverbookedMember_Call {
+func (_e *MockCommunicationService_Expecter) NotifyOverbookedMember(request any, res any) *MockCommunicationService_NotifyOverbookedMember_Call {
 	return &MockCommunicationService_NotifyOverbookedMember_Call{Call: _e.mock.On("NotifyOverbookedMember", request, res)}
 }
 
@@ -111,7 +120,7 @@ type MockCommunicationService_SendGuildSummary_Call struct {
 // SendGuildSummary is a helper method to define mock.On call
 //   - guild1 *guild.Guild
 //   - summary1 *summary.Summary
-func (_e *MockCommunicationService_Expecter) SendGuildSummary(guild1 interface{}, summary1 interface{}) *MockCommunicationService_SendGuildSummary_Call {
+func (_e *MockCommunicationService_Expecter) SendGuildSummary(guild1 any, summary1 any) *MockCommunicationService_SendGuildSummary_Call {
 	return &MockCommunicationService_SendGuildSummary_Call{Call: _e.mock.On("SendGuildSummary", guild1, summary1)}
 }
 
@@ -168,7 +177,7 @@ type MockCommunicationService_SendPrivateSummary_Call struct {
 // SendPrivateSummary is a helper method to define mock.On call
 //   - request summary.PrivateSummaryRequest
 //   - summary1 *summary.Summary
-func (_e *MockCommunicationService_Expecter) SendPrivateSummary(request interface{}, summary1 interface{}) *MockCommunicationService_SendPrivateSummary_Call {
+func (_e *MockCommunicationService_Expecter) SendPrivateSummary(request any, summary1 any) *MockCommunicationService_SendPrivateSummary_Call {
 	return &MockCommunicationService_SendPrivateSummary_Call{Call: _e.mock.On("SendPrivateSummary", request, summary1)}
 }
 

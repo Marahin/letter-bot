@@ -14,10 +14,19 @@ func NewMockWorldApi(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockWorldApi {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockWorldApi{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -114,7 +123,7 @@ type MockWorldApi_GetOnlinePlayerNames_Call struct {
 
 // GetOnlinePlayerNames is a helper method to define mock.On call
 //   - worldName string
-func (_e *MockWorldApi_Expecter) GetOnlinePlayerNames(worldName interface{}) *MockWorldApi_GetOnlinePlayerNames_Call {
+func (_e *MockWorldApi_Expecter) GetOnlinePlayerNames(worldName any) *MockWorldApi_GetOnlinePlayerNames_Call {
 	return &MockWorldApi_GetOnlinePlayerNames_Call{Call: _e.mock.On("GetOnlinePlayerNames", worldName)}
 }
 

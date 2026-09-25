@@ -17,10 +17,19 @@ func NewMockMemberRepository(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockMemberRepository {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockMemberRepository{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -74,7 +83,7 @@ type MockMemberRepository_GetMemberByGuildAndId_Call struct {
 // GetMemberByGuildAndId is a helper method to define mock.On call
 //   - g *guild.Guild
 //   - memberId string
-func (_e *MockMemberRepository_Expecter) GetMemberByGuildAndId(g interface{}, memberId interface{}) *MockMemberRepository_GetMemberByGuildAndId_Call {
+func (_e *MockMemberRepository_Expecter) GetMemberByGuildAndId(g any, memberId any) *MockMemberRepository_GetMemberByGuildAndId_Call {
 	return &MockMemberRepository_GetMemberByGuildAndId_Call{Call: _e.mock.On("GetMemberByGuildAndId", g, memberId)}
 }
 
@@ -132,7 +141,7 @@ type MockMemberRepository_MemberHasRole_Call struct {
 //   - g *guild.Guild
 //   - m *member.Member
 //   - roleName string
-func (_e *MockMemberRepository_Expecter) MemberHasRole(g interface{}, m interface{}, roleName interface{}) *MockMemberRepository_MemberHasRole_Call {
+func (_e *MockMemberRepository_Expecter) MemberHasRole(g any, m any, roleName any) *MockMemberRepository_MemberHasRole_Call {
 	return &MockMemberRepository_MemberHasRole_Call{Call: _e.mock.On("MemberHasRole", g, m, roleName)}
 }
 

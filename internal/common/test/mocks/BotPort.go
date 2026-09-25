@@ -21,10 +21,19 @@ func NewMockBotPort(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockBotPort {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockBotPort{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -78,7 +87,7 @@ type MockBotPort_FindChannelByName_Call struct {
 // FindChannelByName is a helper method to define mock.On call
 //   - g *guild.Guild
 //   - channelName string
-func (_e *MockBotPort_Expecter) FindChannelByName(g interface{}, channelName interface{}) *MockBotPort_FindChannelByName_Call {
+func (_e *MockBotPort_Expecter) FindChannelByName(g any, channelName any) *MockBotPort_FindChannelByName_Call {
 	return &MockBotPort_FindChannelByName_Call{Call: _e.mock.On("FindChannelByName", g, channelName)}
 }
 
@@ -145,7 +154,7 @@ type MockBotPort_OpenDM_Call struct {
 
 // OpenDM is a helper method to define mock.On call
 //   - m *member.Member
-func (_e *MockBotPort_Expecter) OpenDM(m interface{}) *MockBotPort_OpenDM_Call {
+func (_e *MockBotPort_Expecter) OpenDM(m any) *MockBotPort_OpenDM_Call {
 	return &MockBotPort_OpenDM_Call{Call: _e.mock.On("OpenDM", m)}
 }
 
@@ -242,7 +251,7 @@ type MockBotPort_SendDMOverbookedNotification_Call struct {
 //   - member1 *member.Member
 //   - request book.BookRequest
 //   - res *reservation.ClippedOrRemovedReservation
-func (_e *MockBotPort_Expecter) SendDMOverbookedNotification(member1 interface{}, request interface{}, res interface{}) *MockBotPort_SendDMOverbookedNotification_Call {
+func (_e *MockBotPort_Expecter) SendDMOverbookedNotification(member1 any, request any, res any) *MockBotPort_SendDMOverbookedNotification_Call {
 	return &MockBotPort_SendDMOverbookedNotification_Call{Call: _e.mock.On("SendDMOverbookedNotification", member1, request, res)}
 }
 
@@ -305,7 +314,7 @@ type MockBotPort_SendLetterMessage_Call struct {
 //   - g *guild.Guild
 //   - ch *discord.Channel
 //   - sum *summary.Summary
-func (_e *MockBotPort_Expecter) SendLetterMessage(g interface{}, ch interface{}, sum interface{}) *MockBotPort_SendLetterMessage_Call {
+func (_e *MockBotPort_Expecter) SendLetterMessage(g any, ch any, sum any) *MockBotPort_SendLetterMessage_Call {
 	return &MockBotPort_SendLetterMessage_Call{Call: _e.mock.On("SendLetterMessage", g, ch, sum)}
 }
 

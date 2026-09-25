@@ -17,10 +17,19 @@ func NewMockSummaryService(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockSummaryService {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockSummaryService{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -73,7 +82,7 @@ type MockSummaryService_PrepareSummary_Call struct {
 
 // PrepareSummary is a helper method to define mock.On call
 //   - reservations []*reservation.ReservationWithSpot
-func (_e *MockSummaryService_Expecter) PrepareSummary(reservations interface{}) *MockSummaryService_PrepareSummary_Call {
+func (_e *MockSummaryService_Expecter) PrepareSummary(reservations any) *MockSummaryService_PrepareSummary_Call {
 	return &MockSummaryService_PrepareSummary_Call{Call: _e.mock.On("PrepareSummary", reservations)}
 }
 

@@ -12,6 +12,7 @@ import (
 	"spot-assistant/internal/core/dto/guild"
 	"spot-assistant/internal/core/dto/member"
 	"spot-assistant/internal/core/dto/reservation"
+	"spot-assistant/internal/infrastructure/db/postgresql"
 )
 
 type DBTXWrapper interface {
@@ -224,6 +225,122 @@ func (t *ReservationRepository) DeletePresentMemberReservation(ctx context.Conte
 	}
 
 	return nil
+}
+
+func (t *ReservationRepository) SearchReservationsWithSpot(ctx context.Context, filter reservation.SearchFilter) ([]*reservation.ReservationWithSpot, error) {
+	f := mapSearchFilter(filter)
+	res, err := t.q.SearchReservationsWithSpot(ctx, SearchReservationsWithSpotParams{
+		GuildID:         f.GuildID,
+		SpotID:          f.SpotID,
+		Author:          f.Author,
+		AuthorDiscordID: f.AuthorDiscordID,
+		FromAt:          f.FromAt,
+		ToAt:            f.ToAt,
+		Scope:           f.Scope,
+		RowLimit:        int32(filter.Limit),
+		RowOffset:       int32(filter.Offset),
+	})
+	if err != nil {
+		return []*reservation.ReservationWithSpot{}, err
+	}
+
+	reservations := make([]*reservation.ReservationWithSpot, len(res))
+	for i, row := range res {
+		reservations[i] = mapReservationWithSpot(row.WebReservation, row.WebSpot)
+	}
+
+	return reservations, nil
+}
+
+func (t *ReservationRepository) CountReservations(ctx context.Context, filter reservation.SearchFilter) (int64, error) {
+	return t.q.CountReservations(ctx, mapSearchFilter(filter))
+}
+
+func (t *ReservationRepository) SelectGuildReservationWithSpot(ctx context.Context, guildID string, id int64) (*reservation.ReservationWithSpot, error) {
+	res, err := t.q.SelectGuildReservationWithSpot(ctx, SelectGuildReservationWithSpotParams{ID: id, GuildID: guildID})
+	if err != nil {
+		return nil, postgresql.MapError(err)
+	}
+
+	return mapReservationWithSpot(res.WebReservation, res.WebSpot), nil
+}
+
+func (t *ReservationRepository) UpdateReservation(ctx context.Context, guildID string, r reservation.Reservation) error {
+	return postgresql.RowsAffected(t.q.UpdateReservation(ctx, UpdateReservationParams{
+		ID:              r.ID,
+		GuildID:         guildID,
+		SpotID:          r.SpotID,
+		StartAt:         pgtype.Timestamptz{Time: r.StartAt, Valid: true},
+		EndAt:           pgtype.Timestamptz{Time: r.EndAt, Valid: true},
+		Author:          r.Author,
+		AuthorDiscordID: r.AuthorDiscordID,
+	}))
+}
+
+func (t *ReservationRepository) DeleteGuildReservation(ctx context.Context, guildID string, id int64) error {
+	return postgresql.RowsAffected(t.q.DeleteGuildReservation(ctx, DeleteGuildReservationParams{ID: id, GuildID: guildID}))
+}
+
+func (t *ReservationRepository) SelectOverlappingReservationsBySpotID(ctx context.Context, guildID string, spotID int64, startAt time.Time, endAt time.Time, excludeID int64) ([]*reservation.Reservation, error) {
+	res, err := t.q.SelectOverlappingReservationsBySpotID(ctx, SelectOverlappingReservationsBySpotIDParams{
+		SpotID:    spotID,
+		GuildID:   guildID,
+		ExcludeID: excludeID,
+		StartAt:   pgtype.Timestamptz{Time: startAt, Valid: true},
+		EndAt:     pgtype.Timestamptz{Time: endAt, Valid: true},
+	})
+	if err != nil {
+		return []*reservation.Reservation{}, err
+	}
+
+	reservations := make([]*reservation.Reservation, len(res))
+	for i, row := range res {
+		r := mapWebReservation(row)
+		reservations[i] = &r
+	}
+
+	return reservations, nil
+}
+
+func (t *ReservationRepository) SelectKnownAuthors(ctx context.Context, guildID string, pattern string) ([]*reservation.KnownAuthor, error) {
+	res, err := t.q.SelectKnownAuthors(ctx, SelectKnownAuthorsParams{GuildID: guildID, Pattern: pattern})
+	if err != nil {
+		return []*reservation.KnownAuthor{}, err
+	}
+
+	authors := make([]*reservation.KnownAuthor, len(res))
+	for i, row := range res {
+		authors[i] = &reservation.KnownAuthor{AuthorDiscordID: row.AuthorDiscordID, Author: row.Author}
+	}
+
+	return authors, nil
+}
+
+func mapSearchFilter(filter reservation.SearchFilter) CountReservationsParams {
+	params := CountReservationsParams{
+		GuildID: filter.GuildID,
+		Scope:   string(reservation.ScopeAll),
+	}
+	if filter.Scope != "" {
+		params.Scope = string(filter.Scope)
+	}
+	if filter.SpotID != nil {
+		params.SpotID = pgtype.Int8{Int64: *filter.SpotID, Valid: true}
+	}
+	if filter.Author != "" {
+		params.Author = pgtype.Text{String: filter.Author, Valid: true}
+	}
+	if filter.AuthorDiscordID != "" {
+		params.AuthorDiscordID = pgtype.Text{String: filter.AuthorDiscordID, Valid: true}
+	}
+	if filter.From != nil {
+		params.FromAt = pgtype.Timestamptz{Time: *filter.From, Valid: true}
+	}
+	if filter.To != nil {
+		params.ToAt = pgtype.Timestamptz{Time: *filter.To, Valid: true}
+	}
+
+	return params
 }
 
 // createOverbookedLeftovers creates up to two reservations from overbooked reservation leftovers.

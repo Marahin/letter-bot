@@ -16,8 +16,10 @@ func TestMapChannel(t *testing.T) {
 	// given
 	assert := assert.New(t)
 	channel := &discordgo.Channel{
-		ID:   "channel-id",
-		Name: "channel-name",
+		ID:       "channel-id",
+		Name:     "channel-name",
+		ParentID: "category-id",
+		Position: 3,
 	}
 
 	// when
@@ -27,6 +29,8 @@ func TestMapChannel(t *testing.T) {
 	assert.NotNil(res)
 	assert.Equal(channel.Name, res.Name)
 	assert.Equal(channel.ID, res.ID)
+	assert.Equal(channel.ParentID, res.ParentID)
+	assert.Equal(channel.Position, res.Position)
 }
 
 func TestMapRoles(t *testing.T) {
@@ -37,6 +41,8 @@ func TestMapRoles(t *testing.T) {
 			ID:          "test-role-id",
 			Name:        "test-role-name",
 			Permissions: 12345,
+			Position:    2,
+			Color:       0xff0000,
 		},
 		{
 			ID:          "test-role-id-2",
@@ -54,6 +60,8 @@ func TestMapRoles(t *testing.T) {
 		assert.Equal(roles[index].ID, resRole.ID)
 		assert.Equal(roles[index].Name, resRole.Name)
 		assert.Equal(roles[index].Permissions, resRole.Permissions)
+		assert.Equal(roles[index].Position, resRole.Position)
+		assert.Equal(roles[index].Color, resRole.Color)
 	}
 }
 
@@ -61,8 +69,10 @@ func TestMapGuild(t *testing.T) {
 	// given
 	assert := assert.New(t)
 	guild := &discordgo.Guild{
-		ID:   "test-guild-id",
-		Name: "test-guild-name",
+		ID:      "test-guild-id",
+		Name:    "test-guild-name",
+		Icon:    "test-guild-icon",
+		OwnerID: "test-owner-id",
 		Roles: []*discordgo.Role{
 			{
 				ID:          "test-role-id",
@@ -84,6 +94,8 @@ func TestMapGuild(t *testing.T) {
 	assert.NotNil(res)
 	assert.Equal(guild.ID, res.ID)
 	assert.Equal(guild.Name, res.Name)
+	assert.Equal(guild.Icon, res.Icon)
+	assert.Equal(guild.OwnerID, res.OwnerID)
 	for index, gRole := range guild.Roles {
 		expectedRole := guild.Roles[index]
 
@@ -184,8 +196,9 @@ func TestMapMember(t *testing.T) {
 	// given
 	assert := assert.New(t)
 	member := &discordgo.Member{
-		Nick:  "test-member-nick",
-		Roles: []string{"test-member-role1", "test-member-role2"},
+		Nick:        "test-member-nick",
+		Roles:       []string{"test-member-role1", "test-member-role2"},
+		Permissions: discordgo.PermissionAdministrator,
 		User: &discordgo.User{
 			ID:       "test-member-user-id",
 			Username: "test-member-user-username",
@@ -201,6 +214,7 @@ func TestMapMember(t *testing.T) {
 	assert.Equal(member.Nick, res.Nick)
 	assert.Equal(member.User.Username, res.Username)
 	assert.Equal(member.Roles, res.Roles)
+	assert.Equal(member.Permissions, res.Permissions)
 }
 
 func TestMapMemberIfNil(t *testing.T) {
