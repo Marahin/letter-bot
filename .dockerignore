@@ -1,0 +1,7 @@
+bin/tailwindcss
+bin/letter-web
+bin/spot-assistant-bot
+coverage.out
+.env
+.env.local
+.env.prod

@@ -28,6 +28,25 @@ services:
       - ./:/app
     env_file:
       - .env
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8080:8080"
+      - "3005:3005"
+    volumes:
+      - ./:/app
+    env_file:
+      - .env
+    environment:
+      WEB_ASSETS_DIR: /app/internal/infrastructure/web/dist
+    depends_on:
+      - db
+    entrypoint: >-
+      sh -c "make css &&
+      CompileDaemon -include=Makefile -include='*.templ' -include='*.css' -exclude-dir=.git -exclude='app.css' -exclude='*_templ.go'
+      -build='make generate css build-only' -command=./bin/letter-web"
 # Uncomment the following lines to enable the tibiadata service
 # Credits to https://github.com/TibiaData
 #  tibiadata:
