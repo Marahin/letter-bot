@@ -55,6 +55,8 @@ type Services struct {
 	Settings     ports.GuildSettingsService
 	Spots        ports.SpotService
 	Reservations ports.ReservationService
+	Stats        ports.StatsService
+	Characters   ports.CharacterProfileService
 }
 
 // WithServices sets the core services. Call it before Handler.
@@ -100,6 +102,8 @@ func (s *Server) deps() *Deps {
 		Settings:     s.services.Settings,
 		Spots:        s.services.Spots,
 		Reservations: s.services.Reservations,
+		Stats:        s.services.Stats,
+		Characters:   s.services.Characters,
 		Routes:       s.routes,
 	}
 }

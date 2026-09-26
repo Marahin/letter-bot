@@ -16,9 +16,11 @@ import (
 	"spot-assistant/internal/core/booking"
 	"spot-assistant/internal/core/experience"
 	"spot-assistant/internal/core/guildaccess"
+	"spot-assistant/internal/core/players"
 	"spot-assistant/internal/core/premium"
 	"spot-assistant/internal/core/reservations"
 	"spot-assistant/internal/core/spots"
+	corestats "spot-assistant/internal/core/stats"
 
 	adminhttp "spot-assistant/internal/infrastructure/admin-http"
 	channelshttp "spot-assistant/internal/infrastructure/channels-http"
@@ -36,6 +38,8 @@ import (
 	settingshttp "spot-assistant/internal/infrastructure/settings-http"
 	spotRepository "spot-assistant/internal/infrastructure/spot/postgresql/sqlc"
 	spotshttp "spot-assistant/internal/infrastructure/spots-http"
+	statshttp "spot-assistant/internal/infrastructure/stats-http"
+	statsRepository "spot-assistant/internal/infrastructure/stats/postgresql/sqlc"
 	"spot-assistant/internal/infrastructure/web"
 	webUserRepository "spot-assistant/internal/infrastructure/webuser/postgresql/sqlc"
 	"spot-assistant/internal/infrastructure/worldapi"
@@ -87,6 +91,10 @@ func main() {
 	spotRepo := spotRepository.NewSpotRepository(db)
 	reservationRepo := reservationRepository.NewReservationRepository(db).WithLogger(log)
 	botNotifier := notifypg.NewNotifier(db)
+	statsRepo := statsRepository.NewStatsRepository(db, time.Local)
+	experienceRepo := experienceRepository.NewExperienceRepository(db)
+	tibiaDataBaseURL := os.Getenv("TIBIA_WORLD_API_BASE_URL")
+	tibiaData := worldapi.NewHttpWorldService(tibiaDataBaseURL)
 	bookingService := booking.NewAdapter(spotRepo, reservationRepo, webcomm.New(botNotifier, log)).WithLogger(log)
 
 	discordOAuth := oauth.NewCaching(oauth.New(cfg.Discord.ClientID, cfg.Discord.ClientSecret, cfg.CallbackURL(), webUserRepo), log)
@@ -98,24 +106,26 @@ func main() {
 		Settings:     guildsettings.New(guildConfigRepo, guildChannelRepo, guildRoleRepo, worldNameRepo, botNotifier, log),
 		Spots:        spots.New(spotRepo, botNotifier, log),
 		Reservations: reservations.New(bookingService, reservationRepo, spotRepo, botNotifier, log),
+		Stats:        corestats.New(statsRepo, spotRepo),
+		Characters:   players.New(worldapi.NewCachedCharacters(tibiaData), worldNameRepo, experienceRepo, statsRepo, log),
 	})
 	server.Mount(adminhttp.Register)
 	server.Mount(settingshttp.Register)
 	server.Mount(channelshttp.Register)
 	server.Mount(spotshttp.Register)
 	server.Mount(reservationshttp.Register)
+	server.Mount(statshttp.Register)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	tibiaDataBaseURL := os.Getenv("TIBIA_WORLD_API_BASE_URL")
 	switch {
 	case !cfg.ExperienceJobEnabled:
 		log.Warn("Experience job is disabled: WEB_EXPERIENCE_JOB_ENABLED=false")
 	case tibiaDataBaseURL == "":
 		log.Warn("Experience job is disabled: TIBIA_WORLD_API_BASE_URL not set")
 	default:
-		job := experience.New(worldapi.NewHttpWorldService(tibiaDataBaseURL), experienceRepository.NewExperienceRepository(db), log)
+		job := experience.New(tibiaData, experienceRepo, log)
 		lock := scheduler.NewPgAdvisoryLock(db, scheduler.ExperienceJobLockKey, log)
 		go scheduler.New(job, lock, cfg.ExperienceJobInterval, log).Run(ctx)
 	}

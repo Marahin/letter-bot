@@ -32,6 +32,8 @@ type Mocks struct {
 	Settings     *mocks.MockGuildSettingsService
 	Spots        *mocks.MockSpotService
 	Reservations *mocks.MockReservationService
+	Stats        *mocks.MockStatsService
+	Characters   *mocks.MockCharacterProfileService
 }
 
 // NewDeps returns Deps over an scs memstore and fresh mocks.
@@ -45,6 +47,8 @@ func NewDeps(t *testing.T) (*web.Deps, Mocks) {
 		Settings:     mocks.NewMockGuildSettingsService(t),
 		Spots:        mocks.NewMockSpotService(t),
 		Reservations: mocks.NewMockReservationService(t),
+		Stats:        mocks.NewMockStatsService(t),
+		Characters:   mocks.NewMockCharacterProfileService(t),
 	}
 	d := &web.Deps{
 		Cfg:          cfg,
@@ -56,6 +60,8 @@ func NewDeps(t *testing.T) (*web.Deps, Mocks) {
 		Settings:     m.Settings,
 		Spots:        m.Spots,
 		Reservations: m.Reservations,
+		Stats:        m.Stats,
+		Characters:   m.Characters,
 	}
 	return d, m
 }

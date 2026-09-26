@@ -60,7 +60,7 @@ templ chartFrame(p ChartProps) {
 	<div class="relative" style={ p.heightStyle() }>
 		<div class="absolute inset-y-2 left-0 w-11">
 			for _, t := range ticks {
-				<span data-chart-label class="absolute right-1.5 -translate-y-1/2 font-mono text-[10px] leading-none tabular-nums text-zone-400" style={ "top:" + t.TopPct + "%" }>{ t.Text }</span>
+				<span data-chart-label class="absolute right-1.5 -translate-y-1/2 whitespace-nowrap font-mono text-[10px] leading-none tabular-nums text-zone-400" style={ "top:" + t.TopPct + "%" }>{ t.Text }</span>
 			}
 		</div>
 		<div class="absolute inset-y-2 left-11 right-0">

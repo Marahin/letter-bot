@@ -304,14 +304,14 @@ func chartFrame(p ChartProps) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		for _, t := range ticks {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<span data-chart-label class=\"absolute right-1.5 -translate-y-1/2 font-mono text-[10px] leading-none tabular-nums text-zone-400\" style=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<span data-chart-label class=\"absolute right-1.5 -translate-y-1/2 whitespace-nowrap font-mono text-[10px] leading-none tabular-nums text-zone-400\" style=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var14 string
 			templ_7745c5c3_Var14, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("top:" + t.TopPct + "%")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/chart.templ`, Line: 63, Col: 164}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/chart.templ`, Line: 63, Col: 182}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 			if templ_7745c5c3_Err != nil {
@@ -324,7 +324,7 @@ func chartFrame(p ChartProps) templ.Component {
 			var templ_7745c5c3_Var15 string
 			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(t.Text)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/chart.templ`, Line: 63, Col: 175}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/chart.templ`, Line: 63, Col: 193}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 			if templ_7745c5c3_Err != nil {

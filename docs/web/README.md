@@ -135,3 +135,57 @@ one web process runs it at a time (Postgres advisory lock `7419001`). Set
 To test the job against a real database, apply the migrations and run
 `LETTER_TEST_DATABASE_URL=postgres://… go test -run 'EndToEnd|PgAdvisoryLock' ./internal/infrastructure/experience/postgresql/sqlc/`.
 The test uses the guild ids `it-exp-*` and the worlds `Itworld*`, and deletes them after.
+
+## Stats
+
+Every Stats page needs the view rank and a premium server. Pages:
+`/servers/{id}/stats` (overview), `/stats/spots`, `/stats/players`,
+`/stats/characters` (tables), `/stats/spots/{spot}`, `/stats/players/{user}`
+and `/servers/{id}/characters/{name}` (the character page).
+
+- **Day range.** The shared range picker (`web.RangePicker`) sets the days. The
+  page uses the span from the first to the last picked day (picked single days
+  do not make gaps), at most 400 days, default the last 30 days. Days are local
+  days of the process time zone (`TZ`, decision 31); a reservation belongs to
+  the day on which it starts. The span is stored per server in the
+  `letter_range_{id}` session cookie as its first and last day.
+- **Figures.** Reservations and booked hours (the reservation length, not play
+  time, decision 36) count every reservation that starts in the range.
+  Experience is the sum of the `ok` gains in `reservation_experience`.
+  Experience per hour divides it by the hours of the reservations that have at
+  least one `ok` gain. On a character's rows only that character's own gain
+  counts; on a respawn or player row every character of the party counts.
+- **No data.** A figure without any `ok` gain shows "No data" with a tooltip and
+  a note on the page, never 0: the highscores show only the top 1000 of a world.
+  The daily experience chart plots only the days that have data. A reservation
+  that has not been attributed yet shows "Pending" on the character page.
+- **Players** are Discord users (`author_discord_id`). Their name is the author
+  text of their latest reservation. Reservations with a free-text author (made
+  by a manager) are not in the player table; they are in the respawn and
+  character tables.
+- **Characters** come from the author text split on `/` and compared by
+  `lower(trim(name))`.
+- **Tables** sort on the server (`?sort=name|reservations|hours|exp|exp_h&dir=asc|desc`);
+  a row without experience data sorts last in both directions. A table shows at
+  most 500 rows; `?format=csv` exports every row (an empty cell means no data).
+- **Leaderboards** on the overview: the 10 players with the most booked hours,
+  the 10 characters with the most experience, and the 10 characters with the
+  best experience per hour among those with at least 3 hours of data.
+- **Character page.** The TibiaData profile (`/v4/character/{name}`, cached 5
+  minutes in the web process, including "not found") and the experience history
+  from `highscore_snapshots` of the server's world (the last value of each day).
+  When TibiaData fails, the page shows a notice and the statistics. A name that
+  TibiaData and the server's reservations do not know answers 404.
+
+Query cost, measured on 430 000 generated reservations of one guild (the size of
+Celesta) with 141 000 experience rows, PostgreSQL 12: a 30-day overview (four
+aggregate queries plus the picker days) takes about 230 ms; a 400-day overview
+about 0.6 s, the character totals being the largest part (0.85 s). One respawn,
+player or character takes 1-30 ms. The existing indexes are enough
+(`web_reservation_guild_start_idx`, `web_reservation_guild_spot_start_idx`,
+`web_reservation_guild_author_end_idx`, the author trigram index and the
+`reservation_experience` primary key), so there is no new migration.
+
+To test the stats queries against a real database, run
+`LETTER_TEST_DATABASE_URL=postgres://… go test -run TestStatsRepository_Queries ./internal/infrastructure/stats/postgresql/sqlc/`.
+The test uses the guild id `it-stats-guild` and deletes its rows after.
