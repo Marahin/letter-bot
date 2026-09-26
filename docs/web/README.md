@@ -189,3 +189,27 @@ player or character takes 1-30 ms. The existing indexes are enough
 To test the stats queries against a real database, run
 `LETTER_TEST_DATABASE_URL=postgres://… go test -run TestStatsRepository_Queries ./internal/infrastructure/stats/postgresql/sqlc/`.
 The test uses the guild id `it-stats-guild` and deletes its rows after.
+
+## Loot Calculator
+
+`/tools/loot-calculator` is public. It uses the top bar when you are signed out
+and the sidebar when you are signed in. The logic is a port of the tibialoot.com
+calculator (`tibiadata-front/components/Calculator.vue`) in
+`internal/core/lootcalc`:
+
+- A player block is a name line without indentation, followed by indented
+  `Key: value` lines. Each block must have Loot, Supplies, Balance, Damage and
+  Healing. The parser accepts CRLF, tabs, comma thousands and negative values,
+  and removes ` (Leader)` from the name. It ignores unknown keys.
+- The share per player is the total balance divided by the number of players,
+  rounded down (also for a negative total). Each player above the share gives,
+  the largest amount first. Each player at or below the share receives, in paste
+  order. Up to (players - 1) gp stays with the players who give.
+- The Discord and TeamSpeak texts are the same as in the original. The one
+  change: the TeamSpeak summary prints "gp" once, not twice.
+
+The server does the calculation and stores nothing. The browser keeps the last
+20 sessions (with the pasted text) in `localStorage` (`letter:loot-history`).
+`dist/loot-calculator.js` does the copy buttons (the Clipboard API, with an
+`execCommand` fallback on plain HTTP), the history and the Load button (it posts
+the saved text again). The form limit is 64 KB.

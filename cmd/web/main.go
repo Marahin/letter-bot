@@ -40,6 +40,7 @@ import (
 	spotshttp "spot-assistant/internal/infrastructure/spots-http"
 	statshttp "spot-assistant/internal/infrastructure/stats-http"
 	statsRepository "spot-assistant/internal/infrastructure/stats/postgresql/sqlc"
+	toolshttp "spot-assistant/internal/infrastructure/tools-http"
 	"spot-assistant/internal/infrastructure/web"
 	webUserRepository "spot-assistant/internal/infrastructure/webuser/postgresql/sqlc"
 	"spot-assistant/internal/infrastructure/worldapi"
@@ -115,6 +116,7 @@ func main() {
 	server.Mount(spotshttp.Register)
 	server.Mount(reservationshttp.Register)
 	server.Mount(statshttp.Register)
+	server.Mount(toolshttp.Register)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

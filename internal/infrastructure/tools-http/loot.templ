@@ -1,0 +1,240 @@
+package toolshttp
+
+import (
+	"strconv"
+
+	"spot-assistant/internal/core/lootcalc"
+	"spot-assistant/internal/infrastructure/i18n"
+	"spot-assistant/internal/infrastructure/web"
+)
+
+const cardClass = "rounded-lg border border-zone-800 bg-zone-900 shadow-glass"
+
+const labelClass = "text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-300"
+
+const quietButtonClass = "inline-flex min-h-11 items-center justify-center rounded-md border border-zone-700 px-4 text-sm font-semibold text-zone-300 transition hover:border-signal hover:text-signal-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/40"
+
+const primaryButtonClass = "inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-signal px-5 text-sm font-bold text-zone-950 shadow-accent transition hover:bg-signal-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zone-950 disabled:cursor-wait disabled:opacity-70"
+
+// LootCalculator is the public Loot Calculator page: the paste form or the split
+// in the main column, and the browser-only history beside it.
+templ LootCalculator(baseURL string, v lootView, nav web.Nav) {
+	@web.Layout(i18n.T(ctx, "tools.loot.page.title"), i18n.T(ctx, "tools.loot.page.description"), baseURL, LootCalculatorPath, nav) {
+		<header class="flex flex-col gap-1.5">
+			<span class={ labelClass }>{ i18n.T(ctx, "tools.loot.page.eyebrow") }</span>
+			<h1 class="font-display text-4xl font-bold -tracking-[0.02em] text-zone-50">{ i18n.T(ctx, "tools.loot.page.heading") }</h1>
+			<p class="max-w-2xl text-[15px] leading-relaxed text-zone-300">{ i18n.T(ctx, "tools.loot.page.lede") }</p>
+		</header>
+		<div class="mt-8 grid items-start gap-6 lg:grid-cols-3">
+			@lootMain(v)
+			@history()
+		</div>
+		@web.TranslatedStrings(map[string]string{
+			"tools.loot.copy.copied":        i18n.T(ctx, "tools.loot.copy.copied"),
+			"tools.loot.copy.done":          i18n.T(ctx, "tools.loot.copy.done"),
+			"tools.loot.copy.failed":        i18n.T(ctx, "tools.loot.copy.failed"),
+			"tools.loot.history.clear_confirm": i18n.T(ctx, "tools.loot.history.clear_confirm"),
+			"tools.loot.history.load_label": i18n.T(ctx, "tools.loot.history.load_label"),
+		})
+		<script src={ web.AssetURL("/assets/loot-calculator.js") } defer></script>
+	}
+}
+
+// lootMain is the column every calculation replaces.
+templ lootMain(v lootView) {
+	if v.Result != nil {
+		@result(v.Result)
+	} else {
+		@pasteForm(v)
+	}
+}
+
+templ pasteForm(v lootView) {
+	<form
+		id="loot-main"
+		method="post"
+		action={ templ.SafeURL(LootCalculatorPath) }
+		hx-post={ LootCalculatorPath }
+		hx-target="this"
+		hx-swap="outerHTML"
+		hx-disabled-elt="find button[type=submit]"
+		class={ cardClass, "flex flex-col gap-3.5 p-5 sm:p-6 lg:col-span-2" }
+	>
+		<label for="loot-session" class="text-xs font-semibold uppercase tracking-[0.1em] text-zone-300">{ i18n.T(ctx, "tools.loot.form.label") }</label>
+		<textarea
+			id="loot-session"
+			name="session"
+			rows="17"
+			spellcheck="false"
+			autocomplete="off"
+			placeholder={ i18n.T(ctx, "tools.loot.form.placeholder") }
+			if v.Error != nil {
+				aria-invalid="true"
+				aria-describedby="loot-session-help loot-session-error"
+				autofocus
+			} else {
+				aria-describedby="loot-session-help"
+			}
+			data-loot-input
+			class={ "w-full resize-y rounded-md border bg-zone-850 p-3.5 font-mono text-[13px] leading-relaxed text-zone-100 placeholder:text-zone-500 focus:outline-none focus:ring-2",
+				templ.KV("border-rose-500/70 focus:border-rose-400 focus:ring-rose-500/30", v.Error != nil),
+				templ.KV("border-zone-700 focus:border-signal focus:ring-signal/30", v.Error == nil) }
+		>{ v.Text }</textarea>
+		<p id="loot-session-help" class="text-[13px] text-zone-300">{ i18n.T(ctx, "tools.loot.form.help") }</p>
+		if v.Error != nil {
+			<p id="loot-session-error" role="alert" class="text-[13px] text-rose-300">{ errorText(ctx, v.Error) }</p>
+		}
+		<div class="flex flex-wrap justify-end gap-2.5">
+			<button type="button" data-loot-clear class={ quietButtonClass }>{ i18n.T(ctx, "tools.loot.form.clear") }</button>
+			<button type="submit" class={ primaryButtonClass }>{ i18n.T(ctx, "tools.loot.form.submit") }</button>
+		</div>
+	</form>
+}
+
+templ result(r *resultView) {
+	<div id="loot-main" class="flex min-w-0 flex-col gap-5 lg:col-span-2">
+		<dl class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+			@tile(i18n.T(ctx, "tools.loot.kpi.total"), digits(r.Split.Total), balanceClass(r.Split.Total))
+			@tile(i18n.T(ctx, "tools.loot.kpi.per_player"), digits(r.Split.PerHead), "text-zone-50")
+			@tile(i18n.T(ctx, "tools.loot.kpi.players"), strconv.Itoa(r.Split.Players), "text-zone-50")
+			@tile(i18n.T(ctx, "tools.loot.kpi.duration"), duration(r.Session), "text-zone-50")
+		</dl>
+		<section aria-labelledby="loot-transfers-heading" class={ cardClass, "flex flex-col gap-3.5 p-5 sm:p-6" }>
+			<div class="flex items-center justify-between gap-4">
+				<h2 id="loot-transfers-heading" tabindex="-1" data-loot-focus class="font-display text-lg font-semibold text-zone-50 focus:outline-none">{ i18n.T(ctx, "tools.loot.transfers.heading") }</h2>
+				<a href={ templ.SafeURL(LootCalculatorPath) } class="inline-flex min-h-11 items-center text-[13px] font-semibold text-signal-bright transition hover:text-signal">{ i18n.T(ctx, "tools.loot.transfers.new") }</a>
+			</div>
+			if len(r.Split.Transfers) == 0 {
+				<p class="rounded-md border border-zone-800 bg-zone-850 px-3.5 py-3 text-sm text-zone-300">{ i18n.T(ctx, "tools.loot.transfers.none") }</p>
+			} else {
+				<ul class="flex flex-col gap-2">
+					for _, t := range r.Split.Transfers {
+						@transferRow(t)
+					}
+				</ul>
+			}
+			<p data-loot-status role="status" aria-live="polite" class="min-h-[1.25rem] break-words text-[13px] text-zone-300"></p>
+			<div class="flex flex-col gap-2.5 sm:flex-row">
+				<button
+					type="button"
+					data-copy={ r.Discord }
+					data-copy-status={ i18n.T(ctx, "tools.loot.copy.discord_done") }
+					class={ primaryButtonClass, "flex-1" }
+				>
+					<svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.317 4.369a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.211.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.6 12.6 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.009c.12.099.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.891.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.056c.5-5.177-.838-9.674-3.549-13.66a.06.06 0 0 0-.031-.028ZM8.02 15.331c-1.182 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418Zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418Z"></path></svg>
+					<span data-copy-label>{ i18n.T(ctx, "tools.loot.copy.discord") }</span>
+				</button>
+				<button
+					type="button"
+					data-copy={ r.TeamSpeak }
+					data-copy-status={ i18n.T(ctx, "tools.loot.copy.teamspeak_done") }
+					class={ quietButtonClass, "flex-1 gap-2 text-zone-200" }
+				>
+					<svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14v-2a9 9 0 0 1 18 0v2"></path><rect x="3" y="14" width="4" height="6" rx="1.5"></rect><rect x="17" y="14" width="4" height="6" rx="1.5"></rect></svg>
+					<span data-copy-label>{ i18n.T(ctx, "tools.loot.copy.teamspeak") }</span>
+				</button>
+			</div>
+		</section>
+		<section aria-labelledby="loot-players-heading" class={ cardClass, "flex flex-col gap-3 p-5 sm:p-6" }>
+			<h2 id="loot-players-heading" class="font-display text-lg font-semibold text-zone-50">{ i18n.T(ctx, "tools.loot.players.heading") }</h2>
+			<div class="-mx-1 overflow-x-auto px-1">
+				<table class="w-full text-sm">
+					<thead>
+						<tr class="text-left text-xs font-semibold uppercase tracking-[0.08em] text-zone-300">
+							<th scope="col" class="px-1 pb-2 font-semibold">{ i18n.T(ctx, "tools.loot.players.name") }</th>
+							<th scope="col" class="px-1 pb-2 text-right font-semibold">{ i18n.T(ctx, "tools.loot.players.loot") }</th>
+							<th scope="col" class="hidden px-1 pb-2 text-right font-semibold sm:table-cell">{ i18n.T(ctx, "tools.loot.players.supplies") }</th>
+							<th scope="col" class="px-1 pb-2 text-right font-semibold">{ i18n.T(ctx, "tools.loot.players.balance") }</th>
+							<th scope="col" class="hidden px-1 pb-2 text-right font-semibold sm:table-cell">{ i18n.T(ctx, "tools.loot.players.damage") }</th>
+						</tr>
+					</thead>
+					<tbody class="font-mono tabular-nums text-zone-100">
+						for _, p := range r.Players {
+							@playerRow(p)
+						}
+					</tbody>
+				</table>
+			</div>
+		</section>
+		@templ.JSONScript(entryScriptID, r.Entry)
+	</div>
+}
+
+templ tile(label, value, valueClass string) {
+	<div class={ cardClass, "flex min-w-0 flex-col gap-1.5 px-4 py-3.5" }>
+		<dt class="text-xs text-zone-300">{ label }</dt>
+		<dd class={ "truncate font-mono text-[22px] font-semibold tabular-nums", valueClass } title={ value }>{ value }</dd>
+	</div>
+}
+
+templ transferRow(t lootcalc.Transfer) {
+	<li class="flex flex-wrap items-center gap-x-3.5 gap-y-2 rounded-md border border-zone-800 bg-zone-850 px-3.5 py-3">
+		<span class="min-w-0 basis-full break-words font-semibold text-zone-50 sm:basis-0 sm:flex-1">
+			{ t.From }
+			<span class="mx-1.5 font-normal text-zone-400" aria-hidden="true">→</span>
+			<span class="sr-only">{ i18n.T(ctx, "tools.loot.transfers.to") }</span>
+			{ t.To }
+		</span>
+		<span class="mr-auto font-mono text-[15px] tabular-nums text-signal-bright sm:mr-0">{ amount(t.Amount) }</span>
+		<button
+			type="button"
+			data-copy={ lootcalc.BankCommand(t) }
+			data-copy-code
+			aria-label={ i18n.T(ctx, "tools.loot.transfers.copy_label", t.To) }
+			class="inline-flex min-h-11 items-center rounded-md border border-zone-700 px-3 text-xs font-semibold text-zone-300 transition hover:border-signal hover:text-signal-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/40 data-[copied]:border-signal data-[copied]:bg-signal/[0.12] data-[copied]:text-signal-bright sm:min-h-10"
+		><span data-copy-label>{ i18n.T(ctx, "tools.loot.transfers.copy") }</span></button>
+	</li>
+}
+
+templ playerRow(p lootcalc.Player) {
+	<tr class="border-t border-zone-800">
+		<th scope="row" class="px-1 py-2 text-left font-sans font-semibold text-zone-50">
+			{ p.Name }
+			if p.Leader {
+				<span class="ml-1.5 rounded border border-zone-700 px-1 py-px font-sans text-[10px] font-semibold uppercase tracking-[0.08em] text-zone-300">{ i18n.T(ctx, "tools.loot.players.leader") }</span>
+			}
+		</th>
+		<td class="px-1 py-2 text-right">{ digits(p.Loot) }</td>
+		<td class="hidden px-1 py-2 text-right sm:table-cell">{ digits(p.Supplies) }</td>
+		<td class={ "px-1 py-2 text-right", balanceClass(p.Balance) }>{ digits(p.Balance) }</td>
+		<td class="hidden px-1 py-2 text-right sm:table-cell">{ digits(p.Damage) }</td>
+	</tr>
+}
+
+// history lists the sessions saved in this browser. loot-calculator.js fills
+// the list from localStorage with the item template; the server never sees it.
+templ history() {
+	<section aria-labelledby="loot-history-heading" data-loot-history data-loot-action={ LootCalculatorPath } class={ cardClass, "flex min-w-0 flex-col gap-3 p-5" }>
+		<h2 id="loot-history-heading" class="font-display text-base font-semibold text-zone-50">{ i18n.T(ctx, "tools.loot.history.heading") }</h2>
+		<p class="text-[13px] text-zone-300">{ i18n.T(ctx, "tools.loot.history.local") }</p>
+		<ul data-loot-history-list class="flex flex-col gap-2"></ul>
+		<p data-loot-history-empty class="text-[13px] text-zone-300">{ i18n.T(ctx, "tools.loot.history.empty") }</p>
+		<noscript><p class="text-[13px] text-amber-400">{ i18n.T(ctx, "tools.loot.history.noscript") }</p></noscript>
+		<button type="button" data-loot-history-clear hidden class="self-start text-xs font-semibold text-zone-300 underline-offset-2 transition hover:text-signal-bright hover:underline min-h-11">{ i18n.T(ctx, "tools.loot.history.clear") }</button>
+		<template data-loot-history-item>
+			<li class="flex flex-col gap-1 rounded-md border border-zone-800 bg-zone-850 px-3 py-2.5">
+				<div class="flex items-baseline justify-between gap-3">
+					<span data-field="label" class="min-w-0 font-mono text-xs text-zone-300"></span>
+					<span data-field="total" class="whitespace-nowrap font-mono text-[13px] tabular-nums"></span>
+				</div>
+				<div class="flex items-center justify-between gap-3">
+					<span data-field="names" class="min-w-0 truncate text-[13px] text-zone-100"></span>
+					<button type="button" data-loot-load class="inline-flex min-h-11 shrink-0 items-center rounded-md border border-zone-700 px-3 text-xs font-semibold text-zone-300 transition hover:border-signal hover:text-signal-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/40 sm:min-h-9">{ i18n.T(ctx, "tools.loot.history.load") }</button>
+				</div>
+			</li>
+		</template>
+	</section>
+}
+
+// balanceClass colours an amount: profit green, waste red. It lives here, not in
+// view.go, so Tailwind (which scans templ output only) keeps the classes.
+func balanceClass(n int64) string {
+	switch {
+	case n > 0:
+		return "text-emerald-400"
+	case n < 0:
+		return "text-rose-400"
+	default:
+		return "text-zone-100"
+	}
+}
