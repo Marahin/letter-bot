@@ -8,6 +8,7 @@ import (
 	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/guildconfig"
 	"spot-assistant/internal/core/dto/role"
+	"spot-assistant/internal/core/dto/spot"
 	"spot-assistant/internal/core/dto/webuser"
 )
 
@@ -72,4 +73,16 @@ type GuildSettingsService interface {
 	// RequestResync asks the bot to sync channels and roles again. During the
 	// cooldown it does nothing and returns the time left.
 	RequestResync(ctx context.Context, guildID string) (retryAfter time.Duration, err error)
+}
+
+// SpotService manages the respawn list of a guild. Every id is checked against the guild.
+type SpotService interface {
+	List(ctx context.Context, guildID string, filter spot.ListFilter) (*spot.List, error)
+	Create(ctx context.Context, guildID, name string) (*spot.Spot, error)
+	Rename(ctx context.Context, guildID string, id int64, name string) error
+	// Remove deletes a spot without reservations and archives any other, so history and stats stay.
+	Remove(ctx context.Context, guildID string, id int64) (spot.RemoveOutcome, error)
+	Restore(ctx context.Context, guildID string, id int64) error
+	// ImportDefaults adds the default respawn names the guild does not have yet and returns how many it added.
+	ImportDefaults(ctx context.Context, guildID string) (int64, error)
 }

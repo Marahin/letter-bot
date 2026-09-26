@@ -86,6 +86,19 @@ func (repo *SpotRepository) CountSpotReservations(ctx context.Context, guildID s
 	return repo.q.CountSpotReservations(ctx, CountSpotReservationsParams{SpotID: id, GuildID: guildID})
 }
 
+func (repo *SpotRepository) SelectGuildSpotReservationCounts(ctx context.Context, guildID string) (map[int64]spot.ReservationCounts, error) {
+	rows, err := repo.q.SelectGuildSpotReservationCounts(ctx, guildID)
+	if err != nil {
+		return nil, err
+	}
+
+	counts := make(map[int64]spot.ReservationCounts, len(rows))
+	for _, r := range rows {
+		counts[r.SpotID] = spot.ReservationCounts{Total: r.Total, Upcoming: r.Upcoming}
+	}
+	return counts, nil
+}
+
 func (repo *SpotRepository) InsertSpotsIgnoreDuplicates(ctx context.Context, guildID string, names []string) (int64, error) {
 	if len(names) == 0 {
 		return 0, nil

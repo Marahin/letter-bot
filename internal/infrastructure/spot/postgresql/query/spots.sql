@@ -56,14 +56,26 @@ WHERE id = @id
 
 -- name: DeleteSpot :execrows
 DELETE FROM web_spot
-WHERE id = @id
-  AND guild_id = @guild_id::text;
+WHERE web_spot.id = @id
+  AND web_spot.guild_id = @guild_id::text
+  AND NOT EXISTS (SELECT 1 FROM web_reservation r WHERE r.spot_id = web_spot.id);
 
 -- name: CountSpotReservations :one
 SELECT count(*)
 FROM web_reservation
 WHERE spot_id = @spot_id
   AND guild_id = @guild_id::text;
+
+-- Counts every reservation that points at a guild spot, whatever its guild_id,
+-- because any of them blocks DeleteSpot.
+-- name: SelectGuildSpotReservationCounts :many
+SELECT r.spot_id,
+  count(*) AS total,
+  count(*) FILTER (WHERE r.end_at >= now()) AS upcoming
+FROM web_reservation r
+  INNER JOIN web_spot s ON s.id = r.spot_id
+WHERE s.guild_id = @guild_id::text
+GROUP BY r.spot_id;
 
 -- name: InsertSpotsIgnoreDuplicates :execrows
 INSERT INTO web_spot (guild_id, name, created_at)

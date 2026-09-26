@@ -86,11 +86,16 @@ type SpotRepository interface {
 	// or ports.ErrDuplicate when an active spot has the same name.
 	RestoreSpot(ctx context.Context, guildID string, id int64) error
 
-	// DeleteSpot returns ports.ErrNotFound. It fails when the spot has reservations.
+	// DeleteSpot returns ports.ErrNotFound when no spot has the id, or when any
+	// reservation (of any guild) points at it.
 	DeleteSpot(ctx context.Context, guildID string, id int64) error
 
 	// CountSpotReservations counts all past and upcoming reservations of the spot.
 	CountSpotReservations(ctx context.Context, guildID string, id int64) (int64, error)
+
+	// SelectGuildSpotReservationCounts maps each guild spot with reservations to its counts. It
+	// counts every reservation of the spot, as DeleteSpot does, even one with another guild_id.
+	SelectGuildSpotReservationCounts(ctx context.Context, guildID string) (map[int64]spot.ReservationCounts, error)
 
 	// InsertSpotsIgnoreDuplicates adds the names that are not active in the guild yet.
 	// Returns the number of spots added.

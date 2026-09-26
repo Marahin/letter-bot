@@ -51,8 +51,9 @@ func (q *Queries) CountSpotReservations(ctx context.Context, arg CountSpotReserv
 
 const deleteSpot = `-- name: DeleteSpot :execrows
 DELETE FROM web_spot
-WHERE id = $1
-  AND guild_id = $2::text
+WHERE web_spot.id = $1
+  AND web_spot.guild_id = $2::text
+  AND NOT EXISTS (SELECT 1 FROM web_reservation r WHERE r.spot_id = web_spot.id)
 `
 
 type DeleteSpotParams struct {
@@ -204,6 +205,44 @@ func (q *Queries) SelectGuildSpotByName(ctx context.Context, arg SelectGuildSpot
 		&i.ArchivedAt,
 	)
 	return i, err
+}
+
+const selectGuildSpotReservationCounts = `-- name: SelectGuildSpotReservationCounts :many
+SELECT r.spot_id,
+  count(*) AS total,
+  count(*) FILTER (WHERE r.end_at >= now()) AS upcoming
+FROM web_reservation r
+  INNER JOIN web_spot s ON s.id = r.spot_id
+WHERE s.guild_id = $1::text
+GROUP BY r.spot_id
+`
+
+type SelectGuildSpotReservationCountsRow struct {
+	SpotID   int64
+	Total    int64
+	Upcoming int64
+}
+
+// Counts every reservation that points at a guild spot, whatever its guild_id,
+// because any of them blocks DeleteSpot.
+func (q *Queries) SelectGuildSpotReservationCounts(ctx context.Context, guildID string) ([]SelectGuildSpotReservationCountsRow, error) {
+	rows, err := q.db.Query(ctx, selectGuildSpotReservationCounts, guildID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SelectGuildSpotReservationCountsRow
+	for rows.Next() {
+		var i SelectGuildSpotReservationCountsRow
+		if err := rows.Scan(&i.SpotID, &i.Total, &i.Upcoming); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const selectGuildSpots = `-- name: SelectGuildSpots :many

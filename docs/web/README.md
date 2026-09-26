@@ -53,3 +53,19 @@ Only the server owner and administrators open these pages.
   `#letter-summary`). Saving sends `letter_guild_config` and `letter_summary_refresh`.
 - The pickers list only the channels and roles that the bot copied. A value that
   is not in that list is refused.
+
+## Respawns
+
+`/servers/{id}/spots` needs premium. Members with view access see the list.
+Managers can change it.
+
+- **Add** and **rename**: the name is trimmed and has 1 to 120 characters. Names
+  are unique among the active respawns of the server, not case-sensitive.
+- **Remove**: a respawn that no reservation points at is deleted. Any other
+  respawn is archived, so its history and stats stay. The button says which one
+  happens ("Delete" or "Archive"), and the confirm dialog says why.
+- **Restore** moves an archived respawn back to the active list. It is refused
+  when an active respawn has the same name.
+- **Import the default list** shows only on a server without respawns. It adds
+  the 208 names from `seeds/spots.sql` and skips names that exist.
+- Every change sends `letter_summary_refresh`.

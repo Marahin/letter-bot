@@ -30,6 +30,7 @@ type Mocks struct {
 	Access   *mocks.MockGuildAccessService
 	Premium  *mocks.MockPremiumService
 	Settings *mocks.MockGuildSettingsService
+	Spots    *mocks.MockSpotService
 }
 
 // NewDeps returns Deps over an scs memstore and fresh mocks.
@@ -41,6 +42,7 @@ func NewDeps(t *testing.T) (*web.Deps, Mocks) {
 		Access:   mocks.NewMockGuildAccessService(t),
 		Premium:  mocks.NewMockPremiumService(t),
 		Settings: mocks.NewMockGuildSettingsService(t),
+		Spots:    mocks.NewMockSpotService(t),
 	}
 	d := &web.Deps{
 		Cfg:      cfg,
@@ -50,6 +52,7 @@ func NewDeps(t *testing.T) (*web.Deps, Mocks) {
 		Access:   m.Access,
 		Premium:  m.Premium,
 		Settings: m.Settings,
+		Spots:    m.Spots,
 	}
 	return d, m
 }

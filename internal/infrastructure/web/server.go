@@ -53,6 +53,7 @@ type Services struct {
 	Access   ports.GuildAccessService
 	Premium  ports.PremiumService
 	Settings ports.GuildSettingsService
+	Spots    ports.SpotService
 }
 
 // WithServices sets the core services. Call it before Handler.
@@ -96,6 +97,7 @@ func (s *Server) deps() *Deps {
 		Access:   s.services.Access,
 		Premium:  s.services.Premium,
 		Settings: s.services.Settings,
+		Spots:    s.services.Spots,
 		Routes:   s.routes,
 	}
 }

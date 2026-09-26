@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"spot-assistant/internal/core/dto/spot"
 	"spot-assistant/internal/ports"
 )
 
@@ -261,6 +262,38 @@ func TestCountSpotReservations(t *testing.T) {
 	// then
 	require.NoError(t, err)
 	assert.Equal(t, int64(12), count)
+}
+
+func TestSelectGuildSpotReservationCounts(t *testing.T) {
+	// given
+	mock := newSpotMock(t)
+	mock.ExpectQuery("FILTER \\(WHERE r.end_at >= now\\(\\)\\) AS upcoming").
+		WithArgs("guild-1").
+		WillReturnRows(pgxmock.NewRows([]string{"spot_id", "total", "upcoming"}).
+			AddRow(int64(1), int64(12), int64(2)).
+			AddRow(int64(4), int64(3), int64(0)))
+	repo := NewSpotRepository(mock)
+
+	// when
+	counts, err := repo.SelectGuildSpotReservationCounts(context.Background(), "guild-1")
+
+	// then
+	require.NoError(t, err)
+	assert.Equal(t, map[int64]spot.ReservationCounts{1: {Total: 12, Upcoming: 2}, 4: {Total: 3}}, counts)
+}
+
+func TestSelectGuildSpotReservationCounts_Error(t *testing.T) {
+	// given
+	mock := newSpotMock(t)
+	mock.ExpectQuery("FROM web_reservation").WithArgs("guild-1").WillReturnError(errors.New("boom"))
+	repo := NewSpotRepository(mock)
+
+	// when
+	counts, err := repo.SelectGuildSpotReservationCounts(context.Background(), "guild-1")
+
+	// then
+	assert.Error(t, err)
+	assert.Nil(t, counts)
 }
 
 func TestInsertSpotsIgnoreDuplicates(t *testing.T) {

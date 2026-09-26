@@ -17,3 +17,11 @@ func TestSpot_IsArchived(t *testing.T) {
 	assert.False(t, active.IsArchived())
 	assert.True(t, archived.IsArchived())
 }
+
+func TestList_Total(t *testing.T) {
+	// given
+	l := List{ActiveCount: 3, ArchivedCount: 2}
+
+	// when / then
+	assert.Equal(t, 5, l.Total())
+}
