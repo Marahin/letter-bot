@@ -1,0 +1,72 @@
+{
+    "character": {
+        "character": {
+            "name": "Elder Reno",
+            "sex": "male",
+            "title": "Apex Predator",
+            "unlocked_titles": 52,
+            "vocation": "Elder Druid",
+            "level": 2744,
+            "achievement_points": 734,
+            "world": "Celesta",
+            "residence": "Ankrahmun",
+            "guild": {
+                "name": "Refugees",
+                "rank": "Leader"
+            },
+            "last_login": "2026-09-26T00:43:27Z",
+            "account_status": "Premium Account"
+        },
+        "achievements": [
+            {
+                "name": "Dog Sitter",
+                "grade": 1,
+                "secret": false
+            }
+        ],
+        "account_information": {
+            "created": "2006-07-06T08:37:02Z",
+            "loyalty_title": "Sage of Tibia"
+        },
+        "other_characters": [
+            {
+                "name": "Elder Reno",
+                "world": "Celesta",
+                "status": "offline",
+                "deleted": false,
+                "main": true,
+                "traded": false
+            },
+            {
+                "name": "Reno Asno",
+                "world": "Celesta",
+                "status": "offline",
+                "deleted": false,
+                "main": false,
+                "traded": false
+            },
+            {
+                "name": "Renuwka",
+                "world": "Celesta",
+                "status": "offline",
+                "deleted": false,
+                "main": false,
+                "traded": false
+            }
+        ]
+    },
+    "information": {
+        "api": {
+            "version": 4,
+            "release": "4.10.0",
+            "commit": "d53b603c7e235c45268bcf878ef2921b2356cf75"
+        },
+        "timestamp": "2026-09-26T01:09:31Z",
+        "tibia_urls": [
+            "https://www.tibia.com/community/?subtopic=characters&name=elder+reno"
+        ],
+        "status": {
+            "http_code": 200
+        }
+    }
+}

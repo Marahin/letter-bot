@@ -80,6 +80,22 @@ func TestLoadConfig_RejectsInvalidInterval(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestLoadConfig_RejectsNonPositiveIntervalWhenJobEnabled(t *testing.T) {
+	// given
+	t.Setenv("WEB_BASE_URL", "http://localhost:8080")
+	t.Setenv("WEB_EXPERIENCE_JOB_INTERVAL", "0s")
+	setDiscord(t)
+
+	// when
+	_, err := LoadConfig()
+	t.Setenv("WEB_EXPERIENCE_JOB_ENABLED", "false")
+	_, disabledErr := LoadConfig()
+
+	// then
+	assert.ErrorContains(t, err, "WEB_EXPERIENCE_JOB_INTERVAL")
+	assert.NoError(t, disabledErr)
+}
+
 func TestLoadConfig_RequiresDiscordCredentials(t *testing.T) {
 	for _, missing := range []string{"DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET"} {
 		t.Run(missing, func(t *testing.T) {

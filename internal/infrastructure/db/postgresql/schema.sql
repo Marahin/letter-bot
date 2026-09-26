@@ -921,7 +921,8 @@ CREATE TABLE public.highscore_snapshots (
     level integer NOT NULL,
     experience bigint NOT NULL,
     vocation text NOT NULL DEFAULT '',
-    observed_at timestamptz NOT NULL
+    observed_at timestamptz NOT NULL,
+    last_seen_at timestamptz NOT NULL
 );
 
 CREATE TABLE public.reservation_experience (

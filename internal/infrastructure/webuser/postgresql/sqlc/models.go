@@ -145,6 +145,7 @@ type HighscoreSnapshot struct {
 	Experience    int64
 	Vocation      string
 	ObservedAt    pgtype.Timestamptz
+	LastSeenAt    pgtype.Timestamptz
 }
 
 type ReservationExperience struct {

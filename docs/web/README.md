@@ -99,3 +99,39 @@ The web uses the rules of `/book`:
 - **Delete**: the author before the reservation ends, managers at any time.
 - Every change sends `letter_summary_refresh`.
 - Times are read and shown in the server time zone (`TZ`, Europe/Berlin).
+
+## Experience job
+
+The web process reads the TibiaData experience highscores of each world set by a
+premium server (`TIBIA_WORLD_API_BASE_URL`, pages 1 to 20 = the world top 1000).
+It runs at start and then every `WEB_EXPERIENCE_JOB_INTERVAL` (15 minutes). Only
+one web process runs it at a time (Postgres advisory lock `7419001`). Set
+`WEB_EXPERIENCE_JOB_ENABLED=false` to stop it.
+
+- **Tracked characters** are the characters in the author of a reservation
+  (split on `/`) that is upcoming, active or ended in the last 24 hours. The job
+  does not call TibiaData for a world with no tracked character.
+- **Snapshots** (`highscore_snapshots`): a new row only when the level or the
+  experience of a tracked character changed. A run that sees the same value
+  moves `last_seen_at` of the latest row. A row therefore says "this value was
+  seen from `observed_at` to `last_seen_at`".
+- **Runs** (`highscore_runs`): one row per complete read. `observed_at` is the
+  TibiaData scrape time (`information.timestamp`, or the request time) minus
+  `highscore_age` minutes, the oldest of all pages. A failed page writes no run.
+- **Gain per reservation** (`reservation_experience`, one row per character),
+  computed once the reservation has ended and a run was observed at or after
+  `end_at`:
+  - start = the latest snapshot at or before `start_at`, if it was still seen
+    at most 2 hours before `start_at`. Otherwise the first snapshot within 20
+    minutes after `start_at`.
+  - end = the latest snapshot at or before that first run after `end_at`, if it
+    was seen at or after `end_at`.
+  - gain = end - start (negative after a death). A missing start or end gives
+    `status = no_data`: the character was outside the top 1000, or was not
+    tracked when the job ran.
+- Only reservations that start after the first run of the world, and that ended
+  in the last 48 hours, get a gain. There is no backfill.
+
+To test the job against a real database, apply the migrations and run
+`LETTER_TEST_DATABASE_URL=postgres://… go test -run 'EndToEnd|PgAdvisoryLock' ./internal/infrastructure/experience/postgresql/sqlc/`.
+The test uses the guild ids `it-exp-*` and the worlds `Itworld*`, and deletes them after.

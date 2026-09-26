@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"spot-assistant/internal/common/version"
 	"spot-assistant/internal/core/auth"
 	"spot-assistant/internal/core/booking"
+	"spot-assistant/internal/core/experience"
 	"spot-assistant/internal/core/guildaccess"
 	"spot-assistant/internal/core/premium"
 	"spot-assistant/internal/core/reservations"
@@ -22,6 +24,7 @@ import (
 	channelshttp "spot-assistant/internal/infrastructure/channels-http"
 	"spot-assistant/internal/infrastructure/db/postgresql"
 	"spot-assistant/internal/infrastructure/discord/oauth"
+	experienceRepository "spot-assistant/internal/infrastructure/experience/postgresql/sqlc"
 	guildRepository "spot-assistant/internal/infrastructure/guild/postgresql/sqlc"
 	"spot-assistant/internal/infrastructure/guildsettings"
 	infrahttp "spot-assistant/internal/infrastructure/http"
@@ -29,11 +32,13 @@ import (
 	"spot-assistant/internal/infrastructure/notify/webcomm"
 	reservationRepository "spot-assistant/internal/infrastructure/reservation/postgresql/sqlc"
 	reservationshttp "spot-assistant/internal/infrastructure/reservations-http"
+	"spot-assistant/internal/infrastructure/scheduler"
 	settingshttp "spot-assistant/internal/infrastructure/settings-http"
 	spotRepository "spot-assistant/internal/infrastructure/spot/postgresql/sqlc"
 	spotshttp "spot-assistant/internal/infrastructure/spots-http"
 	"spot-assistant/internal/infrastructure/web"
 	webUserRepository "spot-assistant/internal/infrastructure/webuser/postgresql/sqlc"
+	"spot-assistant/internal/infrastructure/worldapi"
 	worldNameRepository "spot-assistant/internal/infrastructure/worldname/postgresql/sqlc"
 )
 
@@ -102,6 +107,18 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+
+	tibiaDataBaseURL := os.Getenv("TIBIA_WORLD_API_BASE_URL")
+	switch {
+	case !cfg.ExperienceJobEnabled:
+		log.Warn("Experience job is disabled: WEB_EXPERIENCE_JOB_ENABLED=false")
+	case tibiaDataBaseURL == "":
+		log.Warn("Experience job is disabled: TIBIA_WORLD_API_BASE_URL not set")
+	default:
+		job := experience.New(worldapi.NewHttpWorldService(tibiaDataBaseURL), experienceRepository.NewExperienceRepository(db), log)
+		lock := scheduler.NewPgAdvisoryLock(db, scheduler.ExperienceJobLockKey, log)
+		go scheduler.New(job, lock, cfg.ExperienceJobInterval, log).Run(ctx)
+	}
 
 	go func() {
 		if err := server.Start(); err != nil {

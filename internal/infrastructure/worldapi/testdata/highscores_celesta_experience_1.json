@@ -1,0 +1,429 @@
+{
+    "highscores": {
+        "world": "Celesta",
+        "category": "experience",
+        "vocation": "all",
+        "highscore_age": 24,
+        "highscore_list": [
+            {
+                "rank": 1,
+                "name": "Elder Reno",
+                "vocation": "Elder Druid",
+                "world": "Celesta",
+                "level": 2744,
+                "value": 343769339496
+            },
+            {
+                "rank": 2,
+                "name": "King Danter",
+                "vocation": "Elite Knight",
+                "world": "Celesta",
+                "level": 2658,
+                "value": 312405676703
+            },
+            {
+                "rank": 3,
+                "name": "Venoox",
+                "vocation": "Royal Paladin",
+                "world": "Celesta",
+                "level": 2567,
+                "value": 281464294348
+            },
+            {
+                "rank": 4,
+                "name": "Lunatic Princess",
+                "vocation": "Elite Knight",
+                "world": "Celesta",
+                "level": 2389,
+                "value": 226881308254
+            },
+            {
+                "rank": 5,
+                "name": "Wakii Szef",
+                "vocation": "Elite Knight",
+                "world": "Celesta",
+                "level": 2342,
+                "value": 213811650457
+            },
+            {
+                "rank": 6,
+                "name": "Naruszacz",
+                "vocation": "Royal Paladin",
+                "world": "Celesta",
+                "level": 2317,
+                "value": 206867846789
+            },
+            {
+                "rank": 7,
+                "name": "Medicaux",
+                "vocation": "Elder Druid",
+                "world": "Celesta",
+                "level": 2304,
+                "value": 203380459945
+            },
+            {
+                "rank": 8,
+                "name": "Bloodii",
+                "vocation": "Master Sorcerer",
+                "world": "Celesta",
+                "level": 2297,
+                "value": 201475403702
+            },
+            {
+                "rank": 9,
+                "name": "Trullen",
+                "vocation": "Elder Druid",
+                "world": "Celesta",
+                "level": 2253,
+                "value": 190263540678
+            },
+            {
+                "rank": 10,
+                "name": "Devzin",
+                "vocation": "Royal Paladin",
+                "world": "Celesta",
+                "level": 2167,
+                "value": 169253976250
+            },
+            {
+                "rank": 11,
+                "name": "Adam Malysh",
+                "vocation": "Elder Druid",
+                "world": "Celesta",
+                "level": 2147,
+                "value": 164650545410
+            },
+            {
+                "rank": 12,
+                "name": "Leik Dwer",
+                "vocation": "Elite Knight",
+                "world": "Celesta",
+                "level": 2124,
+                "value": 159266410938
+            },
+            {
+                "rank": 13,
+                "name": "Fenia Tegisa",
+                "vocation": "Elder Druid",
+                "world": "Celesta",
+                "level": 2118,
+                "value": 158017277803
+            },
+            {
+                "rank": 14,
+                "name": "Kamix",
+                "vocation": "Royal Paladin",
+                "world": "Celesta",
+                "level": 2099,
+                "value": 153890280696
+            },
+            {
+                "rank": 15,
+                "name": "Saayo",
+                "vocation": "Master Sorcerer",
+                "world": "Celesta",
+                "level": 2073,
+                "value": 148186806653
+            },
+            {
+                "rank": 16,
+                "name": "Mighty Rune",
+                "vocation": "Elite Knight",
+                "world": "Celesta",
+                "level": 2072,
+                "value": 147937630400
+            },
+            {
+                "rank": 17,
+                "name": "Bia aly",
+                "vocation": "Master Sorcerer",
+                "world": "Celesta",
+                "level": 2051,
+                "value": 143426003995
+            },
+            {
+                "rank": 18,
+                "name": "Darin Luthayndan",
+                "vocation": "Master Sorcerer",
+                "world": "Celesta",
+                "level": 1988,
+                "value": 130583540887
+            },
+            {
+                "rank": 19,
+                "name": "Mitmachina",
+                "vocation": "Royal Paladin",
+                "world": "Celesta",
+                "level": 1978,
+                "value": 128642870493
+            },
+            {
+                "rank": 20,
+                "name": "Lesarian",
+                "vocation": "Master Sorcerer",
+                "world": "Celesta",
+                "level": 1894,
+                "value": 112980877037
+            },
+            {
+                "rank": 21,
+                "name": "Adam Bialysz",
+                "vocation": "Elder Druid",
+                "world": "Celesta",
+                "level": 1864,
+                "value": 107714247514
+            },
+            {
+                "rank": 22,
+                "name": "Wakynzs",
+                "vocation": "Royal Paladin",
+                "world": "Celesta",
+                "level": 1862,
+                "value": 107384049258
+            },
+            {
+                "rank": 23,
+                "name": "Itz Raider",
+                "vocation": "Master Sorcerer",
+                "world": "Celesta",
+                "level": 1845,
+                "value": 104394792340
+            },
+            {
+                "rank": 24,
+                "name": "Muere Ice",
+                "vocation": "Royal Paladin",
+                "world": "Celesta",
+                "level": 1844,
+                "value": 104200018127
+            },
+            {
+                "rank": 25,
+                "name": "Zafis Cain",
+                "vocation": "Elite Knight",
+                "world": "Celesta",
+                "level": 1838,
+                "value": 103224812873
+            },
+            {
+                "rank": 26,
+                "name": "Markelito",
+                "vocation": "Elite Knight",
+                "world": "Celesta",
+                "level": 1829,
+                "value": 101779565610
+            },
+            {
+                "rank": 27,
+                "name": "Attorii",
+                "vocation": "Elite Knight",
+                "world": "Celesta",
+                "level": 1818,
+                "value": 99860266014
+            },
+            {
+                "rank": 28,
+                "name": "Akashiia",
+                "vocation": "Master Sorcerer",
+                "world": "Celesta",
+                "level": 1797,
+                "value": 96459302427
+            },
+            {
+                "rank": 29,
+                "name": "Kruuks",
+                "vocation": "Royal Paladin",
+                "world": "Celesta",
+                "level": 1787,
+                "value": 94911993713
+            },
+            {
+                "rank": 30,
+                "name": "Valek Phor",
+                "vocation": "Elder Druid",
+                "world": "Celesta",
+                "level": 1773,
+                "value": 92673493275
+            },
+            {
+                "rank": 31,
+                "name": "Dudus Andy",
+                "vocation": "Elite Knight",
+                "world": "Celesta",
+                "level": 1744,
+                "value": 88126819973
+            },
+            {
+                "rank": 32,
+                "name": "Royal Velkoz",
+                "vocation": "Royal Paladin",
+                "world": "Celesta",
+                "level": 1743,
+                "value": 88023069959
+            },
+            {
+                "rank": 33,
+                "name": "Crugeros",
+                "vocation": "Master Sorcerer",
+                "world": "Celesta",
+                "level": 1729,
+                "value": 85936742979
+            },
+            {
+                "rank": 34,
+                "name": "Kamila kami",
+                "vocation": "Master Sorcerer",
+                "world": "Celesta",
+                "level": 1705,
+                "value": 82386979598
+            },
+            {
+                "rank": 35,
+                "name": "Chealino",
+                "vocation": "Master Sorcerer",
+                "world": "Celesta",
+                "level": 1704,
+                "value": 82301893366
+            },
+            {
+                "rank": 36,
+                "name": "Kratosek",
+                "vocation": "Elite Knight",
+                "world": "Celesta",
+                "level": 1689,
+                "value": 80050910260
+            },
+            {
+                "rank": 37,
+                "name": "Kedo Azkam",
+                "vocation": "Master Sorcerer",
+                "world": "Celesta",
+                "level": 1684,
+                "value": 79345477370
+            },
+            {
+                "rank": 38,
+                "name": "Fevorii",
+                "vocation": "Royal Paladin",
+                "world": "Celesta",
+                "level": 1648,
+                "value": 74440836065
+            },
+            {
+                "rank": 39,
+                "name": "King Manius",
+                "vocation": "Elite Knight",
+                "world": "Celesta",
+                "level": 1630,
+                "value": 71994767188
+            },
+            {
+                "rank": 40,
+                "name": "Ghentor Berserker",
+                "vocation": "Elite Knight",
+                "world": "Celesta",
+                "level": 1618,
+                "value": 70383757234
+            },
+            {
+                "rank": 41,
+                "name": "Tamelio",
+                "vocation": "Master Sorcerer",
+                "world": "Celesta",
+                "level": 1610,
+                "value": 69331454953
+            },
+            {
+                "rank": 42,
+                "name": "Og Ivene",
+                "vocation": "Elite Knight",
+                "world": "Celesta",
+                "level": 1607,
+                "value": 69027853739
+            },
+            {
+                "rank": 43,
+                "name": "Hyxuu",
+                "vocation": "Elder Druid",
+                "world": "Celesta",
+                "level": 1581,
+                "value": 65687433067
+            },
+            {
+                "rank": 44,
+                "name": "Psyho Destro",
+                "vocation": "Royal Paladin",
+                "world": "Celesta",
+                "level": 1575,
+                "value": 64978166886
+            },
+            {
+                "rank": 45,
+                "name": "Inkkton",
+                "vocation": "Elite Knight",
+                "world": "Celesta",
+                "level": 1567,
+                "value": 63986209993
+            },
+            {
+                "rank": 46,
+                "name": "Drax Oblivion",
+                "vocation": "Elite Knight",
+                "world": "Celesta",
+                "level": 1551,
+                "value": 62062062291
+            },
+            {
+                "rank": 47,
+                "name": "Berfor",
+                "vocation": "Elder Druid",
+                "world": "Celesta",
+                "level": 1550,
+                "value": 61938611467
+            },
+            {
+                "rank": 48,
+                "name": "Poleyy",
+                "vocation": "Elder Druid",
+                "world": "Celesta",
+                "level": 1547,
+                "value": 61529948880
+            },
+            {
+                "rank": 49,
+                "name": "Zevelan Leywin",
+                "vocation": "Master Sorcerer",
+                "world": "Celesta",
+                "level": 1546,
+                "value": 61385879618
+            },
+            {
+                "rank": 50,
+                "name": "Akuma Sovereign",
+                "vocation": "Master Sorcerer",
+                "world": "Celesta",
+                "level": 1544,
+                "value": 61109006719
+            }
+        ],
+        "highscore_page": {
+            "current_page": 1,
+            "total_pages": 20,
+            "total_records": 1000
+        }
+    },
+    "information": {
+        "api": {
+            "version": 4,
+            "release": "4.10.0",
+            "commit": "d53b603c7e235c45268bcf878ef2921b2356cf75"
+        },
+        "timestamp": "2026-09-26T01:04:15Z",
+        "tibia_urls": [
+            "https://www.tibia.com/community/?subtopic=highscores&world=Celesta&category=6&profession=0&currentpage=1"
+        ],
+        "status": {
+            "http_code": 200
+        }
+    }
+}

@@ -39,6 +39,9 @@ func LoadConfig() (Config, error) {
 	if cfg.BaseURL == "" {
 		return Config{}, errors.New("WEB_BASE_URL must not be empty")
 	}
+	if cfg.ExperienceJobEnabled && cfg.ExperienceJobInterval <= 0 {
+		return Config{}, errors.New("WEB_EXPERIENCE_JOB_INTERVAL must be positive")
+	}
 	if err := envconfig.Process("discord", &cfg.Discord); err != nil {
 		return Config{}, err
 	}

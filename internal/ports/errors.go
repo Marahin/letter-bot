@@ -1,6 +1,9 @@
 package ports
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 var (
 	// ErrNotFound means the row does not exist, or does not belong to the given guild.
@@ -20,3 +23,6 @@ var (
 	// ErrUnauthorized means Discord refused the user's stored OAuth token. The user must sign in again.
 	ErrUnauthorized = errors.New("oauth token refused")
 )
+
+// ErrCharacterNotFound means TibiaData knows no character with that name. It also matches ErrNotFound.
+var ErrCharacterNotFound = fmt.Errorf("character %w", ErrNotFound)
