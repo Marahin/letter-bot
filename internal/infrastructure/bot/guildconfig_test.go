@@ -7,6 +7,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
@@ -187,14 +188,14 @@ func TestBot_ProcessResyncRequests(t *testing.T) {
 	m.reader.On("GuildRoles", "g1").Return(nil, nil).Once()
 	m.channels.On("Replace", mocks.ContextMock, "g1", []*discord.Channel{}).Return(nil).Once()
 	m.roles.On("Replace", mocks.ContextMock, "g1", []*role.Role{}).Return(nil).Once()
-	configs.On("MarkSynced", mocks.ContextMock, "g1").Return(nil).Once()
+	configs.On("MarkSynced", mocks.ContextMock, "g1", mock.Anything).Return(nil).Once()
 	m.reader.On("GuildChannels", "g2").Return(nil, errors.New("missing access")).Once()
 
 	// when
 	b.processResyncRequests(context.Background())
 
 	// then: g1 is marked synced, g2 keeps its request for the next tick
-	configs.AssertNotCalled(t, "MarkSynced", mocks.ContextMock, "g2")
+	configs.AssertNotCalled(t, "MarkSynced", mocks.ContextMock, "g2", mock.Anything)
 }
 
 func TestBot_ProcessResyncRequests_ListError(t *testing.T) {

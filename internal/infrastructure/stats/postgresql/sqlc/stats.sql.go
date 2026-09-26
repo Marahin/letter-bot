@@ -81,7 +81,7 @@ func (q *Queries) CharacterReservations(ctx context.Context, arg CharacterReserv
 
 const characterTotals = `-- name: CharacterTotals :many
 WITH r AS (
-  SELECT r.id, r.author, extract(epoch FROM r.end_at - r.start_at)::bigint AS secs
+  SELECT r.id, r.author, r.start_at, extract(epoch FROM r.end_at - r.start_at)::bigint AS secs
   FROM web_reservation r
   WHERE r.guild_id = $1::text
     AND r.start_at >= $2::timestamptz
@@ -90,7 +90,7 @@ WITH r AS (
     AND ($5::text = '' OR r.author_discord_id = $5::text)
     AND ($6::text = '' OR lower(r.author) LIKE '%' || $6::text || '%')
 ), c AS (
-  SELECT r.id, r.secs, n.character_key, n.character_name
+  SELECT r.id, r.start_at, r.secs, n.character_key, n.character_name
   FROM r
   CROSS JOIN LATERAL (
     SELECT lower(btrim(m.name)) AS character_key, min(btrim(m.name)) AS character_name
@@ -101,7 +101,7 @@ WITH r AS (
   WHERE $6::text = '' OR n.character_key = $6::text
 )
 SELECT c.character_key::text AS character_key,
-       max(c.character_name)::text AS name,
+       (array_agg(c.character_name ORDER BY c.start_at DESC, c.id DESC))[1]::text AS name,
        count(*)::bigint AS reservations,
        coalesce(sum(c.secs), 0)::bigint AS seconds,
        count(re.gain)::bigint AS exp_reservations,

@@ -79,7 +79,7 @@ FROM g;
 -- The inner GROUP BY dedupes a character named twice in one author text; it sorts 1-3 names per
 -- reservation instead of every row.
 WITH r AS (
-  SELECT r.id, r.author, extract(epoch FROM r.end_at - r.start_at)::bigint AS secs
+  SELECT r.id, r.author, r.start_at, extract(epoch FROM r.end_at - r.start_at)::bigint AS secs
   FROM web_reservation r
   WHERE r.guild_id = @guild_id::text
     AND r.start_at >= @from_t::timestamptz
@@ -88,7 +88,7 @@ WITH r AS (
     AND (@user_id::text = '' OR r.author_discord_id = @user_id::text)
     AND (@character_key::text = '' OR lower(r.author) LIKE '%' || @character_key::text || '%')
 ), c AS (
-  SELECT r.id, r.secs, n.character_key, n.character_name
+  SELECT r.id, r.start_at, r.secs, n.character_key, n.character_name
   FROM r
   CROSS JOIN LATERAL (
     SELECT lower(btrim(m.name)) AS character_key, min(btrim(m.name)) AS character_name
@@ -99,7 +99,7 @@ WITH r AS (
   WHERE @character_key::text = '' OR n.character_key = @character_key::text
 )
 SELECT c.character_key::text AS character_key,
-       max(c.character_name)::text AS name,
+       (array_agg(c.character_name ORDER BY c.start_at DESC, c.id DESC))[1]::text AS name,
        count(*)::bigint AS reservations,
        coalesce(sum(c.secs), 0)::bigint AS seconds,
        count(re.gain)::bigint AS exp_reservations,

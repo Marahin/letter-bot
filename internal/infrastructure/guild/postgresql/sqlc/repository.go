@@ -124,8 +124,11 @@ func (r *GuildConfigRepository) ListResyncRequested(ctx context.Context) ([]stri
 	return res, nil
 }
 
-func (r *GuildConfigRepository) MarkSynced(ctx context.Context, guildID string) error {
-	return postgresql.RowsAffected(r.q.MarkGuildSynced(ctx, guildID))
+func (r *GuildConfigRepository) MarkSynced(ctx context.Context, guildID string, startedAt time.Time) error {
+	return postgresql.RowsAffected(r.q.MarkGuildSynced(ctx, MarkGuildSyncedParams{
+		StartedAt: pgtype.Timestamptz{Time: startedAt, Valid: true},
+		GuildID:   guildID,
+	}))
 }
 
 type GuildChannelRepository struct {

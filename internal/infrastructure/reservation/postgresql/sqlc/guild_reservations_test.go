@@ -79,7 +79,7 @@ func TestSearchReservationsWithSpot_MapsEveryFilter(t *testing.T) {
 	mock.ExpectQuery("FROM web_reservation INNER JOIN web_spot").
 		WithArgs("guild-1",
 			pgtype.Int8{Int64: 3, Valid: true},
-			pgtype.Text{String: "nyx", Valid: true},
+			pgtype.Text{String: `nyx\_1`, Valid: true},
 			pgtype.Text{String: "111", Valid: true},
 			mocks.NewPgTimestamptzTime(from),
 			mocks.NewPgTimestamptzTime(to),
@@ -91,7 +91,7 @@ func TestSearchReservationsWithSpot_MapsEveryFilter(t *testing.T) {
 	res, err := repo.SearchReservationsWithSpot(context.Background(), reservation.SearchFilter{
 		GuildID:         "guild-1",
 		SpotID:          &spotID,
-		Author:          "nyx",
+		Author:          "nyx_1",
 		AuthorDiscordID: "111",
 		From:            &from,
 		To:              &to,
@@ -242,14 +242,14 @@ func TestSelectKnownAuthors(t *testing.T) {
 	// given
 	mock := newReservationMock(t)
 	mock.ExpectQuery("WITH matching AS").
-		WithArgs("guild-1", "nyx").
+		WithArgs("guild-1", `n\%yx`).
 		WillReturnRows(pgxmock.NewRows([]string{"author_discord_id", "author"}).
 			AddRow("111", "Quiet Nyx").
 			AddRow("222", "Nyxie"))
 	repo := NewReservationRepository(mock)
 
 	// when
-	authors, err := repo.SelectKnownAuthors(context.Background(), "guild-1", "nyx")
+	authors, err := repo.SelectKnownAuthors(context.Background(), "guild-1", "n%yx")
 
 	// then
 	require.NoError(t, err)

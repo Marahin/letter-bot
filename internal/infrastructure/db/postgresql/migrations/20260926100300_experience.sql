@@ -16,9 +16,11 @@ CREATE TABLE highscore_snapshots (
   level int NOT NULL,
   experience bigint NOT NULL,
   vocation text NOT NULL DEFAULT '',
-  observed_at timestamptz NOT NULL
+  -- A row covers [observed_at, last_seen_at]: runs that see the same value only move last_seen_at.
+  observed_at timestamptz NOT NULL,
+  last_seen_at timestamptz NOT NULL
 );
-CREATE INDEX highscore_snapshots_lookup_idx ON highscore_snapshots (world, character_key, observed_at);
+CREATE UNIQUE INDEX highscore_snapshots_lookup_uidx ON highscore_snapshots (world, character_key, observed_at);
 
 CREATE TABLE reservation_experience (
   reservation_id bigint NOT NULL REFERENCES web_reservation(id) ON DELETE CASCADE,

@@ -35,6 +35,8 @@ CREATE EXTENSION IF NOT EXISTS btree_gist WITH SCHEMA public;
 
 COMMENT ON EXTENSION btree_gist IS 'support for indexing common datatypes in GiST';
 
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
+
 
 SET default_tablespace = '';
 
@@ -626,6 +628,11 @@ ALTER TABLE ONLY public.django_session
 ALTER TABLE ONLY public.web_reservation
     ADD CONSTRAINT unique_reservation_time_and_space_per_guild UNIQUE (start_at, end_at, spot_id, guild_id);
 
+CREATE INDEX web_reservation_guild_author_end_idx ON public.web_reservation USING btree (guild_id, author_discord_id, end_at);
+CREATE INDEX web_reservation_guild_end_idx ON public.web_reservation USING btree (guild_id, end_at);
+CREATE INDEX web_spot_lower_name_idx ON public.web_spot USING btree (lower((name)::text));
+CREATE INDEX web_spot_lower_name_trgm_idx ON public.web_spot USING gin (lower((name)::text) public.gin_trgm_ops);
+
 
 --
 -- Name: web_reservation web_reservation_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -885,6 +892,7 @@ ALTER TABLE public.web_spot ADD COLUMN guild_id character varying(255), ADD COLU
 CREATE UNIQUE INDEX web_spot_guild_active_name_uidx ON public.web_spot USING btree (guild_id, lower((name)::text)) WHERE (archived_at IS NULL);
 CREATE INDEX web_reservation_guild_start_idx ON public.web_reservation USING btree (guild_id, start_at);
 CREATE INDEX web_reservation_guild_spot_start_idx ON public.web_reservation USING btree (guild_id, spot_id, start_at);
+CREATE INDEX web_reservation_author_trgm_idx ON public.web_reservation USING gin (lower((author)::text) public.gin_trgm_ops);
 
 CREATE TABLE public.web_users (
     discord_user_id text PRIMARY KEY,
@@ -903,6 +911,7 @@ CREATE TABLE public.web_sessions (
     data bytea NOT NULL,
     expiry timestamptz NOT NULL
 );
+CREATE INDEX web_sessions_expiry_idx ON public.web_sessions USING btree (expiry);
 
 CREATE TABLE public.highscore_runs (
     id bigserial PRIMARY KEY,
@@ -912,6 +921,7 @@ CREATE TABLE public.highscore_runs (
     pages integer NOT NULL,
     rows integer NOT NULL
 );
+CREATE INDEX highscore_runs_world_observed_idx ON public.highscore_runs USING btree (world, observed_at);
 
 CREATE TABLE public.highscore_snapshots (
     id bigserial PRIMARY KEY,
@@ -924,6 +934,7 @@ CREATE TABLE public.highscore_snapshots (
     observed_at timestamptz NOT NULL,
     last_seen_at timestamptz NOT NULL
 );
+CREATE UNIQUE INDEX highscore_snapshots_lookup_uidx ON public.highscore_snapshots USING btree (world, character_key, observed_at);
 
 CREATE TABLE public.reservation_experience (
     reservation_id bigint NOT NULL REFERENCES public.web_reservation(id) ON DELETE CASCADE,

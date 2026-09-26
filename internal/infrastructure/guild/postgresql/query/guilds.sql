@@ -77,5 +77,6 @@ ORDER BY resync_requested_at;
 
 -- name: MarkGuildSynced :execrows
 UPDATE guilds
-SET resync_requested_at = NULL, synced_at = now()
+SET resync_requested_at = CASE WHEN resync_requested_at <= @started_at::timestamptz THEN NULL ELSE resync_requested_at END,
+    synced_at = now()
 WHERE guild_id = @guild_id;

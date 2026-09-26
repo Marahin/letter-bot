@@ -204,7 +204,7 @@ func (t *ReservationRepository) SelectUpcomingMemberReservationsWithSpots(ctx co
 		AuthorDiscordID: member.ID,
 	})
 	if err != nil {
-		return []*reservation.ReservationWithSpot{}, nil
+		return nil, err
 	}
 
 	reservations := make([]*reservation.ReservationWithSpot, len(res))
@@ -304,7 +304,7 @@ func (t *ReservationRepository) SelectOverlappingReservationsBySpotID(ctx contex
 }
 
 func (t *ReservationRepository) SelectKnownAuthors(ctx context.Context, guildID string, pattern string) ([]*reservation.KnownAuthor, error) {
-	res, err := t.q.SelectKnownAuthors(ctx, SelectKnownAuthorsParams{GuildID: guildID, Pattern: pattern})
+	res, err := t.q.SelectKnownAuthors(ctx, SelectKnownAuthorsParams{GuildID: guildID, Pattern: postgresql.EscapeLike(pattern)})
 	if err != nil {
 		return []*reservation.KnownAuthor{}, err
 	}
@@ -329,7 +329,7 @@ func mapSearchFilter(filter reservation.SearchFilter) CountReservationsParams {
 		params.SpotID = pgtype.Int8{Int64: *filter.SpotID, Valid: true}
 	}
 	if filter.Author != "" {
-		params.Author = pgtype.Text{String: filter.Author, Valid: true}
+		params.Author = pgtype.Text{String: postgresql.EscapeLike(filter.Author), Valid: true}
 	}
 	if filter.AuthorDiscordID != "" {
 		params.AuthorDiscordID = pgtype.Text{String: filter.AuthorDiscordID, Valid: true}

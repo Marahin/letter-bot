@@ -34,15 +34,8 @@ func (r *ExperienceRepository) ListTrackedWorlds(ctx context.Context) ([]string,
 	return r.q.ListTrackedWorlds(ctx)
 }
 
-// trackedLookback bounds start_at so the (guild_id, start_at) index serves the scan; reservations last hours, not days.
-const trackedLookback = 24 * time.Hour
-
 func (r *ExperienceRepository) ListTrackedCharacterKeys(ctx context.Context, world string, since time.Time) ([]string, error) {
-	return r.q.ListTrackedCharacterKeys(ctx, ListTrackedCharacterKeysParams{
-		World:     world,
-		StartFrom: ts(since.Add(-trackedLookback)),
-		Since:     ts(since),
-	})
+	return r.q.ListTrackedCharacterKeys(ctx, ListTrackedCharacterKeysParams{World: world, Since: ts(since)})
 }
 
 func (r *ExperienceRepository) LatestSnapshots(ctx context.Context, world string, keys []string) (map[string]experience.Snapshot, error) {

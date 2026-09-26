@@ -2,6 +2,7 @@ package sqlc
 
 import (
 	"context"
+	"errors"
 	"spot-assistant/internal/core/dto/guild"
 	"spot-assistant/internal/core/dto/member"
 	"testing"
@@ -376,4 +377,22 @@ func TestSelectUpcomingReservationsWithSpotForSpot_EmptyWhenNoMatches(t *testing
 	assert.NoError(err)
 	assert.Len(res, 0)
 	assert.NoError(mock.ExpectationsWereMet())
+}
+
+func TestSelectUpcomingMemberReservationsWithSpots_ReturnsDBError(t *testing.T) {
+	// given
+	mock, err := pgxmock.NewPool()
+	assert.NoError(t, err)
+	defer mock.Close()
+	boom := errors.New("boom")
+	mock.ExpectQuery("author_discord_id").WithArgs("guild-1", "u1").WillReturnError(boom)
+	repo := NewReservationRepository(mock)
+
+	// when
+	res, err := repo.SelectUpcomingMemberReservationsWithSpots(context.Background(), &guild.Guild{ID: "guild-1"}, &member.Member{ID: "u1"})
+
+	// then
+	assert.ErrorIs(t, err, boom)
+	assert.Nil(t, res)
+	assert.NoError(t, mock.ExpectationsWereMet())
 }

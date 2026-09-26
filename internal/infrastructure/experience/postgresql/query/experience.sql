@@ -13,7 +13,6 @@ JOIN guilds g ON g.guild_id = r.guild_id
 CROSS JOIN LATERAL unnest(string_to_array(r.author, '/')) AS n(name)
 WHERE gw.world_name = @world::text
   AND (g.premium OR g.premium_forever)
-  AND r.start_at >= @start_from::timestamptz
   AND r.end_at >= @since::timestamptz
   AND btrim(n.name) <> ''
 ORDER BY character_key;
@@ -34,7 +33,8 @@ SELECT @world::text,
        unnest(@experiences::bigint[]),
        unnest(@vocations::text[]),
        @observed_at::timestamptz,
-       @observed_at::timestamptz;
+       @observed_at::timestamptz
+ON CONFLICT (world, character_key, observed_at) DO NOTHING;
 
 -- name: TouchSnapshots :exec
 UPDATE highscore_snapshots

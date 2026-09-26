@@ -48,6 +48,7 @@ func (s *GuildSyncer) WithLogger(log *zap.SugaredLogger) *GuildSyncer {
 }
 
 func (s *GuildSyncer) Sync(ctx context.Context, guildID string) error {
+	startedAt := time.Now()
 	channels, err := s.reader.GuildChannels(guildID)
 	if err != nil {
 		return fmt.Errorf("fetch channels: %w", err)
@@ -64,7 +65,7 @@ func (s *GuildSyncer) Sync(ctx context.Context, guildID string) error {
 		return fmt.Errorf("store roles: %w", err)
 	}
 
-	return s.configs.MarkSynced(ctx, guildID)
+	return s.configs.MarkSynced(ctx, guildID, startedAt)
 }
 
 // Schedule syncs the guild once Discord events for it stop arriving for a few seconds.

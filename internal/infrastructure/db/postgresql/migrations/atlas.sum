@@ -1,4 +1,4 @@
-h1:WMHRfIZinpQP1nHHl5M7QXDLGP/oPwbK1/Mwiz3RLqg=
+h1:tWCniQ1xtt8U2BdRzx3vfgev66jvwmcUeLAoaKSe0L0=
 20240429143025_initial_schema.sql h1:XrCU7DGR+St1MmMTZDwGo7tdSFLq8IGEz9cKXK7m5+E=
 20240429143026_actual_schema.sql h1:cM2HxcG49CeQSsz60cmwEdH1ZZfF0T7rYkERAfvBng8=
 20250611195746_add_world_setting.sql h1:Ox6e6V3ECEsovtO3xJo9fjrCZZ6fH1sTFOYe2qvxhyU=
@@ -6,5 +6,4 @@ h1:WMHRfIZinpQP1nHHl5M7QXDLGP/oPwbK1/Mwiz3RLqg=
 20260926100000_letter_guilds.sql h1:f9v4Mcva+oESbwh7h5wDrcWqIDr2JxPaPxbzUamh74k=
 20260926100100_spots_per_guild.sql h1:IAVYL7YwRGjhbYVPpDIy1G76WHAozTjFK1DMCTXUJGo=
 20260926100200_web_users_sessions.sql h1:9UVroeIYf1Nkz4K/ZKfsK7uq/m2xVeQ60702KvPrQ64=
-20260926100300_experience.sql h1:gxNPhWr9YjAU1obky2Ea0ZTs15IjjxwysX1Yplk7y6Q=
-20260926100400_highscore_last_seen.sql h1:vVci1eDmAO74LCSQ9dXa6Xv0jj3/ZN8ZIbJ9YFJnChU=
+20260926100300_experience.sql h1:OuVL1hfoM3Wt4Wz7yWfZoQe2H53BsZVc63nHjrtQTSw=

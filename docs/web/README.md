@@ -267,7 +267,12 @@ it cannot go first.
 1. Take a database backup (`pg_dump` of `spotassistant`).
 2. Apply the migrations: `bin/migrate` with the `DATABASE_*` values of the
    production database (atlas, revisions in schema `atlas_schema_revisions`).
-   Five new files: `20260926100000` to `20260926100400`.
+   Four new files: `20260926100000` to `20260926100300`.
+   `20260926100100` builds three indexes on `web_reservation` (about 430k
+   rows) without `CONCURRENTLY` (atlas runs each file in a transaction). Each
+   build holds a lock that blocks writes to `web_reservation` (reads still
+   work) for a few seconds, so bookings from the old bot can fail or wait
+   during this step. Run it at a quiet hour.
 3. Immediately set the new `marahin/letter-bot:<sha>` image on
    `spot-assistant-bot`. Expect a break of `/unbook` autocomplete and the
    summaries of about one minute between step 2 and the new bot pod being ready.

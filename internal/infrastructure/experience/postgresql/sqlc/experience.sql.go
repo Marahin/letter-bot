@@ -167,6 +167,7 @@ SELECT $1::text,
        unnest($6::text[]),
        $7::timestamptz,
        $7::timestamptz
+ON CONFLICT (world, character_key, observed_at) DO NOTHING
 `
 
 type InsertSnapshotsParams struct {
@@ -243,20 +244,18 @@ JOIN guilds g ON g.guild_id = r.guild_id
 CROSS JOIN LATERAL unnest(string_to_array(r.author, '/')) AS n(name)
 WHERE gw.world_name = $1::text
   AND (g.premium OR g.premium_forever)
-  AND r.start_at >= $2::timestamptz
-  AND r.end_at >= $3::timestamptz
+  AND r.end_at >= $2::timestamptz
   AND btrim(n.name) <> ''
 ORDER BY character_key
 `
 
 type ListTrackedCharacterKeysParams struct {
-	World     string
-	StartFrom pgtype.Timestamptz
-	Since     pgtype.Timestamptz
+	World string
+	Since pgtype.Timestamptz
 }
 
 func (q *Queries) ListTrackedCharacterKeys(ctx context.Context, arg ListTrackedCharacterKeysParams) ([]string, error) {
-	rows, err := q.db.Query(ctx, listTrackedCharacterKeys, arg.World, arg.StartFrom, arg.Since)
+	rows, err := q.db.Query(ctx, listTrackedCharacterKeys, arg.World, arg.Since)
 	if err != nil {
 		return nil, err
 	}

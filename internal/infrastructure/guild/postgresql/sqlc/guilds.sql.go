@@ -7,16 +7,24 @@ package sqlc
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const markGuildSynced = `-- name: MarkGuildSynced :execrows
 UPDATE guilds
-SET resync_requested_at = NULL, synced_at = now()
-WHERE guild_id = $1
+SET resync_requested_at = CASE WHEN resync_requested_at <= $1::timestamptz THEN NULL ELSE resync_requested_at END,
+    synced_at = now()
+WHERE guild_id = $2
 `
 
-func (q *Queries) MarkGuildSynced(ctx context.Context, guildID string) (int64, error) {
-	result, err := q.db.Exec(ctx, markGuildSynced, guildID)
+type MarkGuildSyncedParams struct {
+	StartedAt pgtype.Timestamptz
+	GuildID   string
+}
+
+func (q *Queries) MarkGuildSynced(ctx context.Context, arg MarkGuildSyncedParams) (int64, error) {
+	result, err := q.db.Exec(ctx, markGuildSynced, arg.StartedAt, arg.GuildID)
 	if err != nil {
 		return 0, err
 	}

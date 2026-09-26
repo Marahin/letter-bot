@@ -7,6 +7,7 @@ package mocks
 import (
 	"context"
 	"spot-assistant/internal/core/dto/guildconfig"
+	"time"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -308,16 +309,16 @@ func (_c *MockGuildConfigRepository_ListResyncRequested_Call) RunAndReturn(run f
 }
 
 // MarkSynced provides a mock function for the type MockGuildConfigRepository
-func (_mock *MockGuildConfigRepository) MarkSynced(ctx context.Context, guildID string) error {
-	ret := _mock.Called(ctx, guildID)
+func (_mock *MockGuildConfigRepository) MarkSynced(ctx context.Context, guildID string, startedAt time.Time) error {
+	ret := _mock.Called(ctx, guildID, startedAt)
 
 	if len(ret) == 0 {
 		panic("no return value specified for MarkSynced")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
-		r0 = returnFunc(ctx, guildID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, time.Time) error); ok {
+		r0 = returnFunc(ctx, guildID, startedAt)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -332,11 +333,12 @@ type MockGuildConfigRepository_MarkSynced_Call struct {
 // MarkSynced is a helper method to define mock.On call
 //   - ctx context.Context
 //   - guildID string
-func (_e *MockGuildConfigRepository_Expecter) MarkSynced(ctx any, guildID any) *MockGuildConfigRepository_MarkSynced_Call {
-	return &MockGuildConfigRepository_MarkSynced_Call{Call: _e.mock.On("MarkSynced", ctx, guildID)}
+//   - startedAt time.Time
+func (_e *MockGuildConfigRepository_Expecter) MarkSynced(ctx any, guildID any, startedAt any) *MockGuildConfigRepository_MarkSynced_Call {
+	return &MockGuildConfigRepository_MarkSynced_Call{Call: _e.mock.On("MarkSynced", ctx, guildID, startedAt)}
 }
 
-func (_c *MockGuildConfigRepository_MarkSynced_Call) Run(run func(ctx context.Context, guildID string)) *MockGuildConfigRepository_MarkSynced_Call {
+func (_c *MockGuildConfigRepository_MarkSynced_Call) Run(run func(ctx context.Context, guildID string, startedAt time.Time)) *MockGuildConfigRepository_MarkSynced_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -346,9 +348,14 @@ func (_c *MockGuildConfigRepository_MarkSynced_Call) Run(run func(ctx context.Co
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
+		var arg2 time.Time
+		if args[2] != nil {
+			arg2 = args[2].(time.Time)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -359,7 +366,7 @@ func (_c *MockGuildConfigRepository_MarkSynced_Call) Return(err error) *MockGuil
 	return _c
 }
 
-func (_c *MockGuildConfigRepository_MarkSynced_Call) RunAndReturn(run func(ctx context.Context, guildID string) error) *MockGuildConfigRepository_MarkSynced_Call {
+func (_c *MockGuildConfigRepository_MarkSynced_Call) RunAndReturn(run func(ctx context.Context, guildID string, startedAt time.Time) error) *MockGuildConfigRepository_MarkSynced_Call {
 	_c.Call.Return(run)
 	return _c
 }

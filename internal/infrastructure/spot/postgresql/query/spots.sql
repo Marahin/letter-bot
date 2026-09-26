@@ -19,7 +19,7 @@ FROM web_spot
 WHERE guild_id = @guild_id::text
   AND archived_at IS NULL
   AND lower(name) LIKE '%' || lower(@name_pattern) || '%'
-ORDER BY name
+ORDER BY lower(name), id
 LIMIT 15;
 
 -- name: SelectGuildSpotByID :one

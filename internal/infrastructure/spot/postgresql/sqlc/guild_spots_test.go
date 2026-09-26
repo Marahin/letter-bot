@@ -103,12 +103,12 @@ func TestSelectGuildSpotsLike(t *testing.T) {
 	// given
 	mock := newSpotMock(t)
 	mock.ExpectQuery("LIKE").
-		WithArgs("guild-1", "dra").
+		WithArgs("guild-1", `dra\_\%`).
 		WillReturnRows(newGuildSpotRows().AddRow(int64(1), "Dragon Lords", time.Now(), "guild-1", nil))
 	repo := NewSpotRepository(mock)
 
 	// when
-	spots, err := repo.SelectGuildSpotsLike(context.Background(), "guild-1", "dra")
+	spots, err := repo.SelectGuildSpotsLike(context.Background(), "guild-1", "dra_%")
 
 	// then
 	require.NoError(t, err)

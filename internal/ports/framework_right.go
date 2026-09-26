@@ -141,8 +141,8 @@ type GuildConfigRepository interface {
 	RequestResync(ctx context.Context, guildID string) error
 	// ListResyncRequested returns the ids of the guilds (with the bot present) that wait for a resync.
 	ListResyncRequested(ctx context.Context) ([]string, error)
-	// MarkSynced clears the resync request and sets synced_at.
-	MarkSynced(ctx context.Context, guildID string) error
+	// MarkSynced sets synced_at and clears the resync request unless it was made after startedAt.
+	MarkSynced(ctx context.Context, guildID string, startedAt time.Time) error
 }
 
 // GuildChannelRepository stores the channels the bot synced from Discord.

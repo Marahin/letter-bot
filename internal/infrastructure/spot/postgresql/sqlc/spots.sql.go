@@ -290,7 +290,7 @@ FROM web_spot
 WHERE guild_id = $1::text
   AND archived_at IS NULL
   AND lower(name) LIKE '%' || lower($2) || '%'
-ORDER BY name
+ORDER BY lower(name), id
 LIMIT 15
 `
 

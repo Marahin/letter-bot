@@ -75,13 +75,17 @@ func TestGuildSyncer_Sync(t *testing.T) {
 	m.reader.On("GuildRoles", "g1").Return([]*discordgo.Role{{ID: "g1"}, {ID: "r1", Name: "Postman"}}, nil).Once()
 	m.channels.On("Replace", mocks.ContextMock, "g1", []*discord.Channel{{ID: "c1", Name: "letter"}}).Return(nil).Once()
 	m.roles.On("Replace", mocks.ContextMock, "g1", []*role.Role{{ID: "r1", Name: "Postman"}}).Return(nil).Once()
-	m.configs.On("MarkSynced", mocks.ContextMock, "g1").Return(nil).Once()
+	var startedAt time.Time
+	m.configs.On("MarkSynced", mocks.ContextMock, "g1", mock.AnythingOfType("time.Time")).Return(nil).Once().
+		Run(func(args mock.Arguments) { startedAt = args.Get(2).(time.Time) })
+	before := time.Now()
 
 	// when
 	err := s.Sync(context.Background(), "g1")
 
 	// then
 	assert.NoError(t, err)
+	assert.False(t, startedAt.Before(before), "startedAt is taken when the sync starts")
 }
 
 func TestGuildSyncer_Sync_Errors(t *testing.T) {
@@ -151,7 +155,7 @@ func TestGuildSyncer_Schedule_CoalescesEvents(t *testing.T) {
 	m.reader.On("GuildRoles", "g1").Return(nil, nil).Once()
 	m.channels.On("Replace", mocks.ContextMock, "g1", []*discord.Channel{}).Return(nil).Once()
 	m.roles.On("Replace", mocks.ContextMock, "g1", []*role.Role{}).Return(nil).Once()
-	m.configs.On("MarkSynced", mocks.ContextMock, "g1").Return(errors.New("logged only")).Once().
+	m.configs.On("MarkSynced", mocks.ContextMock, "g1", mock.Anything).Return(errors.New("logged only")).Once().
 		Run(func(_ mock.Arguments) { synced <- struct{}{} })
 
 	// when

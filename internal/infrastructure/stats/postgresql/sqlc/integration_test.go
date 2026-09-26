@@ -53,7 +53,7 @@ func TestStatsRepository_Queries(t *testing.T) {
 		start, end   time.Time
 	}
 	for _, r := range []res{
-		{990001, 990001, "u1", "Quiet Nyx/Storm Quiet", at(1, 10, 0), at(1, 12, 0)},
+		{990001, 990001, "u1", "quiet nyx/Storm Quiet", at(1, 10, 0), at(1, 12, 0)},
 		{990002, 990001, "u2", "Storm Quiet", at(1, 23, 30), at(2, 1, 30)},
 		{990003, 990002, "", "Free Text", at(2, 10, 0), at(2, 11, 0)},
 		{990004, 990002, "u1", "quiet nyx / Quiet Nyx", at(3, 10, 0), at(3, 11, 0)},
@@ -136,14 +136,17 @@ func TestStatsRepository_Queries(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		got := map[string]stats.Totals{}
+		names := map[string]string{}
 		for _, r := range rows {
 			got[r.Key] = r.Totals
+			names[r.Key] = r.Name
 		}
 		assert.Equal(t, map[string]stats.Totals{
 			"quiet nyx":   tot(3, 4*3600, 2, 3*3600, 950),
 			"storm quiet": tot(2, 4*3600, 1, 2*3600, 500),
 			"free text":   tot(1, 3600, 0, 0, 0),
 		}, got)
+		assert.Equal(t, "Quiet Nyx", names["quiet nyx"], "the spelling of the latest reservation")
 	})
 
 	t.Run("character totals of one player and of one character", func(t *testing.T) {

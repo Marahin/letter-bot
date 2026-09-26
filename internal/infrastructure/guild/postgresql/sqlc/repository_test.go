@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/pashagolub/pgxmock/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -170,6 +171,7 @@ func TestGuildConfigRepository_UpsertPresence(t *testing.T) {
 }
 
 func TestGuildConfigRepository_Setters(t *testing.T) {
+	syncStartedAt := time.Date(2026, 9, 26, 12, 0, 0, 0, time.UTC)
 	cases := map[string]struct {
 		sql  string
 		args []any
@@ -224,9 +226,9 @@ func TestGuildConfigRepository_Setters(t *testing.T) {
 			call: func(r *GuildConfigRepository) error { return r.RequestResync(context.Background(), "g1") },
 		},
 		"mark synced": {
-			sql:  "SET resync_requested_at = NULL, synced_at = now\\(\\)",
-			args: []any{"g1"},
-			call: func(r *GuildConfigRepository) error { return r.MarkSynced(context.Background(), "g1") },
+			sql:  "resync_requested_at <= \\$1::timestamptz THEN NULL",
+			args: []any{pgtype.Timestamptz{Time: syncStartedAt, Valid: true}, "g1"},
+			call: func(r *GuildConfigRepository) error { return r.MarkSynced(context.Background(), "g1", syncStartedAt) },
 		},
 	}
 

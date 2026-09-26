@@ -63,7 +63,7 @@ func TestExperienceRepository_ListTrackedCharacterKeys(t *testing.T) {
 	// given
 	mock := newMock(t)
 	mock.ExpectQuery("string_to_array").
-		WithArgs("Celesta", tsz(t0.Add(-trackedLookback)), tsz(t0)).
+		WithArgs("Celesta", tsz(t0)).
 		WillReturnRows(pgxmock.NewRows([]string{"character_key"}).AddRow("quiet nyx"))
 	repo := NewExperienceRepository(mock)
 
