@@ -1,0 +1,194 @@
+{
+  "locale": "en",
+  "status": "source (English is authored here, never translated)",
+  "reviewed_by": [
+    "maintainers"
+  ],
+  "messages": {
+    "combobox.filter": "Type to filter…",
+    "combobox.no_matches": "No options match.",
+    "error.back_to_dashboard": "Back to dashboard",
+    "error.back_to_home": "Back to home",
+    "error.bad_request.title": "Bad request",
+    "error.denied.title": "Access denied",
+    "error.forbidden.message": "You don't have access to manage this server.",
+    "error.not_found.message": "We couldn't find the page you were looking for. It may have moved, or you may not have access to it.",
+    "error.not_found.plain": "Not found.",
+    "error.not_found.title": "Page not found",
+    "error.server.message": "An unexpected error occurred on our end. Please try again in a moment.",
+    "error.server.plain": "internal server error",
+    "error.server.title": "Something went wrong",
+    "error.unavailable.message": "A service we depend on is not responding right now. Please try again in a moment.",
+    "error.unavailable.plain": "service temporarily unavailable, please try again",
+    "error.unavailable.title": "Temporarily unavailable",
+    "landing.badge.no_login": "No login",
+    "landing.bottom.heading": "Get started",
+    "landing.bottom.premium_note": "The bot takes reservations only on premium servers. A new server stays inactive until premium is turned on.",
+    "landing.bottom.sub": "Add Letter to your Discord server, then sign in to set ranks and channels.",
+    "landing.cta.add_bot": "Add Letter to Discord",
+    "landing.cta.log_in": "Log in with Discord",
+    "landing.cta.open_loot": "Open the Loot Calculator",
+    "landing.feature.channels.desc": "Choose one channel for /book and one for the summary. Anyone who books elsewhere is told where to go.",
+    "landing.feature.channels.name": "Channels",
+    "landing.feature.characters.desc": "Level, vocation, guild and last login of every booked character, straight from TibiaData.",
+    "landing.feature.characters.name": "Characters",
+    "landing.feature.reservations.desc": "Book a respawn with /book or in the panel. Overlapping bookings are refused, and managers can edit or cancel any reservation.",
+    "landing.feature.reservations.name": "Reservations",
+    "landing.feature.roles.desc": "Pick which Discord roles manage respawns, which can book and which may overbook. Server admins always keep full control.",
+    "landing.feature.roles.name": "Ranks & permissions",
+    "landing.feature.stats.desc": "Booked hours per respawn and player, and experience per hour from the TibiaData highscores.",
+    "landing.feature.stats.name": "Stats & experience",
+    "landing.feature.summary.desc": "A live schedule of upcoming reservations in the channel you pick, refreshed as soon as something changes.",
+    "landing.feature.summary.name": "Discord summary",
+    "landing.features.eyebrow": "For guild leaders",
+    "landing.features.heading": "Everything your respawn schedule needs",
+    "landing.features.sub": "The bot works in your Discord server, the panel keeps the settings and the numbers. You decide who can book, where and for how long.",
+    "landing.hero.line1": "Reserve respawns on Discord.",
+    "landing.hero.line2": "Run them from the web.",
+    "landing.hero.sub": "Letter handles respawn reservations for your Tibia guild. Members book with /book, the bot keeps a live schedule in your Discord server, and the panel gives you ranks, channels and stats.",
+    "landing.meta.description": "Letter is a Discord bot and web panel for Tibia respawn reservations: book with /book, see the schedule on Discord, set ranks and channels, and follow stats and experience per respawn and player.",
+    "landing.meta.title": "Letter: Tibia respawn reservations for your Discord server",
+    "landing.tool.loot.cta": "Split the loot",
+    "landing.tools.eyebrow": "For every player",
+    "landing.tools.heading": "Tools that just open. No account.",
+    "landing.tools.sub": "Split the loot of a hunt between your party in seconds. You need no Discord server and no login.",
+    "range.picker.apply": "Apply",
+    "range.picker.clear": "Clear",
+    "range.picker.close": "Close",
+    "range.picker.from": "From",
+    "range.picker.hint_armed": "Now pick the last day.",
+    "range.picker.hint_days": "Tap a day to add or remove it.",
+    "range.picker.hint_range": "Tap the first day, then the last day.",
+    "range.picker.mode_days": "Single days",
+    "range.picker.mode_range": "Range",
+    "range.picker.next_month": "Next month",
+    "range.picker.no_days": "No days",
+    "range.picker.open": "Change the day range",
+    "range.picker.panel": "Day range",
+    "range.picker.preset_last_30": "Last 30 days",
+    "range.picker.preset_last_7": "Last 7 days",
+    "range.picker.preset_this_month": "This month",
+    "range.picker.preset_this_week": "This week",
+    "range.picker.prev_month": "Previous month",
+    "range.picker.readout_span": "{from} – {to}",
+    "range.picker.readout_start": "Start: {from}",
+    "range.picker.selected_days": "Selected days",
+    "range.picker.to": "To",
+    "shell.account.sign_out": "Sign out",
+    "shell.admin.guilds": "Servers",
+    "shell.admin.heading": "Admin",
+    "shell.language.current": "Language: %s",
+    "shell.language.improve": "Help us improve this translation",
+    "shell.nav.channels": "Channels",
+    "shell.nav.choose_server": "Choose a server",
+    "shell.nav.loot_calculator": "Loot Calculator",
+    "shell.nav.reservations": "Reservations",
+    "shell.nav.settings": "Settings",
+    "shell.nav.spots": "Respawns",
+    "shell.nav.stats": "Stats",
+    "shell.nav.stats_characters": "Characters",
+    "shell.nav.stats_links": "Stats pages",
+    "shell.nav.stats_overview": "Overview",
+    "shell.nav.stats_players": "Players",
+    "shell.nav.stats_spots": "Respawns",
+    "shell.sidebar.collapse": "Collapse %s",
+    "shell.sidebar.expand": "Expand %s",
+    "shell.switcher.empty": "No servers yet.",
+    "shell.switcher.manage": "+ Add / manage servers",
+    "shell.switcher.select": "Select…",
+    "shell.switcher.server": "Server",
+    "shell.switcher.server_count": {
+      "one": "%d server",
+      "other": "%d servers"
+    },
+    "shell.topbar.dashboard": "Dashboard",
+    "shell.topbar.features": "Features",
+    "shell.topbar.log_in": "Log in",
+    "shell.topbar.menu": "Menu",
+    "time.relative.days_ago": {
+      "one": "%d day ago",
+      "other": "%d days ago"
+    },
+    "time.relative.hours_ago": {
+      "one": "%d hour ago",
+      "other": "%d hours ago"
+    },
+    "time.relative.in_days": {
+      "one": "in %d day",
+      "other": "in %d days"
+    },
+    "time.relative.in_hours": {
+      "one": "in %d hour",
+      "other": "in %d hours"
+    },
+    "time.relative.in_minutes": {
+      "one": "in %d minute",
+      "other": "in %d minutes"
+    },
+    "time.relative.in_months": {
+      "one": "in %d month",
+      "other": "in %d months"
+    },
+    "time.relative.in_weeks": {
+      "one": "in %d week",
+      "other": "in %d weeks"
+    },
+    "time.relative.in_years": {
+      "one": "in %d year",
+      "other": "in %d years"
+    },
+    "time.relative.minutes_ago": {
+      "one": "%d minute ago",
+      "other": "%d minutes ago"
+    },
+    "time.relative.months_ago": {
+      "one": "%d month ago",
+      "other": "%d months ago"
+    },
+    "time.relative.now": "just now",
+    "time.relative.soon": "any moment now",
+    "time.relative.weeks_ago": {
+      "one": "%d week ago",
+      "other": "%d weeks ago"
+    },
+    "time.relative.years_ago": {
+      "one": "%d year ago",
+      "other": "%d years ago"
+    }
+  },
+  "dates": {
+    "months_short": [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec"
+    ],
+    "weekdays_short": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat",
+      "Sun"
+    ],
+    "formats": {
+      "weekday": "{Wd}",
+      "day_month": "{DD} {Mon}",
+      "day_month_time": "{DD} {Mon} {HH}:{mm}",
+      "day_month_year": "{DD} {Mon} {YYYY}",
+      "day_month_year_time": "{DD} {Mon} {YYYY} {HH}:{mm}",
+      "weekday_day_month": "{Wd} {DD} {Mon}",
+      "weekday_day_month_time": "{Wd} {DD} {Mon} · {HH}:{mm}",
+      "weekday_day_month_year_time": "{Wd} {DD} {Mon} {YYYY} {HH}:{mm}"
+    }
+  }
+}

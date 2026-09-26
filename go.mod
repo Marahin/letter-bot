@@ -4,6 +4,8 @@ go 1.27.0
 
 require (
 	github.com/a-h/templ v0.3.1020
+	github.com/alexedwards/scs/pgxstore v0.0.0-20251002162104-209de6e426de
+	github.com/alexedwards/scs/v2 v2.9.0
 	github.com/bwmarrin/discordgo v0.27.1
 	github.com/fzipp/gocyclo v0.6.0
 	github.com/gkampitakis/go-snaps v0.5.4
@@ -18,6 +20,7 @@ require (
 	github.com/vicanso/go-charts/v2 v2.6.1
 	go.uber.org/automaxprocs v1.6.0
 	go.uber.org/zap v1.26.0
+	golang.org/x/text v0.34.0
 )
 
 require (
@@ -65,7 +68,6 @@ require (
 	golang.org/x/net v0.51.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
-	golang.org/x/text v0.34.0 // indirect
 	golang.org/x/tools v0.41.0 // indirect
 	google.golang.org/protobuf v1.36.8 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

@@ -44,10 +44,20 @@ generate:
 	@templ generate
 	@find . -name '*_templ.go' -not -path './.git/*' -exec gofmt -w {} +
 
-templ-diff: generate
+templ-diff:
 	@echo "INFO: Checking templ generated code is up to date"
-	@if [ -n "$$(git status --porcelain -- '*_templ.go')" ]; then \
-		echo "ERROR: templ generated code is out of date, run make generate:"; \
+	@# Locally, compare content before/after generating, so uncommitted work passes.
+	@# In CI (CI set), any untracked or modified *_templ.go also fails: a new one
+	@# was never committed.
+	@before=$$(find . -name '*_templ.go' -not -path './.git/*' -exec md5sum {} + | sort); \
+	$(MAKE) -s generate; \
+	after=$$(find . -name '*_templ.go' -not -path './.git/*' -exec md5sum {} + | sort); \
+	if [ "$$before" != "$$after" ]; then \
+		echo "ERROR: templ generated code is out of date, run make generate"; \
+		exit 1; \
+	fi; \
+	if [ -n "$$CI" ] && [ -n "$$(git status --porcelain -- '*_templ.go')" ]; then \
+		echo "ERROR: templ generated code is not committed:"; \
 		git status --porcelain -- '*_templ.go'; \
 		exit 1; \
 	fi

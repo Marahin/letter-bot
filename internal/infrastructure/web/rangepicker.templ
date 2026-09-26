@@ -1,0 +1,100 @@
+package web
+
+import "spot-assistant/internal/infrastructure/i18n"
+
+// RangePicker is the app's one day-range picker, rendered by Stats and
+// Reservations. dist/range-picker.js draws the panel into [data-range-calendar];
+// the noscript from/to fields keep the page usable with no script.
+templ RangePicker(p RangePickerProps) {
+	<form
+		method="get"
+		action={ templ.SafeURL(p.Action) }
+		class="inline-block"
+		data-range-picker
+		data-selected={ jsonArray(p.SelectedDays) }
+		data-days={ jsonArray(p.DataDays) }
+		data-months={ jsonArray(p.MonthsShort) }
+		data-weekdays={ jsonArray(p.WeekdaysShort) }
+		data-date-format={ p.DatePattern }
+		data-explicit?={ p.Explicit }
+	>
+		<div data-range-ui hidden class="relative">
+			// The backdrop covers the page behind the bottom sheet, so a tap outside
+			// the panel closes it on a phone, where there is no Escape key.
+			<div data-range-backdrop hidden class="cal-backdrop"></div>
+			<button
+				type="button"
+				data-range-toggle
+				aria-expanded="false"
+				aria-haspopup="dialog"
+				class="cal-toggle inline-flex items-center gap-2 rounded-md border border-zone-700 bg-zone-850 px-3 text-sm font-semibold text-zone-200 transition hover:border-signal hover:text-signal"
+			>
+				@calendarIcon()
+				<span class="sr-only">{ i18n.T(ctx, "range.picker.open") }</span>
+				<span data-range-label>{ p.Label }</span>
+				<span class="text-xs text-zone-400" aria-hidden="true">▾</span>
+			</button>
+			<div
+				data-range-popover
+				hidden
+				role="dialog"
+				aria-label={ i18n.T(ctx, "range.picker.panel") }
+				class="cal-pop rounded-lg border border-zone-800 bg-zone-900 p-3 shadow-glass"
+			>
+				<div class="cal-sheet-head">
+					<span class="cal-sheet-title">{ i18n.T(ctx, "range.picker.panel") }</span>
+					<button type="button" data-range-close class="cal-sheet-close" aria-label={ i18n.T(ctx, "range.picker.close") }>✕</button>
+				</div>
+				<div data-range-calendar></div>
+				<div class="mt-2 flex items-center gap-1.5 text-xs text-zone-400">
+					<span class="inline-block h-2 w-2 rounded-full bg-emerald-400" aria-hidden="true"></span> { p.DataLegend }
+				</div>
+			</div>
+			// The live region outlives the panel render. A region inserted with its
+			// own text is not announced.
+			<div data-range-live class="sr-only" aria-live="polite" aria-atomic="true"></div>
+		</div>
+		<noscript>
+			for _, h := range p.Hidden {
+				// A GET submit rebuilds the query from the form, so without this Apply
+				// widens the page back. The script path copies the same values over.
+				<input type="hidden" name={ h.Name } value={ h.Value }/>
+			}
+			<div class="flex flex-wrap items-end gap-2">
+				<label class="flex flex-col text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-400">
+					{ i18n.T(ctx, "range.picker.from") }
+					<input type="date" name="from" class="mt-1 rounded-md border border-zone-700 bg-zone-850 px-3 py-1.5 text-sm text-zone-100 outline-none focus:border-signal focus:ring-2 focus:ring-signal/30"/>
+				</label>
+				<label class="flex flex-col text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-400">
+					{ i18n.T(ctx, "range.picker.to") }
+					<input type="date" name="to" class="mt-1 rounded-md border border-zone-700 bg-zone-850 px-3 py-1.5 text-sm text-zone-100 outline-none focus:border-signal focus:ring-2 focus:ring-signal/30"/>
+				</label>
+				<button class="rounded-md bg-signal px-4 py-1.5 text-sm font-semibold text-zone-950">{ i18n.T(ctx, "range.picker.apply") }</button>
+			</div>
+		</noscript>
+		@TranslatedStrings(map[string]string{
+			"range.picker.apply":             i18n.T(ctx, "range.picker.apply"),
+			"range.picker.clear":             i18n.T(ctx, "range.picker.clear"),
+			"range.picker.hint_armed":        i18n.T(ctx, "range.picker.hint_armed"),
+			"range.picker.hint_days":         i18n.T(ctx, "range.picker.hint_days"),
+			"range.picker.hint_range":        i18n.T(ctx, "range.picker.hint_range"),
+			"range.picker.mode_days":         i18n.T(ctx, "range.picker.mode_days"),
+			"range.picker.mode_range":        i18n.T(ctx, "range.picker.mode_range"),
+			"range.picker.next_month":        i18n.T(ctx, "range.picker.next_month"),
+			"range.picker.no_days":           i18n.T(ctx, "range.picker.no_days"),
+			"range.picker.prev_month":        i18n.T(ctx, "range.picker.prev_month"),
+			"range.picker.preset_last_30":    i18n.T(ctx, "range.picker.preset_last_30"),
+			"range.picker.preset_last_7":     i18n.T(ctx, "range.picker.preset_last_7"),
+			"range.picker.preset_this_month": i18n.T(ctx, "range.picker.preset_this_month"),
+			"range.picker.preset_this_week":  i18n.T(ctx, "range.picker.preset_this_week"),
+			"range.picker.readout_span":      i18n.T(ctx, "range.picker.readout_span"),
+			"range.picker.readout_start":     i18n.T(ctx, "range.picker.readout_start"),
+			"range.picker.selected_days":     i18n.T(ctx, "range.picker.selected_days"),
+		})
+	</form>
+}
+
+// calendarIcon is the small glyph on the day-range picker's toggle.
+templ calendarIcon() {
+	<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
+}

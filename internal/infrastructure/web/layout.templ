@@ -1,0 +1,572 @@
+package web
+
+import (
+	"cmp"
+
+	"spot-assistant/internal/infrastructure/branding"
+	"spot-assistant/internal/infrastructure/i18n"
+)
+
+// Layout is the SSR HTML shell: dark by default, meta + Open Graph tags, the
+// embedded Tailwind stylesheet, and htmx for partial updates. Signed-in users get a
+// left sidebar (server switcher + section nav); anonymous visitors get the
+// marketing top bar.
+templ Layout(title, description, baseURL, path string, nav Nav) {
+	<!DOCTYPE html>
+	<html lang={ i18n.From(ctx).HTMLLang() } class="h-full">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>{ title }</title>
+			<meta name="description" content={ description }/>
+			<link rel="canonical" href={ baseURL + path }/>
+			<meta property="og:type" content="website"/>
+			<meta property="og:title" content={ title }/>
+			<meta property="og:description" content={ description }/>
+			<meta property="og:url" content={ baseURL + path }/>
+			<meta property="og:site_name" content={ branding.Name }/>
+			<meta property="og:locale" content={ i18n.From(ctx).OpenGraph() }/>
+			<meta property="og:image" content={ baseURL + AssetURL("/assets/favicon-512.png") }/>
+			<meta property="og:image:width" content="512"/>
+			<meta property="og:image:height" content="512"/>
+			<meta property="og:image:type" content="image/png"/>
+			<meta property="og:image:alt" content={ branding.Name }/>
+			<meta name="theme-color" content="#0A0A0B"/>
+			<meta name="twitter:card" content="summary"/>
+			<link rel="icon" type="image/svg+xml" href={ AssetURL("/assets/favicon.svg") }/>
+			<link rel="icon" type="image/png" sizes="32x32" href={ AssetURL("/assets/favicon-32.png") }/>
+			<link rel="icon" type="image/png" sizes="16x16" href={ AssetURL("/assets/favicon-16.png") }/>
+			<link rel="apple-touch-icon" sizes="180x180" href={ AssetURL("/assets/apple-touch-icon.png") }/>
+			<link rel="manifest" href={ AssetURL("/assets/site.webmanifest") }/>
+			<link rel="stylesheet" href={ AssetURL("/assets/app.css") }/>
+			<link rel="stylesheet" href={ AssetURL("/assets/flatpickr.dark.css") }/>
+			<link rel="stylesheet" href={ AssetURL("/assets/flatpickr.theme.css") }/>
+			// After the shell's own, so page CSS wins a specificity tie. The hrefs arrive
+			// stamped from the call site.
+			for _, href := range nav.Stylesheets {
+				<link rel="stylesheet" href={ href }/>
+			}
+			<script src={ AssetURL("/assets/htmx.min.js") } defer></script>
+			<script src={ AssetURL("/assets/nav-loading.js") } defer></script>
+			<script src={ AssetURL("/assets/i18n.js") } defer></script>
+			<script src={ AssetURL("/assets/flatpickr.min.js") } defer></script>
+			// English is built into flatpickr, so only the other locales load a bundle. It
+			// must run after flatpickr.min.js, which document-order defer guarantees.
+			if code := i18n.From(ctx).Code(); code != "en" {
+				<script src={ AssetURL("/assets/l10n/" + code + ".js") } defer></script>
+			}
+			<script src={ AssetURL("/assets/datepicker.js") } defer></script>
+			<script src={ AssetURL("/assets/range-picker.js") } defer></script>
+			<script src={ AssetURL("/assets/charts.js") } defer></script>
+			<script src={ AssetURL("/assets/modal.js") } defer></script>
+			// The combobox component must run before whatever starts Alpine, which each
+			// page that uses one does from its body. Marketing pages render no picker.
+			if nav.Authenticated && !nav.Marketing {
+				<script src={ AssetURL("/assets/combobox.js") } defer></script>
+			}
+			<script src={ AssetURL("/assets/confirm.js") } defer></script>
+			// Close-on-outside-click and Escape for every <details data-dropdown> menu,
+			// on all pages: the top-bar menu and language picker render before sign-in.
+			<script src={ AssetURL("/assets/dropdown.js") } defer></script>
+		</head>
+		if nav.Authenticated && !nav.Marketing {
+			<body class="min-h-screen bg-zone-950 text-zone-100 antialiased selection:bg-signal/30 md:flex md:items-start">
+				@sidebar(nav, path)
+				<div class="flex min-h-screen flex-1 flex-col">
+					<main class={ "mx-auto w-full flex-1", templ.KV("max-w-[1600px] px-6 py-12 md:px-10 md:py-14", !nav.Wide), templ.KV("max-w-none", nav.Wide) }>
+						{ children... }
+					</main>
+					@attributionFooter()
+				</div>
+			</body>
+		} else {
+			<body class="flex min-h-screen flex-col bg-zone-950 text-zone-100 antialiased selection:bg-signal/30">
+				<header class="sticky top-0 z-40 border-b border-zone-800 bg-zone-950/80 backdrop-blur">
+					<nav class={ "mx-auto flex items-center px-6 py-2 lg:py-3.5", templ.KV("max-w-6xl", !nav.Marketing), templ.KV("max-w-[1440px] sm:px-8", nav.Marketing) }>
+						@wordmark("/", "")
+						@topBarMenu(nav, path)
+					</nav>
+				</header>
+				<main class={ "w-full flex-1", templ.KV("mx-auto max-w-6xl px-6 py-10", !nav.Wide), templ.KV("max-w-none", nav.Wide) }>
+					{ children... }
+				</main>
+				@attributionFooter()
+			</body>
+		}
+	</html>
+}
+
+// attributionFooter is the shell footer: branding.Notice()'s attribution wording.
+templ attributionFooter() {
+	<footer class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 border-t border-zone-800 px-6 py-6 text-center font-mono text-xs text-zone-600">
+		<span>{ branding.Notice() }</span>
+	</footer>
+}
+
+// dropdown is the shared menu shell: a native <details> with a clickable summary
+// and a floating panel (the children). dropdown.js gives every one the same close
+// behaviour: a click outside or Escape closes the panel.
+templ dropdown(p dropdownProps) {
+	<details class={ cmp.Or(p.detailsClass, "relative") } data-dropdown { p.attrs... }>
+		<summary class={ "flex cursor-pointer list-none items-center rounded-md transition [&::-webkit-details-marker]:hidden", p.summaryClass } { p.summaryAttrs... }>
+			@p.summary
+		</summary>
+		<div class={ "absolute rounded-lg border border-zone-700 shadow-glass", p.panelClass }>
+			{ children... }
+		</div>
+	</details>
+}
+
+// topBarMenu is the marketing top bar after the wordmark (also shown to signed-in
+// visitors on the landing page). From lg the tools are flat links; below lg one
+// menu holds them. The primary control is Log in, or Dashboard once signed in.
+templ topBarMenu(nav Nav, path string) {
+	{{ tools := nav.topBarTools(ctx) }}
+	<div class="ml-8 hidden items-center gap-1 text-sm lg:flex">
+		for _, t := range tools {
+			<a
+				href={ templ.SafeURL(t.Href) }
+				if t.Current {
+					aria-current="page"
+				}
+				class={ "whitespace-nowrap rounded-md px-3 py-2 font-semibold transition",
+					templ.KV("bg-signal/[0.12] text-signal-bright", t.Current),
+					templ.KV("text-zone-300 hover:text-signal", !t.Current) }
+			>{ t.Name }</a>
+		}
+		if !nav.Authenticated {
+			<a href="/#features" class="whitespace-nowrap rounded-md px-3 py-2 font-semibold text-zone-300 transition hover:text-signal">{ i18n.T(ctx, "shell.topbar.features") }</a>
+		}
+	</div>
+	<div class="ml-auto flex shrink-0 items-center gap-1 text-sm lg:gap-2">
+		// Below xl only the globe shows; the summary's aria-label still says the language.
+		@languagePickerLabelled(nav, path, "h-11 min-w-11 justify-center px-3 font-semibold text-zone-300 lg:h-auto lg:py-2", "right-0 top-full mt-2", "hidden xl:inline")
+		if nav.Authenticated {
+			<span class="hidden max-w-[10rem] truncate text-zone-400 xl:inline">{ nav.Username }</span>
+			<form method="post" action="/logout" class="hidden lg:block">
+				<button class="whitespace-nowrap rounded-md border border-zone-700 px-3 py-1.5 font-semibold text-zone-300 transition hover:border-signal hover:text-signal">{ i18n.T(ctx, "shell.account.sign_out") }</button>
+			</form>
+			<a href="/dashboard" class="flex h-11 items-center whitespace-nowrap rounded-md border border-transparent bg-signal px-3 font-semibold text-zone-950 shadow-accent transition hover:bg-signal-bright lg:h-auto lg:px-4 lg:py-1.5">{ i18n.T(ctx, "shell.topbar.dashboard") }</a>
+		} else {
+			<a href="/login" class="flex h-11 items-center gap-2 whitespace-nowrap rounded-md bg-signal px-3 font-semibold text-zone-950 shadow-accent transition hover:bg-signal-bright lg:h-auto lg:px-4 lg:py-1.5">
+				// The glyph gives way on a phone, where the longest locale's label needs the room.
+				<span class="hidden sm:contents">
+					@discordGlyph()
+				</span>
+				{ i18n.T(ctx, "shell.topbar.log_in") }
+			</a>
+		}
+		@dropdown(dropdownProps{
+			detailsClass: "lg:hidden",
+			summaryClass: "h-11 w-11 justify-center text-zone-300 hover:text-signal",
+			// The header is sticky, so the panel anchors to it and spans the bar.
+			panelClass:   "inset-x-4 top-full z-30 mt-2 flex flex-col bg-zone-900 p-1.5",
+			summary:      menuSummary(),
+			attrs:        templ.Attributes{"data-topbar-menu": true},
+			summaryAttrs: templ.Attributes{"aria-label": i18n.T(ctx, "shell.topbar.menu")},
+		}) {
+			for _, t := range tools {
+				<a
+					href={ templ.SafeURL(t.Href) }
+					if t.Current {
+						aria-current="page"
+					}
+					class={ "flex min-h-11 items-center gap-3 rounded-md px-3 font-medium transition",
+						templ.KV("bg-signal/[0.12] text-signal-bright", t.Current),
+						templ.KV("text-zone-100 hover:bg-white/5 hover:text-signal", !t.Current) }
+				>
+					@toolGlyph(t.Icon, "h-4 w-4 shrink-0")
+					{ t.Name }
+				</a>
+			}
+			<div class="my-1.5 border-t border-white/10"></div>
+			if nav.Authenticated {
+				<div class="flex min-h-11 items-center justify-between gap-3 pl-3">
+					<span class="truncate text-zone-400">{ nav.Username }</span>
+					<form method="post" action="/logout">
+						<button class="flex h-11 items-center whitespace-nowrap rounded-md border border-zone-700 px-4 font-semibold text-zone-300 transition hover:border-signal hover:text-signal">{ i18n.T(ctx, "shell.account.sign_out") }</button>
+					</form>
+				</div>
+			} else {
+				<a href="/#features" class="flex min-h-11 items-center gap-3 rounded-md px-3 font-medium text-zone-100 transition hover:bg-white/5 hover:text-signal">
+					@featureGlyph("reservations")
+					{ i18n.T(ctx, "shell.topbar.features") }
+				</a>
+			}
+		}
+	</div>
+}
+
+// menuSummary is the top-bar menu button: three bars, named by the summary's aria-label.
+templ menuSummary() {
+	<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+}
+
+// languagePicker is the shared language switcher: a <details> dropdown with one
+// tiny POST form per locale, rendered from both shells so they cannot drift. A
+// POST, not a JS-set cookie: the shell runs no Alpine, and a language change
+// re-renders the whole document down to <html lang> anyway. CSRF needs nothing
+// threaded through: a same-origin form submission carries Sec-Fetch-Site.
+templ languagePicker(nav Nav, path, summaryClass, dropClass string) {
+	@languagePickerLabelled(nav, path, summaryClass, dropClass, "")
+}
+
+// languagePickerLabelled is languagePicker with a class on the native-name label, so a
+// caller can drop the name on a narrow viewport and keep the globe.
+templ languagePickerLabelled(nav Nav, path, summaryClass, dropClass, labelClass string) {
+	{{ cur := i18n.From(ctx) }}
+	@dropdown(dropdownProps{
+		summaryClass: "gap-1.5 hover:text-signal " + summaryClass,
+		panelClass:   "z-30 flex w-52 flex-col gap-0.5 bg-zone-900 p-1.5 text-sm " + dropClass,
+		summary:      languageSummary(cur, labelClass),
+		attrs:        templ.Attributes{"data-language-picker": true},
+		summaryAttrs: templ.Attributes{"aria-label": i18n.T(ctx, "shell.language.current", cur.NativeName())},
+	}) {
+		for _, l := range i18n.Supported() {
+			<form method="post" action="/language">
+				<input type="hidden" name="lang" value={ l.Code() }/>
+				<input type="hidden" name="to" value={ nav.returnTarget(path) }/>
+				<button
+					type="submit"
+					data-language-option={ l.Code() }
+					if l.Code() == cur.Code() {
+						aria-current="true"
+					}
+					class={ "w-full rounded-md px-3 py-2 text-left font-medium transition hover:bg-white/5 hover:text-signal",
+							templ.KV("text-signal-bright", l.Code() == cur.Code()),
+							templ.KV("text-zone-100", l.Code() != cur.Code()) }
+				>{ l.NativeName() }</button>
+			</form>
+		}
+		// Unreviewed copy says so, once and quietly (see i18n/locales/README.md).
+		if !cur.Reviewed() {
+			<div class="my-1 border-t border-white/10"></div>
+			<p class="px-3 py-2 text-xs leading-snug text-zone-500">{ i18n.T(ctx, "shell.language.improve") }</p>
+		}
+	}
+}
+
+// languageSummary is the language picker summary: a globe glyph, the current
+// locale's native name and a caret.
+templ languageSummary(cur i18n.Locale, labelClass string) {
+	@globeGlyph()
+	<span class={ labelClass }>{ cur.NativeName() }</span>
+	<span class="text-[10px] text-zone-400" aria-hidden="true">▾</span>
+}
+
+// globeGlyph marks the language picker, so it reads as a language control even to
+// someone who cannot read the current language's name.
+templ globeGlyph() {
+	<svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"></path></svg>
+}
+
+// discordGlyph is the small Discord mark used on the login and invite CTAs.
+templ discordGlyph() {
+	<svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.317 4.369a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.211.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.6 12.6 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.009c.12.099.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.891.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.056c.5-5.177-.838-9.674-3.549-13.66a.06.06 0 0 0-.031-.028ZM8.02 15.331c-1.182 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418Zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418Z"></path></svg>
+}
+
+// sidebar is the left-hand navigation for signed-in users: the public Tools nav at
+// the top, then the server block once a server is selected (switcher + section
+// links) or a dashed "Choose a server" box otherwise, and the account controls at
+// the bottom. On narrow screens it collapses to a stacked top block.
+templ sidebar(nav Nav, path string) {
+	<aside class="z-30 flex flex-col gap-6 border-b border-zone-800 bg-zone-900 px-5 py-6 md:sticky md:top-0 md:h-screen md:w-[264px] md:shrink-0 md:self-start md:overflow-y-auto md:overscroll-contain md:border-b-0 md:border-r">
+		@wordmark("/dashboard", "shrink-0")
+		<nav class="flex flex-col gap-0.5 text-sm">
+			@sidebarIconLink(lootCalculatorPath, i18n.T(ctx, "shell.nav.loot_calculator"), nav.Active == "loot-calculator") {
+				@toolGlyph("calculator", "h-[15px] w-[15px]")
+			}
+		</nav>
+		if nav.CurrentGuildID != "" {
+			<div class="flex flex-col gap-5">
+				@serverSwitcher(nav)
+				<nav class="flex flex-col gap-0.5 text-sm">
+					@sidebarIconLink(GuildPath(nav.CurrentGuildID, "/reservations"), i18n.T(ctx, "shell.nav.reservations"), nav.Active == "reservations") {
+						<svg class="h-[15px] w-[15px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
+					}
+					@sidebarIconLink(GuildPath(nav.CurrentGuildID, "/spots"), i18n.T(ctx, "shell.nav.spots"), nav.Active == "spots") {
+						<svg class="h-[15px] w-[15px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3 3 6v15l6-3 6 3 6-3V3l-6 3-6-3Z"></path><path d="M9 3v15M15 6v15"></path></svg>
+					}
+					<div class="flex items-stretch gap-0.5 [&>a]:min-w-0 [&>a]:flex-1">
+						@sidebarIconLink(GuildPath(nav.CurrentGuildID, "/stats"), i18n.T(ctx, "shell.nav.stats"), nav.InStats()) {
+							<svg class="h-[15px] w-[15px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"></path><path d="M18 17V9M13 17V5M8 17v-3"></path></svg>
+						}
+						@collapseToggle("stats", i18n.T(ctx, "shell.nav.stats_links"))
+					</div>
+					<div id="sidebar-sublist-stats" data-sidebar-sublist class="space-y-0.5">
+						@sidebarSubLink(GuildPath(nav.CurrentGuildID, "/stats"), i18n.T(ctx, "shell.nav.stats_overview"), nav.subRailFor(statsSubviews, "stats"))
+						@sidebarSubLink(GuildPath(nav.CurrentGuildID, "/stats/spots"), i18n.T(ctx, "shell.nav.stats_spots"), nav.subRailFor(statsSubviews, "stats-spots"))
+						@sidebarSubLink(GuildPath(nav.CurrentGuildID, "/stats/players"), i18n.T(ctx, "shell.nav.stats_players"), nav.subRailFor(statsSubviews, "stats-players"))
+						@sidebarSubLink(GuildPath(nav.CurrentGuildID, "/stats/characters"), i18n.T(ctx, "shell.nav.stats_characters"), nav.subRailFor(statsSubviews, "stats-characters"))
+					</div>
+					if nav.IsAdmin {
+						@sidebarIconLink(GuildPath(nav.CurrentGuildID, "/channels"), i18n.T(ctx, "shell.nav.channels"), nav.Active == "channels") {
+							<svg class="h-[15px] w-[15px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"></path></svg>
+						}
+						@sidebarIconLink(GuildPath(nav.CurrentGuildID, "/settings"), i18n.T(ctx, "shell.nav.settings"), nav.Active == "settings") {
+							<svg class="h-[15px] w-[15px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+						}
+					}
+				</nav>
+			</div>
+		} else {
+			<a href="/dashboard" class="flex items-center gap-2.5 rounded-lg border border-dashed border-zone-700 bg-zone-850 px-3 py-2.5 text-zone-300 transition hover:border-signal hover:text-signal">
+				<svg class="h-[15px] w-[15px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+				<span class="text-[13px] font-medium">{ i18n.T(ctx, "shell.nav.choose_server") }</span>
+			</a>
+		}
+		if nav.SiteAdmin {
+			<div class="flex flex-col gap-1 rounded-lg border border-signal/30 bg-signal/[0.04] px-2 py-2.5 text-sm">
+				<span class="px-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-zone-400">{ i18n.T(ctx, "shell.admin.heading") }</span>
+				@sidebarLink("/admin/guilds", i18n.T(ctx, "shell.admin.guilds"), nav.Active == "admin-guilds")
+			</div>
+		}
+		<div class="mt-auto flex flex-col gap-1 text-sm">
+			@languagePicker(nav, path, "px-3 py-2 text-zone-300", "left-0 bottom-full mb-2")
+			<div class="mt-2 flex items-center justify-between gap-2 border-t border-white/10 px-3 pt-3">
+				<span class="truncate text-xs text-zone-400">{ nav.Username }</span>
+				<form method="post" action="/logout">
+					<button class="text-xs text-zone-400 transition hover:text-signal">{ i18n.T(ctx, "shell.account.sign_out") }</button>
+				</form>
+			</div>
+		</div>
+		@sidebarCollapseScript()
+	</aside>
+}
+
+// collapseToggle is the chevron button that wraps/unwraps the sidebar sub-list
+// with id "sidebar-sublist-<key>". Rendered expanded; sidebarCollapseScript
+// restores the stored state on load. Both aria labels are rendered here, already
+// localized: word order and case differ per language.
+templ collapseToggle(key, label string) {
+	<button
+		type="button"
+		data-sidebar-toggle={ key }
+		data-sidebar-collapse-label={ i18n.T(ctx, "shell.sidebar.collapse", label) }
+		data-sidebar-expand-label={ i18n.T(ctx, "shell.sidebar.expand", label) }
+		aria-controls={ "sidebar-sublist-" + key }
+		aria-expanded="true"
+		aria-label={ i18n.T(ctx, "shell.sidebar.collapse", label) }
+		class="flex w-7 shrink-0 items-center justify-center rounded-md text-zone-500 transition hover:bg-white/5 hover:text-signal"
+	>
+		<svg data-sidebar-chevron class="h-3.5 w-3.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+	</button>
+}
+
+// sidebarCollapseScript restores and toggles each sidebar sub-list's collapsed
+// state from localStorage (key "letter:sidebar:<toggle key>", "1" = collapsed). It
+// runs synchronously at the end of the sidebar, so a collapsed list is hidden
+// before first paint.
+templ sidebarCollapseScript() {
+	<script>
+		(function () {
+			var prefix = "letter:sidebar:";
+			function apply(btn, collapsed) {
+				var key = btn.getAttribute("data-sidebar-toggle");
+				var list = document.getElementById("sidebar-sublist-" + key);
+				if (!list) return;
+				list.hidden = collapsed;
+				btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+				var label = btn.getAttribute(
+					collapsed
+						? "data-sidebar-expand-label"
+						: "data-sidebar-collapse-label",
+				);
+				if (label) btn.setAttribute("aria-label", label);
+				var chevron = btn.querySelector("[data-sidebar-chevron]");
+				if (chevron)
+					chevron.style.transform = collapsed ? "rotate(-90deg)" : "";
+			}
+			document
+				.querySelectorAll("[data-sidebar-toggle]")
+				.forEach(function (btn) {
+					var key = btn.getAttribute("data-sidebar-toggle");
+					var collapsed = false;
+					try {
+						collapsed = localStorage.getItem(prefix + key) === "1";
+					} catch (e) {}
+					apply(btn, collapsed);
+					btn.addEventListener("click", function () {
+						var next = btn.getAttribute("aria-expanded") === "true";
+						try {
+							if (next) localStorage.setItem(prefix + key, "1");
+							else localStorage.removeItem(prefix + key);
+						} catch (e) {}
+						apply(btn, next);
+					});
+				});
+		})();
+	</script>
+}
+
+// sidebarIconLink renders a top-level nav entry with a leading icon (icon as children).
+templ sidebarIconLink(href, label string, active bool) {
+	<a
+		href={ templ.SafeURL(href) }
+		if active {
+			aria-current="page"
+		}
+		class={ "flex items-center gap-2.5 rounded-md px-3 py-2 text-[15px] transition",
+			templ.KV("bg-signal/[0.12] font-semibold text-signal-bright shadow-[inset_2px_0_0_#F97316]", active),
+			templ.KV("text-zone-300 hover:bg-white/5 hover:text-signal", !active) }
+	>
+		<span class="flex h-[15px] w-[15px] shrink-0 items-center justify-center">
+			{ children... }
+		</span>
+		<span class="flex-1">{ label }</span>
+	</a>
+}
+
+// toolGlyph draws one tool's own mark. The sidebar, the top bar and the landing
+// tool cards share it, so a tool looks the same in every place.
+templ toolGlyph(icon, class string) {
+	switch icon {
+		case "calculator":
+			<svg class={ class } viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"></rect><path d="M8 6h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 19h.01M12 19h4"></path></svg>
+	}
+}
+
+// sidebarSubLink renders one sub-view row under a section. rail is the tree-rail
+// segment the row draws; the corner row is the active one.
+templ sidebarSubLink(href, label string, rail subRail) {
+	<a
+		href={ templ.SafeURL(href) }
+		class={ "flex gap-2 rounded-md py-[7px] pl-[18px] pr-3 text-[13.5px] leading-[18px] transition",
+			templ.KV("font-semibold text-signal-bright", rail == subRailCorner),
+			templ.KV("text-zone-400 hover:text-signal", rail != subRailCorner) }
+	>
+		<span aria-hidden="true" class={ "letter-tree-rail", templ.KV("is-run", rail == subRailRun), templ.KV("is-corner", rail == subRailCorner) }></span>
+		<span class="flex items-center gap-1.5">{ label }</span>
+	</a>
+}
+
+// sidebarLink renders one section entry, highlighting it when active.
+templ sidebarLink(href, label string, active bool) {
+	<a
+		href={ templ.SafeURL(href) }
+		class={ "rounded-md px-3 py-2 text-[15px] transition",
+			templ.KV("bg-signal/[0.12] font-semibold text-signal-bright shadow-[inset_2px_0_0_#F97316]", active),
+			templ.KV("text-zone-300 hover:bg-white/5 hover:text-signal", !active) }
+	>{ label }</a>
+}
+
+// wordmark is the Letter lockup in accent orange, set in the display family with
+// the tight display tracking. overflow-hidden drops its min-height to 0, so a
+// column flex parent must pass shrink-0 in class.
+templ wordmark(href, class string) {
+	<a href={ templ.SafeURL(href) } class={ class, "flex h-[1lh] min-w-0 flex-wrap content-start items-center gap-x-1.5 overflow-hidden font-display text-[19px] font-bold -tracking-[0.02em]" }>
+		<span class="text-signal-bright">{ branding.Name }</span>
+	</a>
+}
+
+// serverSwitcher lets a signed-in user move between servers from any page. The
+// summary frames the selected server's icon beside its name; the open panel
+// carries a search field that filters the servers by name and a scrollable list.
+// It builds on the shared dropdown shell, so it needs no Alpine.
+templ serverSwitcher(nav Nav) {
+	<div class="flex flex-col gap-1.5">
+		<span class="px-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-zone-400">{ i18n.T(ctx, "shell.switcher.server") }</span>
+		if len(nav.Servers) == 0 {
+			<p class="rounded-md border border-zone-700 bg-zone-850 px-3 py-2.5 text-xs text-zone-500">{ i18n.T(ctx, "shell.switcher.empty") }</p>
+		} else {
+			@dropdown(dropdownProps{
+				summaryClass: "gap-2 border border-zone-700 bg-zone-850 px-2.5 py-2 text-zone-200 hover:border-signal hover:text-signal",
+				panelClass:   "left-0 z-20 mt-1 w-full min-w-56 bg-zone-850 p-1.5",
+				summary:      serverSummary(nav),
+				attrs:        templ.Attributes{"data-server-picker": true},
+			}) {
+				<p class="px-1.5 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-zone-500">{ i18n.N(ctx, "shell.switcher.server_count", len(nav.Servers)) }</p>
+				<input
+					type="text"
+					data-server-filter
+					class="mb-1.5 w-full rounded-md border border-zone-700 bg-zone-900 px-2.5 py-1.5 text-sm font-normal normal-case tracking-normal text-zone-100 outline-none placeholder:text-zone-500 focus:border-signal focus:ring-2 focus:ring-signal/30"
+					placeholder={ i18n.T(ctx, "combobox.filter") }
+					aria-label={ i18n.T(ctx, "shell.switcher.select") }
+					autocomplete="off"
+					spellcheck="false"
+				/>
+				<div data-server-list class="max-h-56 space-y-0.5 overflow-y-auto">
+					for _, s := range nav.Servers {
+						<a
+							href={ templ.SafeURL(GuildPath(s.ID, "")) }
+							data-server-option
+							class={ "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition hover:bg-white/10 hover:text-signal",
+									templ.KV("text-signal", s.ID == nav.CurrentGuildID),
+									templ.KV("text-zone-200", s.ID != nav.CurrentGuildID) }
+						>
+							@serverOptionIcon(guildIconURL(s.ID, s.Icon), s.Name)
+							<span class="min-w-0 flex-1 truncate">{ s.Name }</span>
+						</a>
+					}
+				</div>
+				<p data-server-empty hidden class="px-2.5 py-3 text-center text-sm text-zone-500">{ i18n.T(ctx, "combobox.no_matches") }</p>
+				<div class="my-1 border-t border-white/10"></div>
+				<a href="/dashboard" class="block rounded-md px-2 py-1.5 text-sm text-zone-400 transition hover:bg-white/10 hover:text-signal">{ i18n.T(ctx, "shell.switcher.manage") }</a>
+			}
+			@serverPickerScript()
+		}
+	</div>
+}
+
+// serverSummary is the switcher summary: the selected server's framed icon, its
+// name and a caret.
+templ serverSummary(nav Nav) {
+	@serverBadge(nav.CurrentGuildIconURL(), nav.CurrentGuildName)
+	<span class="min-w-0 flex-1 truncate text-left font-display font-semibold">{ nav.CurrentGuildName }</span>
+	<span class="text-xs text-zone-400" aria-hidden="true">▾</span>
+}
+
+// serverBadge frames the selected server's icon, falling back to its first letter.
+// alt is empty: the name sits beside it, so the frame is decorative.
+templ serverBadge(iconURL, name string) {
+	if iconURL != "" {
+		<img src={ iconURL } alt="" class="h-9 w-9 flex-none rounded-lg border border-zone-700 bg-zone-800 object-cover"/>
+	} else {
+		<span aria-hidden="true" class="flex h-9 w-9 flex-none items-center justify-center rounded-lg border border-zone-700 bg-zone-800 font-display text-sm font-bold text-zone-400">{ guildInitial(name) }</span>
+	}
+}
+
+// serverOptionIcon frames one server's icon in the switcher list.
+templ serverOptionIcon(iconURL, name string) {
+	if iconURL != "" {
+		<img src={ iconURL } alt="" class="h-6 w-6 flex-none rounded-md border border-zone-700 bg-zone-800 object-cover"/>
+	} else {
+		<span aria-hidden="true" class="flex h-6 w-6 flex-none items-center justify-center rounded-md border border-zone-700 bg-zone-800 font-display text-xs font-bold text-zone-500">{ guildInitial(name) }</span>
+	}
+}
+
+// serverPickerScript filters the switcher list as the reader types, and focuses
+// the search field when the panel opens.
+templ serverPickerScript() {
+	<script>
+		(function () {
+			document
+				.querySelectorAll("[data-server-picker]")
+				.forEach(function (picker) {
+					var filter = picker.querySelector("[data-server-filter]");
+					var empty = picker.querySelector("[data-server-empty]");
+					var options = Array.prototype.slice.call(
+						picker.querySelectorAll("[data-server-option]"),
+					);
+					if (!filter) return;
+					function apply() {
+						var q = filter.value.trim().toLowerCase();
+						var shown = 0;
+						options.forEach(function (o) {
+							var hit = !q || o.textContent.toLowerCase().indexOf(q) >= 0;
+							o.hidden = !hit;
+							if (hit) shown++;
+						});
+						if (empty) empty.hidden = shown !== 0;
+					}
+					filter.addEventListener("input", apply);
+					picker.addEventListener("toggle", function () {
+						if (!picker.open) return;
+						filter.value = "";
+						apply();
+						filter.focus();
+					});
+				});
+		})();
+	</script>
+}

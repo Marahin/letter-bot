@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
-	"net/http"
 	"os/signal"
 	"syscall"
 	"time"
@@ -56,21 +54,13 @@ func main() {
 	}
 	infrahttp.NewServerWithMetrics(cfg.MetricsAddr, log).WithHealth(nil, ready).Start()
 
-	mux := http.NewServeMux()
-	mux.Handle("GET /healthz", web.HealthzHandler(db.Ping))
-	mux.Handle("GET /assets/", web.AssetHandler())
-	server := &http.Server{
-		Addr:              cfg.Addr,
-		Handler:           mux,
-		ReadHeaderTimeout: 10 * time.Second,
-	}
+	server := web.NewServer(cfg, log, db)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	go func() {
-		log.Infow("web listening", "addr", cfg.Addr)
-		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := server.Start(); err != nil {
 			log.Errorw("web server stopped", "error", err)
 			stop()
 		}

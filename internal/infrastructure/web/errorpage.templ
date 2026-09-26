@@ -1,0 +1,32 @@
+package web
+
+import (
+	"strconv"
+
+	"spot-assistant/internal/infrastructure/branding"
+	"spot-assistant/internal/infrastructure/i18n"
+)
+
+// ErrorPage is the branded status page rendered for full-page HTML error responses
+// (404, 403, 400, 500, ...): the app shell around a centred card with the status
+// code, a title, a message and a back link (dashboard when signed in, home
+// otherwise). It never discloses which resource failed. title and message arrive
+// already localized from the caller, which is what knows what went wrong.
+templ ErrorPage(baseURL string, status int, title, message string, nav Nav) {
+	@Layout(title+" - "+branding.Name, message, baseURL, "", nav) {
+		<div class="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center gap-6 py-16 text-center">
+			<p class="font-display text-7xl font-bold -tracking-[0.03em] text-signal-bright">{ strconv.Itoa(status) }</p>
+			<h1 class="font-display text-3xl font-bold -tracking-[0.02em] text-zone-50">{ title }</h1>
+			<p class="max-w-md text-zone-300">{ message }</p>
+			if nav.Authenticated {
+				<a href="/dashboard" class="mt-2 rounded-md bg-signal px-5 py-2.5 text-sm font-semibold text-zone-950 shadow-accent transition hover:bg-signal-bright">
+					{ i18n.T(ctx, "error.back_to_dashboard") }
+				</a>
+			} else {
+				<a href="/" class="mt-2 rounded-md bg-signal px-5 py-2.5 text-sm font-semibold text-zone-950 shadow-accent transition hover:bg-signal-bright">
+					{ i18n.T(ctx, "error.back_to_home") }
+				</a>
+			}
+		</div>
+	}
+}
