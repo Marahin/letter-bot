@@ -8,6 +8,7 @@ import (
 
 	"github.com/a-h/templ"
 
+	"spot-assistant/internal/core/dto/access"
 	"spot-assistant/internal/infrastructure/i18n"
 )
 
@@ -88,6 +89,14 @@ type Nav struct {
 	// the visitor back to. Empty on a Nav built without a request; the shell then
 	// falls back to the path Layout was given.
 	ReturnTo string
+}
+
+func (n *Nav) applyAccess(a access.GuildAccess) {
+	n.CurrentGuildName = a.Config.Name
+	n.CurrentGuildIcon = a.Config.Icon
+	n.IsAdmin = a.Caps.Admin
+	n.CanManage = a.Caps.Manage
+	n.CanReserve = a.Caps.Reserve
 }
 
 // WithStylesheet returns a copy of n with href added to the page stylesheets. The

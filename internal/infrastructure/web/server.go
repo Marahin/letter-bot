@@ -15,6 +15,8 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
+
+	"spot-assistant/internal/ports"
 )
 
 const (
@@ -29,6 +31,7 @@ type Server struct {
 	log      *zap.SugaredLogger
 	sessions *scs.SessionManager
 	ping     func(context.Context) error
+	services Services
 	// features holds the per-feature route registrars mounted by the composition
 	// root; Handler() calls each with the shared Deps after the shell routes.
 	features []func(*Router, *Deps)
@@ -41,6 +44,19 @@ func NewServer(cfg Config, log *zap.SugaredLogger, pool *pgxpool.Pool) *Server {
 	store := pgxstore.NewWithConfig(pool, pgxstore.Config{TableName: sessionTableName, CleanUpInterval: 5 * time.Minute})
 	s := newServer(cfg, log, NewSessionManager(cfg, store))
 	s.ping = pool.Ping
+	return s
+}
+
+// Services are the core services the shell and the feature packages call.
+type Services struct {
+	Auth    ports.AuthService
+	Access  ports.GuildAccessService
+	Premium ports.PremiumService
+}
+
+// WithServices sets the core services. Call it before Handler.
+func (s *Server) WithServices(svc Services) *Server {
+	s.services = svc
 	return s
 }
 
@@ -75,6 +91,9 @@ func (s *Server) deps() *Deps {
 		Cfg:      s.cfg,
 		Log:      s.log,
 		Sessions: s.sessions,
+		Auth:     s.services.Auth,
+		Access:   s.services.Access,
+		Premium:  s.services.Premium,
 		Routes:   s.routes,
 	}
 }
@@ -98,6 +117,11 @@ func (s *Server) Handler() http.Handler {
 	router.Get("/", s.handleNotFound)
 	// Not behind sign-in: anonymous visitors switch language too.
 	router.Post("/language", s.handleSetLanguage)
+	router.Get("/login", s.handleLogin)
+	router.Get("/auth/callback", s.handleCallback)
+	router.Post("/logout", s.handleLogout)
+	router.Get("/dashboard", d.RequireAuth(s.handleDashboard))
+	router.Get("/servers/{id}", d.RequireAuth(d.RequireView(s.handleGuildRoot)))
 	if s.ping != nil {
 		router.Handle(http.MethodGet, "/healthz", HealthzHandler(s.ping))
 	}

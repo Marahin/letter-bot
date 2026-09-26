@@ -12,6 +12,8 @@ type ctxKey int
 
 const (
 	ctxRangeSelection ctxKey = iota // RangeSelection resolved by WithRangeSelection
+	ctxUser                         // *webuser.User loaded by RequireAuth
+	ctxCurrentAccess                // access.GuildAccess resolved by the guild guards
 )
 
 // guildIDPathValue is the wildcard every guild-scoped route carries the guild id in

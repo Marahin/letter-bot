@@ -1,0 +1,67 @@
+package web
+
+import (
+	"spot-assistant/internal/core/dto/access"
+	"spot-assistant/internal/core/dto/webuser"
+	"spot-assistant/internal/infrastructure/i18n"
+)
+
+// Dashboard lists the servers the user may open and offers a generic invite to
+// add the bot to another server.
+templ Dashboard(baseURL string, user *webuser.User, list []access.GuildAccess, addServerURL string, nav Nav) {
+	@Layout(i18n.T(ctx, "dashboard.meta.title"), i18n.T(ctx, "dashboard.meta.description"), baseURL, "/dashboard", nav) {
+		<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+			<div>
+				<h1 class="font-display text-4xl font-bold -tracking-[0.02em] text-zone-50">{ i18n.T(ctx, "dashboard.heading") }</h1>
+				<p class="mt-1.5 text-sm text-zone-300">
+					{ i18n.T(ctx, "dashboard.signed_in_as") }
+					<span class="text-signal-bright">{ user.DisplayName() }</span>
+				</p>
+			</div>
+			<div class="flex items-center gap-3">
+				<a href={ templ.SafeURL(addServerURL) } class="rounded-md border border-signal/40 px-4 py-2.5 text-[13px] font-semibold text-signal-bright transition hover:border-signal hover:bg-signal/[0.12]">
+					{ i18n.T(ctx, "dashboard.add_server") }
+				</a>
+				<form method="post" action="/logout">
+					<button class="rounded-md border border-zone-700 px-4 py-2.5 text-[13px] font-semibold text-zone-300 transition hover:border-signal hover:text-signal">{ i18n.T(ctx, "shell.account.sign_out") }</button>
+				</form>
+			</div>
+		</div>
+		if len(list) == 0 {
+			<div class="mt-10 rounded-lg border border-zone-800 bg-zone-900 shadow-glass p-10 text-center text-zone-400">
+				// The button's own label is substituted, so a translator cannot let the two drift apart.
+				{ i18n.T(ctx, "dashboard.empty", i18n.T(ctx, "dashboard.add_server")) }
+			</div>
+		} else {
+			<div class="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+				for _, a := range list {
+					@guildCard(a)
+				}
+			</div>
+		}
+	}
+}
+
+// guildCard is one server. A server without premium still opens: its admins
+// reach Settings, everyone else reads the "premium required" page.
+templ guildCard(a access.GuildAccess) {
+	<div class="flex flex-col justify-between rounded-lg border border-zone-800 bg-zone-900 p-6" data-guild-card={ a.Config.GuildID }>
+		<div>
+			<h3 class="font-display text-lg font-bold text-zone-50">{ a.Config.Name }</h3>
+			if a.Config.IsPremium() {
+				<p class="mt-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-emerald-400">{ i18n.T(ctx, "dashboard.premium") }</p>
+			} else {
+				<p class="mt-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-amber-400">{ i18n.T(ctx, "dashboard.inactive") }</p>
+			}
+		</div>
+		<div class="mt-6">
+			<a href={ templ.SafeURL(GuildPath(a.Config.GuildID, "")) } class="block rounded-md bg-signal px-4 py-3 text-center text-sm font-semibold text-zone-950 shadow-accent transition hover:bg-signal-bright">
+				if !a.Config.IsPremium() && a.Caps.Admin {
+					{ i18n.T(ctx, "dashboard.open_settings") }
+				} else {
+					{ i18n.T(ctx, "dashboard.open_reservations") }
+				}
+			</a>
+		</div>
+	</div>
+}

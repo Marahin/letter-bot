@@ -1,6 +1,8 @@
 package web
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -10,11 +12,19 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"go.uber.org/zap"
 
+	"spot-assistant/internal/core/dto/access"
+	"spot-assistant/internal/core/dto/webuser"
 	"spot-assistant/internal/infrastructure/i18n"
+	"spot-assistant/internal/ports"
 )
 
-// SessionUserKey holds the signed-in Discord user id.
-const SessionUserKey = "user_id"
+// Session keys shared across the web layer.
+const (
+	// SessionUserKey holds the signed-in Discord user id.
+	SessionUserKey = "user_id"
+	// sessionGuildKey holds the last server the user opened, so guild-less pages keep it selected.
+	sessionGuildKey = "guild_id"
+)
 
 // InviteBotPermissions is the bitfield requested in the bot invite link: View
 // Channel, Send Messages, Manage Messages, Embed Links, Attach Files, Read Message
@@ -27,6 +37,9 @@ type Deps struct {
 	Cfg      Config
 	Log      *zap.SugaredLogger
 	Sessions *scs.SessionManager
+	Auth     ports.AuthService
+	Access   ports.GuildAccessService
+	Premium  ports.PremiumService
 	// Routes is nil in a Deps built without a server.
 	Routes *Router
 }
@@ -129,10 +142,95 @@ func wantsHTMLErrorPage(r *http.Request) bool {
 	return strings.Contains(r.Header.Get("Accept"), "text/html")
 }
 
-// Nav builds the shell navigation state for the current request. Sign-in arrives in
-// a later phase; until then every visitor gets the signed-out Nav.
+// sessionString reads a session value, "" when the request carries no loaded
+// session. RecoverMiddleware sits outside LoadAndSave and renders its error page
+// through Nav, and scs panics on a context without session data.
+func (d *Deps) sessionString(ctx context.Context, key string) (v string) {
+	if d.Sessions == nil {
+		return ""
+	}
+	defer func() {
+		if recover() != nil {
+			v = ""
+		}
+	}()
+	return d.Sessions.GetString(ctx, key)
+}
+
+// SessionUserID is the signed-in Discord user id, "" for an anonymous visitor.
+func (d *Deps) SessionUserID(ctx context.Context) string {
+	return d.sessionString(ctx, SessionUserKey)
+}
+
+// CurrentUser returns the signed-in user: the one RequireAuth loaded, or a fresh
+// lookup. It returns ports.ErrNotFound for an anonymous visitor.
+func (d *Deps) CurrentUser(ctx context.Context) (*webuser.User, error) {
+	if u, ok := ctx.Value(ctxUser).(*webuser.User); ok {
+		return u, nil
+	}
+	id := d.SessionUserID(ctx)
+	if id == "" || d.Auth == nil {
+		return nil, ports.ErrNotFound
+	}
+	return d.Auth.User(ctx, id)
+}
+
+// Nav builds the shell navigation state for the current request. An anonymous
+// visitor gets the signed-out Nav. A failed server list degrades to a switcher
+// without servers rather than failing the page.
 func (d *Deps) Nav(r *http.Request, currentGuildID string) Nav {
-	return Nav{CurrentGuildID: currentGuildID, ReturnTo: r.URL.RequestURI()}
+	ctx := r.Context()
+	signedOut := Nav{CurrentGuildID: currentGuildID, ReturnTo: r.URL.RequestURI()}
+	user, err := d.CurrentUser(ctx)
+	if err != nil {
+		if !errors.Is(err, ports.ErrNotFound) {
+			d.Log.Warnw("nav: load current user", "error", err)
+		}
+		return signedOut
+	}
+	var list []access.GuildAccess
+	if d.Access != nil {
+		if list, err = d.Access.AccessibleGuilds(ctx, user.DiscordUserID); err != nil {
+			d.Log.Warnw("nav: list accessible guilds", "error", err)
+			list = nil
+		}
+	}
+	if currentGuildID == "" {
+		currentGuildID = rememberedGuildID(d.sessionString(ctx, sessionGuildKey), list)
+	}
+	n := d.NavFromAccess(user, list, currentGuildID)
+	if current, ok := CurrentAccessFrom(ctx); ok && current.Config.GuildID == currentGuildID {
+		n.applyAccess(current)
+	}
+	n.ReturnTo = signedOut.ReturnTo
+	return n
+}
+
+// NavFromAccess assembles a signed-in Nav from an already-resolved access list.
+func (d *Deps) NavFromAccess(user *webuser.User, list []access.GuildAccess, currentGuildID string) Nav {
+	n := Nav{
+		Authenticated:  true,
+		Username:       user.DisplayName(),
+		SiteAdmin:      d.Access != nil && d.Access.IsSiteAdmin(user.DiscordUserID),
+		CurrentGuildID: currentGuildID,
+	}
+	for _, a := range list {
+		n.Servers = append(n.Servers, NavServer{ID: a.Config.GuildID, Name: a.Config.Name, Icon: a.Config.Icon})
+		if a.Config.GuildID == currentGuildID {
+			n.applyAccess(a)
+		}
+	}
+	return n
+}
+
+// rememberedGuildID keeps the last opened server only while it is still accessible.
+func rememberedGuildID(guildID string, list []access.GuildAccess) string {
+	for _, a := range list {
+		if guildID != "" && a.Config.GuildID == guildID {
+			return guildID
+		}
+	}
+	return ""
 }
 
 // MarketingNav is a Nav for the marketing landing page: the shell renders the top

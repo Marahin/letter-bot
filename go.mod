@@ -20,6 +20,7 @@ require (
 	github.com/vicanso/go-charts/v2 v2.6.1
 	go.uber.org/automaxprocs v1.6.0
 	go.uber.org/zap v1.26.0
+	golang.org/x/oauth2 v0.37.0
 	golang.org/x/text v0.34.0
 )
 

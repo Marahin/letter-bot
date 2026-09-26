@@ -11,10 +11,18 @@ import (
 	"go.uber.org/zap"
 
 	"spot-assistant/internal/common/version"
+	"spot-assistant/internal/core/auth"
+	"spot-assistant/internal/core/guildaccess"
+	"spot-assistant/internal/core/premium"
 
+	adminhttp "spot-assistant/internal/infrastructure/admin-http"
 	"spot-assistant/internal/infrastructure/db/postgresql"
+	"spot-assistant/internal/infrastructure/discord/oauth"
+	guildRepository "spot-assistant/internal/infrastructure/guild/postgresql/sqlc"
 	infrahttp "spot-assistant/internal/infrastructure/http"
+	notifypg "spot-assistant/internal/infrastructure/notify/postgresql"
 	"spot-assistant/internal/infrastructure/web"
+	webUserRepository "spot-assistant/internal/infrastructure/webuser/postgresql/sqlc"
 )
 
 func main() {
@@ -54,7 +62,19 @@ func main() {
 	}
 	infrahttp.NewServerWithMetrics(cfg.MetricsAddr, log).WithHealth(nil, ready).Start()
 
-	server := web.NewServer(cfg, log, db)
+	guildConfigRepo := guildRepository.NewGuildConfigRepository(db)
+	guildRoleRepo := guildRepository.NewGuildRoleRepository(db)
+	webUserRepo := webUserRepository.NewWebUserRepository(db)
+	botNotifier := notifypg.NewNotifier(db)
+
+	discordOAuth := oauth.NewCaching(oauth.New(cfg.Discord.ClientID, cfg.Discord.ClientSecret, cfg.CallbackURL(), webUserRepo), log)
+
+	server := web.NewServer(cfg, log, db).WithServices(web.Services{
+		Auth:    auth.New(discordOAuth, webUserRepo),
+		Access:  guildaccess.New(discordOAuth, guildConfigRepo, guildRoleRepo, cfg.AdminDiscordIDs, log),
+		Premium: premium.New(guildConfigRepo, botNotifier, log),
+	})
+	server.Mount(adminhttp.Register)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

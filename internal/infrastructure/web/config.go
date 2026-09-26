@@ -2,6 +2,7 @@ package web
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -23,6 +24,11 @@ type DiscordConfig struct {
 	ClientSecret string `envconfig:"CLIENT_SECRET"`
 }
 
+// CallbackURL is the OAuth redirect URL to register in the Discord developer portal.
+func (c Config) CallbackURL() string {
+	return strings.TrimRight(c.BaseURL, "/") + "/auth/callback"
+}
+
 // LoadConfig reads WEB_* and DISCORD_* from the environment.
 func LoadConfig() (Config, error) {
 	var cfg Config
@@ -35,6 +41,10 @@ func LoadConfig() (Config, error) {
 	}
 	if err := envconfig.Process("discord", &cfg.Discord); err != nil {
 		return Config{}, err
+	}
+	// Sign-in cannot work without the Discord application credentials.
+	if cfg.Discord.ClientID == "" || cfg.Discord.ClientSecret == "" {
+		return Config{}, errors.New("DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET must be set")
 	}
 	return cfg, nil
 }

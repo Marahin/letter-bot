@@ -1,0 +1,78 @@
+package adminhttp
+
+import (
+	"spot-assistant/internal/core/dto/guildconfig"
+	"spot-assistant/internal/infrastructure/i18n"
+	"spot-assistant/internal/infrastructure/web"
+)
+
+// Guilds is the site-admin server list: every stored server, whether the bot is
+// in it, and its premium switch. A premium-forever server shows a static badge:
+// only a migration changes it.
+templ Guilds(baseURL string, guilds []*guildconfig.Config, nav web.Nav) {
+	@web.Layout(i18n.T(ctx, "admin.guilds.meta.title"), i18n.T(ctx, "admin.guilds.meta.description"), baseURL, "/admin/guilds", nav) {
+		<div>
+			<h1 class="font-display text-4xl font-bold -tracking-[0.02em] text-zone-50">{ i18n.T(ctx, "admin.guilds.heading") }</h1>
+			<p class="mt-2 max-w-2xl text-sm leading-relaxed text-zone-400">{ i18n.T(ctx, "admin.guilds.lede") }</p>
+		</div>
+		<div class="mt-8 overflow-x-auto rounded-lg border border-zone-800 bg-zone-900 shadow-glass">
+			<table class="w-full text-left text-sm">
+				<thead>
+					<tr class="border-b border-zone-800 text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-400">
+						<th class="px-4 py-3">{ i18n.T(ctx, "admin.guilds.th_server") }</th>
+						<th class="px-4 py-3">{ i18n.T(ctx, "admin.guilds.th_id") }</th>
+						<th class="px-4 py-3">{ i18n.T(ctx, "admin.guilds.th_bot") }</th>
+						<th class="px-4 py-3">{ i18n.T(ctx, "admin.guilds.th_premium") }</th>
+					</tr>
+				</thead>
+				<tbody>
+					if len(guilds) == 0 {
+						<tr><td colspan="4" class="px-4 py-6 text-zone-500">{ i18n.T(ctx, "admin.guilds.empty") }</td></tr>
+					}
+					for _, g := range guilds {
+						@guildRow(g)
+					}
+				</tbody>
+			</table>
+		</div>
+	}
+}
+
+templ guildRow(g *guildconfig.Config) {
+	<tr id={ "guild-" + g.GuildID } class="border-b border-zone-800/60 last:border-b-0">
+		<td class="px-4 py-3">
+			<span class="font-medium text-zone-100">{ displayName(ctx, g) }</span>
+		</td>
+		<td class="px-4 py-3 font-mono text-xs text-zone-400">{ g.GuildID }</td>
+		<td class="px-4 py-3">
+			if g.BotPresent {
+				<span class="text-[11px] font-bold uppercase tracking-[0.06em] text-emerald-400">{ i18n.T(ctx, "admin.guilds.bot_present") }</span>
+			} else {
+				<span class="text-[11px] font-bold uppercase tracking-[0.06em] text-zone-500">{ i18n.T(ctx, "admin.guilds.bot_absent") }</span>
+			}
+		</td>
+		<td class="px-4 py-3">
+			if g.PremiumForever {
+				<span class="rounded-full border border-signal/50 bg-signal/15 px-2.5 py-0.5 text-xs font-semibold text-signal-bright">{ i18n.T(ctx, "admin.guilds.forever") }</span>
+			} else {
+				<form
+					method="post"
+					action={ templ.SafeURL("/admin/guilds/" + g.GuildID + "/premium") }
+					hx-post={ "/admin/guilds/" + g.GuildID + "/premium" }
+					hx-target={ "#guild-" + g.GuildID }
+					hx-swap="outerHTML"
+					class="flex items-center gap-3"
+				>
+					<input type="hidden" name="premium" value={ premiumFormValue(g) }/>
+					if g.Premium {
+						<span class="text-[11px] font-bold uppercase tracking-[0.06em] text-emerald-400">{ i18n.T(ctx, "admin.guilds.premium_on") }</span>
+						<button class="min-h-11 rounded-md border border-zone-700 px-3 text-xs font-semibold text-zone-300 transition hover:border-signal hover:text-signal">{ i18n.T(ctx, "admin.guilds.turn_off") }</button>
+					} else {
+						<span class="text-[11px] font-bold uppercase tracking-[0.06em] text-zone-500">{ i18n.T(ctx, "admin.guilds.premium_off") }</span>
+						<button class="min-h-11 rounded-md border border-signal/40 px-3 text-xs font-semibold text-signal-bright transition hover:border-signal hover:bg-signal/[0.12]">{ i18n.T(ctx, "admin.guilds.turn_on") }</button>
+					}
+				</form>
+			}
+		</td>
+	</tr>
+}

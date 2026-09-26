@@ -12,3 +12,11 @@ var (
 	// ErrConflict means the write overlaps an existing reservation.
 	ErrConflict = errors.New("conflicting reservation")
 )
+
+var (
+	// ErrUpstreamUnavailable means an external service did not answer or rate-limited us. Retry later.
+	ErrUpstreamUnavailable = errors.New("upstream unavailable")
+
+	// ErrUnauthorized means Discord refused the user's stored OAuth token. The user must sign in again.
+	ErrUnauthorized = errors.New("oauth token refused")
+)
