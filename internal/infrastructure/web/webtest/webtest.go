@@ -26,11 +26,12 @@ const BaseURL = "http://localhost:8080"
 
 // Mocks are the service mocks inside the Deps NewDeps returns.
 type Mocks struct {
-	Auth     *mocks.MockAuthService
-	Access   *mocks.MockGuildAccessService
-	Premium  *mocks.MockPremiumService
-	Settings *mocks.MockGuildSettingsService
-	Spots    *mocks.MockSpotService
+	Auth         *mocks.MockAuthService
+	Access       *mocks.MockGuildAccessService
+	Premium      *mocks.MockPremiumService
+	Settings     *mocks.MockGuildSettingsService
+	Spots        *mocks.MockSpotService
+	Reservations *mocks.MockReservationService
 }
 
 // NewDeps returns Deps over an scs memstore and fresh mocks.
@@ -38,21 +39,23 @@ func NewDeps(t *testing.T) (*web.Deps, Mocks) {
 	t.Helper()
 	cfg := web.Config{BaseURL: BaseURL, Discord: web.DiscordConfig{ClientID: "4242"}}
 	m := Mocks{
-		Auth:     mocks.NewMockAuthService(t),
-		Access:   mocks.NewMockGuildAccessService(t),
-		Premium:  mocks.NewMockPremiumService(t),
-		Settings: mocks.NewMockGuildSettingsService(t),
-		Spots:    mocks.NewMockSpotService(t),
+		Auth:         mocks.NewMockAuthService(t),
+		Access:       mocks.NewMockGuildAccessService(t),
+		Premium:      mocks.NewMockPremiumService(t),
+		Settings:     mocks.NewMockGuildSettingsService(t),
+		Spots:        mocks.NewMockSpotService(t),
+		Reservations: mocks.NewMockReservationService(t),
 	}
 	d := &web.Deps{
-		Cfg:      cfg,
-		Log:      zap.NewNop().Sugar(),
-		Sessions: web.NewSessionManager(cfg, nil),
-		Auth:     m.Auth,
-		Access:   m.Access,
-		Premium:  m.Premium,
-		Settings: m.Settings,
-		Spots:    m.Spots,
+		Cfg:          cfg,
+		Log:          zap.NewNop().Sugar(),
+		Sessions:     web.NewSessionManager(cfg, nil),
+		Auth:         m.Auth,
+		Access:       m.Access,
+		Premium:      m.Premium,
+		Settings:     m.Settings,
+		Spots:        m.Spots,
+		Reservations: m.Reservations,
 	}
 	return d, m
 }

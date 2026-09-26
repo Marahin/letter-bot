@@ -92,12 +92,30 @@
     });
   }
 
+  // Date-only fields (the reservation filter): the same European display, an ISO
+  // Y-m-d value.
+  function initDatePickers(root) {
+    if (typeof flatpickr === "undefined") return;
+    var scope = root && root.querySelectorAll ? root : document;
+    scope.querySelectorAll("input.js-date:not([data-fp])").forEach(function (el) {
+      el.dataset.fp = "1";
+      flatpickr(el, {
+        altInput: true,
+        altFormat: "d/m/Y",
+        dateFormat: "Y-m-d",
+        allowInput: true,
+      });
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     localize();
     initPickers(document);
+    initDatePickers(document);
   });
   document.addEventListener("htmx:afterSwap", function (e) {
     initPickers(e.target);
+    initDatePickers(e.target);
   });
   // A successful create fires `session-created`; drop the composer's stored values
   // so the next "New session" opens blank rather than re-seeding the just-used date.

@@ -12,8 +12,10 @@ import (
 
 	"spot-assistant/internal/common/version"
 	"spot-assistant/internal/core/auth"
+	"spot-assistant/internal/core/booking"
 	"spot-assistant/internal/core/guildaccess"
 	"spot-assistant/internal/core/premium"
+	"spot-assistant/internal/core/reservations"
 	"spot-assistant/internal/core/spots"
 
 	adminhttp "spot-assistant/internal/infrastructure/admin-http"
@@ -24,6 +26,9 @@ import (
 	"spot-assistant/internal/infrastructure/guildsettings"
 	infrahttp "spot-assistant/internal/infrastructure/http"
 	notifypg "spot-assistant/internal/infrastructure/notify/postgresql"
+	"spot-assistant/internal/infrastructure/notify/webcomm"
+	reservationRepository "spot-assistant/internal/infrastructure/reservation/postgresql/sqlc"
+	reservationshttp "spot-assistant/internal/infrastructure/reservations-http"
 	settingshttp "spot-assistant/internal/infrastructure/settings-http"
 	spotRepository "spot-assistant/internal/infrastructure/spot/postgresql/sqlc"
 	spotshttp "spot-assistant/internal/infrastructure/spots-http"
@@ -75,21 +80,25 @@ func main() {
 	worldNameRepo := worldNameRepository.NewWorldNameRepository(db)
 	webUserRepo := webUserRepository.NewWebUserRepository(db)
 	spotRepo := spotRepository.NewSpotRepository(db)
+	reservationRepo := reservationRepository.NewReservationRepository(db).WithLogger(log)
 	botNotifier := notifypg.NewNotifier(db)
+	bookingService := booking.NewAdapter(spotRepo, reservationRepo, webcomm.New(botNotifier, log)).WithLogger(log)
 
 	discordOAuth := oauth.NewCaching(oauth.New(cfg.Discord.ClientID, cfg.Discord.ClientSecret, cfg.CallbackURL(), webUserRepo), log)
 
 	server := web.NewServer(cfg, log, db).WithServices(web.Services{
-		Auth:     auth.New(discordOAuth, webUserRepo),
-		Access:   guildaccess.New(discordOAuth, guildConfigRepo, guildRoleRepo, cfg.AdminDiscordIDs, log),
-		Premium:  premium.New(guildConfigRepo, botNotifier, log),
-		Settings: guildsettings.New(guildConfigRepo, guildChannelRepo, guildRoleRepo, worldNameRepo, botNotifier, log),
-		Spots:    spots.New(spotRepo, botNotifier, log),
+		Auth:         auth.New(discordOAuth, webUserRepo),
+		Access:       guildaccess.New(discordOAuth, guildConfigRepo, guildRoleRepo, cfg.AdminDiscordIDs, log),
+		Premium:      premium.New(guildConfigRepo, botNotifier, log),
+		Settings:     guildsettings.New(guildConfigRepo, guildChannelRepo, guildRoleRepo, worldNameRepo, botNotifier, log),
+		Spots:        spots.New(spotRepo, botNotifier, log),
+		Reservations: reservations.New(bookingService, reservationRepo, spotRepo, botNotifier, log),
 	})
 	server.Mount(adminhttp.Register)
 	server.Mount(settingshttp.Register)
 	server.Mount(channelshttp.Register)
 	server.Mount(spotshttp.Register)
+	server.Mount(reservationshttp.Register)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

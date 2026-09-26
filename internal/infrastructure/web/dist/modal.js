@@ -40,4 +40,6 @@
   // event bubbles from the form (or the body, if the form was swapped out), so
   // listening on document catches it either way.
   document.addEventListener("session-created", closeOpenModals);
+  // A saved reservation (HX-Trigger: reservation-saved) closes its dialog too.
+  document.addEventListener("reservation-saved", closeOpenModals);
 })();

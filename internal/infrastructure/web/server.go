@@ -49,11 +49,12 @@ func NewServer(cfg Config, log *zap.SugaredLogger, pool *pgxpool.Pool) *Server {
 
 // Services are the core services the shell and the feature packages call.
 type Services struct {
-	Auth     ports.AuthService
-	Access   ports.GuildAccessService
-	Premium  ports.PremiumService
-	Settings ports.GuildSettingsService
-	Spots    ports.SpotService
+	Auth         ports.AuthService
+	Access       ports.GuildAccessService
+	Premium      ports.PremiumService
+	Settings     ports.GuildSettingsService
+	Spots        ports.SpotService
+	Reservations ports.ReservationService
 }
 
 // WithServices sets the core services. Call it before Handler.
@@ -90,15 +91,16 @@ func (s *Server) Mount(register func(*Router, *Deps)) {
 
 func (s *Server) deps() *Deps {
 	return &Deps{
-		Cfg:      s.cfg,
-		Log:      s.log,
-		Sessions: s.sessions,
-		Auth:     s.services.Auth,
-		Access:   s.services.Access,
-		Premium:  s.services.Premium,
-		Settings: s.services.Settings,
-		Spots:    s.services.Spots,
-		Routes:   s.routes,
+		Cfg:          s.cfg,
+		Log:          s.log,
+		Sessions:     s.sessions,
+		Auth:         s.services.Auth,
+		Access:       s.services.Access,
+		Premium:      s.services.Premium,
+		Settings:     s.services.Settings,
+		Spots:        s.services.Spots,
+		Reservations: s.services.Reservations,
+		Routes:       s.routes,
 	}
 }
 

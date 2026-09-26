@@ -100,12 +100,7 @@ func (a *Adapter) Book(request book.BookRequest) ([]*reservation.ClippedOrRemove
 		return nil, err
 	}
 
-	upcomingAuthorReservations, err := a.reservationRepo.SelectUpcomingMemberReservationsWithSpots(context.Background(), guild, member)
-	if err != nil {
-		return nil, fmt.Errorf("could not select upcoming member reservations: %w", err)
-	}
-
-	if err = validateHuntLengthForMultiFloorRespawns(spot.Name, upcomingAuthorReservations, startAt, endAt); err != nil {
+	if err = a.validateAuthorQuota(context.Background(), guild, member, spot.Name, startAt, endAt, 0); err != nil {
 		return nil, err
 	}
 

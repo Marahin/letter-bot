@@ -34,14 +34,15 @@ const InviteBotPermissions = "268561424"
 // Deps carries the cross-cutting dependencies every feature handler needs. The
 // server builds one and hands it to each feature package.
 type Deps struct {
-	Cfg      Config
-	Log      *zap.SugaredLogger
-	Sessions *scs.SessionManager
-	Auth     ports.AuthService
-	Access   ports.GuildAccessService
-	Premium  ports.PremiumService
-	Settings ports.GuildSettingsService
-	Spots    ports.SpotService
+	Cfg          Config
+	Log          *zap.SugaredLogger
+	Sessions     *scs.SessionManager
+	Auth         ports.AuthService
+	Access       ports.GuildAccessService
+	Premium      ports.PremiumService
+	Settings     ports.GuildSettingsService
+	Spots        ports.SpotService
+	Reservations ports.ReservationService
 	// Routes is nil in a Deps built without a server.
 	Routes *Router
 }

@@ -12,21 +12,31 @@ import (
 
 const MaximumReservationLength = 3 * time.Hour
 
+var (
+	ErrReservationTooLong = errors.New("reservation cannot take more than 3 hours")
+	ErrSelfOverbook       = errors.New("you cannot overbook yourself")
+	ErrQuotaExceeded      = errors.New("you can only book 3 hours of reservations within 24 hour window")
+)
+
 func validateHuntLength(t time.Duration) error {
 	if t > MaximumReservationLength {
-		return errors.New("reservation cannot take more than 3 hours")
+		return ErrReservationTooLong
 	}
 
 	return nil
 }
 
 func validateNoSelfOverbook(member *member.Member, conflictingReservations []*reservation.Reservation) error {
+	// A free-text author booked in the web has no Discord id to compare.
+	if member.ID == "" {
+		return nil
+	}
 	authorsConflictingReservations, _ := collections.PoorMansFind(conflictingReservations, func(r *reservation.Reservation) bool {
 		return r.AuthorDiscordID == member.ID
 	})
 
 	if authorsConflictingReservations != nil {
-		return errors.New("you cannot overbook yourself")
+		return ErrSelfOverbook
 	}
 
 	return nil
@@ -52,7 +62,7 @@ func validateHuntLengthForMultiFloorRespawns(spotName string, upcomingAuthorRese
 	})
 
 	if totalReservationsTime > MaximumReservationLength {
-		return errors.New("you can only book 3 hours of reservations within 24 hour window")
+		return ErrQuotaExceeded
 	}
 
 	return nil

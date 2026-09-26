@@ -193,10 +193,12 @@ templ row(v pageView, s spot.Listed) {
 			if v.CanManage && !s.IsArchived() {
 				@renameEditor(v, s)
 			} else {
-				<span class="font-medium text-zone-100">{ s.Name }</span>
+				<a href={ templ.SafeURL(web.GuildPath(v.GuildID, "/spots/"+strconv.FormatInt(s.ID, 10))) } class="font-medium text-zone-100 transition hover:text-signal-bright">{ s.Name }</a>
 			}
 		</td>
-		<td class="px-4 py-3 text-right font-mono tabular-nums text-zone-300">{ formatCount(s.Reservations.Upcoming) }</td>
+		<td class="px-4 py-3 text-right font-mono tabular-nums text-zone-300">
+			<a href={ templ.SafeURL(web.GuildPath(v.GuildID, "/spots/"+strconv.FormatInt(s.ID, 10))) } class="inline-flex min-h-11 items-center justify-end underline decoration-zone-700 underline-offset-4 transition hover:text-signal-bright hover:decoration-signal sm:min-h-0" aria-label={ i18n.T(ctx, "spots.list.reservations_link", s.Name) }>{ formatCount(s.Reservations.Upcoming) }</a>
+		</td>
 		<td class="hidden px-4 py-3 text-right font-mono tabular-nums text-zone-400 sm:table-cell">{ formatCount(s.Reservations.Total) }</td>
 		<td class="hidden whitespace-nowrap px-4 py-3 font-mono text-xs text-zone-400 md:table-cell">
 			if s.ArchivedAt != nil {

@@ -1,0 +1,505 @@
+package reservationshttp
+
+import (
+	"strconv"
+
+	"spot-assistant/internal/core/booking"
+	"spot-assistant/internal/core/dto/reservation"
+	"spot-assistant/internal/infrastructure/i18n"
+	"spot-assistant/internal/infrastructure/web"
+)
+
+const fieldLabel = "text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-400"
+
+const inputBase = "min-h-11 w-full rounded-md border bg-zone-850 px-3 py-1.5 text-sm text-zone-100 placeholder:text-zone-500 focus:outline-none focus:ring-2 sm:min-h-9"
+
+func inputState(invalid bool) templ.KeyValue[string, bool] {
+	if invalid {
+		return templ.KV("border-rose-500 focus:border-rose-500 focus:ring-rose-500/30", true)
+	}
+	return templ.KV("border-zone-700 focus:border-signal focus:ring-signal/30", true)
+}
+
+// Page is the Reservations page, and a respawn's own page when v.Spot is set.
+// The filter bar and the status line sit outside the region, so a reload of the
+// list never takes the reader's cursor out of a field.
+templ Page(baseURL string, v listView, nav web.Nav) {
+	@web.Layout(pageTitle(ctx, v), i18n.T(ctx, "reservations.page.description", v.GuildName), baseURL, v.basePath(), nav) {
+		<div class="flex flex-wrap items-end justify-between gap-4">
+			<div>
+				if v.Spot != nil {
+					<a href={ templ.SafeURL(web.GuildPath(v.GuildID, "/spots")) } class="text-xs font-semibold uppercase tracking-[0.12em] text-zone-400 transition hover:text-signal-bright">
+						<span aria-hidden="true">←</span> { i18n.T(ctx, "reservations.spot.back") }
+					</a>
+					<h1 class="mt-1 font-display text-4xl font-bold -tracking-[0.02em] text-zone-50">{ v.Spot.Name }</h1>
+				} else {
+					<h1 class="font-display text-4xl font-bold -tracking-[0.02em] text-zone-50">{ i18n.T(ctx, "reservations.page.heading") }</h1>
+					<p class="mt-2 max-w-2xl text-sm leading-relaxed text-zone-400">{ i18n.T(ctx, "reservations.page.lede", v.GuildName) }</p>
+				}
+			</div>
+			if v.Create != nil {
+				@createModal(v.Create)
+			}
+		</div>
+		if v.Spot != nil {
+			@spotStrip(v)
+		}
+		@filterBar(v)
+		@Status(flash{}, false)
+		@Region(v)
+		@editModal()
+		<script src={ web.AssetURL("/assets/reservations.js") } defer></script>
+		<script src={ web.AssetURL("/assets/alpine.js") } defer></script>
+	}
+}
+
+templ spotStrip(v listView) {
+	<dl class="mt-6 grid max-w-xl grid-cols-2 gap-3 sm:grid-cols-3">
+		@stat(i18n.T(ctx, "reservations.spot.upcoming"), strconv.FormatInt(v.Spot.Reservations.Upcoming, 10))
+		@stat(i18n.T(ctx, "reservations.spot.total"), strconv.FormatInt(v.Spot.Reservations.Total, 10))
+		if v.Spot.IsArchived() {
+			<div class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+				<dt class="text-[11px] font-semibold uppercase tracking-[0.12em] text-amber-300">{ i18n.T(ctx, "reservations.spot.archived") }</dt>
+				<dd class="mt-1 text-xs text-amber-200">{ i18n.T(ctx, "reservations.spot.archived_hint") }</dd>
+			</div>
+		}
+	</dl>
+}
+
+templ stat(label, value string) {
+	<div class="rounded-lg border border-zone-800 bg-zone-900 px-4 py-3 shadow-glass">
+		<dt class={ fieldLabel }>{ label }</dt>
+		<dd class="mt-1 font-mono text-2xl font-semibold tabular-nums text-zone-50">{ value }</dd>
+	</div>
+}
+
+// filterBar narrows the list as the reader changes it. It is a plain GET form
+// too, so it works without JavaScript (the Apply button).
+templ filterBar(v listView) {
+	<form
+		id="reservations-filter"
+		method="get"
+		action={ templ.SafeURL(v.basePath()) }
+		role="search"
+		aria-label={ i18n.T(ctx, "reservations.filter.label") }
+		hx-get={ v.basePath() }
+		hx-trigger="change, input changed delay:300ms from:#filter-author, submit"
+		hx-target={ "#" + regionID }
+		hx-swap="outerHTML"
+		class="mt-8 flex flex-wrap items-end gap-3 rounded-lg border border-zone-800 bg-zone-900 p-4 shadow-glass"
+	>
+		if v.Spot == nil {
+			<div class="flex min-w-[13rem] flex-[2_1_13rem] flex-col gap-1.5">
+				<label for="filter-spot" class={ fieldLabel }>{ i18n.T(ctx, "reservations.filter.spot") }</label>
+				@web.Combobox(web.ComboboxProps{
+					ID:       "filter-spot",
+					Name:     "spot",
+					Label:    i18n.T(ctx, "reservations.filter.spot"),
+					Options:  v.FilterSpots,
+					Selected: v.Filter.Spot,
+				})
+			</div>
+		}
+		<div class="flex min-w-[11rem] flex-[2_1_11rem] flex-col gap-1.5">
+			<label for="filter-author" class={ fieldLabel }>{ i18n.T(ctx, "reservations.filter.author") }</label>
+			<input id="filter-author" type="search" name="author" value={ v.Filter.Author } placeholder={ i18n.T(ctx, "reservations.filter.author_placeholder") } autocomplete="off" class={ inputBase, inputState(false) }/>
+		</div>
+		<div class="flex min-w-[9rem] flex-[1_1_9rem] flex-col gap-1.5">
+			<label for="filter-from" class={ fieldLabel }>{ i18n.T(ctx, "reservations.filter.from") }</label>
+			<input id="filter-from" type="text" name="from" value={ v.Filter.From } placeholder="dd/mm/yyyy" autocomplete="off" class={ "js-date font-mono", inputBase, inputState(false) }/>
+		</div>
+		<div class="flex min-w-[9rem] flex-[1_1_9rem] flex-col gap-1.5">
+			<label for="filter-to" class={ fieldLabel }>{ i18n.T(ctx, "reservations.filter.to") }</label>
+			<input id="filter-to" type="text" name="to" value={ v.Filter.To } placeholder="dd/mm/yyyy" autocomplete="off" class={ "js-date font-mono", inputBase, inputState(false) }/>
+		</div>
+		<div class="flex flex-col gap-1.5">
+			<span id="filter-scope-label" class={ fieldLabel }>{ i18n.T(ctx, "reservations.filter.scope") }</span>
+			<div role="radiogroup" aria-labelledby="filter-scope-label" class="inline-flex rounded-md border border-zone-700 bg-zone-850 p-0.5">
+				@scopeOption(v, reservation.ScopeUpcoming, i18n.T(ctx, "reservations.scope.upcoming"))
+				@scopeOption(v, reservation.ScopePast, i18n.T(ctx, "reservations.scope.past"))
+				@scopeOption(v, reservation.ScopeAll, i18n.T(ctx, "reservations.scope.all"))
+			</div>
+		</div>
+		if v.Actor.Caps.Reserve {
+			<label class="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm text-zone-300 sm:min-h-9">
+				<input type="checkbox" name="mine" value="1" checked?={ v.Filter.Mine } class="h-4 w-4 rounded border-zone-600 bg-zone-850 accent-signal focus-visible:ring-2 focus-visible:ring-signal/30"/>
+				{ i18n.T(ctx, "reservations.filter.mine") }
+			</label>
+		}
+		<div class="flex items-center gap-3">
+			<noscript>
+				<button class="letter-btn-quiet min-h-11 sm:min-h-9">{ i18n.T(ctx, "reservations.filter.apply") }</button>
+			</noscript>
+			if v.Filter.active() {
+				<a href={ templ.SafeURL(v.clearURL()) } class="inline-flex min-h-11 items-center text-sm font-semibold text-signal transition hover:text-signal-bright sm:min-h-9">{ i18n.T(ctx, "reservations.filter.clear") }</a>
+			}
+		</div>
+	</form>
+}
+
+templ scopeOption(v listView, scope reservation.SearchScope, label string) {
+	<label class="relative">
+		<input type="radio" name="scope" value={ string(scope) } checked?={ v.Filter.Scope == string(scope) } class="peer sr-only"/>
+		<span class="inline-flex min-h-10 cursor-pointer items-center rounded px-3 text-sm font-semibold text-zone-400 transition hover:text-zone-100 peer-checked:bg-signal peer-checked:text-zone-950 peer-focus-visible:ring-2 peer-focus-visible:ring-signal/40 sm:min-h-8">{ label }</span>
+	</label>
+}
+
+// Status is the result line of a change. A change answers it out of band, so
+// it survives the region reload the change triggers.
+templ Status(f flash, oob bool) {
+	<p
+		id={ statusID }
+		role="status"
+		aria-live="polite"
+		if oob {
+			hx-swap-oob="true"
+		}
+		class={ "mt-4 text-sm", templ.KV("text-emerald-400", !f.Warn), templ.KV("text-amber-400", f.Warn), templ.KV("hidden", f.Text == "") }
+	>{ f.Text }</p>
+}
+
+// Region is the list: the count, the table and the pages. Any saved change
+// (the reservation-saved event) reloads it with the current filter.
+templ Region(v listView) {
+	<div id={ regionID } hx-get={ v.currentURL() } hx-trigger={ savedEvent + " from:body" } hx-swap="outerHTML">
+		if len(v.Page.Items) == 0 {
+			<div class="mt-4 rounded-lg border border-zone-800 bg-zone-900 p-10 text-center text-zone-400 shadow-glass">{ v.emptyText(ctx) }</div>
+		} else {
+			<p class="mt-4 text-xs text-zone-500">{ v.pageInfo(ctx) }</p>
+			@table(v)
+			if v.Page.Pages > 1 {
+				@pagination(v)
+			}
+		}
+	</div>
+}
+
+templ table(v listView) {
+	<div class="mt-2 overflow-x-auto rounded-lg border border-zone-800 bg-zone-900 shadow-glass">
+		<table class="w-full text-left text-sm">
+			<caption class="sr-only">{ i18n.T(ctx, "reservations.list.caption") }</caption>
+			<thead>
+				<tr class="border-b border-zone-800 text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-400">
+					if v.Spot == nil {
+						<th scope="col" class="px-4 py-3">{ i18n.T(ctx, "reservations.list.th_spot") }</th>
+					}
+					<th scope="col" class="px-4 py-3">{ i18n.T(ctx, "reservations.list.th_when") }</th>
+					<th scope="col" class="hidden px-4 py-3 sm:table-cell">{ i18n.T(ctx, "reservations.list.th_length") }</th>
+					<th scope="col" class="px-4 py-3">{ i18n.T(ctx, "reservations.list.th_author") }</th>
+					<th scope="col" class="hidden px-4 py-3 md:table-cell">{ i18n.T(ctx, "reservations.list.th_state") }</th>
+					if v.hasActions() {
+						<th scope="col" class="px-4 py-3 text-right"><span class="sr-only">{ i18n.T(ctx, "reservations.list.th_actions") }</span></th>
+					}
+				</tr>
+			</thead>
+			<tbody>
+				for _, r := range v.Page.Items {
+					@row(v, r)
+				}
+			</tbody>
+		</table>
+	</div>
+}
+
+templ row(v listView, r *reservation.ReservationWithSpot) {
+	<tr id={ rowID(r.Reservation.ID) } class={ "border-b border-zone-800/60 align-top last:border-b-0", templ.KV("text-zone-500", v.state(r) == "past") }>
+		if v.Spot == nil {
+			<td class="px-4 py-3">
+				<a href={ templ.SafeURL(web.GuildPath(v.GuildID, "/spots/"+strconv.FormatInt(r.Spot.ID, 10))) } class={ "font-medium transition hover:text-signal-bright", templ.KV("text-zone-100", v.state(r) != "past") }>{ r.Spot.Name }</a>
+			</td>
+		}
+		<td class="whitespace-nowrap px-4 py-3">
+			{{ day, hours := when(ctx, r) }}
+			<span class="block text-xs text-zone-400">{ day }</span>
+			<span class={ "font-mono tabular-nums", templ.KV("text-zone-100", v.state(r) != "past") }>{ hours }</span>
+		</td>
+		<td class="hidden whitespace-nowrap px-4 py-3 font-mono text-xs tabular-nums text-zone-400 sm:table-cell">{ duration(r) }</td>
+		<td class="px-4 py-3">
+			<span class={ "break-words", templ.KV("text-zone-200", v.state(r) != "past") }>{ r.Author }</span>
+			if v.isMine(r) {
+				<span class="ml-1.5 rounded-full border border-signal/40 px-1.5 py-px text-[10px] font-semibold uppercase tracking-wider text-signal-bright">{ i18n.T(ctx, "reservations.list.you") }</span>
+			}
+		</td>
+		<td class="hidden px-4 py-3 md:table-cell">
+			@stateChip(v.state(r))
+		</td>
+		if v.hasActions() {
+			<td class="px-4 py-3">
+				<div class="flex flex-wrap justify-end gap-2">
+					if v.canEdit(r) {
+						<a
+							href={ templ.SafeURL(reservationPath(v.GuildID, r.Reservation.ID, "edit")) }
+							hx-get={ reservationPath(v.GuildID, r.Reservation.ID, "edit") }
+							hx-target={ "#" + editBodyID }
+							hx-swap="innerHTML"
+							data-modal-open="reservation-edit-modal"
+							class="letter-btn-quiet min-h-11 sm:min-h-8"
+							aria-label={ i18n.T(ctx, "reservations.row.edit_label", r.Spot.Name, r.Author) }
+						>{ i18n.T(ctx, "reservations.row.edit") }</a>
+					}
+					if v.canDelete(r) {
+						<form
+							method="post"
+							action={ templ.SafeURL(reservationPath(v.GuildID, r.Reservation.ID, "delete")) }
+							hx-post={ reservationPath(v.GuildID, r.Reservation.ID, "delete") }
+							hx-target={ "#" + statusID }
+							hx-swap="outerHTML"
+							data-confirm={ deleteConfirm(ctx, r) }
+						>
+							<button class="letter-btn-danger min-h-11 sm:min-h-8" aria-label={ i18n.T(ctx, "reservations.row.delete_label", r.Spot.Name, r.Author) }>{ i18n.T(ctx, "reservations.row.delete") }</button>
+						</form>
+					}
+				</div>
+			</td>
+		}
+	</tr>
+}
+
+templ stateChip(state string) {
+	switch state {
+		case "ongoing":
+			<span class="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-300"><span class="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden="true"></span>{ i18n.T(ctx, "reservations.state.ongoing") }</span>
+		case "past":
+			<span class="inline-flex rounded-full border border-zone-700 px-2 py-0.5 text-[11px] font-semibold text-zone-500">{ i18n.T(ctx, "reservations.state.past") }</span>
+		default:
+			<span class="inline-flex rounded-full border border-signal/40 bg-signal/10 px-2 py-0.5 text-[11px] font-semibold text-signal-bright">{ i18n.T(ctx, "reservations.state.upcoming") }</span>
+	}
+}
+
+templ pagination(v listView) {
+	<nav aria-label={ i18n.T(ctx, "reservations.pages.label") } class="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+		<span class="text-zone-400">{ i18n.T(ctx, "reservations.pages.position", v.Page.Page, v.Page.Pages) }</span>
+		<div class="flex gap-2">
+			if v.Page.Page > 1 {
+				@pageLink(v, v.Page.Page-1, i18n.T(ctx, "reservations.pages.previous"))
+			}
+			if v.Page.Page < v.Page.Pages {
+				@pageLink(v, v.Page.Page+1, i18n.T(ctx, "reservations.pages.next"))
+			}
+		</div>
+	</nav>
+}
+
+templ pageLink(v listView, page int, label string) {
+	<a
+		href={ templ.SafeURL(v.pageURL(page)) }
+		hx-get={ v.pageURL(page) }
+		hx-target={ "#" + regionID }
+		hx-swap="outerHTML"
+		class="letter-btn-quiet min-h-11 px-4 sm:min-h-9"
+	>{ label }</a>
+}
+
+// createModal is the "New reservation" button and the native <dialog> it opens
+// (modal.js). The close control comes first, so showModal() focuses it rather
+// than the respawn picker, whose panel opens on focus.
+templ createModal(f *formView) {
+	<button
+		type="button"
+		data-modal-open="reservation-new-modal"
+		class="flex min-h-11 cursor-pointer items-center gap-2 rounded-md bg-signal px-4 py-2 text-sm font-semibold text-zone-950 shadow-accent transition hover:bg-signal-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/40"
+	>
+		<span aria-hidden="true">+</span> { i18n.T(ctx, "reservations.new.open") }
+	</button>
+	@dialog("reservation-new-modal", i18n.T(ctx, "reservations.new.heading"), i18n.T(ctx, "reservations.new.sub")) {
+		@Form(f)
+	}
+}
+
+templ editModal() {
+	@dialog("reservation-edit-modal", i18n.T(ctx, "reservations.edit.heading"), i18n.T(ctx, "reservations.edit.sub")) {
+		<div id={ editBodyID }>
+			<p class="mt-4 text-sm text-zone-400">{ i18n.T(ctx, "reservations.edit.loading") }</p>
+		</div>
+	}
+}
+
+templ dialog(id, heading, sub string) {
+	<dialog
+		id={ id }
+		data-modal
+		aria-labelledby={ id + "-heading" }
+		class="m-auto w-full max-w-xl rounded-lg border border-zone-800 bg-zone-900 p-0 text-left text-zone-100 shadow-glass backdrop:bg-black/60 backdrop:backdrop-blur-sm"
+	>
+		<div class="max-h-[92vh] overflow-y-auto p-5">
+			<div class="flex items-start justify-between gap-3">
+				<div>
+					<h2 id={ id + "-heading" } class="font-display text-xl font-semibold text-zone-50">{ heading }</h2>
+					<p class="mt-1 text-xs text-zone-400">{ sub }</p>
+				</div>
+				<button type="button" data-modal-close class="inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-md text-zone-400 transition hover:text-signal-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/40 sm:h-9 sm:w-9" aria-label={ i18n.T(ctx, "reservations.dialog.close") }>✕</button>
+			</div>
+			{ children... }
+		</div>
+	</dialog>
+}
+
+// Form creates (f.ID 0) or edits a reservation. A refusal re-renders it in
+// place (hx-target this) with the values kept and the message next to the field.
+templ Form(f *formView) {
+	<form
+		id={ f.prefix() + "-form" }
+		method="post"
+		action={ templ.SafeURL(f.action()) }
+		hx-post={ f.action() }
+		hx-target="this"
+		hx-swap="outerHTML"
+		class="mt-4 grid gap-4 sm:grid-cols-2"
+	>
+		if f.General != "" {
+			<div role="alert" class="rounded-md border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-200 sm:col-span-2">
+				<p>{ f.General }</p>
+				if len(f.Conflicts) > 0 {
+					<ul class="mt-2 list-disc space-y-0.5 pl-5 font-mono text-xs text-rose-100">
+						for _, c := range f.Conflicts {
+							<li>{ conflictLine(ctx, c) }</li>
+						}
+					</ul>
+				}
+			</div>
+		}
+		<div class="flex flex-col gap-1.5 sm:col-span-2">
+			<label for={ f.fieldID("spot") } class={ fieldLabel }>{ i18n.T(ctx, "reservations.form.spot") }</label>
+			@web.Combobox(web.ComboboxProps{
+				ID:       f.fieldID("spot"),
+				Name:     "spot_id",
+				Label:    i18n.T(ctx, "reservations.form.spot"),
+				Options:  f.Spots,
+				Selected: f.SpotID,
+			})
+			@fieldError(f, "spot")
+		</div>
+		@timeField(f, "start", i18n.T(ctx, "reservations.form.start"), f.Start)
+		@timeField(f, "end", i18n.T(ctx, "reservations.form.end"), f.End)
+		<p id={ f.fieldID("time-hint") } class="-mt-2 text-xs leading-relaxed text-zone-500 sm:col-span-2">{ i18n.T(ctx, "reservations.form.time_hint", int(booking.MaximumReservationLength.Hours()), zoneName()) }</p>
+		<div class="flex flex-col gap-1.5 sm:col-span-2">
+			if f.CanPickAuthor {
+				@authorPicker(f)
+			} else {
+				<span class={ fieldLabel }>{ i18n.T(ctx, "reservations.form.author") }</span>
+				<p class="text-sm text-zone-200">{ i18n.T(ctx, "reservations.form.booking_as") } <strong class="font-semibold text-zone-50">{ f.SelfName }</strong></p>
+			}
+		</div>
+		if f.ID == 0 && f.CanOverbook {
+			<label class="flex cursor-pointer items-start gap-3 rounded-md border border-zone-800 bg-zone-850 p-3 sm:col-span-2">
+				<input type="checkbox" name="overbook" value="1" checked?={ f.Overbook } class="mt-0.5 h-4 w-4 shrink-0 accent-signal"/>
+				<span>
+					<span class="block text-sm font-semibold text-zone-100">{ i18n.T(ctx, "reservations.form.overbook") }</span>
+					<span class="mt-0.5 block text-xs leading-relaxed text-zone-400">{ i18n.T(ctx, "reservations.form.overbook_hint") }</span>
+				</span>
+			</label>
+		}
+		<div class="flex items-center gap-3 border-t border-zone-800 pt-4 sm:col-span-2">
+			<button class="min-h-11 rounded-md bg-signal px-5 py-2 text-sm font-semibold text-zone-950 transition hover:bg-signal-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/40 sm:min-h-9">
+				if f.ID == 0 {
+					{ i18n.T(ctx, "reservations.form.book") }
+				} else {
+					{ i18n.T(ctx, "reservations.form.save") }
+				}
+			</button>
+			<button type="button" data-modal-close class="min-h-11 rounded-md border border-zone-700 px-4 py-2 text-sm font-semibold text-zone-300 transition hover:border-zone-500 hover:text-zone-100 sm:min-h-9">{ i18n.T(ctx, "reservations.form.cancel") }</button>
+		</div>
+	</form>
+}
+
+templ timeField(f *formView, name, label, value string) {
+	<div class="flex flex-col gap-1.5">
+		<label for={ f.fieldID(name) } class={ fieldLabel }>{ label }</label>
+		<input
+			id={ f.fieldID(name) }
+			type="text"
+			name={ name }
+			value={ value }
+			required
+			placeholder="dd/mm/yyyy hh:mm"
+			autocomplete="off"
+			aria-describedby={ f.fieldID("time-hint") + " " + f.describedBy(name, false) }
+			if f.err(name) != "" {
+				aria-invalid="true"
+			}
+			class={ "js-datetime font-mono", inputBase, inputState(f.err(name) != "") }
+		/>
+		@fieldError(f, name)
+	</div>
+}
+
+templ fieldError(f *formView, name string) {
+	if f.err(name) != "" {
+		<p id={ f.fieldID(name) + "-error" } role="alert" class="text-xs text-rose-400">{ f.err(name) }</p>
+	}
+}
+
+// authorPicker lets a manager book for someone else: a member found among past
+// authors (the hidden id is set, so the reservation is theirs), or any text.
+// reservations.js clears the id as soon as the text is typed over.
+templ authorPicker(f *formView) {
+	<label for={ f.fieldID("author") } class={ fieldLabel }>{ i18n.T(ctx, "reservations.form.author") }</label>
+	<input type="hidden" name="author_discord_id" value={ f.AuthorID } data-author-id/>
+	<input
+		id={ f.fieldID("author") }
+		type="text"
+		name="author"
+		value={ f.Author }
+		maxlength="200"
+		autocomplete="off"
+		data-author-input
+		hx-get={ web.GuildPath(f.GuildID, "/reservations/authors") }
+		hx-trigger="input changed delay:300ms"
+		hx-target={ "#" + f.fieldID("author-suggestions") }
+		hx-swap="innerHTML"
+		aria-describedby={ f.describedBy("author", true) }
+		if f.err("author") != "" {
+			aria-invalid="true"
+		}
+		class={ inputBase, inputState(f.err("author") != "") }
+	/>
+	<p id={ f.fieldID("author") + "-hint" } class="text-xs leading-relaxed text-zone-500">{ i18n.T(ctx, "reservations.form.author_hint") }</p>
+	@fieldError(f, "author")
+	<div id={ f.fieldID("author-suggestions") } aria-live="polite"></div>
+}
+
+// AuthorSuggestions is the known-author list under the author field.
+templ AuthorSuggestions(authors []*reservation.KnownAuthor) {
+	if len(authors) > 0 {
+		<ul class="mt-1 flex flex-wrap gap-2" aria-label={ i18n.T(ctx, "reservations.form.suggestions") }>
+			for _, a := range authors {
+				<li>
+					<button type="button" data-author-pick data-author={ a.Author } data-id={ a.AuthorDiscordID } class="letter-btn-quiet min-h-11 sm:min-h-8">{ a.Author }</button>
+				</li>
+			}
+		</ul>
+	}
+}
+
+// Saved answers a successful create or edit: the form to show next (a blank one
+// after a create, none after an edit) and the status line out of band.
+templ Saved(next *formView, f flash) {
+	if next != nil {
+		@Form(next)
+	}
+	@Status(f, true)
+}
+
+// FormPage is the create or edit form as a page of its own, for a browser
+// without JavaScript and for a refused plain form post.
+templ FormPage(baseURL, guildName string, f *formView, nav web.Nav) {
+	@web.Layout(i18n.T(ctx, "reservations.page.title", guildName), i18n.T(ctx, "reservations.page.description", guildName), baseURL, f.action(), nav) {
+		<div class="mx-auto w-full max-w-xl">
+			<a href={ templ.SafeURL(web.GuildPath(f.GuildID, "/reservations")) } class="text-xs font-semibold uppercase tracking-[0.12em] text-zone-400 transition hover:text-signal-bright">
+				<span aria-hidden="true">←</span> { i18n.T(ctx, "reservations.page.heading") }
+			</a>
+			<h1 class="mt-1 font-display text-3xl font-bold -tracking-[0.02em] text-zone-50">
+				if f.ID == 0 {
+					{ i18n.T(ctx, "reservations.new.heading") }
+				} else {
+					{ i18n.T(ctx, "reservations.edit.heading") }
+				}
+			</h1>
+			<div class="mt-4 rounded-lg border border-zone-800 bg-zone-900 p-5 shadow-glass">
+				@Form(f)
+			</div>
+		</div>
+		<script src={ web.AssetURL("/assets/reservations.js") } defer></script>
+		<script src={ web.AssetURL("/assets/alpine.js") } defer></script>
+	}
+}

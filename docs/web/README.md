@@ -69,3 +69,33 @@ Managers can change it.
 - **Import the default list** shows only on a server without respawns. It adds
   the 208 names from `seeds/spots.sql` and skips names that exist.
 - Every change sends `letter_summary_refresh`.
+- The upcoming count (and the name, for members who cannot rename) links to the respawn's own page,
+  `/servers/{id}/spots/{spot}`: its reservations and counts.
+
+## Reservations
+
+`/servers/{id}/reservations` needs premium. Members with view access see every
+reservation of the server. The filter bar narrows the list by respawn, author
+(part of the text, not case-sensitive), day range (From and To are whole days),
+time (Upcoming, the default, Past or All) and "Only mine". Each change updates
+the list and the address, so a filtered list can be shared. A page has 50 rows.
+
+The web uses the rules of `/book`:
+
+- A reservation takes up to 3 hours. One author can book 3 hours within 24
+  hours (the same multi-floor rule as the bot). An author typed as free text
+  (no Discord account) has no quota.
+- **New reservation** (reserve access): a member books as themselves (their
+  server nick). A manager can choose a member who booked before (type 2 or more
+  letters) or type any author. The start cannot be in the past.
+- **Overbook** shows only to members who can overbook (managers, the overbook
+  ranks, or `@Postman` when no overbook rank is set). Overbooked authors get the
+  bot's Discord message (`letter_overbooked`). The bot's "abandoned reservation"
+  rule applies too.
+- **Edit**: the author of a reservation and managers can change the respawn and
+  the times until the reservation ends. Only managers change the author. An edit
+  never overbooks: an overlap is refused and the overlapping reservations are
+  listed. An ongoing reservation keeps its start.
+- **Delete**: the author before the reservation ends, managers at any time.
+- Every change sends `letter_summary_refresh`.
+- Times are read and shown in the server time zone (`TZ`, Europe/Berlin).

@@ -83,7 +83,18 @@
         this.query = "";
         this.hi = idx >= 0 ? idx : 0;
       },
-      pick: function (v) { this.value = v; this.open = false; },
+      // A changed pick fires change on the hidden input, once Alpine has written
+      // the value, so a form that reacts to change (the reservation filter) sees it.
+      pick: function (v) {
+        var changed = v !== this.value;
+        this.value = v;
+        this.open = false;
+        if (!changed) return;
+        var hidden = this.$root.querySelector('input[type="hidden"]');
+        this.$nextTick(function () {
+          if (hidden) hidden.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+      },
       // optionId names each option for aria-activedescendant, off the panel id.
       optionId: function (i) { return this.id + "-opt-" + i; },
       // confirmPick is the Enter handler: it commits the highlighted (or first)

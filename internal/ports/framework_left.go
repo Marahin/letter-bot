@@ -47,6 +47,13 @@ type BookingService interface {
 	UnbookAutocomplete(g *guild.Guild, m *member.Member, filter string) ([]*reservation.ReservationWithSpot, error)
 
 	Unbook(g *guild.Guild, m *member.Member, reservationId int64) (*reservation.ReservationWithSpot, error)
+
+	// Edit changes a reservation under the booking rules, without overbooking.
+	// On booking.ErrConflict it returns the overlapping reservations.
+	Edit(ctx context.Context, req book.EditRequest) ([]*reservation.Reservation, error)
+
+	// DeleteForGuild deletes any reservation of the guild. Returns ports.ErrNotFound.
+	DeleteForGuild(ctx context.Context, guildID string, id int64) error
 }
 
 type OnlineCheckService interface {

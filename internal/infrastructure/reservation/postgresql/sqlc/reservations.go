@@ -140,7 +140,8 @@ func (t *ReservationRepository) CreateAndDeleteConflicting(ctx context.Context, 
 			return modifiedConflicts, err
 		}
 
-		if conflictingReservation.AuthorDiscordID != member.ID {
+		// A free-text author (no Discord id) never merges with another reservation.
+		if member.ID == "" || conflictingReservation.AuthorDiscordID != member.ID {
 			createdLeftovers, err := t.createOverbookedLeftovers(ctx, qtx, conflictingReservation, spotId, startAt, endAt)
 			if err != nil {
 				return modifiedConflicts, err

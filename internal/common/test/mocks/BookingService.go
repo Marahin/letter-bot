@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	"context"
 	"spot-assistant/internal/core/dto/book"
 	"spot-assistant/internal/core/dto/guild"
 	"spot-assistant/internal/core/dto/member"
@@ -108,6 +109,137 @@ func (_c *MockBookingService_Book_Call) Return(clippedOrRemovedReservations []*r
 }
 
 func (_c *MockBookingService_Book_Call) RunAndReturn(run func(request book.BookRequest) ([]*reservation.ClippedOrRemovedReservation, error)) *MockBookingService_Book_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteForGuild provides a mock function for the type MockBookingService
+func (_mock *MockBookingService) DeleteForGuild(ctx context.Context, guildID string, id int64) error {
+	ret := _mock.Called(ctx, guildID, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteForGuild")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int64) error); ok {
+		r0 = returnFunc(ctx, guildID, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockBookingService_DeleteForGuild_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteForGuild'
+type MockBookingService_DeleteForGuild_Call struct {
+	*mock.Call
+}
+
+// DeleteForGuild is a helper method to define mock.On call
+//   - ctx context.Context
+//   - guildID string
+//   - id int64
+func (_e *MockBookingService_Expecter) DeleteForGuild(ctx any, guildID any, id any) *MockBookingService_DeleteForGuild_Call {
+	return &MockBookingService_DeleteForGuild_Call{Call: _e.mock.On("DeleteForGuild", ctx, guildID, id)}
+}
+
+func (_c *MockBookingService_DeleteForGuild_Call) Run(run func(ctx context.Context, guildID string, id int64)) *MockBookingService_DeleteForGuild_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 int64
+		if args[2] != nil {
+			arg2 = args[2].(int64)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockBookingService_DeleteForGuild_Call) Return(err error) *MockBookingService_DeleteForGuild_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockBookingService_DeleteForGuild_Call) RunAndReturn(run func(ctx context.Context, guildID string, id int64) error) *MockBookingService_DeleteForGuild_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Edit provides a mock function for the type MockBookingService
+func (_mock *MockBookingService) Edit(ctx context.Context, req book.EditRequest) ([]*reservation.Reservation, error) {
+	ret := _mock.Called(ctx, req)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Edit")
+	}
+
+	var r0 []*reservation.Reservation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, book.EditRequest) ([]*reservation.Reservation, error)); ok {
+		return returnFunc(ctx, req)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, book.EditRequest) []*reservation.Reservation); ok {
+		r0 = returnFunc(ctx, req)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*reservation.Reservation)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, book.EditRequest) error); ok {
+		r1 = returnFunc(ctx, req)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockBookingService_Edit_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Edit'
+type MockBookingService_Edit_Call struct {
+	*mock.Call
+}
+
+// Edit is a helper method to define mock.On call
+//   - ctx context.Context
+//   - req book.EditRequest
+func (_e *MockBookingService_Expecter) Edit(ctx any, req any) *MockBookingService_Edit_Call {
+	return &MockBookingService_Edit_Call{Call: _e.mock.On("Edit", ctx, req)}
+}
+
+func (_c *MockBookingService_Edit_Call) Run(run func(ctx context.Context, req book.EditRequest)) *MockBookingService_Edit_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 book.EditRequest
+		if args[1] != nil {
+			arg1 = args[1].(book.EditRequest)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockBookingService_Edit_Call) Return(reservations []*reservation.Reservation, err error) *MockBookingService_Edit_Call {
+	_c.Call.Return(reservations, err)
+	return _c
+}
+
+func (_c *MockBookingService_Edit_Call) RunAndReturn(run func(ctx context.Context, req book.EditRequest) ([]*reservation.Reservation, error)) *MockBookingService_Edit_Call {
 	_c.Call.Return(run)
 	return _c
 }
