@@ -178,7 +178,7 @@ These items of the request were unclear or had a cost. Each has a decision.
     - Managers edit and delete any reservation, and may delete past ones. Only
       managers change the author.
     - A member books as their server nick. A manager may book for a known author
-      (picked from past reservations, 2 or more letters typed) or for a
+      (picked from past reservations, 3 or more letters typed) or for a
       free-text author. A free-text author has no Discord id
       (`author_discord_id = ''`), no quota and no owner, and gets no overbook
       message. A posted Discord id must be a snowflake (digits only, at most 20).

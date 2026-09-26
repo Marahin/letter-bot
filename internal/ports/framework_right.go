@@ -144,8 +144,8 @@ type GuildConfigRepository interface {
 	UpsertPresence(ctx context.Context, guildID, name, icon, ownerID string) (*guildconfig.Config, error)
 	SetBotPresent(ctx context.Context, guildID string, present bool) error
 	// MarkAbsentExcept sets bot_present=false for the stored guilds of one gateway shard
-	// that are not in presentIDs.
-	MarkAbsentExcept(ctx context.Context, shardID, shardCount int, presentIDs []string) error
+	// that are not in presentIDs and were not updated since readyAt.
+	MarkAbsentExcept(ctx context.Context, shardID, shardCount int, presentIDs []string, readyAt time.Time) error
 	SetPremium(ctx context.Context, guildID string, premium bool) error
 	SetChannels(ctx context.Context, guildID, commandChannelID, summaryChannelID string) error
 	SetRoleIDs(ctx context.Context, guildID string, kind guildconfig.RoleKind, roleIDs []string) error

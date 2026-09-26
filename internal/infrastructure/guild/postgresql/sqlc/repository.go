@@ -92,7 +92,7 @@ func (r *GuildConfigRepository) SetBotPresent(ctx context.Context, guildID strin
 	return postgresql.RowsAffected(r.q.SetGuildBotPresent(ctx, SetGuildBotPresentParams{BotPresent: present, GuildID: guildID}))
 }
 
-func (r *GuildConfigRepository) MarkAbsentExcept(ctx context.Context, shardID, shardCount int, presentIDs []string) error {
+func (r *GuildConfigRepository) MarkAbsentExcept(ctx context.Context, shardID, shardCount int, presentIDs []string, readyAt time.Time) error {
 	if presentIDs == nil {
 		presentIDs = []string{}
 	}
@@ -100,6 +100,7 @@ func (r *GuildConfigRepository) MarkAbsentExcept(ctx context.Context, shardID, s
 		PresentIds: presentIDs,
 		ShardCount: int64(shardCount),
 		ShardID:    int64(shardID),
+		ReadyAt:    pgtype.Timestamptz{Time: readyAt, Valid: true},
 	})
 }
 

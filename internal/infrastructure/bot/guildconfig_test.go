@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/stretchr/testify/assert"
@@ -288,10 +289,11 @@ func TestBot_MarkAbsentGuilds(t *testing.T) {
 			// given
 			b, configs := newConfigBot(t)
 			ready := &discordgo.Ready{Shard: tc.shard, Guilds: []*discordgo.Guild{{ID: "g1"}, {ID: "g2"}}}
-			configs.On("MarkAbsentExcept", mocks.ContextMock, tc.expectedID, tc.count, []string{"g1", "g2"}).Return(errors.New("db down")).Once()
+			readyAt := time.Date(2026, 9, 26, 10, 0, 0, 0, time.UTC)
+			configs.On("MarkAbsentExcept", mocks.ContextMock, tc.expectedID, tc.count, []string{"g1", "g2"}, readyAt).Return(errors.New("db down")).Once()
 
 			// when
-			b.markAbsentGuilds(ready)
+			b.markAbsentGuilds(ready, readyAt)
 
 			// then: expectations are asserted on cleanup; the error is only logged
 		})

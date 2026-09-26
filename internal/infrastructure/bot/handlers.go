@@ -132,7 +132,8 @@ func (b *Bot) scheduleSync(guildID string) {
 }
 
 func (b *Bot) Ready(s *discordgo.Session, r *discordgo.Ready) {
-	b.markAbsentGuilds(r)
+	readyAt := time.Now()
+	b.markAbsentGuilds(r, readyAt)
 	for _, g := range s.State.Guilds {
 		if err := b.onlineCheckService.ConfigureWorldNameForGuild(g.ID); err != nil {
 			b.log.Errorf("ConfigureWorldNameForGuild failed for guild %s: %v", g.ID, err)
@@ -144,8 +145,9 @@ func (b *Bot) Ready(s *discordgo.Session, r *discordgo.Ready) {
 }
 
 // markAbsentGuilds clears bot_present for the guilds that removed the bot while it
-// was offline. Each shard's Ready lists only the guilds of that shard.
-func (b *Bot) markAbsentGuilds(r *discordgo.Ready) {
+// was offline. Each shard's Ready lists only the guilds of that shard. A guild
+// that joined after readyAt is kept, because its GuildCreate may run first.
+func (b *Bot) markAbsentGuilds(r *discordgo.Ready, readyAt time.Time) {
 	shardID, shardCount := 0, 1
 	if r.Shard != nil && r.Shard[1] > 0 {
 		shardID, shardCount = r.Shard[0], r.Shard[1]
@@ -154,7 +156,7 @@ func (b *Bot) markAbsentGuilds(r *discordgo.Ready) {
 	for _, g := range r.Guilds {
 		ids = append(ids, g.ID)
 	}
-	if err := b.guildConfigs.MarkAbsentExcept(context.Background(), shardID, shardCount, ids); err != nil {
+	if err := b.guildConfigs.MarkAbsentExcept(context.Background(), shardID, shardCount, ids, readyAt); err != nil {
 		b.log.With("event", "Ready", "shard", shardID).Errorf("could not mark absent guilds: %s", err)
 	}
 }

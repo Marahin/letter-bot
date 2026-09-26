@@ -94,6 +94,7 @@ WHERE guild_id = @guild_id;
 UPDATE guilds
 SET bot_present = false, updated_at = now()
 WHERE bot_present
+  AND updated_at < @ready_at::timestamptz
   AND NOT (guild_id = ANY(@present_ids::text[]))
   AND CASE WHEN guild_id ~ '^[0-9]{1,19}$'
     THEN (guild_id::bigint >> 22) % @shard_count::bigint = @shard_id::bigint

@@ -87,7 +87,7 @@ The web uses the rules of `/book`:
   hours (the same multi-floor rule as the bot). An author typed as free text
   (no Discord account) has no quota.
 - **New reservation** (reserve access): a member books as themselves (their
-  server nick). A manager can choose a member who booked before (type 2 or more
+  server nick). A manager can choose a member who booked before (type 3 or more
   letters) or type any author. The start cannot be in the past.
 - **Overbook** shows only to members who can overbook (managers, the overbook
   ranks, or `@Postman` when no overbook rank is set). Overbooked authors get the

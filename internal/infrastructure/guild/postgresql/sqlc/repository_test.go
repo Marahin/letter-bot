@@ -195,18 +195,19 @@ func TestGuildConfigRepository_UpsertPresence(t *testing.T) {
 
 func TestGuildConfigRepository_MarkAbsentExcept(t *testing.T) {
 	// given
+	readyAt := time.Date(2026, 9, 26, 10, 0, 0, 0, time.UTC)
 	mock := newMock(t)
 	mock.ExpectExec("SET bot_present = false").
-		WithArgs([]string{"g1"}, int64(2), int64(1)).
+		WithArgs(pgtype.Timestamptz{Time: readyAt, Valid: true}, []string{"g1"}, int64(2), int64(1)).
 		WillReturnResult(pgxmock.NewResult("UPDATE", 3))
 	mock.ExpectExec("SET bot_present = false").
-		WithArgs([]string{}, int64(1), int64(0)).
+		WithArgs(pgtype.Timestamptz{Time: readyAt, Valid: true}, []string{}, int64(1), int64(0)).
 		WillReturnError(errors.New("boom"))
 	repo := NewGuildConfigRepository(mock)
 
 	// when
-	err := repo.MarkAbsentExcept(context.Background(), 1, 2, []string{"g1"})
-	nilErr := repo.MarkAbsentExcept(context.Background(), 0, 1, nil)
+	err := repo.MarkAbsentExcept(context.Background(), 1, 2, []string{"g1"}, readyAt)
+	nilErr := repo.MarkAbsentExcept(context.Background(), 0, 1, nil, readyAt)
 
 	// then
 	assert.NoError(t, err)

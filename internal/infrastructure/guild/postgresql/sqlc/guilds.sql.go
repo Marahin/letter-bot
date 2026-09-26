@@ -35,14 +35,16 @@ const markGuildsAbsentExcept = `-- name: MarkGuildsAbsentExcept :exec
 UPDATE guilds
 SET bot_present = false, updated_at = now()
 WHERE bot_present
-  AND NOT (guild_id = ANY($1::text[]))
+  AND updated_at < $1::timestamptz
+  AND NOT (guild_id = ANY($2::text[]))
   AND CASE WHEN guild_id ~ '^[0-9]{1,19}$'
-    THEN (guild_id::bigint >> 22) % $2::bigint = $3::bigint
+    THEN (guild_id::bigint >> 22) % $3::bigint = $4::bigint
     ELSE false
   END
 `
 
 type MarkGuildsAbsentExceptParams struct {
+	ReadyAt    pgtype.Timestamptz
 	PresentIds []string
 	ShardCount int64
 	ShardID    int64
@@ -51,7 +53,12 @@ type MarkGuildsAbsentExceptParams struct {
 // Discord routes a guild to shard (guild_id >> 22) % shard_count. The CASE keeps
 // a non-snowflake id away from the bigint cast.
 func (q *Queries) MarkGuildsAbsentExcept(ctx context.Context, arg MarkGuildsAbsentExceptParams) error {
-	_, err := q.db.Exec(ctx, markGuildsAbsentExcept, arg.PresentIds, arg.ShardCount, arg.ShardID)
+	_, err := q.db.Exec(ctx, markGuildsAbsentExcept,
+		arg.ReadyAt,
+		arg.PresentIds,
+		arg.ShardCount,
+		arg.ShardID,
+	)
 	return err
 }
 

@@ -377,16 +377,16 @@ func (_c *MockGuildConfigRepository_ListResyncRequested_Call) RunAndReturn(run f
 }
 
 // MarkAbsentExcept provides a mock function for the type MockGuildConfigRepository
-func (_mock *MockGuildConfigRepository) MarkAbsentExcept(ctx context.Context, shardID int, shardCount int, presentIDs []string) error {
-	ret := _mock.Called(ctx, shardID, shardCount, presentIDs)
+func (_mock *MockGuildConfigRepository) MarkAbsentExcept(ctx context.Context, shardID int, shardCount int, presentIDs []string, readyAt time.Time) error {
+	ret := _mock.Called(ctx, shardID, shardCount, presentIDs, readyAt)
 
 	if len(ret) == 0 {
 		panic("no return value specified for MarkAbsentExcept")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int, []string) error); ok {
-		r0 = returnFunc(ctx, shardID, shardCount, presentIDs)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int, []string, time.Time) error); ok {
+		r0 = returnFunc(ctx, shardID, shardCount, presentIDs, readyAt)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -403,11 +403,12 @@ type MockGuildConfigRepository_MarkAbsentExcept_Call struct {
 //   - shardID int
 //   - shardCount int
 //   - presentIDs []string
-func (_e *MockGuildConfigRepository_Expecter) MarkAbsentExcept(ctx any, shardID any, shardCount any, presentIDs any) *MockGuildConfigRepository_MarkAbsentExcept_Call {
-	return &MockGuildConfigRepository_MarkAbsentExcept_Call{Call: _e.mock.On("MarkAbsentExcept", ctx, shardID, shardCount, presentIDs)}
+//   - readyAt time.Time
+func (_e *MockGuildConfigRepository_Expecter) MarkAbsentExcept(ctx any, shardID any, shardCount any, presentIDs any, readyAt any) *MockGuildConfigRepository_MarkAbsentExcept_Call {
+	return &MockGuildConfigRepository_MarkAbsentExcept_Call{Call: _e.mock.On("MarkAbsentExcept", ctx, shardID, shardCount, presentIDs, readyAt)}
 }
 
-func (_c *MockGuildConfigRepository_MarkAbsentExcept_Call) Run(run func(ctx context.Context, shardID int, shardCount int, presentIDs []string)) *MockGuildConfigRepository_MarkAbsentExcept_Call {
+func (_c *MockGuildConfigRepository_MarkAbsentExcept_Call) Run(run func(ctx context.Context, shardID int, shardCount int, presentIDs []string, readyAt time.Time)) *MockGuildConfigRepository_MarkAbsentExcept_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -425,11 +426,16 @@ func (_c *MockGuildConfigRepository_MarkAbsentExcept_Call) Run(run func(ctx cont
 		if args[3] != nil {
 			arg3 = args[3].([]string)
 		}
+		var arg4 time.Time
+		if args[4] != nil {
+			arg4 = args[4].(time.Time)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
+			arg4,
 		)
 	})
 	return _c
@@ -440,7 +446,7 @@ func (_c *MockGuildConfigRepository_MarkAbsentExcept_Call) Return(err error) *Mo
 	return _c
 }
 
-func (_c *MockGuildConfigRepository_MarkAbsentExcept_Call) RunAndReturn(run func(ctx context.Context, shardID int, shardCount int, presentIDs []string) error) *MockGuildConfigRepository_MarkAbsentExcept_Call {
+func (_c *MockGuildConfigRepository_MarkAbsentExcept_Call) RunAndReturn(run func(ctx context.Context, shardID int, shardCount int, presentIDs []string, readyAt time.Time) error) *MockGuildConfigRepository_MarkAbsentExcept_Call {
 	_c.Call.Return(run)
 	return _c
 }

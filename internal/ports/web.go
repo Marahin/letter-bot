@@ -101,7 +101,7 @@ type ReservationService interface {
 	// Search returns one page (1-based) of the reservations that match the filter.
 	Search(ctx context.Context, filter reservation.SearchFilter, page int) (*reservation.Page, error)
 	// KnownAuthors returns the Discord users who booked with a matching author text.
-	// A query shorter than 2 characters returns none.
+	// A query shorter than 3 characters returns none.
 	KnownAuthors(ctx context.Context, guildID, query string) ([]*reservation.KnownAuthor, error)
 	// Get returns ErrNotFound for a reservation of another guild.
 	Get(ctx context.Context, guildID string, id int64) (*reservation.ReservationWithSpot, error)

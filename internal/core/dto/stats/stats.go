@@ -132,7 +132,8 @@ type Sort struct {
 }
 
 // Query orders the totals rows of Filter by Sort and keeps the first Limit (0 = every row).
-// Rows without the sort figure come last in both directions; ties go by name.
+// Rows without the sort figure come last in both directions; ties go by name,
+// or by id when the sort is not by name.
 type Query struct {
 	Filter
 	Sort  Sort
