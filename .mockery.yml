@@ -7,12 +7,25 @@ include-auto-generated: false
 log-level: info
 structname: '{{.Mock}}{{.InterfaceName}}'
 pkgname: 'mocks'
-recursive: true
 require-template-schema-exists: true
 template: testify
 template-schema: '{{.Template}}.schema.json'
+# Only the packages that declare mocked interfaces are loaded. Loading the whole module would
+# fail on any package that does not compile yet, e.g. a consumer of a port whose signature changed.
 packages:
-  spot-assistant:
+  spot-assistant/internal/ports:
     config:
       all: true
-      exclude-subpkg-regex: ['sqlc$']
+  spot-assistant/internal/common/errors:
+    interfaces:
+      LogEntry: {}
+  spot-assistant/internal/infrastructure/bot:
+    interfaces:
+      DiscordGuildReader: {}
+      GuildActions: {}
+  spot-assistant/internal/infrastructure/notify/postgresql:
+    interfaces:
+      NotifyExecutor: {}
+  spot-assistant/internal/infrastructure/scheduler:
+    interfaces:
+      JobLocker: {}

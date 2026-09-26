@@ -58,24 +58,30 @@ type tableView struct {
 	Total int
 }
 
+// breakdownView is a detail page's table: its first rows and the number of rows without the cap.
+type breakdownView struct {
+	Rows  []tableRow
+	Total int
+}
+
 type spotView struct {
 	pageView
 	D          *stats.SpotDetail
-	Players    []tableRow
-	Characters []tableRow
+	Players    breakdownView
+	Characters breakdownView
 }
 
 type playerView struct {
 	pageView
 	D          *stats.PlayerDetail
-	Spots      []tableRow
-	Characters []tableRow
+	Spots      breakdownView
+	Characters breakdownView
 }
 
 type characterView struct {
 	pageView
 	P     *stats.CharacterProfile
-	Spots []tableRow
+	Spots breakdownView
 	Now   time.Time
 }
 
@@ -113,13 +119,6 @@ func characterRows(guildID string, rows []stats.CharacterRow) []tableRow {
 		out[i] = tableRow{Name: r.Name, Href: characterHref(guildID, r.Name), Totals: r.Totals}
 	}
 	return out
-}
-
-func capRows(rows []tableRow, n int) []tableRow {
-	if len(rows) > n {
-		return rows[:n]
-	}
-	return rows
 }
 
 func sortDir(s stats.Sort) string {

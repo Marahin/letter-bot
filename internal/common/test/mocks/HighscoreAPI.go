@@ -48,23 +48,23 @@ func (_m *MockHighscoreAPI) EXPECT() *MockHighscoreAPI_Expecter {
 }
 
 // GetHighscoresPage provides a mock function for the type MockHighscoreAPI
-func (_mock *MockHighscoreAPI) GetHighscoresPage(ctx context.Context, world1 string, page int) (*world.HighscoresResponse, error) {
+func (_mock *MockHighscoreAPI) GetHighscoresPage(ctx context.Context, world1 string, page int) (*world.HighscorePage, error) {
 	ret := _mock.Called(ctx, world1, page)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetHighscoresPage")
 	}
 
-	var r0 *world.HighscoresResponse
+	var r0 *world.HighscorePage
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int) (*world.HighscoresResponse, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int) (*world.HighscorePage, error)); ok {
 		return returnFunc(ctx, world1, page)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int) *world.HighscoresResponse); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int) *world.HighscorePage); ok {
 		r0 = returnFunc(ctx, world1, page)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*world.HighscoresResponse)
+			r0 = ret.Get(0).(*world.HighscorePage)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string, int) error); ok {
@@ -111,12 +111,12 @@ func (_c *MockHighscoreAPI_GetHighscoresPage_Call) Run(run func(ctx context.Cont
 	return _c
 }
 
-func (_c *MockHighscoreAPI_GetHighscoresPage_Call) Return(highscoresResponse *world.HighscoresResponse, err error) *MockHighscoreAPI_GetHighscoresPage_Call {
-	_c.Call.Return(highscoresResponse, err)
+func (_c *MockHighscoreAPI_GetHighscoresPage_Call) Return(highscorePage *world.HighscorePage, err error) *MockHighscoreAPI_GetHighscoresPage_Call {
+	_c.Call.Return(highscorePage, err)
 	return _c
 }
 
-func (_c *MockHighscoreAPI_GetHighscoresPage_Call) RunAndReturn(run func(ctx context.Context, world1 string, page int) (*world.HighscoresResponse, error)) *MockHighscoreAPI_GetHighscoresPage_Call {
+func (_c *MockHighscoreAPI_GetHighscoresPage_Call) RunAndReturn(run func(ctx context.Context, world1 string, page int) (*world.HighscorePage, error)) *MockHighscoreAPI_GetHighscoresPage_Call {
 	_c.Call.Return(run)
 	return _c
 }

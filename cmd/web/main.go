@@ -14,9 +14,9 @@ import (
 	"spot-assistant/internal/common/version"
 	"spot-assistant/internal/core/auth"
 	"spot-assistant/internal/core/booking"
+	"spot-assistant/internal/core/characters"
 	"spot-assistant/internal/core/experience"
 	"spot-assistant/internal/core/guildaccess"
-	"spot-assistant/internal/core/players"
 	"spot-assistant/internal/core/premium"
 	"spot-assistant/internal/core/reservations"
 	"spot-assistant/internal/core/spots"
@@ -46,6 +46,9 @@ import (
 	"spot-assistant/internal/infrastructure/worldapi"
 	worldNameRepository "spot-assistant/internal/infrastructure/worldname/postgresql/sqlc"
 )
+
+// experienceJobLockKey is the pg_advisory_lock key of the experience job.
+const experienceJobLockKey int64 = 7419001
 
 func main() {
 	logger, _ := zap.NewProduction()
@@ -92,7 +95,10 @@ func main() {
 	spotRepo := spotRepository.NewSpotRepository(db)
 	reservationRepo := reservationRepository.NewReservationRepository(db).WithLogger(log)
 	botNotifier := notifypg.NewNotifier(db)
-	statsRepo := statsRepository.NewStatsRepository(db, time.Local)
+	statsRepo, err := statsRepository.NewStatsRepository(db, os.Getenv("TZ"))
+	if err != nil {
+		log.Panic(err)
+	}
 	experienceRepo := experienceRepository.NewExperienceRepository(db)
 	tibiaDataBaseURL := os.Getenv("TIBIA_WORLD_API_BASE_URL")
 	tibiaData := worldapi.NewHttpWorldService(tibiaDataBaseURL)
@@ -108,7 +114,7 @@ func main() {
 		Spots:        spots.New(spotRepo, botNotifier, log),
 		Reservations: reservations.New(bookingService, reservationRepo, spotRepo, botNotifier, log),
 		Stats:        corestats.New(statsRepo, spotRepo),
-		Characters:   players.New(worldapi.NewCachedCharacters(tibiaData), worldNameRepo, experienceRepo, statsRepo, log),
+		Characters:   characters.New(worldapi.NewCachedCharacters(tibiaData), worldNameRepo, experienceRepo, statsRepo, log),
 	})
 	server.Mount(adminhttp.Register)
 	server.Mount(settingshttp.Register)
@@ -127,9 +133,10 @@ func main() {
 	case tibiaDataBaseURL == "":
 		log.Warn("Experience job is disabled: TIBIA_WORLD_API_BASE_URL not set")
 	default:
-		job := experience.New(tibiaData, experienceRepo, log)
-		lock := scheduler.NewPgAdvisoryLock(db, scheduler.ExperienceJobLockKey, log)
-		go scheduler.New(job, lock, cfg.ExperienceJobInterval, log).Run(ctx)
+		job := experience.New(tibiaData, experienceRepo, cfg.ExperienceJobInterval, log)
+		lock := scheduler.NewPgAdvisoryLock(db, experienceJobLockKey, log)
+		run := func(ctx context.Context) error { return job.RunOnce(ctx, time.Now()) }
+		go scheduler.New("experience", run, lock, cfg.ExperienceJobInterval, log).Run(ctx)
 	}
 
 	go func() {

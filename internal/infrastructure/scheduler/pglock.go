@@ -8,9 +8,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// ExperienceJobLockKey is the pg_advisory_lock key of the experience job.
-const ExperienceJobLockKey int64 = 7419001
-
 // PgAdvisoryLock is a session-level Postgres advisory lock held on a dedicated pooled connection.
 type PgAdvisoryLock struct {
 	pool *pgxpool.Pool

@@ -49,12 +49,3 @@ func TestTotals_Add(t *testing.T) {
 	// then
 	assert.Equal(t, Totals{11, 22, 33, 44, 55}, got)
 }
-
-func TestRows_ExposeTotalsAndLabel(t *testing.T) {
-	tot := Totals{Reservations: 1}
-	rows := []StatsRow{SpotRow{Name: "s", Totals: tot}, PlayerRow{Name: "p", Totals: tot}, CharacterRow{Name: "c", Totals: tot}}
-	for i, want := range []string{"s", "p", "c"} {
-		assert.Equal(t, want, rows[i].Label())
-		assert.Equal(t, tot, rows[i].Stats())
-	}
-}

@@ -117,12 +117,17 @@ These items of the request were unclear or had a cost. Each has a decision.
     the latest snapshot, so a snapshot says "this value was seen from
     `observed_at` to `last_seen_at`". Each complete read is a run, with
     `observed_at` = the TibiaData scrape time (`information.timestamp`, or the
-    request time) minus `highscore_age` minutes, the oldest of all pages.
+    request time) minus `highscore_age` minutes, the oldest of all pages. An
+    empty page, or a page before the last one with fewer than 50 rows, fails
+    the run: a partial answer would make tracked characters look absent.
     - Start value: the latest snapshot at or before `start_at`, if it was seen at
       most 2 hours before `start_at`; else the first snapshot within 20 minutes
       after `start_at`.
     - End value: the latest snapshot at or before the first run observed at or
-      after `end_at`, if it was seen at or after `end_at`.
+      after `end_at`, if it was seen at or after `end_at`. If that run did not
+      see the character, the next run stands in when it was observed within two
+      job intervals (one missed run is often a TibiaData hiccup); the
+      reservation waits until that next run exists.
     - A missing start or end gives `no_data`.
 
     The `last_seen_at` checks replace the plain "last snapshot at or before"
@@ -145,7 +150,8 @@ These items of the request were unclear or had a cost. Each has a decision.
 30. **UI vocabulary.** English "Respawn", Polish "Resp", matching the bot's
     `respawn` option. Code keeps "spot". See `VOCABULARY.md`.
 31. **The web uses the process time zone (`TZ=Europe/Berlin`), the same as the
-    bot.** It applies to input, display and daily stat buckets.
+    bot.** It applies to input, display and daily stat buckets. The web does not
+    start without `TZ`: PostgreSQL buckets the stat days in that zone by name.
 32. **The Loot Calculator is public and computes on the server.** History (the
     last 20 sessions) stays in the browser's localStorage, never on the server.
     The analytics call of the original is dropped. Differences from the original:

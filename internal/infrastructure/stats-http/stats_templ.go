@@ -1927,8 +1927,8 @@ func leaderboard(id, title, hint string, rows []tableRow, key stats.SortKey, mor
 	})
 }
 
-// breakdown is a detail page's table, capped at maxBreakdownRows.
-func breakdown(title string, rows []tableRow, name string) templ.Component {
+// breakdown is a detail page's table; the core caps its rows.
+func breakdown(title string, b breakdownView, name string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -1966,7 +1966,7 @@ func breakdown(title string, rows []tableRow, name string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if len(rows) == 0 {
+		if len(b.Rows) == 0 {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 135, "<p class=\"mt-2 text-sm text-zone-400\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -1985,7 +1985,7 @@ func breakdown(title string, rows []tableRow, name string) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = statsTable(capRows(rows, maxBreakdownRows), name, nil).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = statsTable(b.Rows, name, nil).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -1993,13 +1993,13 @@ func breakdown(title string, rows []tableRow, name string) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			if len(rows) > maxBreakdownRows {
+			if b.Total > len(b.Rows) {
 				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 138, "<p class=\"mt-2 text-xs text-zone-400\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var90 string
-				templ_7745c5c3_Var90, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "stats.table.truncated", formatInt(ctx, maxBreakdownRows), formatInt(ctx, int64(len(rows)))))
+				templ_7745c5c3_Var90, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "stats.table.truncated", formatInt(ctx, int64(len(b.Rows))), formatInt(ctx, int64(b.Total))))
 				if templ_7745c5c3_Err != nil {
 					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/stats-http/stats.templ`, Line: 314, Col: 148}
 				}

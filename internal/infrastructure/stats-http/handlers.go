@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -18,9 +19,6 @@ import (
 
 // maxTableRows caps the HTML tables; the CSV export has every row.
 const maxTableRows = 500
-
-// maxBreakdownRows caps the tables on a detail page.
-const maxBreakdownRows = 25
 
 type Handlers struct {
 	D   *web.Deps
@@ -43,48 +41,69 @@ func (h *Handlers) HandleOverview(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) HandleSpots(w http.ResponseWriter, r *http.Request) {
-	h.table(w, r, kindSpots, func(ctx context.Context, p pageView, s stats.Sort) ([]tableRow, error) {
-		rows, err := h.D.Stats.Spots(ctx, p.GuildID, p.Range, s)
-		return spotRows(p.GuildID, rows), err
+	h.table(w, r, kindSpots, func(ctx context.Context, p pageView, s stats.Sort, limit int) ([]tableRow, int, error) {
+		page, err := h.D.Stats.Spots(ctx, p.GuildID, p.Range, s, limit)
+		return spotRows(p.GuildID, page.Rows), page.Total, err
 	})
 }
 
 func (h *Handlers) HandlePlayers(w http.ResponseWriter, r *http.Request) {
-	h.table(w, r, kindPlayers, func(ctx context.Context, p pageView, s stats.Sort) ([]tableRow, error) {
-		rows, err := h.D.Stats.Players(ctx, p.GuildID, p.Range, s)
-		return playerRows(p.GuildID, rows), err
+	h.table(w, r, kindPlayers, func(ctx context.Context, p pageView, s stats.Sort, limit int) ([]tableRow, int, error) {
+		page, err := h.D.Stats.Players(ctx, p.GuildID, p.Range, s, limit)
+		return playerRows(p.GuildID, page.Rows), page.Total, err
 	})
 }
 
 func (h *Handlers) HandleCharacters(w http.ResponseWriter, r *http.Request) {
-	h.table(w, r, kindCharacters, func(ctx context.Context, p pageView, s stats.Sort) ([]tableRow, error) {
-		rows, err := h.D.Stats.Characters(ctx, p.GuildID, p.Range, s)
-		return characterRows(p.GuildID, rows), err
+	h.table(w, r, kindCharacters, func(ctx context.Context, p pageView, s stats.Sort, limit int) ([]tableRow, int, error) {
+		page, err := h.D.Stats.Characters(ctx, p.GuildID, p.Range, s, limit)
+		return characterRows(p.GuildID, page.Rows), page.Total, err
 	})
 }
 
-func (h *Handlers) table(w http.ResponseWriter, r *http.Request, kind tableKind, load func(context.Context, pageView, stats.Sort) ([]tableRow, error)) {
+type tableLoader func(ctx context.Context, p pageView, s stats.Sort, limit int) (rows []tableRow, total int, err error)
+
+func (h *Handlers) table(w http.ResponseWriter, r *http.Request, kind tableKind, load tableLoader) {
 	q := r.URL.Query()
-	sort := corestats.ParseSort(q.Get("sort"), q.Get("dir"))
+	sort := parseSort(q.Get("sort"), q.Get("dir"))
 	p, ok := h.page(w, r, web.RangePickerHidden{Name: "sort", Value: string(sort.Key)}, web.RangePickerHidden{Name: "dir", Value: sortDir(sort)})
 	if !ok {
 		return
 	}
-	rows, err := load(r.Context(), p, sort)
+	csv := q.Get("format") == "csv"
+	limit := maxTableRows
+	if csv {
+		limit = 0
+	}
+	rows, total, err := load(r.Context(), p, sort, limit)
 	if err != nil {
 		h.D.ServerError(w, r, "stats table", err)
 		return
 	}
-	if q.Get("format") == "csv" {
+	if csv {
 		h.csv(w, r, kind, p, rows)
 		return
 	}
-	v := tableView{pageView: p, Kind: kind, Sort: sort, Total: len(rows), Rows: rows}
-	if len(rows) > maxTableRows {
-		v.Rows = rows[:maxTableRows]
-	}
+	v := tableView{pageView: p, Kind: kind, Sort: sort, Total: total, Rows: rows}
 	active := "stats-" + string(kind)
 	h.D.Render(w, r, Table(h.D.Cfg.BaseURL, v, h.nav(r, p, active)))
+}
+
+// parseSort reads a sort key and a direction ("asc"/"desc"). An unknown key sorts by hours; no
+// direction means ascending for the name and descending for figures.
+func parseSort(key, dir string) stats.Sort {
+	k := stats.SortKey(key)
+	if !slices.Contains(stats.SortKeys, k) {
+		k = stats.SortHours
+	}
+	asc := k == stats.SortName
+	switch dir {
+	case "asc":
+		asc = true
+	case "desc":
+		asc = false
+	}
+	return stats.Sort{Key: k, Asc: asc}
 }
 
 func (h *Handlers) HandleSpot(w http.ResponseWriter, r *http.Request) {
@@ -105,7 +124,10 @@ func (h *Handlers) HandleSpot(w http.ResponseWriter, r *http.Request) {
 		h.D.ServerError(w, r, "stats spot", err)
 		return
 	}
-	v := spotView{pageView: p, D: detail, Players: playerRows(p.GuildID, detail.Players), Characters: characterRows(p.GuildID, detail.Characters)}
+	v := spotView{pageView: p, D: detail,
+		Players:    breakdownView{Rows: playerRows(p.GuildID, detail.Players.Rows), Total: detail.Players.Total},
+		Characters: breakdownView{Rows: characterRows(p.GuildID, detail.Characters.Rows), Total: detail.Characters.Total},
+	}
 	h.D.Render(w, r, SpotPage(h.D.Cfg.BaseURL, v, h.nav(r, p, "stats-spots")))
 }
 
@@ -123,7 +145,10 @@ func (h *Handlers) HandlePlayer(w http.ResponseWriter, r *http.Request) {
 		h.D.ServerError(w, r, "stats player", err)
 		return
 	}
-	v := playerView{pageView: p, D: detail, Spots: spotRows(p.GuildID, detail.Spots), Characters: characterRows(p.GuildID, detail.Characters)}
+	v := playerView{pageView: p, D: detail,
+		Spots:      breakdownView{Rows: spotRows(p.GuildID, detail.Spots.Rows), Total: detail.Spots.Total},
+		Characters: breakdownView{Rows: characterRows(p.GuildID, detail.Characters.Rows), Total: detail.Characters.Total},
+	}
 	h.D.Render(w, r, PlayerPage(h.D.Cfg.BaseURL, v, h.nav(r, p, "stats-players")))
 }
 
@@ -142,7 +167,7 @@ func (h *Handlers) HandleCharacter(w http.ResponseWriter, r *http.Request) {
 		h.D.ServerError(w, r, "character profile", err)
 		return
 	}
-	v := characterView{pageView: p, P: profile, Spots: spotRows(p.GuildID, profile.Spots), Now: h.now()}
+	v := characterView{pageView: p, P: profile, Spots: breakdownView{Rows: spotRows(p.GuildID, profile.Spots.Rows), Total: profile.Spots.Total}, Now: h.now()}
 	h.D.Render(w, r, CharacterPage(h.D.Cfg.BaseURL, v, h.nav(r, p, "stats-characters")))
 }
 

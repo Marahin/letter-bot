@@ -2,6 +2,7 @@ package sqlc_test
 
 import (
 	"context"
+	"errors"
 	"os"
 	"testing"
 	"time"
@@ -71,20 +72,25 @@ func TestStatsRepository_Queries(t *testing.T) {
 		(990004, 'quiet nyx', 'Quiet Nyx', -50, 'ok')`)
 	require.NoError(t, err)
 
-	repo := sqlc.NewStatsRepository(pool, berlin)
+	repo, err := sqlc.NewStatsRepository(pool, "Europe/Berlin")
+	require.NoError(t, err)
 	all := stats.Filter{GuildID: itGuild, From: at(1, 0, 0), To: at(4, 0, 0)}
+	every := func(f stats.Filter) stats.Query {
+		return stats.Query{Filter: f, Sort: stats.Sort{Key: stats.SortHours}}
+	}
 	tot := func(res, secs, expRes, expSecs, exp int64) stats.Totals {
 		return stats.Totals{Reservations: res, Seconds: secs, ExpReservations: expRes, ExpSeconds: expSecs, Exp: exp}
 	}
 
 	t.Run("spot totals", func(t *testing.T) {
 		// when
-		rows, err := repo.SpotTotals(ctx, all)
+		page, err := repo.SpotTotals(ctx, every(all))
 
 		// then
 		require.NoError(t, err)
+		assert.Equal(t, 2, page.Total)
 		got := map[string]stats.Totals{}
-		for _, r := range rows {
+		for _, r := range page.Rows {
 			got[r.Name] = r.Totals
 		}
 		assert.Equal(t, map[string]stats.Totals{
@@ -99,12 +105,12 @@ func TestStatsRepository_Queries(t *testing.T) {
 		f.CharacterKey = "quiet nyx"
 
 		// when
-		rows, err := repo.SpotTotals(ctx, f)
+		page, err := repo.SpotTotals(ctx, every(f))
 
 		// then
 		require.NoError(t, err)
 		got := map[string]stats.Totals{}
-		for _, r := range rows {
+		for _, r := range page.Rows {
 			got[r.Name] = r.Totals
 		}
 		assert.Equal(t, map[string]stats.Totals{
@@ -115,12 +121,12 @@ func TestStatsRepository_Queries(t *testing.T) {
 
 	t.Run("player totals leave out free-text authors", func(t *testing.T) {
 		// when
-		rows, err := repo.PlayerTotals(ctx, all)
+		page, err := repo.PlayerTotals(ctx, every(all))
 
 		// then
 		require.NoError(t, err)
 		got := map[string]stats.PlayerRow{}
-		for _, r := range rows {
+		for _, r := range page.Rows {
 			got[r.UserID] = r
 		}
 		require.Len(t, got, 2)
@@ -131,13 +137,13 @@ func TestStatsRepository_Queries(t *testing.T) {
 
 	t.Run("character totals split and dedupe the author", func(t *testing.T) {
 		// when
-		rows, err := repo.CharacterTotals(ctx, all)
+		page, err := repo.CharacterTotals(ctx, every(all))
 
 		// then
 		require.NoError(t, err)
 		got := map[string]stats.Totals{}
 		names := map[string]string{}
-		for _, r := range rows {
+		for _, r := range page.Rows {
 			got[r.Key] = r.Totals
 			names[r.Key] = r.Name
 		}
@@ -156,16 +162,72 @@ func TestStatsRepository_Queries(t *testing.T) {
 		byChar.CharacterKey = "storm quiet"
 
 		// when
-		userRows, err1 := repo.CharacterTotals(ctx, byUser)
-		charRows, err2 := repo.CharacterTotals(ctx, byChar)
+		userPage, err1 := repo.CharacterTotals(ctx, every(byUser))
+		charPage, err2 := repo.CharacterTotals(ctx, every(byChar))
 
 		// then
 		require.NoError(t, err1)
 		require.NoError(t, err2)
-		assert.Len(t, userRows, 2)
-		require.Len(t, charRows, 1)
-		assert.Equal(t, "Storm Quiet", charRows[0].Name)
-		assert.Equal(t, tot(2, 4*3600, 1, 2*3600, 500), charRows[0].Totals)
+		assert.Len(t, userPage.Rows, 2)
+		require.Len(t, charPage.Rows, 1)
+		assert.Equal(t, "Storm Quiet", charPage.Rows[0].Name)
+		assert.Equal(t, tot(2, 4*3600, 1, 2*3600, 500), charPage.Rows[0].Totals)
+	})
+
+	t.Run("totals sort in SQL with no data last and count the rows before the limit", func(t *testing.T) {
+		// given
+		sorted := func(key stats.SortKey, asc bool, limit int) stats.Query {
+			return stats.Query{Filter: all, Sort: stats.Sort{Key: key, Asc: asc}, Limit: limit}
+		}
+		keys := func(p stats.Page[stats.CharacterRow]) []string {
+			var out []string
+			for _, r := range p.Rows {
+				out = append(out, r.Key)
+			}
+			return out
+		}
+
+		// when
+		byExpDesc, err1 := repo.CharacterTotals(ctx, sorted(stats.SortExp, false, 0))
+		byExpAsc, err2 := repo.CharacterTotals(ctx, sorted(stats.SortExp, true, 0))
+		byNameDesc, err3 := repo.CharacterTotals(ctx, sorted(stats.SortName, false, 2))
+		byReservations, err4 := repo.CharacterTotals(ctx, sorted(stats.SortReservations, false, 1))
+		spotsByName, err5 := repo.SpotTotals(ctx, sorted(stats.SortName, true, 1))
+		playersByName, err6 := repo.PlayerTotals(ctx, sorted(stats.SortName, true, 0))
+
+		// then
+		require.NoError(t, errors.Join(err1, err2, err3, err4, err5, err6))
+		assert.Equal(t, []string{"quiet nyx", "storm quiet", "free text"}, keys(byExpDesc))
+		assert.Equal(t, []string{"storm quiet", "quiet nyx", "free text"}, keys(byExpAsc))
+		assert.Equal(t, []string{"storm quiet", "quiet nyx"}, keys(byNameDesc))
+		assert.Equal(t, 3, byNameDesc.Total)
+		assert.Equal(t, []string{"quiet nyx"}, keys(byReservations))
+		require.Len(t, spotsByName.Rows, 1)
+		assert.Equal(t, "It Dragons", spotsByName.Rows[0].Name)
+		assert.Equal(t, 2, spotsByName.Total)
+		require.Len(t, playersByName.Rows, 2)
+		assert.Equal(t, "Quiet Nyx", playersByName.Rows[0].Name)
+	})
+
+	t.Run("character leaderboards", func(t *testing.T) {
+		// when
+		boards, err := repo.CharacterLeaderboards(ctx, all, 10, 3*3600)
+		top1, err2 := repo.CharacterLeaderboards(ctx, all, 1, 0)
+		none, err3 := repo.CharacterLeaderboards(ctx, all, 10, 100*3600)
+
+		// then
+		require.NoError(t, errors.Join(err, err2, err3))
+		assert.Equal(t, 3, boards.Characters)
+		require.Len(t, boards.ByExp, 2)
+		assert.Equal(t, "Quiet Nyx", boards.ByExp[0].Name)
+		assert.Equal(t, tot(3, 4*3600, 2, 3*3600, 950), boards.ByExp[0].Totals)
+		assert.Equal(t, "storm quiet", boards.ByExp[1].Key)
+		require.Len(t, boards.ByExpPerHour, 1, "storm quiet has only 2 hours with data")
+		assert.Equal(t, "quiet nyx", boards.ByExpPerHour[0].Key)
+		require.Len(t, top1.ByExp, 1)
+		require.Len(t, top1.ByExpPerHour, 1)
+		assert.Equal(t, "quiet nyx", top1.ByExpPerHour[0].Key, "317 exp/h beats 250")
+		assert.Equal(t, stats.CharacterBoards{Characters: 3, ByExp: none.ByExp}, none)
 	})
 
 	t.Run("daily buckets by the local day of the start", func(t *testing.T) {

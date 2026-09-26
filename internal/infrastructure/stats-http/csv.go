@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -32,7 +33,7 @@ func (h *Handlers) csv(w http.ResponseWriter, r *http.Request, kind tableKind, p
 			expPerHour = strconv.FormatFloat(*v, 'f', 0, 64)
 		}
 		records = append(records, []string{
-			row.Name,
+			csvText(row.Name),
 			strconv.FormatInt(row.Reservations, 10),
 			strconv.FormatFloat(row.Hours(), 'f', 2, 64),
 			exp,
@@ -42,4 +43,13 @@ func (h *Handlers) csv(w http.ResponseWriter, r *http.Request, kind tableKind, p
 	if err := out.WriteAll(records); err != nil {
 		h.D.Log.Warnw("write stats csv", "error", err)
 	}
+}
+
+// csvText defuses a spreadsheet formula: author names are free text, and a leading = + - @ (or a
+// tab / carriage return) makes Excel and LibreOffice evaluate the cell.
+func csvText(s string) string {
+	if s != "" && strings.ContainsRune("=+-@\t\r", rune(s[0])) {
+		return "'" + s
+	}
+	return s
 }

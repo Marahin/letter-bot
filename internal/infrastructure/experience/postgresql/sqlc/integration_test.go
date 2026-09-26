@@ -3,6 +3,7 @@ package sqlc_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -23,7 +24,8 @@ import (
 	"spot-assistant/internal/infrastructure/worldapi"
 )
 
-// fakeTibiaData serves /highscores/{world}/experience/all/{page} from a mutable board, 2 rows per page.
+// fakeTibiaData serves /highscores/{world}/experience/all/{page} from a mutable board, padded with
+// untracked characters to two pages.
 type fakeTibiaData struct {
 	mu      sync.Mutex
 	scraped time.Time
@@ -34,8 +36,13 @@ type fakeTibiaData struct {
 func (f *fakeTibiaData) set(scraped time.Time, board ...world.HighscoreEntry) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	for i := 0; i < fillers; i++ {
+		board = append(board, hs(fmt.Sprintf("Filler %d", i), 1000))
+	}
 	f.scraped, f.board = scraped, board
 }
+
+const fillers = 55
 
 func (f *fakeTibiaData) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f.mu.Lock()
@@ -49,22 +56,24 @@ func (f *fakeTibiaData) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	const perPage = 2
+	perPage := coreexperience.PageSize
 	total := (len(f.board) + perPage - 1) / perPage
 	from, to := (page-1)*perPage, min(page*perPage, len(f.board))
-	res := world.HighscoresResponse{
-		Highscores: world.Highscores{
-			World: "Itworld", Category: "experience", HighscoreAge: 5,
-			HighscoreList: f.board[from:to],
-			HighscorePage: world.HighscorePage{CurrentPage: page, TotalPages: total, TotalRecords: len(f.board)},
-		},
-		Information: world.Information{Timestamp: f.scraped},
+	list := []map[string]any{}
+	for _, e := range f.board[from:to] {
+		list = append(list, map[string]any{"name": e.Name, "level": e.Level, "value": e.Value, "vocation": e.Vocation, "world": "Itworld"})
 	}
-	_ = json.NewEncoder(w).Encode(res)
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"highscores": map[string]any{
+			"world": "Itworld", "category": "experience", "highscore_age": 5, "highscore_list": list,
+			"highscore_page": map[string]any{"current_page": page, "total_pages": total, "total_records": len(f.board)},
+		},
+		"information": map[string]any{"timestamp": f.scraped},
+	})
 }
 
 func hs(name string, exp int64) world.HighscoreEntry {
-	return world.HighscoreEntry{Name: name, Level: int(exp / 100), Value: exp, Vocation: "Master Sorcerer", World: "Itworld"}
+	return world.HighscoreEntry{Name: name, Level: int(exp / 100), Value: exp, Vocation: "Master Sorcerer"}
 }
 
 // TestExperienceJob_EndToEnd runs the job against a real database. Set LETTER_TEST_DATABASE_URL to run it, e.g.
@@ -96,7 +105,8 @@ func TestExperienceJob_EndToEnd(t *testing.T) {
 	cleanup()
 	t.Cleanup(cleanup)
 
-	base := time.Now().UTC().Truncate(time.Minute)
+	// In the past: the adapter uses a scrape time only when it is not after the real clock.
+	base := time.Now().UTC().Add(-2 * time.Hour).Truncate(time.Minute)
 	start, end := base.Add(10*time.Minute), base.Add(70*time.Minute)
 	exec(`INSERT INTO guilds (guild_id, name, premium) VALUES ('it-exp-p', 'P', true), ('it-exp-np', 'NP', false), ('it-exp-np2', 'NP2', false)`)
 	exec(`INSERT INTO guilds_world (guild_id, world_name) VALUES ('it-exp-p', 'Itworld'), ('it-exp-np', 'Itworld'), ('it-exp-np2', 'Itworld-np')`)
@@ -116,7 +126,7 @@ func TestExperienceJob_EndToEnd(t *testing.T) {
 	server := httptest.NewServer(fake)
 	t.Cleanup(server.Close)
 	repo := sqlc.NewExperienceRepository(pool)
-	job := coreexperience.New(worldapi.NewHttpWorldService(server.URL+"/v4"), repo, nil)
+	job := coreexperience.New(worldapi.NewHttpWorldService(server.URL+"/v4"), repo, 15*time.Minute, nil)
 	cycle := func(now time.Time) {
 		t.Helper()
 		require.NoError(t, job.Collect(ctx, "Itworld", now))
@@ -139,15 +149,20 @@ func TestExperienceJob_EndToEnd(t *testing.T) {
 	fake.mu.Lock()
 	fake.fail = false
 	fake.mu.Unlock()
-	// Dark Quiet dropped out of the top 1000.
+	// Dark Quiet dropped out of the top 1000. The cut-off run misses it, so attribution waits for the next run.
 	fake.set(base.Add(80*time.Minute), hs("Quiet Nyx", 230_000), hs("Untracked", 99_000), hs("Storm Quiet", 90_000), hs("Other Guy", 80_000))
 	cycle(base.Add(81 * time.Minute))
+	var waiting int
+	require.NoError(t, pool.QueryRow(ctx, `SELECT count(*) FROM reservation_experience WHERE reservation_id = $1`, mainID).Scan(&waiting))
+	fake.set(base.Add(95*time.Minute), hs("Quiet Nyx", 230_000), hs("Untracked", 99_000), hs("Storm Quiet", 90_000), hs("Other Guy", 80_000))
 	cycle(base.Add(96 * time.Minute))
+	cycle(base.Add(97 * time.Minute))
 
 	// then
 	assert.Contains(t, worlds, "Itworld")
 	assert.NotContains(t, worlds, "Itworld-np")
 	assert.Error(t, failedErr)
+	assert.Zero(t, waiting)
 
 	type run struct {
 		observed time.Time
@@ -163,11 +178,11 @@ func TestExperienceJob_EndToEnd(t *testing.T) {
 		runs = append(runs, r)
 	}
 	require.NoError(t, rows.Err())
-	require.Len(t, runs, 5, "the failed collect must not write a run")
+	require.Len(t, runs, 6, "the failed collect must not write a run")
 	assert.True(t, runs[0].observed.Equal(base.Add(-5*time.Minute)), "observed_at = scrape time - highscore_age minutes")
-	assert.Equal(t, 3, runs[0].pages)
-	assert.Equal(t, 5, runs[0].rows)
-	assert.Equal(t, 2, runs[3].pages)
+	assert.Equal(t, 2, runs[0].pages)
+	assert.Equal(t, 5+fillers, runs[0].rows)
+	assert.Equal(t, 4+fillers, runs[3].rows)
 
 	type snapshot struct {
 		key      string

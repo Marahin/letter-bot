@@ -1,4 +1,4 @@
-package players
+package characters
 
 import (
 	"context"
@@ -48,9 +48,13 @@ func filter() stats.Filter {
 	return stats.Filter{GuildID: "g", From: rng.From, To: rng.To, CharacterKey: "quiet nyx"}
 }
 
-func (f fixture) expectStats(spots []stats.SpotRow) {
-	f.stats.EXPECT().SpotTotals(mock.Anything, filter()).Return(spots, nil)
-	f.stats.EXPECT().Daily(mock.Anything, filter()).Return(nil, nil)
+func spotsQuery() stats.Query {
+	return stats.Query{Filter: filter(), Sort: stats.Sort{Key: stats.SortHours}, Limit: corestats.BreakdownSize}
+}
+
+func (f fixture) expectStats(daily []stats.Day, spots stats.Page[stats.SpotRow]) {
+	f.stats.EXPECT().Daily(mock.Anything, filter()).Return(daily, nil)
+	f.stats.EXPECT().SpotTotals(mock.Anything, spotsQuery()).Return(spots, nil)
 	f.stats.EXPECT().CharacterReservations(mock.Anything, filter(), RecentLimit).Return([]stats.CharacterReservation{{ID: 1}}, nil)
 }
 
@@ -64,10 +68,11 @@ func TestProfile_CombinesTibiaDataHistoryAndStats(t *testing.T) {
 		{Level: 500, Experience: 200, ObservedAt: now.Add(-2 * time.Hour)},
 		{Level: 500, Experience: 250, ObservedAt: now.Add(-1 * time.Hour)},
 	}, nil)
-	f.expectStats([]stats.SpotRow{
-		{Name: "a", Totals: stats.Totals{Reservations: 1, Seconds: 3600}},
-		{Name: "b", Totals: stats.Totals{Reservations: 2, Seconds: 7200, ExpReservations: 1, ExpSeconds: 3600, Exp: 9}},
-	})
+	spots := stats.Page[stats.SpotRow]{Rows: []stats.SpotRow{{Name: "b"}, {Name: "a"}}, Total: 2}
+	f.expectStats([]stats.Day{
+		{Day: corestats.Midnight(now), Totals: stats.Totals{Reservations: 1, Seconds: 3600}},
+		{Day: corestats.Midnight(now).AddDate(0, 0, -1), Totals: stats.Totals{Reservations: 2, Seconds: 7200, ExpReservations: 1, ExpSeconds: 3600, Exp: 9}},
+	}, spots)
 
 	// when
 	p, err := f.svc.Profile(context.Background(), "g", "  quiet NYX ", rng)
@@ -80,7 +85,7 @@ func TestProfile_CombinesTibiaDataHistoryAndStats(t *testing.T) {
 	assert.Equal(t, "Celesta", p.World)
 	require.Len(t, p.History, 2)
 	assert.Equal(t, int64(250), p.History[1].Experience)
-	assert.Equal(t, "b", p.Spots[0].Name)
+	assert.Equal(t, spots, p.Spots)
 	assert.Equal(t, int64(3), p.Totals.Reservations)
 	assert.Len(t, p.Daily, corestats.DefaultDays)
 	assert.Len(t, p.Recent, 1)
@@ -91,7 +96,7 @@ func TestProfile_TibiaDataFailureDegradesToStats(t *testing.T) {
 	f := newFixture(t)
 	f.chars.EXPECT().GetCharacter(mock.Anything, "Quiet Nyx").Return(nil, ports.ErrUpstreamUnavailable)
 	f.world.EXPECT().SelectGuildWorld(mock.Anything, "g").Return(nil, ports.ErrNotFound)
-	f.expectStats(nil)
+	f.expectStats(nil, stats.Page[stats.SpotRow]{})
 
 	// when
 	p, err := f.svc.Profile(context.Background(), "g", "Quiet Nyx", rng)
@@ -109,13 +114,13 @@ func TestProfile_UnknownEverywhereIsNotFound(t *testing.T) {
 	f := newFixture(t)
 	f.chars.EXPECT().GetCharacter(mock.Anything, "Quiet Nyx").Return(nil, ports.ErrCharacterNotFound)
 	f.world.EXPECT().SelectGuildWorld(mock.Anything, "g").Return(nil, ports.ErrNotFound)
-	f.expectStats(nil)
+	f.expectStats(nil, stats.Page[stats.SpotRow]{})
 
 	// when
 	_, err := f.svc.Profile(context.Background(), "g", "Quiet Nyx", rng)
 
 	// then
-	assert.ErrorIs(t, err, ErrNotFound)
+	assert.ErrorIs(t, err, ports.ErrNotFound)
 }
 
 func TestProfile_DeletedCharacterWithReservationsStillShows(t *testing.T) {
@@ -123,7 +128,7 @@ func TestProfile_DeletedCharacterWithReservationsStillShows(t *testing.T) {
 	f := newFixture(t)
 	f.chars.EXPECT().GetCharacter(mock.Anything, "Quiet Nyx").Return(nil, ports.ErrCharacterNotFound)
 	f.world.EXPECT().SelectGuildWorld(mock.Anything, "g").Return(nil, ports.ErrNotFound)
-	f.expectStats([]stats.SpotRow{{Name: "a", Totals: stats.Totals{Reservations: 1}}})
+	f.expectStats([]stats.Day{{Day: corestats.Midnight(now), Totals: stats.Totals{Reservations: 1}}}, stats.Page[stats.SpotRow]{Rows: []stats.SpotRow{{Name: "a"}}, Total: 1})
 
 	// when
 	p, err := f.svc.Profile(context.Background(), "g", "Quiet Nyx", rng)
@@ -141,11 +146,11 @@ func TestProfile_BlankNameIsNotFound(t *testing.T) {
 	_, err := f.svc.Profile(context.Background(), "g", "   ", rng)
 
 	// then
-	assert.ErrorIs(t, err, ErrNotFound)
+	assert.ErrorIs(t, err, ports.ErrNotFound)
 }
 
 func TestProfile_RepositoryErrors(t *testing.T) {
-	steps := []string{"world", "history", "spots", "daily", "recent"}
+	steps := []string{"world", "history", "daily", "spots", "recent"}
 	for i, step := range steps {
 		t.Run(step, func(t *testing.T) {
 			// given
@@ -164,10 +169,10 @@ func TestProfile_RepositoryErrors(t *testing.T) {
 				f.exp.EXPECT().SnapshotHistory(mock.Anything, "Celesta", "quiet nyx", rng.From, rng.To).Return(nil, fail(1))
 			}
 			if i >= 2 {
-				f.stats.EXPECT().SpotTotals(mock.Anything, filter()).Return(nil, fail(2))
+				f.stats.EXPECT().Daily(mock.Anything, filter()).Return(nil, fail(2))
 			}
 			if i >= 3 {
-				f.stats.EXPECT().Daily(mock.Anything, filter()).Return(nil, fail(3))
+				f.stats.EXPECT().SpotTotals(mock.Anything, spotsQuery()).Return(stats.Page[stats.SpotRow]{}, fail(3))
 			}
 			if i >= 4 {
 				f.stats.EXPECT().CharacterReservations(mock.Anything, filter(), RecentLimit).Return(nil, fail(4))

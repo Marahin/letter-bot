@@ -11,7 +11,7 @@ import (
 
 type HighscoreAPI interface {
 	// GetHighscoresPage returns one page (1-based) of the world's experience highscores, all vocations.
-	GetHighscoresPage(ctx context.Context, world string, page int) (*world.HighscoresResponse, error)
+	GetHighscoresPage(ctx context.Context, world string, page int) (*world.HighscorePage, error)
 }
 
 type CharacterAPI interface {
@@ -43,8 +43,4 @@ type ExperienceRepository interface {
 	InsertReservationExperience(ctx context.Context, rows []experience.ReservationExperience) error
 	// SnapshotHistory returns the character's snapshots observed in [from, to], oldest first.
 	SnapshotHistory(ctx context.Context, world, key string, from, to time.Time) ([]experience.Snapshot, error)
-}
-
-type ExperienceJob interface {
-	RunOnce(ctx context.Context, now time.Time) error
 }

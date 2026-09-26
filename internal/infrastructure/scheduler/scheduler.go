@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-
-	"spot-assistant/internal/ports"
 )
 
 // JobLocker is a lock shared by every process that runs the job.
@@ -17,18 +15,20 @@ type JobLocker interface {
 }
 
 type Scheduler struct {
-	job      ports.ExperienceJob
+	name     string
+	job      func(ctx context.Context) error
 	locker   JobLocker
 	interval time.Duration
 	log      *zap.SugaredLogger
 	now      func() time.Time
 }
 
-func New(job ports.ExperienceJob, locker JobLocker, interval time.Duration, log *zap.SugaredLogger) *Scheduler {
+// New schedules job every interval; name labels its log lines.
+func New(name string, job func(ctx context.Context) error, locker JobLocker, interval time.Duration, log *zap.SugaredLogger) *Scheduler {
 	if log == nil {
 		log = zap.NewNop().Sugar()
 	}
-	return &Scheduler{job: job, locker: locker, interval: interval, log: log, now: time.Now}
+	return &Scheduler{name: name, job: job, locker: locker, interval: interval, log: log.With("job", name), now: time.Now}
 }
 
 // Run runs the job now and then every interval, until ctx is done.
@@ -49,11 +49,11 @@ func (s *Scheduler) Run(ctx context.Context) {
 func (s *Scheduler) Tick(ctx context.Context) {
 	unlock, ok, err := s.locker.TryLock(ctx)
 	if err != nil {
-		s.log.Warnw("experience job: lock failed", "error", err)
+		s.log.Warnw("scheduled job: lock failed", "error", err)
 		return
 	}
 	if !ok {
-		s.log.Debug("experience job: another process holds the lock")
+		s.log.Debug("scheduled job: another process holds the lock")
 		return
 	}
 	defer unlock()
@@ -61,9 +61,9 @@ func (s *Scheduler) Tick(ctx context.Context) {
 	runCtx, cancel := context.WithTimeout(ctx, s.interval)
 	defer cancel()
 	started := s.now()
-	if err := s.job.RunOnce(runCtx, started); err != nil {
-		s.log.Errorw("experience job failed", "error", err, "took", s.now().Sub(started))
+	if err := s.job(runCtx); err != nil {
+		s.log.Errorw("scheduled job failed", "error", err, "took", s.now().Sub(started))
 		return
 	}
-	s.log.Debugw("experience job done", "took", s.now().Sub(started))
+	s.log.Debugw("scheduled job done", "took", s.now().Sub(started))
 }

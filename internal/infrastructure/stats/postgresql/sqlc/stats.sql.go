@@ -11,6 +11,129 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const characterLeaderboards = `-- name: CharacterLeaderboards :many
+WITH r AS (
+  SELECT r.id, r.author, r.start_at, extract(epoch FROM r.end_at - r.start_at)::bigint AS secs
+  FROM web_reservation r
+  WHERE r.guild_id = $1::text
+    AND r.start_at >= $2::timestamptz
+    AND r.start_at < $3::timestamptz
+    AND ($4::bigint = 0 OR r.spot_id = $4::bigint)
+    AND ($5::text = '' OR r.author_discord_id = $5::text)
+    AND ($6::text = '' OR lower(r.author) LIKE '%' || $6::text || '%')
+), c AS (
+  SELECT r.id, r.start_at, r.secs, n.character_key
+  FROM r
+  CROSS JOIN LATERAL (
+    SELECT DISTINCT lower(btrim(m.name)) AS character_key
+    FROM unnest(string_to_array(r.author, '/')) AS m(name)
+    WHERE btrim(m.name) <> ''
+  ) AS n
+  WHERE $6::text = '' OR n.character_key = $6::text
+), e AS (
+  SELECT re.reservation_id, re.character_key, re.gain
+  FROM reservation_experience re
+  JOIN r ON r.id = re.reservation_id
+  WHERE re.status = 'ok'
+), g AS (
+  SELECT c.character_key,
+         (max(ARRAY[extract(epoch FROM c.start_at)::bigint, c.id]))[2] AS last_id,
+         count(*)::bigint AS reservations,
+         coalesce(sum(c.secs), 0)::bigint AS seconds,
+         count(e.gain)::bigint AS exp_reservations,
+         coalesce(sum(c.secs) FILTER (WHERE e.gain IS NOT NULL), 0)::bigint AS exp_seconds,
+         coalesce(sum(e.gain), 0)::bigint AS exp
+  FROM c
+  LEFT JOIN e ON e.reservation_id = c.id AND e.character_key = c.character_key
+  GROUP BY c.character_key
+), b AS (
+  (SELECT 'exp'::text AS board, g.exp::float8 AS figure, g.character_key, g.last_id, g.reservations, g.seconds, g.exp_reservations, g.exp_seconds, g.exp
+   FROM g WHERE g.exp_reservations > 0
+   ORDER BY g.exp DESC, g.character_key LIMIT $7::int)
+  UNION ALL
+  (SELECT 'exp_h'::text AS board, g.exp::float8 * 3600 / g.exp_seconds AS figure, g.character_key, g.last_id, g.reservations, g.seconds, g.exp_reservations, g.exp_seconds, g.exp
+   FROM g WHERE g.exp_seconds > 0 AND g.exp_seconds >= $8::bigint
+   ORDER BY g.exp::float8 / g.exp_seconds DESC, g.character_key LIMIT $7::int)
+)
+SELECT t.total_rows::bigint AS total_rows,
+       b.board,
+       b.character_key,
+       coalesce((SELECT min(btrim(n.name)) FROM web_reservation w CROSS JOIN LATERAL unnest(string_to_array(w.author, '/')) AS n(name)
+        WHERE w.id = b.last_id AND lower(btrim(n.name)) = b.character_key), '')::text AS name,
+       b.reservations,
+       b.seconds,
+       b.exp_reservations,
+       b.exp_seconds,
+       b.exp
+FROM (SELECT count(*) AS total_rows FROM g) AS t
+LEFT JOIN b ON true
+ORDER BY b.board, b.figure DESC, b.character_key
+`
+
+type CharacterLeaderboardsParams struct {
+	GuildID       string
+	FromT         pgtype.Timestamptz
+	ToT           pgtype.Timestamptz
+	SpotID        int64
+	UserID        string
+	CharacterKey  string
+	Lim           int32
+	MinExpSeconds int64
+}
+
+type CharacterLeaderboardsRow struct {
+	TotalRows       int64
+	Board           pgtype.Text
+	CharacterKey    pgtype.Text
+	Name            string
+	Reservations    pgtype.Int8
+	Seconds         pgtype.Int8
+	ExpReservations pgtype.Int8
+	ExpSeconds      pgtype.Int8
+	Exp             pgtype.Int8
+}
+
+// Both overview character leaderboards and the number of characters from one pass over the
+// reservations. The count row always comes back; board is NULL when neither leaderboard has a row.
+func (q *Queries) CharacterLeaderboards(ctx context.Context, arg CharacterLeaderboardsParams) ([]CharacterLeaderboardsRow, error) {
+	rows, err := q.db.Query(ctx, characterLeaderboards,
+		arg.GuildID,
+		arg.FromT,
+		arg.ToT,
+		arg.SpotID,
+		arg.UserID,
+		arg.CharacterKey,
+		arg.Lim,
+		arg.MinExpSeconds,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CharacterLeaderboardsRow
+	for rows.Next() {
+		var i CharacterLeaderboardsRow
+		if err := rows.Scan(
+			&i.TotalRows,
+			&i.Board,
+			&i.CharacterKey,
+			&i.Name,
+			&i.Reservations,
+			&i.Seconds,
+			&i.ExpReservations,
+			&i.ExpSeconds,
+			&i.Exp,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const characterReservations = `-- name: CharacterReservations :many
 SELECT r.id, r.spot_id, s.name::text AS spot_name, r.author::text AS author, r.start_at, r.end_at, re.status, re.gain
 FROM web_reservation r
@@ -83,37 +206,72 @@ const characterTotals = `-- name: CharacterTotals :many
 WITH r AS (
   SELECT r.id, r.author, r.start_at, extract(epoch FROM r.end_at - r.start_at)::bigint AS secs
   FROM web_reservation r
-  WHERE r.guild_id = $1::text
-    AND r.start_at >= $2::timestamptz
-    AND r.start_at < $3::timestamptz
-    AND ($4::bigint = 0 OR r.spot_id = $4::bigint)
-    AND ($5::text = '' OR r.author_discord_id = $5::text)
-    AND ($6::text = '' OR lower(r.author) LIKE '%' || $6::text || '%')
+  WHERE r.guild_id = $4::text
+    AND r.start_at >= $5::timestamptz
+    AND r.start_at < $6::timestamptz
+    AND ($7::bigint = 0 OR r.spot_id = $7::bigint)
+    AND ($8::text = '' OR r.author_discord_id = $8::text)
+    AND ($9::text = '' OR lower(r.author) LIKE '%' || $9::text || '%')
 ), c AS (
-  SELECT r.id, r.start_at, r.secs, n.character_key, n.character_name
+  SELECT r.id, r.start_at, r.secs, n.character_key
   FROM r
   CROSS JOIN LATERAL (
-    SELECT lower(btrim(m.name)) AS character_key, min(btrim(m.name)) AS character_name
+    SELECT DISTINCT lower(btrim(m.name)) AS character_key
     FROM unnest(string_to_array(r.author, '/')) AS m(name)
     WHERE btrim(m.name) <> ''
-    GROUP BY lower(btrim(m.name))
   ) AS n
-  WHERE $6::text = '' OR n.character_key = $6::text
+  WHERE $9::text = '' OR n.character_key = $9::text
+), e AS (
+  SELECT re.reservation_id, re.character_key, re.gain
+  FROM reservation_experience re
+  JOIN r ON r.id = re.reservation_id
+  WHERE re.status = 'ok'
+), g AS (
+  SELECT c.character_key,
+         (max(ARRAY[extract(epoch FROM c.start_at)::bigint, c.id]))[2] AS last_id,
+         count(*)::bigint AS reservations,
+         coalesce(sum(c.secs), 0)::bigint AS seconds,
+         count(e.gain)::bigint AS exp_reservations,
+         coalesce(sum(c.secs) FILTER (WHERE e.gain IS NOT NULL), 0)::bigint AS exp_seconds,
+         coalesce(sum(e.gain), 0)::bigint AS exp
+  FROM c
+  LEFT JOIN e ON e.reservation_id = c.id AND e.character_key = c.character_key
+  GROUP BY c.character_key
+), m AS (
+  SELECT g.character_key, g.last_id, g.reservations, g.seconds, g.exp_reservations, g.exp_seconds, g.exp,
+         CASE WHEN $1::text = 'name' THEN (SELECT min(btrim(n.name)) FROM web_reservation w CROSS JOIN LATERAL unnest(string_to_array(w.author, '/')) AS n(name)
+        WHERE w.id = g.last_id AND lower(btrim(n.name)) = g.character_key) END AS name,
+         CASE $1::text
+         WHEN 'reservations' THEN g.reservations::float8
+         WHEN 'exp' THEN CASE WHEN g.exp_reservations > 0 THEN g.exp::float8 END
+         WHEN 'exp_h' THEN CASE WHEN g.exp_seconds > 0 THEN g.exp::float8 * 3600 / g.exp_seconds END
+         WHEN 'name' THEN NULL
+         ELSE g.seconds::float8
+       END AS figure
+  FROM g
 )
-SELECT c.character_key::text AS character_key,
-       (array_agg(c.character_name ORDER BY c.start_at DESC, c.id DESC))[1]::text AS name,
-       count(*)::bigint AS reservations,
-       coalesce(sum(c.secs), 0)::bigint AS seconds,
-       count(re.gain)::bigint AS exp_reservations,
-       coalesce(sum(c.secs) FILTER (WHERE re.gain IS NOT NULL), 0)::bigint AS exp_seconds,
-       coalesce(sum(re.gain), 0)::bigint AS exp
-FROM c
-LEFT JOIN reservation_experience re
-  ON re.reservation_id = c.id AND re.character_key = c.character_key AND re.status = 'ok'
-GROUP BY c.character_key
+SELECT m.character_key::text AS character_key,
+       coalesce(m.name, (SELECT min(btrim(n.name)) FROM web_reservation w CROSS JOIN LATERAL unnest(string_to_array(w.author, '/')) AS n(name)
+        WHERE w.id = m.last_id AND lower(btrim(n.name)) = m.character_key), '')::text AS name,
+       m.reservations::bigint AS reservations,
+       m.seconds::bigint AS seconds,
+       m.exp_reservations::bigint AS exp_reservations,
+       m.exp_seconds::bigint AS exp_seconds,
+       m.exp::bigint AS exp,
+       count(*) OVER ()::bigint AS total_rows
+FROM m
+ORDER BY CASE WHEN $1::text = 'name' AND $2::boolean THEN lower(m.name) END ASC,
+         CASE WHEN $1::text = 'name' AND NOT $2::boolean THEN lower(m.name) END DESC,
+         CASE WHEN $2::boolean THEN m.figure END ASC NULLS LAST,
+         CASE WHEN NOT $2::boolean THEN m.figure END DESC NULLS LAST,
+         m.character_key
+LIMIT NULLIF($3::int, 0)
 `
 
 type CharacterTotalsParams struct {
+	SortKey      string
+	Ascending    bool
+	Lim          int32
 	GuildID      string
 	FromT        pgtype.Timestamptz
 	ToT          pgtype.Timestamptz
@@ -130,12 +288,17 @@ type CharacterTotalsRow struct {
 	ExpReservations int64
 	ExpSeconds      int64
 	Exp             int64
+	TotalRows       int64
 }
 
-// The inner GROUP BY dedupes a character named twice in one author text; it sorts 1-3 names per
-// reservation instead of every row.
+// The DISTINCT dedupes a character named twice in one author text; it sorts 1-3 names per
+// reservation instead of every row. The name is the spelling in the latest reservation (by start),
+// looked up by id after the limit, or before it for a name sort.
 func (q *Queries) CharacterTotals(ctx context.Context, arg CharacterTotalsParams) ([]CharacterTotalsRow, error) {
 	rows, err := q.db.Query(ctx, characterTotals,
+		arg.SortKey,
+		arg.Ascending,
+		arg.Lim,
 		arg.GuildID,
 		arg.FromT,
 		arg.ToT,
@@ -158,6 +321,7 @@ func (q *Queries) CharacterTotals(ctx context.Context, arg CharacterTotalsParams
 			&i.ExpReservations,
 			&i.ExpSeconds,
 			&i.Exp,
+			&i.TotalRows,
 		); err != nil {
 			return nil, err
 		}
@@ -280,22 +444,25 @@ WITH r AS (
   SELECT r.id, r.author_discord_id, extract(epoch FROM r.end_at - r.start_at)::bigint AS secs
   FROM web_reservation r
   WHERE r.guild_id = $1::text
-    AND r.start_at >= $2::timestamptz
-    AND r.start_at < $3::timestamptz
+    AND r.start_at >= $5::timestamptz
+    AND r.start_at < $6::timestamptz
+    AND ($7::bigint = 0 OR r.spot_id = $7::bigint)
+    AND ($8::text = '' OR r.author_discord_id = $8::text)
     AND r.author_discord_id <> ''
-    AND ($4::bigint = 0 OR r.spot_id = $4::bigint)
-    AND ($5::text = '' OR r.author_discord_id = $5::text)
-    AND ($6::text = '' OR (lower(r.author) LIKE '%' || $6::text || '%'
-      AND EXISTS (SELECT 1 FROM unnest(string_to_array(r.author, '/')) AS n(name) WHERE lower(btrim(n.name)) = $6::text)))
+    AND ($9::text = '' OR (lower(r.author) LIKE '%' || $9::text || '%'
+      AND EXISTS (SELECT 1 FROM unnest(string_to_array(r.author, '/')) AS n(name) WHERE lower(btrim(n.name)) = $9::text)))
 ), e AS (
   SELECT re.reservation_id, sum(re.gain)::bigint AS gain
   FROM reservation_experience re
   JOIN r ON r.id = re.reservation_id
   WHERE re.status = 'ok'
-    AND ($6::text = '' OR re.character_key = $6::text)
+    AND ($9::text = '' OR re.character_key = $9::text)
   GROUP BY re.reservation_id
 ), g AS (
-  SELECT r.author_discord_id,
+  SELECT r.author_discord_id AS user_id,
+         CASE WHEN $2::text = 'name' THEN (SELECT w.author FROM web_reservation w
+           WHERE w.guild_id = $1::text AND w.author_discord_id = r.author_discord_id
+           ORDER BY w.end_at DESC LIMIT 1) END AS name,
          count(*)::bigint AS reservations,
          coalesce(sum(r.secs), 0)::bigint AS seconds,
          count(e.reservation_id)::bigint AS exp_reservations,
@@ -304,21 +471,40 @@ WITH r AS (
   FROM r
   LEFT JOIN e ON e.reservation_id = r.id
   GROUP BY r.author_discord_id
+), m AS (
+  SELECT g.user_id, g.name, g.reservations, g.seconds, g.exp_reservations, g.exp_seconds, g.exp, CASE $2::text
+         WHEN 'reservations' THEN g.reservations::float8
+         WHEN 'exp' THEN CASE WHEN g.exp_reservations > 0 THEN g.exp::float8 END
+         WHEN 'exp_h' THEN CASE WHEN g.exp_seconds > 0 THEN g.exp::float8 * 3600 / g.exp_seconds END
+         WHEN 'name' THEN NULL
+         ELSE g.seconds::float8
+       END AS figure
+  FROM g
 )
-SELECT g.author_discord_id::text AS user_id,
-       coalesce((SELECT w.author FROM web_reservation w
-                 WHERE w.guild_id = $1::text AND w.author_discord_id = g.author_discord_id
+SELECT m.user_id::text AS user_id,
+       coalesce(m.name, (SELECT w.author FROM web_reservation w
+                 WHERE w.guild_id = $1::text AND w.author_discord_id = m.user_id
                  ORDER BY w.end_at DESC LIMIT 1), '')::text AS name,
-       g.reservations::bigint AS reservations,
-       g.seconds::bigint AS seconds,
-       g.exp_reservations::bigint AS exp_reservations,
-       g.exp_seconds::bigint AS exp_seconds,
-       g.exp::bigint AS exp
-FROM g
+       m.reservations::bigint AS reservations,
+       m.seconds::bigint AS seconds,
+       m.exp_reservations::bigint AS exp_reservations,
+       m.exp_seconds::bigint AS exp_seconds,
+       m.exp::bigint AS exp,
+       count(*) OVER ()::bigint AS total_rows
+FROM m
+ORDER BY CASE WHEN $2::text = 'name' AND $3::boolean THEN lower(m.name) END ASC,
+         CASE WHEN $2::text = 'name' AND NOT $3::boolean THEN lower(m.name) END DESC,
+         CASE WHEN $3::boolean THEN m.figure END ASC NULLS LAST,
+         CASE WHEN NOT $3::boolean THEN m.figure END DESC NULLS LAST,
+         lower(m.name), m.user_id
+LIMIT NULLIF($4::int, 0)
 `
 
 type PlayerTotalsParams struct {
 	GuildID      string
+	SortKey      string
+	Ascending    bool
+	Lim          int32
 	FromT        pgtype.Timestamptz
 	ToT          pgtype.Timestamptz
 	SpotID       int64
@@ -334,12 +520,17 @@ type PlayerTotalsRow struct {
 	ExpReservations int64
 	ExpSeconds      int64
 	Exp             int64
+	TotalRows       int64
 }
 
-// The name is looked up per player after grouping: an ordered array_agg would force a sort of every row.
+// The name is looked up after the limit: an ordered array_agg would force a sort of every row.
+// A name sort needs it before, so that lookup runs per player only then; other sorts break ties by user id.
 func (q *Queries) PlayerTotals(ctx context.Context, arg PlayerTotalsParams) ([]PlayerTotalsRow, error) {
 	rows, err := q.db.Query(ctx, playerTotals,
 		arg.GuildID,
+		arg.SortKey,
+		arg.Ascending,
+		arg.Lim,
 		arg.FromT,
 		arg.ToT,
 		arg.SpotID,
@@ -361,6 +552,7 @@ func (q *Queries) PlayerTotals(ctx context.Context, arg PlayerTotalsParams) ([]P
 			&i.ExpReservations,
 			&i.ExpSeconds,
 			&i.Exp,
+			&i.TotalRows,
 		); err != nil {
 			return nil, err
 		}
@@ -429,36 +621,61 @@ const spotTotals = `-- name: SpotTotals :many
 WITH r AS (
   SELECT r.id, r.spot_id, extract(epoch FROM r.end_at - r.start_at)::bigint AS secs
   FROM web_reservation r
-  WHERE r.guild_id = $1::text
-    AND r.start_at >= $2::timestamptz
-    AND r.start_at < $3::timestamptz
-    AND ($4::bigint = 0 OR r.spot_id = $4::bigint)
-    AND ($5::text = '' OR r.author_discord_id = $5::text)
-    AND ($6::text = '' OR (lower(r.author) LIKE '%' || $6::text || '%'
-      AND EXISTS (SELECT 1 FROM unnest(string_to_array(r.author, '/')) AS n(name) WHERE lower(btrim(n.name)) = $6::text)))
+  WHERE r.guild_id = $4::text
+    AND r.start_at >= $5::timestamptz
+    AND r.start_at < $6::timestamptz
+    AND ($7::bigint = 0 OR r.spot_id = $7::bigint)
+    AND ($8::text = '' OR r.author_discord_id = $8::text)
+    AND ($9::text = '' OR (lower(r.author) LIKE '%' || $9::text || '%'
+      AND EXISTS (SELECT 1 FROM unnest(string_to_array(r.author, '/')) AS n(name) WHERE lower(btrim(n.name)) = $9::text)))
 ), e AS (
   SELECT re.reservation_id, sum(re.gain)::bigint AS gain
   FROM reservation_experience re
   JOIN r ON r.id = re.reservation_id
   WHERE re.status = 'ok'
-    AND ($6::text = '' OR re.character_key = $6::text)
+    AND ($9::text = '' OR re.character_key = $9::text)
   GROUP BY re.reservation_id
+), g AS (
+  SELECT s.id AS spot_id, s.name::text AS name, (s.archived_at IS NOT NULL)::boolean AS archived,
+         count(*)::bigint AS reservations,
+         coalesce(sum(r.secs), 0)::bigint AS seconds,
+         count(e.reservation_id)::bigint AS exp_reservations,
+         coalesce(sum(r.secs) FILTER (WHERE e.reservation_id IS NOT NULL), 0)::bigint AS exp_seconds,
+         coalesce(sum(e.gain), 0)::bigint AS exp
+  FROM r
+  JOIN web_spot s ON s.id = r.spot_id
+  LEFT JOIN e ON e.reservation_id = r.id
+  GROUP BY s.id, s.name, s.archived_at
+), m AS (
+  SELECT g.spot_id, g.name, g.archived, g.reservations, g.seconds, g.exp_reservations, g.exp_seconds, g.exp, CASE $1::text
+         WHEN 'reservations' THEN g.reservations::float8
+         WHEN 'exp' THEN CASE WHEN g.exp_reservations > 0 THEN g.exp::float8 END
+         WHEN 'exp_h' THEN CASE WHEN g.exp_seconds > 0 THEN g.exp::float8 * 3600 / g.exp_seconds END
+         WHEN 'name' THEN NULL
+         ELSE g.seconds::float8
+       END AS figure
+  FROM g
 )
-SELECT s.id AS spot_id,
-       s.name::text AS name,
-       (s.archived_at IS NOT NULL)::boolean AS archived,
-       count(*)::bigint AS reservations,
-       coalesce(sum(r.secs), 0)::bigint AS seconds,
-       count(e.reservation_id)::bigint AS exp_reservations,
-       coalesce(sum(r.secs) FILTER (WHERE e.reservation_id IS NOT NULL), 0)::bigint AS exp_seconds,
-       coalesce(sum(e.gain), 0)::bigint AS exp
-FROM r
-JOIN web_spot s ON s.id = r.spot_id
-LEFT JOIN e ON e.reservation_id = r.id
-GROUP BY s.id, s.name, s.archived_at
+SELECT m.spot_id::bigint AS spot_id, m.name::text AS name, m.archived::boolean AS archived,
+       m.reservations::bigint AS reservations,
+       m.seconds::bigint AS seconds,
+       m.exp_reservations::bigint AS exp_reservations,
+       m.exp_seconds::bigint AS exp_seconds,
+       m.exp::bigint AS exp,
+       count(*) OVER ()::bigint AS total_rows
+FROM m
+ORDER BY CASE WHEN $1::text = 'name' AND $2::boolean THEN lower(m.name) END ASC,
+         CASE WHEN $1::text = 'name' AND NOT $2::boolean THEN lower(m.name) END DESC,
+         CASE WHEN $2::boolean THEN m.figure END ASC NULLS LAST,
+         CASE WHEN NOT $2::boolean THEN m.figure END DESC NULLS LAST,
+         lower(m.name), m.spot_id
+LIMIT NULLIF($3::int, 0)
 `
 
 type SpotTotalsParams struct {
+	SortKey      string
+	Ascending    bool
+	Lim          int32
 	GuildID      string
 	FromT        pgtype.Timestamptz
 	ToT          pgtype.Timestamptz
@@ -476,13 +693,19 @@ type SpotTotalsRow struct {
 	ExpReservations int64
 	ExpSeconds      int64
 	Exp             int64
+	TotalRows       int64
 }
 
 // Every totals query filters the same way: guild, start_at in [from_t, to_t), and optional
 // spot_id, user_id and character_key (zero value = all). The LIKE on lower(author)
 // lets the trigram index narrow a character filter before the exact unnest check.
+// They share the ordering too: sort_key's figure (NULL = no data, last in both directions), then
+// the name. lim 0 = every row; total_rows counts the rows before the limit.
 func (q *Queries) SpotTotals(ctx context.Context, arg SpotTotalsParams) ([]SpotTotalsRow, error) {
 	rows, err := q.db.Query(ctx, spotTotals,
+		arg.SortKey,
+		arg.Ascending,
+		arg.Lim,
 		arg.GuildID,
 		arg.FromT,
 		arg.ToT,
@@ -506,6 +729,7 @@ func (q *Queries) SpotTotals(ctx context.Context, arg SpotTotalsParams) ([]SpotT
 			&i.ExpReservations,
 			&i.ExpSeconds,
 			&i.Exp,
+			&i.TotalRows,
 		); err != nil {
 			return nil, err
 		}

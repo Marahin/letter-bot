@@ -95,7 +95,7 @@ Test coverage of the core packages added for the web panel (`make test`):
 | `internal/core/spots` | 100% |
 | `internal/core/reservations` | 100% |
 | `internal/core/experience` | 100% |
-| `internal/core/players` | 100% |
+| `internal/core/characters` | 100% |
 | `internal/core/lootcalc` | 100% |
 | `internal/core/stats` | 99.3% |
 

@@ -11,8 +11,14 @@ import (
 	"spot-assistant/internal/ports"
 )
 
-// CharacterCacheTTL matches how often TibiaData refreshes a character page.
-const CharacterCacheTTL = 5 * time.Minute
+const (
+	// CharacterCacheTTL matches how often TibiaData refreshes a character page.
+	CharacterCacheTTL = 5 * time.Minute
+	// UpstreamFailureTTL keeps every character view from waiting on a TibiaData that does not answer.
+	UpstreamFailureTTL = 30 * time.Second
+	// CharacterLookupTimeout is shorter than the HTTP client's: the character page renders without the profile.
+	CharacterLookupTimeout = 5 * time.Second
+)
 
 type cachedCharacter struct {
 	character *character.Character
@@ -21,7 +27,7 @@ type cachedCharacter struct {
 }
 
 // CachedCharacters keeps TibiaData character answers (found and not found) in memory for
-// CharacterCacheTTL. Upstream failures are not cached.
+// CharacterCacheTTL, and upstream failures for UpstreamFailureTTL.
 type CachedCharacters struct {
 	inner ports.CharacterAPI
 	ttl   time.Duration
@@ -45,8 +51,15 @@ func (c *CachedCharacters) GetCharacter(ctx context.Context, name string) (*char
 		return e.character, e.err
 	}
 
-	ch, err := c.inner.GetCharacter(ctx, name)
-	if err != nil && !errors.Is(err, ports.ErrCharacterNotFound) {
+	lookupCtx, cancel := context.WithTimeout(ctx, CharacterLookupTimeout)
+	defer cancel()
+	ch, err := c.inner.GetCharacter(lookupCtx, name)
+	ttl := c.ttl
+	switch {
+	case err == nil || errors.Is(err, ports.ErrCharacterNotFound):
+	case errors.Is(err, ports.ErrUpstreamUnavailable) && ctx.Err() == nil:
+		ttl = UpstreamFailureTTL
+	default:
 		return nil, err
 	}
 	c.mu.Lock()
@@ -55,7 +68,7 @@ func (c *CachedCharacters) GetCharacter(ctx context.Context, name string) (*char
 			delete(c.entries, k)
 		}
 	}
-	c.entries[key] = cachedCharacter{character: ch, err: err, expires: now.Add(c.ttl)}
+	c.entries[key] = cachedCharacter{character: ch, err: err, expires: now.Add(ttl)}
 	c.mu.Unlock()
 	return ch, err
 }

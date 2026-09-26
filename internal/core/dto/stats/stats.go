@@ -73,21 +73,12 @@ func (t Totals) Add(o Totals) Totals {
 	}
 }
 
-// StatsRow is what sorting and leaderboards need from a totals row.
-type StatsRow interface {
-	Stats() Totals
-	Label() string
-}
-
 type SpotRow struct {
 	SpotID   int64
 	Name     string
 	Archived bool
 	Totals
 }
-
-func (r SpotRow) Stats() Totals { return r.Totals }
-func (r SpotRow) Label() string { return r.Name }
 
 // PlayerRow is one Discord user. Name is the author text of their latest reservation.
 type PlayerRow struct {
@@ -96,18 +87,12 @@ type PlayerRow struct {
 	Totals
 }
 
-func (r PlayerRow) Stats() Totals { return r.Totals }
-func (r PlayerRow) Label() string { return r.Name }
-
 // CharacterRow is one character of the reservation authors. Name is its latest spelling.
 type CharacterRow struct {
 	Key  string
 	Name string
 	Totals
 }
-
-func (r CharacterRow) Stats() Totals { return r.Totals }
-func (r CharacterRow) Label() string { return r.Name }
 
 // Day is the totals of the reservations that start on one local day (midnight).
 type Day struct {
@@ -146,6 +131,27 @@ type Sort struct {
 	Asc bool
 }
 
+// Query orders the totals rows of Filter by Sort and keeps the first Limit (0 = every row).
+// Rows without the sort figure come last in both directions; ties go by name.
+type Query struct {
+	Filter
+	Sort  Sort
+	Limit int
+}
+
+// Page is the first rows of a query and the number of rows without the limit.
+type Page[T any] struct {
+	Rows  []T
+	Total int
+}
+
+// CharacterBoards are the overview's character leaderboards and the number of characters.
+type CharacterBoards struct {
+	ByExp        []CharacterRow
+	ByExpPerHour []CharacterRow
+	Characters   int
+}
+
 // Leaderboards are the top rows of the overview.
 type Leaderboards struct {
 	PlayersByHours         []PlayerRow
@@ -169,8 +175,8 @@ type SpotDetail struct {
 	Range      Range
 	Totals     Totals
 	Daily      []Day
-	Players    []PlayerRow
-	Characters []CharacterRow
+	Players    Page[PlayerRow]
+	Characters Page[CharacterRow]
 }
 
 type PlayerDetail struct {
@@ -179,8 +185,8 @@ type PlayerDetail struct {
 	Range      Range
 	Totals     Totals
 	Daily      []Day
-	Spots      []SpotRow
-	Characters []CharacterRow
+	Spots      Page[SpotRow]
+	Characters Page[CharacterRow]
 }
 
 // ProfileSource says what the character page got from TibiaData.
@@ -209,6 +215,6 @@ type CharacterProfile struct {
 	History   []HistoryPoint
 	Totals    Totals
 	Daily     []Day
-	Spots     []SpotRow
+	Spots     Page[SpotRow]
 	Recent    []CharacterReservation
 }

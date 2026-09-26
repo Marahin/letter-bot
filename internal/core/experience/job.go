@@ -16,26 +16,35 @@ import (
 )
 
 const (
-	// MaxPages is the TibiaData page count of the top 1000 (50 rows per page).
+	// MaxPages is the TibiaData page count of the top 1000.
 	MaxPages = 20
+	// PageSize is the row count of every highscore page but the last.
+	PageSize = 50
 	// TrackingWindow keeps a character tracked this long after its reservation ended.
 	TrackingWindow = 24 * time.Hour
 	// AttributionWindow gives up on reservations that ended longer ago than this.
 	AttributionWindow = 48 * time.Hour
 )
 
-// Job implements ports.ExperienceJob.
+// ErrIncompletePage is a highscore page with fewer rows than it must have: TibiaData served a
+// broken or partial list, and a run on it would miss characters that are in the top 1000.
+var ErrIncompletePage = errors.New("incomplete highscore page")
+
 type Job struct {
 	api  ports.HighscoreAPI
 	repo ports.ExperienceRepository
-	log  *zap.SugaredLogger
+	// endFallback is how long after the end cut-off run a later run may stand in for it.
+	endFallback time.Duration
+	log         *zap.SugaredLogger
 }
 
-func New(api ports.HighscoreAPI, repo ports.ExperienceRepository, log *zap.SugaredLogger) *Job {
+// New builds the job that runs every interval.
+func New(api ports.HighscoreAPI, repo ports.ExperienceRepository, interval time.Duration, log *zap.SugaredLogger) *Job {
 	if log == nil {
 		log = zap.NewNop().Sugar()
 	}
-	return &Job{api: api, repo: repo, log: log}
+	// Two intervals: the next run's data time drifts with the highscore age, so it can land a bit past one.
+	return &Job{api: api, repo: repo, endFallback: 2 * interval, log: log}
 }
 
 // RunOnce collects and attributes every tracked world. A failing world does not stop the others.
@@ -73,7 +82,7 @@ func (j *Job) Collect(ctx context.Context, worldName string, now time.Time) erro
 		return nil
 	}
 
-	entries, observedAt, pages, err := j.fetch(ctx, worldName, now)
+	entries, observedAt, pages, err := j.fetch(ctx, worldName)
 	if err != nil {
 		return err
 	}
@@ -137,7 +146,7 @@ func diff(worldName string, observedAt time.Time, keys []string, found map[strin
 			if observedAt.After(prev.LastSeenAt) {
 				seen = append(seen, prev.ID)
 			}
-		case ok && !observedAt.After(prev.ObservedAt):
+		case ok && !observedAt.After(prev.LastSeenAt):
 			// Older data than what is stored (a stale TibiaData cache); never rewrite history.
 		default:
 			inserted = append(inserted, experience.Snapshot{
@@ -155,9 +164,9 @@ func diff(worldName string, observedAt time.Time, keys []string, found map[strin
 	return inserted, seen
 }
 
-// fetch reads pages 1..min(MaxPages, total pages). observedAt is the oldest page's data time:
-// the scrape time (or now, when TibiaData does not say) minus highscore_age minutes.
-func (j *Job) fetch(ctx context.Context, worldName string, now time.Time) ([]world.HighscoreEntry, time.Time, int, error) {
+// fetch reads pages 1..min(MaxPages, total pages). observedAt is the oldest page's data time.
+// An empty page, or a short page before the last one, fails the whole run.
+func (j *Job) fetch(ctx context.Context, worldName string) ([]world.HighscoreEntry, time.Time, int, error) {
 	var entries []world.HighscoreEntry
 	var observedAt time.Time
 	total := 1
@@ -167,24 +176,18 @@ func (j *Job) fetch(ctx context.Context, worldName string, now time.Time) ([]wor
 		if err != nil {
 			return nil, time.Time{}, 0, fmt.Errorf("highscores page %d: %w", page, err)
 		}
-		if page == 1 {
-			total = min(MaxPages, res.Highscores.HighscorePage.TotalPages)
+		if n := len(res.Entries); n == 0 || (page < res.TotalPages && n < PageSize) {
+			return nil, time.Time{}, 0, fmt.Errorf("highscores page %d of %d has %d rows: %w", page, res.TotalPages, n, ErrIncompletePage)
 		}
-		entries = append(entries, res.Highscores.HighscoreList...)
-		if pageObserved := observedTime(res, now); page == 1 || pageObserved.Before(observedAt) {
-			observedAt = pageObserved
+		if page == 1 {
+			total = min(MaxPages, res.TotalPages)
+		}
+		entries = append(entries, res.Entries...)
+		if page == 1 || res.ObservedAt.Before(observedAt) {
+			observedAt = res.ObservedAt
 		}
 	}
 	return entries, observedAt, page - 1, nil
-}
-
-func observedTime(res *world.HighscoresResponse, now time.Time) time.Time {
-	scraped := res.Information.Timestamp
-	if scraped.IsZero() || scraped.After(now) {
-		scraped = now
-	}
-	age := time.Duration(max(0, res.Highscores.HighscoreAge)) * time.Minute
-	return scraped.Add(-age)
 }
 
 // Attribute stores the experience of each character of every ended reservation whose end cut-off run exists.
@@ -218,6 +221,7 @@ func (j *Job) Attribute(ctx context.Context, worldName string, now time.Time) er
 	return nil
 }
 
+// attributeReservation returns false when the reservation must wait for a later run.
 func (j *Job) attributeReservation(ctx context.Context, worldName string, r experience.PendingReservation) (bool, error) {
 	cutoff, err := j.repo.FirstRunObservedAtOrAfter(ctx, worldName, r.EndAt)
 	if errors.Is(err, ports.ErrNotFound) {
@@ -226,6 +230,7 @@ func (j *Job) attributeReservation(ctx context.Context, worldName string, r expe
 	if err != nil {
 		return false, fmt.Errorf("end cut-off run: %w", err)
 	}
+	fallback := endFallback{job: j, world: worldName, cutoff: cutoff}
 
 	characters := experience.Characters(r.Author)
 	rows := make([]experience.ReservationExperience, 0, len(characters))
@@ -234,11 +239,21 @@ func (j *Job) attributeReservation(ctx context.Context, worldName string, r expe
 		if err != nil {
 			return false, err
 		}
-		end, err := optional(j.repo.SnapshotAtOrBefore(ctx, worldName, c.Key, cutoff))
+		atCutoff, err := optional(j.repo.SnapshotAtOrBefore(ctx, worldName, c.Key, cutoff))
 		if err != nil {
 			return false, fmt.Errorf("end snapshot: %w", err)
 		}
-		res := ComputeGain(start, EndSnapshot(end, r.EndAt))
+		end := EndSnapshot(atCutoff, r.EndAt)
+		if end == nil {
+			var wait bool
+			if end, wait, err = fallback.snapshot(ctx, c.Key, r.EndAt); err != nil {
+				return false, err
+			}
+			if wait {
+				return false, nil
+			}
+		}
+		res := ComputeGain(start, end)
 		rows = append(rows, experience.ReservationExperience{
 			ReservationID:   r.ID,
 			CharacterKey:    c.Key,
@@ -253,6 +268,41 @@ func (j *Job) attributeReservation(ctx context.Context, worldName string, r expe
 		return false, fmt.Errorf("insert: %w", err)
 	}
 	return len(rows) > 0, nil
+}
+
+// endFallback finds the end value of a character the cut-off run did not see (one missed run is
+// often a TibiaData hiccup) in the next run, if that run came within endFallback of the cut-off.
+type endFallback struct {
+	job    *Job
+	world  string
+	cutoff time.Time
+
+	looked bool
+	next   time.Time
+	usable bool
+}
+
+// snapshot returns wait when no run followed the cut-off run yet.
+func (f *endFallback) snapshot(ctx context.Context, key string, endAt time.Time) (*experience.Snapshot, bool, error) {
+	if !f.looked {
+		// Run times have microsecond precision, so this is the first run strictly after the cut-off.
+		next, err := f.job.repo.FirstRunObservedAtOrAfter(ctx, f.world, f.cutoff.Add(time.Microsecond))
+		switch {
+		case errors.Is(err, ports.ErrNotFound):
+			return nil, true, nil
+		case err != nil:
+			return nil, false, fmt.Errorf("fallback end run: %w", err)
+		}
+		f.looked, f.next, f.usable = true, next, !next.After(f.cutoff.Add(f.job.endFallback))
+	}
+	if !f.usable {
+		return nil, false, nil
+	}
+	end, err := optional(f.job.repo.SnapshotAtOrBefore(ctx, f.world, key, f.next))
+	if err != nil {
+		return nil, false, fmt.Errorf("fallback end snapshot: %w", err)
+	}
+	return EndSnapshot(end, endAt), false, nil
 }
 
 func (j *Job) startSnapshot(ctx context.Context, worldName, key string, startAt time.Time) (*experience.Snapshot, error) {

@@ -196,17 +196,18 @@ func TestHandleOverview_DataDaysFailureStillRenders(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rec.Code)
 }
 
-func spotRowsFixture() []stats.SpotRow {
-	return []stats.SpotRow{
+func spotRowsFixture() stats.Page[stats.SpotRow] {
+	return stats.Page[stats.SpotRow]{Rows: []stats.SpotRow{
 		{SpotID: 4, Name: "Hero Cave", Totals: tot(3, 3*3600, 1, 3600, 1_200_000)},
 		{SpotID: 5, Name: "Old Spot", Archived: true, Totals: tot(1, 1800, 0, 0, 0)},
-	}
+		{SpotID: 6, Name: "=HYPERLINK(\"x\")", Totals: tot(1, 3600, 0, 0, 0)},
+	}, Total: 3}
 }
 
 func TestHandleSpots_SortsOnTheServer(t *testing.T) {
 	// given
 	h, m, cookie := signedIn(t, true)
-	m.Stats.EXPECT().Spots(mock.Anything, guildID, mock.Anything, stats.Sort{Key: stats.SortExp}).Return(spotRowsFixture(), nil)
+	m.Stats.EXPECT().Spots(mock.Anything, guildID, mock.Anything, stats.Sort{Key: stats.SortExp}, maxTableRows).Return(spotRowsFixture(), nil)
 
 	// when
 	rec := webtest.Serve(h, webtest.Get("/servers/g1/stats/spots?sort=exp", cookie))
@@ -227,7 +228,7 @@ func TestHandleSpots_SortsOnTheServer(t *testing.T) {
 func TestHandleSpots_CSVExportsEveryRowWithEmptyNoDataCells(t *testing.T) {
 	// given
 	h, m, cookie := signedIn(t, true)
-	m.Stats.EXPECT().Spots(mock.Anything, guildID, mock.Anything, mock.Anything).Return(spotRowsFixture(), nil)
+	m.Stats.EXPECT().Spots(mock.Anything, guildID, mock.Anything, mock.Anything, 0).Return(spotRowsFixture(), nil)
 
 	// when
 	rec := webtest.Serve(h, webtest.Get("/servers/g1/stats/spots?format=csv&days=2026-09-01,2026-09-02", cookie))
@@ -236,18 +237,19 @@ func TestHandleSpots_CSVExportsEveryRowWithEmptyNoDataCells(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.Equal(t, "text/csv; charset=utf-8", rec.Header().Get("Content-Type"))
 	assert.Contains(t, rec.Header().Get("Content-Disposition"), "stats-spots-2026-09-01_2026-09-02.csv")
-	assert.Equal(t, "Respawn,Reservations,Hours,Experience,Exp/h\nHero Cave,3,3.00,1200000,1200000\nOld Spot,1,0.50,,\n", rec.Body.String())
+	assert.Equal(t, "Respawn,Reservations,Hours,Experience,Exp/h\nHero Cave,3,3.00,1200000,1200000\nOld Spot,1,0.50,,\n\"'=HYPERLINK(\"\"x\"\")\",1,1.00,,\n", rec.Body.String())
 }
 
 func TestHandlePlayersAndCharacters_ListsAndTruncates(t *testing.T) {
 	// given
 	h, m, cookie := signedIn(t, true)
-	m.Stats.EXPECT().Players(mock.Anything, guildID, mock.Anything, stats.Sort{Key: stats.SortName, Asc: true}).Return([]stats.PlayerRow{{UserID: "u2", Name: "Storm Quiet"}}, nil)
-	many := make([]stats.CharacterRow, maxTableRows+1)
+	m.Stats.EXPECT().Players(mock.Anything, guildID, mock.Anything, stats.Sort{Key: stats.SortName, Asc: true}, maxTableRows).
+		Return(stats.Page[stats.PlayerRow]{Rows: []stats.PlayerRow{{UserID: "u2", Name: "Storm Quiet"}}, Total: 1}, nil)
+	many := make([]stats.CharacterRow, maxTableRows)
 	for i := range many {
 		many[i] = stats.CharacterRow{Key: "c", Name: "Char"}
 	}
-	m.Stats.EXPECT().Characters(mock.Anything, guildID, mock.Anything, mock.Anything).Return(many, nil)
+	m.Stats.EXPECT().Characters(mock.Anything, guildID, mock.Anything, mock.Anything, maxTableRows).Return(stats.Page[stats.CharacterRow]{Rows: many, Total: 501}, nil)
 
 	// when
 	players := webtest.Serve(h, webtest.Get("/servers/g1/stats/players?sort=name", cookie))
@@ -263,8 +265,8 @@ func TestHandlePlayersAndCharacters_ListsAndTruncates(t *testing.T) {
 func TestHandleTable_EmptyAndError(t *testing.T) {
 	// given
 	h, m, cookie := signedIn(t, true)
-	m.Stats.EXPECT().Characters(mock.Anything, guildID, mock.Anything, mock.Anything).Return(nil, nil)
-	m.Stats.EXPECT().Players(mock.Anything, guildID, mock.Anything, mock.Anything).Return(nil, errBoom)
+	m.Stats.EXPECT().Characters(mock.Anything, guildID, mock.Anything, mock.Anything, mock.Anything).Return(stats.Page[stats.CharacterRow]{}, nil)
+	m.Stats.EXPECT().Players(mock.Anything, guildID, mock.Anything, mock.Anything, mock.Anything).Return(stats.Page[stats.PlayerRow]{}, errBoom)
 
 	// when
 	empty := webtest.Serve(h, webtest.Get("/servers/g1/stats/characters", cookie))
@@ -282,9 +284,9 @@ func TestHandleSpot(t *testing.T) {
 		h, m, cookie := signedIn(t, true)
 		archived := time.Now()
 		m.Stats.EXPECT().Spot(mock.Anything, guildID, int64(4), mock.Anything).RunAndReturn(func(_ context.Context, _ string, _ int64, rng stats.Range) (*stats.SpotDetail, error) {
-			players := make([]stats.PlayerRow, maxBreakdownRows+2)
-			for i := range players {
-				players[i] = stats.PlayerRow{UserID: "u", Name: "P"}
+			players := stats.Page[stats.PlayerRow]{Rows: make([]stats.PlayerRow, 25), Total: 27}
+			for i := range players.Rows {
+				players.Rows[i] = stats.PlayerRow{UserID: "u", Name: "P"}
 			}
 			return &stats.SpotDetail{
 				Spot: &spot.Spot{ID: 4, Name: "Hero Cave", ArchivedAt: &archived}, Range: rng,
@@ -336,8 +338,8 @@ func TestHandlePlayer(t *testing.T) {
 			return &stats.PlayerDetail{
 				UserID: "u2", Name: "Quiet Nyx/Storm Quiet", Range: rng, Totals: tot(1, 3600, 1, 3600, 10),
 				Daily:      days(rng, tot(1, 3600, 1, 3600, 10)),
-				Spots:      []stats.SpotRow{{SpotID: 4, Name: "Hero Cave", Totals: tot(1, 3600, 1, 3600, 10)}},
-				Characters: []stats.CharacterRow{{Key: "storm quiet", Name: "Storm Quiet"}},
+				Spots:      stats.Page[stats.SpotRow]{Rows: []stats.SpotRow{{SpotID: 4, Name: "Hero Cave", Totals: tot(1, 3600, 1, 3600, 10)}}, Total: 1},
+				Characters: stats.Page[stats.CharacterRow]{Rows: []stats.CharacterRow{{Key: "storm quiet", Name: "Storm Quiet"}}, Total: 1},
 			}, nil
 		})
 
@@ -379,7 +381,7 @@ func TestHandleCharacter(t *testing.T) {
 				History:   []stats.HistoryPoint{{Day: rng.Days[0], Level: 611, Experience: 3_700_000_000}, {Day: rng.Days[1], Level: 612, Experience: 3_750_000_000}},
 				Totals:    tot(2, 7200, 1, 3600, gain),
 				Daily:     days(rng, tot(0, 0, 0, 0, 0)),
-				Spots:     []stats.SpotRow{{SpotID: 4, Name: "Hero Cave", Totals: tot(2, 7200, 1, 3600, gain)}},
+				Spots:     stats.Page[stats.SpotRow]{Rows: []stats.SpotRow{{SpotID: 4, Name: "Hero Cave", Totals: tot(2, 7200, 1, 3600, gain)}}, Total: 1},
 				Recent: []stats.CharacterReservation{
 					{ID: 1, SpotID: 4, SpotName: "Hero Cave", Author: "Quiet Nyx/Storm Quiet", StartAt: login, EndAt: login.Add(time.Hour), Status: experience.StatusOK, Gain: &gain},
 					{ID: 2, SpotID: 4, SpotName: "Hero Cave", Author: "Quiet Nyx", StartAt: login, EndAt: login.Add(time.Hour), Status: experience.StatusNoData},
@@ -495,4 +497,34 @@ func mustQuery(t *testing.T, raw string) url.Values {
 	q, err := url.ParseQuery(raw)
 	require.NoError(t, err)
 	return q
+}
+
+func TestParseSort(t *testing.T) {
+	cases := []struct {
+		key, dir string
+		want     stats.Sort
+	}{
+		{"", "", stats.Sort{Key: stats.SortHours}},
+		{"bogus", "asc", stats.Sort{Key: stats.SortHours, Asc: true}},
+		{"name", "", stats.Sort{Key: stats.SortName, Asc: true}},
+		{"name", "desc", stats.Sort{Key: stats.SortName}},
+		{"exp_h", "", stats.Sort{Key: stats.SortExpPerHour}},
+		{"reservations", "sideways", stats.Sort{Key: stats.SortReservations}},
+	}
+	for _, c := range cases {
+		// when
+		got := parseSort(c.key, c.dir)
+
+		// then
+		assert.Equal(t, c.want, got, "%s/%s", c.key, c.dir)
+	}
+}
+
+func TestCSVText_DefusesFormulas(t *testing.T) {
+	for in, want := range map[string]string{
+		"=1+1": "'=1+1", "+1": "'+1", "-1": "'-1", "@SUM(A1)": "'@SUM(A1)", "\tx": "'\tx", "\rx": "'\rx",
+		"Quiet Nyx": "Quiet Nyx", "": "", "a=b": "a=b",
+	} {
+		assert.Equal(t, want, csvText(in), in)
+	}
 }

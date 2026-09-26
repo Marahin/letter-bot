@@ -26,7 +26,7 @@ type resultView struct {
 	Session lootcalc.Session
 	Split   lootcalc.Result
 	// Players are sorted by balance, highest first.
-	Players   []lootcalc.Player
+	Players   []lootcalc.PartyMember
 	Discord   string
 	TeamSpeak string
 	// Entry is the history record loot-calculator.js keeps in localStorage.
@@ -45,7 +45,7 @@ type historyEntry struct {
 }
 
 func newResultView(text string, s lootcalc.Session, r lootcalc.Result) *resultView {
-	players := append([]lootcalc.Player(nil), s.Players...)
+	players := append([]lootcalc.PartyMember(nil), s.Players...)
 	sort.SliceStable(players, func(i, j int) bool { return players[i].Balance > players[j].Balance })
 
 	names := make([]string, 0, len(s.Players))

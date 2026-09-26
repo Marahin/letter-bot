@@ -95,105 +95,15 @@ func TestFillDaily_AddsZeroDaysInOrder(t *testing.T) {
 	assert.Equal(t, day(2026, 9, 1), out[0].Day)
 }
 
-func TestParseSort(t *testing.T) {
-	cases := []struct {
-		key, dir string
-		want     stats.Sort
-	}{
-		{"", "", stats.Sort{Key: stats.SortHours}},
-		{"bogus", "asc", stats.Sort{Key: stats.SortHours, Asc: true}},
-		{"name", "", stats.Sort{Key: stats.SortName, Asc: true}},
-		{"name", "desc", stats.Sort{Key: stats.SortName}},
-		{"exp_h", "", stats.Sort{Key: stats.SortExpPerHour}},
-		{"reservations", "sideways", stats.Sort{Key: stats.SortReservations}},
-	}
-	for _, c := range cases {
-		// when
-		got := ParseSort(c.key, c.dir)
-
-		// then
-		assert.Equal(t, c.want, got, "%s/%s", c.key, c.dir)
-	}
-}
-
-func names(rows []stats.CharacterRow) []string {
-	out := make([]string, len(rows))
-	for i, r := range rows {
-		out[i] = r.Name
-	}
-	return out
-}
-
-func sampleCharacters() []stats.CharacterRow {
-	return []stats.CharacterRow{
-		{Key: "b", Name: "Bravo", Totals: withExp(3, 3*3600, 0, 0, 0)},
-		{Key: "a", Name: "alpha", Totals: withExp(5, 5*3600, 5, 5*3600, 5_000_000)},
-		{Key: "c", Name: "Charlie", Totals: withExp(1, 2*3600, 1, 2*3600, 4_000_000)},
-		{Key: "d", Name: "Delta", Totals: withExp(1, 3600, 1, 3600, -100)},
-	}
-}
-
-func TestSortRows_ByFigureDescendingPutsNoDataLast(t *testing.T) {
-	// given
-	rows := sampleCharacters()
-
-	// when
-	SortRows(rows, stats.Sort{Key: stats.SortExp})
-
-	// then
-	assert.Equal(t, []string{"alpha", "Charlie", "Delta", "Bravo"}, names(rows))
-}
-
-func TestSortRows_ByFigureAscendingStillPutsNoDataLast(t *testing.T) {
-	// given
-	rows := sampleCharacters()
-
-	// when
-	SortRows(rows, stats.Sort{Key: stats.SortExpPerHour, Asc: true})
-
-	// then
-	assert.Equal(t, []string{"Delta", "alpha", "Charlie", "Bravo"}, names(rows))
-}
-
-func TestSortRows_ByNameIgnoresCaseAndTiesGoByName(t *testing.T) {
-	// given
-	rows := sampleCharacters()
-	byName := append([]stats.CharacterRow(nil), rows...)
-	byReservations := append([]stats.CharacterRow(nil), rows...)
-	byNameDesc := append([]stats.CharacterRow(nil), rows...)
-
-	// when
-	SortRows(byName, stats.Sort{Key: stats.SortName, Asc: true})
-	SortRows(byNameDesc, stats.Sort{Key: stats.SortName})
-	SortRows(byReservations, stats.Sort{Key: stats.SortReservations, Asc: true})
-
-	// then
-	assert.Equal(t, []string{"alpha", "Bravo", "Charlie", "Delta"}, names(byName))
-	assert.Equal(t, []string{"Delta", "Charlie", "Bravo", "alpha"}, names(byNameDesc))
-	assert.Equal(t, []string{"Charlie", "Delta", "Bravo", "alpha"}, names(byReservations))
-}
-
-func TestTop_LeavesOutRowsWithoutTheFigureAndBelowMinHours(t *testing.T) {
-	// given
-	rows := sampleCharacters()
-
-	// when
-	byExpPerHour := Top(rows, stats.SortExpPerHour, 10, MinExpPerHourHours)
-	byExp := Top(rows, stats.SortExp, 2, 0)
-	byHours := Top(rows, stats.SortHours, 10, 0)
-
-	// then
-	assert.Equal(t, []string{"alpha"}, names(byExpPerHour))
-	assert.Equal(t, []string{"alpha", "Charlie"}, names(byExp))
-	assert.Equal(t, []string{"alpha", "Bravo", "Charlie", "Delta"}, names(byHours))
-}
-
 func TestSum(t *testing.T) {
+	// given
+	days := []stats.Day{{Totals: withExp(1, 3600, 1, 3600, 10)}, {Totals: withExp(2, 7200, 0, 0, 0)}}
+
 	// when
-	got := Sum(sampleCharacters())
+	got := Sum(days)
 
 	// then
-	assert.Equal(t, withExp(10, 11*3600, 7, 8*3600, 8_999_900), got)
+	assert.Equal(t, withExp(3, 10800, 1, 3600, 10), got)
 }
 
 func TestMidnight(t *testing.T) {
@@ -206,18 +116,37 @@ func newService(t *testing.T) (*Service, *mocks.MockStatsRepository, *mocks.Mock
 	return New(repo, spots), repo, spots
 }
 
+func names(rows []stats.CharacterRow) []string {
+	out := make([]string, len(rows))
+	for i, r := range rows {
+		out[i] = r.Name
+	}
+	return out
+}
+
+func byHoursQuery(f stats.Filter, limit int) stats.Query {
+	return stats.Query{Filter: f, Sort: stats.Sort{Key: stats.SortHours}, Limit: limit}
+}
+
 func TestService_Overview(t *testing.T) {
 	// given
 	svc, repo, _ := newService(t)
 	rng := ResolveRange([]time.Time{day(2026, 9, 1), day(2026, 9, 2)}, now)
 	f := stats.Filter{GuildID: "g", From: rng.From, To: rng.To}
-	repo.EXPECT().SpotTotals(mock.Anything, f).Return([]stats.SpotRow{
-		{SpotID: 1, Name: "Hero Cave", Totals: withExp(2, 7200, 1, 3600, 100)},
-		{SpotID: 2, Name: "Dragons", Totals: withExp(1, 3600, 0, 0, 0)},
-	}, nil)
-	repo.EXPECT().PlayerTotals(mock.Anything, f).Return([]stats.PlayerRow{{UserID: "u", Name: "A/B", Totals: withExp(3, 10800, 1, 3600, 100)}}, nil)
-	repo.EXPECT().CharacterTotals(mock.Anything, f).Return(sampleCharacters(), nil)
 	repo.EXPECT().Daily(mock.Anything, f).Return([]stats.Day{{Day: day(2026, 9, 2), Totals: withExp(3, 10800, 1, 3600, 100)}}, nil)
+	repo.EXPECT().SpotTotals(mock.Anything, byHoursQuery(f, LeaderboardSize)).Return(stats.Page[stats.SpotRow]{
+		Rows:  []stats.SpotRow{{SpotID: 1, Name: "Hero Cave", Totals: withExp(2, 7200, 1, 3600, 100)}},
+		Total: 2,
+	}, nil)
+	repo.EXPECT().PlayerTotals(mock.Anything, byHoursQuery(f, LeaderboardSize)).Return(stats.Page[stats.PlayerRow]{
+		Rows:  []stats.PlayerRow{{UserID: "u", Name: "A/B", Totals: withExp(3, 10800, 1, 3600, 100)}},
+		Total: 1,
+	}, nil)
+	repo.EXPECT().CharacterLeaderboards(mock.Anything, f, LeaderboardSize, int64(3*3600)).Return(stats.CharacterBoards{
+		ByExp:        []stats.CharacterRow{{Name: "alpha"}, {Name: "Charlie"}},
+		ByExpPerHour: []stats.CharacterRow{{Name: "alpha"}},
+		Characters:   4,
+	}, nil)
 
 	// when
 	o, err := svc.Overview(context.Background(), "g", rng)
@@ -232,13 +161,13 @@ func TestService_Overview(t *testing.T) {
 	assert.Zero(t, o.Daily[0].Reservations)
 	assert.Equal(t, "Hero Cave", o.TopSpots[0].Name)
 	assert.Equal(t, []string{"alpha"}, names(o.Leaderboards.CharactersByExpPerHour))
-	assert.Equal(t, []string{"alpha", "Charlie", "Delta"}, names(o.Leaderboards.CharactersByExp))
+	assert.Equal(t, []string{"alpha", "Charlie"}, names(o.Leaderboards.CharactersByExp))
 	assert.Len(t, o.Leaderboards.PlayersByHours, 1)
 }
 
 func TestService_Overview_Errors(t *testing.T) {
 	rng := ResolveRange(nil, now)
-	steps := []string{"spots", "players", "characters", "daily"}
+	steps := []string{"daily", "spots", "players", "characters"}
 	for i := range steps {
 		t.Run(steps[i], func(t *testing.T) {
 			// given
@@ -249,15 +178,15 @@ func TestService_Overview_Errors(t *testing.T) {
 				}
 				return nil
 			}
-			repo.EXPECT().SpotTotals(mock.Anything, mock.Anything).Return(nil, fail(0))
+			repo.EXPECT().Daily(mock.Anything, mock.Anything).Return(nil, fail(0))
 			if i >= 1 {
-				repo.EXPECT().PlayerTotals(mock.Anything, mock.Anything).Return(nil, fail(1))
+				repo.EXPECT().SpotTotals(mock.Anything, mock.Anything).Return(stats.Page[stats.SpotRow]{}, fail(1))
 			}
 			if i >= 2 {
-				repo.EXPECT().CharacterTotals(mock.Anything, mock.Anything).Return(nil, fail(2))
+				repo.EXPECT().PlayerTotals(mock.Anything, mock.Anything).Return(stats.Page[stats.PlayerRow]{}, fail(2))
 			}
 			if i >= 3 {
-				repo.EXPECT().Daily(mock.Anything, mock.Anything).Return(nil, fail(3))
+				repo.EXPECT().CharacterLeaderboards(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(stats.CharacterBoards{}, fail(3))
 			}
 
 			// when
@@ -269,41 +198,29 @@ func TestService_Overview_Errors(t *testing.T) {
 	}
 }
 
-func TestService_Lists_SortAndPropagateErrors(t *testing.T) {
+func TestService_Lists_PassSortAndLimitToTheRepository(t *testing.T) {
 	// given
 	svc, repo, _ := newService(t)
 	rng := ResolveRange(nil, now)
-	f := stats.Filter{GuildID: "g", From: rng.From, To: rng.To}
-	repo.EXPECT().SpotTotals(mock.Anything, f).Return([]stats.SpotRow{{Name: "b"}, {Name: "a"}}, nil).Once()
-	repo.EXPECT().PlayerTotals(mock.Anything, f).Return([]stats.PlayerRow{{Name: "b"}, {Name: "a"}}, nil).Once()
-	repo.EXPECT().CharacterTotals(mock.Anything, f).Return(sampleCharacters(), nil).Once()
 	byName := stats.Sort{Key: stats.SortName, Asc: true}
+	q := stats.Query{Filter: stats.Filter{GuildID: "g", From: rng.From, To: rng.To}, Sort: byName, Limit: 500}
+	spotPage := stats.Page[stats.SpotRow]{Rows: []stats.SpotRow{{Name: "a"}}, Total: 7}
+	playerPage := stats.Page[stats.PlayerRow]{Rows: []stats.PlayerRow{{Name: "a"}}, Total: 8}
+	characterPage := stats.Page[stats.CharacterRow]{Rows: []stats.CharacterRow{{Name: "a"}}, Total: 9}
+	repo.EXPECT().SpotTotals(mock.Anything, q).Return(spotPage, nil).Once()
+	repo.EXPECT().PlayerTotals(mock.Anything, q).Return(playerPage, nil).Once()
+	repo.EXPECT().CharacterTotals(mock.Anything, q).Return(characterPage, nil).Once()
 
 	// when
-	spots, err1 := svc.Spots(context.Background(), "g", rng, byName)
-	players, err2 := svc.Players(context.Background(), "g", rng, byName)
-	characters, err3 := svc.Characters(context.Background(), "g", rng, byName)
+	spots, err1 := svc.Spots(context.Background(), "g", rng, byName, 500)
+	players, err2 := svc.Players(context.Background(), "g", rng, byName, 500)
+	characters, err3 := svc.Characters(context.Background(), "g", rng, byName, 500)
 
 	// then
 	require.NoError(t, errors.Join(err1, err2, err3))
-	assert.Equal(t, "a", spots[0].Name)
-	assert.Equal(t, "a", players[0].Name)
-	assert.Equal(t, "alpha", characters[0].Name)
-
-	// given
-	repo.EXPECT().SpotTotals(mock.Anything, f).Return(nil, errBoom)
-	repo.EXPECT().PlayerTotals(mock.Anything, f).Return(nil, errBoom)
-	repo.EXPECT().CharacterTotals(mock.Anything, f).Return(nil, errBoom)
-
-	// when
-	_, err1 = svc.Spots(context.Background(), "g", rng, byName)
-	_, err2 = svc.Players(context.Background(), "g", rng, byName)
-	_, err3 = svc.Characters(context.Background(), "g", rng, byName)
-
-	// then
-	assert.ErrorIs(t, err1, errBoom)
-	assert.ErrorIs(t, err2, errBoom)
-	assert.ErrorIs(t, err3, errBoom)
+	assert.Equal(t, spotPage, spots)
+	assert.Equal(t, playerPage, players)
+	assert.Equal(t, characterPage, characters)
 }
 
 func TestService_Spot(t *testing.T) {
@@ -312,11 +229,12 @@ func TestService_Spot(t *testing.T) {
 	rng := ResolveRange(nil, now)
 	f := stats.Filter{GuildID: "g", From: rng.From, To: rng.To, SpotID: 4}
 	sp := &spot.Spot{ID: 4, Name: "Hero Cave"}
+	players := stats.Page[stats.PlayerRow]{Rows: []stats.PlayerRow{{Name: "y"}}, Total: 30}
+	characters := stats.Page[stats.CharacterRow]{Rows: []stats.CharacterRow{{Name: "alpha"}}, Total: 1}
 	spots.EXPECT().SelectGuildSpotByID(mock.Anything, "g", int64(4)).Return(sp, nil)
-	repo.EXPECT().SpotTotals(mock.Anything, f).Return([]stats.SpotRow{{SpotID: 4, Totals: withExp(2, 7200, 0, 0, 0)}}, nil)
-	repo.EXPECT().Daily(mock.Anything, f).Return(nil, nil)
-	repo.EXPECT().PlayerTotals(mock.Anything, f).Return([]stats.PlayerRow{{Name: "x", Totals: withExp(1, 3600, 0, 0, 0)}, {Name: "y", Totals: withExp(1, 7200, 0, 0, 0)}}, nil)
-	repo.EXPECT().CharacterTotals(mock.Anything, f).Return(sampleCharacters(), nil)
+	repo.EXPECT().Daily(mock.Anything, f).Return([]stats.Day{{Day: day(2026, 9, 20), Totals: withExp(2, 7200, 0, 0, 0)}}, nil)
+	repo.EXPECT().PlayerTotals(mock.Anything, byHoursQuery(f, BreakdownSize)).Return(players, nil)
+	repo.EXPECT().CharacterTotals(mock.Anything, byHoursQuery(f, BreakdownSize)).Return(characters, nil)
 
 	// when
 	d, err := svc.Spot(context.Background(), "g", 4, rng)
@@ -325,8 +243,8 @@ func TestService_Spot(t *testing.T) {
 	require.NoError(t, err)
 	assert.Same(t, sp, d.Spot)
 	assert.Equal(t, int64(2), d.Totals.Reservations)
-	assert.Equal(t, "y", d.Players[0].Name)
-	assert.Equal(t, "alpha", d.Characters[0].Name)
+	assert.Equal(t, players, d.Players)
+	assert.Equal(t, characters, d.Characters)
 	assert.Len(t, d.Daily, DefaultDays)
 }
 
@@ -341,9 +259,9 @@ func TestService_Spot_NotFoundAndErrors(t *testing.T) {
 		_, err := svc.Spot(context.Background(), "g", 9, rng)
 
 		// then
-		assert.ErrorIs(t, err, ErrNotFound)
+		assert.ErrorIs(t, err, ports.ErrNotFound)
 	})
-	for i, step := range []string{"spots", "daily", "players", "characters"} {
+	for i, step := range []string{"daily", "players", "characters"} {
 		t.Run(step, func(t *testing.T) {
 			// given
 			svc, repo, spots := newService(t)
@@ -354,15 +272,12 @@ func TestService_Spot_NotFoundAndErrors(t *testing.T) {
 				return nil
 			}
 			spots.EXPECT().SelectGuildSpotByID(mock.Anything, "g", int64(4)).Return(&spot.Spot{ID: 4}, nil)
-			repo.EXPECT().SpotTotals(mock.Anything, mock.Anything).Return(nil, fail(0))
+			repo.EXPECT().Daily(mock.Anything, mock.Anything).Return(nil, fail(0))
 			if i >= 1 {
-				repo.EXPECT().Daily(mock.Anything, mock.Anything).Return(nil, fail(1))
+				repo.EXPECT().PlayerTotals(mock.Anything, mock.Anything).Return(stats.Page[stats.PlayerRow]{}, fail(1))
 			}
 			if i >= 2 {
-				repo.EXPECT().PlayerTotals(mock.Anything, mock.Anything).Return(nil, fail(2))
-			}
-			if i >= 3 {
-				repo.EXPECT().CharacterTotals(mock.Anything, mock.Anything).Return(nil, fail(3))
+				repo.EXPECT().CharacterTotals(mock.Anything, mock.Anything).Return(stats.Page[stats.CharacterRow]{}, fail(2))
 			}
 
 			// when
@@ -379,10 +294,12 @@ func TestService_Player(t *testing.T) {
 	svc, repo, _ := newService(t)
 	rng := ResolveRange(nil, now)
 	f := stats.Filter{GuildID: "g", From: rng.From, To: rng.To, UserID: "u1"}
+	spots := stats.Page[stats.SpotRow]{Rows: []stats.SpotRow{{Name: "b"}}, Total: 1}
+	characters := stats.Page[stats.CharacterRow]{Rows: []stats.CharacterRow{{Name: "alpha"}}, Total: 4}
 	repo.EXPECT().LatestPlayerName(mock.Anything, "g", "u1").Return("Quiet Nyx/Storm", nil)
-	repo.EXPECT().SpotTotals(mock.Anything, f).Return([]stats.SpotRow{{Name: "a", Totals: withExp(1, 3600, 0, 0, 0)}, {Name: "b", Totals: withExp(1, 7200, 0, 0, 0)}}, nil)
-	repo.EXPECT().Daily(mock.Anything, f).Return(nil, nil)
-	repo.EXPECT().CharacterTotals(mock.Anything, f).Return(sampleCharacters(), nil)
+	repo.EXPECT().Daily(mock.Anything, f).Return([]stats.Day{{Day: day(2026, 9, 20), Totals: withExp(2, 10800, 0, 0, 0)}}, nil)
+	repo.EXPECT().SpotTotals(mock.Anything, byHoursQuery(f, BreakdownSize)).Return(spots, nil)
+	repo.EXPECT().CharacterTotals(mock.Anything, byHoursQuery(f, BreakdownSize)).Return(characters, nil)
 
 	// when
 	d, err := svc.Player(context.Background(), "g", "u1", rng)
@@ -390,9 +307,9 @@ func TestService_Player(t *testing.T) {
 	// then
 	require.NoError(t, err)
 	assert.Equal(t, "Quiet Nyx/Storm", d.Name)
-	assert.Equal(t, "b", d.Spots[0].Name)
+	assert.Equal(t, spots, d.Spots)
 	assert.Equal(t, int64(10800), d.Totals.Seconds)
-	assert.Len(t, d.Characters, 4)
+	assert.Equal(t, characters, d.Characters)
 }
 
 func TestService_Player_NotFoundAndErrors(t *testing.T) {
@@ -405,7 +322,7 @@ func TestService_Player_NotFoundAndErrors(t *testing.T) {
 		_, err := svc.Player(context.Background(), "g", "", rng)
 
 		// then
-		assert.ErrorIs(t, err, ErrNotFound)
+		assert.ErrorIs(t, err, ports.ErrNotFound)
 	})
 	t.Run("unknown user", func(t *testing.T) {
 		// given
@@ -416,9 +333,9 @@ func TestService_Player_NotFoundAndErrors(t *testing.T) {
 		_, err := svc.Player(context.Background(), "g", "x", rng)
 
 		// then
-		assert.ErrorIs(t, err, ErrNotFound)
+		assert.ErrorIs(t, err, ports.ErrNotFound)
 	})
-	for i, step := range []string{"spots", "daily", "characters"} {
+	for i, step := range []string{"daily", "spots", "characters"} {
 		t.Run(step, func(t *testing.T) {
 			// given
 			svc, repo, _ := newService(t)
@@ -429,12 +346,12 @@ func TestService_Player_NotFoundAndErrors(t *testing.T) {
 				return nil
 			}
 			repo.EXPECT().LatestPlayerName(mock.Anything, "g", "u").Return("n", nil)
-			repo.EXPECT().SpotTotals(mock.Anything, mock.Anything).Return(nil, fail(0))
+			repo.EXPECT().Daily(mock.Anything, mock.Anything).Return(nil, fail(0))
 			if i >= 1 {
-				repo.EXPECT().Daily(mock.Anything, mock.Anything).Return(nil, fail(1))
+				repo.EXPECT().SpotTotals(mock.Anything, mock.Anything).Return(stats.Page[stats.SpotRow]{}, fail(1))
 			}
 			if i >= 2 {
-				repo.EXPECT().CharacterTotals(mock.Anything, mock.Anything).Return(nil, fail(2))
+				repo.EXPECT().CharacterTotals(mock.Anything, mock.Anything).Return(stats.Page[stats.CharacterRow]{}, fail(2))
 			}
 
 			// when

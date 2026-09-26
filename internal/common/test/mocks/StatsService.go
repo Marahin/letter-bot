@@ -49,27 +49,25 @@ func (_m *MockStatsService) EXPECT() *MockStatsService_Expecter {
 }
 
 // Characters provides a mock function for the type MockStatsService
-func (_mock *MockStatsService) Characters(ctx context.Context, guildID string, rng stats.Range, sort stats.Sort) ([]stats.CharacterRow, error) {
-	ret := _mock.Called(ctx, guildID, rng, sort)
+func (_mock *MockStatsService) Characters(ctx context.Context, guildID string, rng stats.Range, sort stats.Sort, limit int) (stats.Page[stats.CharacterRow], error) {
+	ret := _mock.Called(ctx, guildID, rng, sort, limit)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Characters")
 	}
 
-	var r0 []stats.CharacterRow
+	var r0 stats.Page[stats.CharacterRow]
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, stats.Range, stats.Sort) ([]stats.CharacterRow, error)); ok {
-		return returnFunc(ctx, guildID, rng, sort)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, stats.Range, stats.Sort, int) (stats.Page[stats.CharacterRow], error)); ok {
+		return returnFunc(ctx, guildID, rng, sort, limit)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, stats.Range, stats.Sort) []stats.CharacterRow); ok {
-		r0 = returnFunc(ctx, guildID, rng, sort)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, stats.Range, stats.Sort, int) stats.Page[stats.CharacterRow]); ok {
+		r0 = returnFunc(ctx, guildID, rng, sort, limit)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]stats.CharacterRow)
-		}
+		r0 = ret.Get(0).(stats.Page[stats.CharacterRow])
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, stats.Range, stats.Sort) error); ok {
-		r1 = returnFunc(ctx, guildID, rng, sort)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, stats.Range, stats.Sort, int) error); ok {
+		r1 = returnFunc(ctx, guildID, rng, sort, limit)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -86,11 +84,12 @@ type MockStatsService_Characters_Call struct {
 //   - guildID string
 //   - rng stats.Range
 //   - sort stats.Sort
-func (_e *MockStatsService_Expecter) Characters(ctx any, guildID any, rng any, sort any) *MockStatsService_Characters_Call {
-	return &MockStatsService_Characters_Call{Call: _e.mock.On("Characters", ctx, guildID, rng, sort)}
+//   - limit int
+func (_e *MockStatsService_Expecter) Characters(ctx any, guildID any, rng any, sort any, limit any) *MockStatsService_Characters_Call {
+	return &MockStatsService_Characters_Call{Call: _e.mock.On("Characters", ctx, guildID, rng, sort, limit)}
 }
 
-func (_c *MockStatsService_Characters_Call) Run(run func(ctx context.Context, guildID string, rng stats.Range, sort stats.Sort)) *MockStatsService_Characters_Call {
+func (_c *MockStatsService_Characters_Call) Run(run func(ctx context.Context, guildID string, rng stats.Range, sort stats.Sort, limit int)) *MockStatsService_Characters_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -108,22 +107,27 @@ func (_c *MockStatsService_Characters_Call) Run(run func(ctx context.Context, gu
 		if args[3] != nil {
 			arg3 = args[3].(stats.Sort)
 		}
+		var arg4 int
+		if args[4] != nil {
+			arg4 = args[4].(int)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
+			arg4,
 		)
 	})
 	return _c
 }
 
-func (_c *MockStatsService_Characters_Call) Return(characterRows []stats.CharacterRow, err error) *MockStatsService_Characters_Call {
-	_c.Call.Return(characterRows, err)
+func (_c *MockStatsService_Characters_Call) Return(page stats.Page[stats.CharacterRow], err error) *MockStatsService_Characters_Call {
+	_c.Call.Return(page, err)
 	return _c
 }
 
-func (_c *MockStatsService_Characters_Call) RunAndReturn(run func(ctx context.Context, guildID string, rng stats.Range, sort stats.Sort) ([]stats.CharacterRow, error)) *MockStatsService_Characters_Call {
+func (_c *MockStatsService_Characters_Call) RunAndReturn(run func(ctx context.Context, guildID string, rng stats.Range, sort stats.Sort, limit int) (stats.Page[stats.CharacterRow], error)) *MockStatsService_Characters_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -357,27 +361,25 @@ func (_c *MockStatsService_Player_Call) RunAndReturn(run func(ctx context.Contex
 }
 
 // Players provides a mock function for the type MockStatsService
-func (_mock *MockStatsService) Players(ctx context.Context, guildID string, rng stats.Range, sort stats.Sort) ([]stats.PlayerRow, error) {
-	ret := _mock.Called(ctx, guildID, rng, sort)
+func (_mock *MockStatsService) Players(ctx context.Context, guildID string, rng stats.Range, sort stats.Sort, limit int) (stats.Page[stats.PlayerRow], error) {
+	ret := _mock.Called(ctx, guildID, rng, sort, limit)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Players")
 	}
 
-	var r0 []stats.PlayerRow
+	var r0 stats.Page[stats.PlayerRow]
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, stats.Range, stats.Sort) ([]stats.PlayerRow, error)); ok {
-		return returnFunc(ctx, guildID, rng, sort)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, stats.Range, stats.Sort, int) (stats.Page[stats.PlayerRow], error)); ok {
+		return returnFunc(ctx, guildID, rng, sort, limit)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, stats.Range, stats.Sort) []stats.PlayerRow); ok {
-		r0 = returnFunc(ctx, guildID, rng, sort)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, stats.Range, stats.Sort, int) stats.Page[stats.PlayerRow]); ok {
+		r0 = returnFunc(ctx, guildID, rng, sort, limit)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]stats.PlayerRow)
-		}
+		r0 = ret.Get(0).(stats.Page[stats.PlayerRow])
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, stats.Range, stats.Sort) error); ok {
-		r1 = returnFunc(ctx, guildID, rng, sort)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, stats.Range, stats.Sort, int) error); ok {
+		r1 = returnFunc(ctx, guildID, rng, sort, limit)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -394,11 +396,12 @@ type MockStatsService_Players_Call struct {
 //   - guildID string
 //   - rng stats.Range
 //   - sort stats.Sort
-func (_e *MockStatsService_Expecter) Players(ctx any, guildID any, rng any, sort any) *MockStatsService_Players_Call {
-	return &MockStatsService_Players_Call{Call: _e.mock.On("Players", ctx, guildID, rng, sort)}
+//   - limit int
+func (_e *MockStatsService_Expecter) Players(ctx any, guildID any, rng any, sort any, limit any) *MockStatsService_Players_Call {
+	return &MockStatsService_Players_Call{Call: _e.mock.On("Players", ctx, guildID, rng, sort, limit)}
 }
 
-func (_c *MockStatsService_Players_Call) Run(run func(ctx context.Context, guildID string, rng stats.Range, sort stats.Sort)) *MockStatsService_Players_Call {
+func (_c *MockStatsService_Players_Call) Run(run func(ctx context.Context, guildID string, rng stats.Range, sort stats.Sort, limit int)) *MockStatsService_Players_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -416,22 +419,27 @@ func (_c *MockStatsService_Players_Call) Run(run func(ctx context.Context, guild
 		if args[3] != nil {
 			arg3 = args[3].(stats.Sort)
 		}
+		var arg4 int
+		if args[4] != nil {
+			arg4 = args[4].(int)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
+			arg4,
 		)
 	})
 	return _c
 }
 
-func (_c *MockStatsService_Players_Call) Return(playerRows []stats.PlayerRow, err error) *MockStatsService_Players_Call {
-	_c.Call.Return(playerRows, err)
+func (_c *MockStatsService_Players_Call) Return(page stats.Page[stats.PlayerRow], err error) *MockStatsService_Players_Call {
+	_c.Call.Return(page, err)
 	return _c
 }
 
-func (_c *MockStatsService_Players_Call) RunAndReturn(run func(ctx context.Context, guildID string, rng stats.Range, sort stats.Sort) ([]stats.PlayerRow, error)) *MockStatsService_Players_Call {
+func (_c *MockStatsService_Players_Call) RunAndReturn(run func(ctx context.Context, guildID string, rng stats.Range, sort stats.Sort, limit int) (stats.Page[stats.PlayerRow], error)) *MockStatsService_Players_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -517,27 +525,25 @@ func (_c *MockStatsService_Spot_Call) RunAndReturn(run func(ctx context.Context,
 }
 
 // Spots provides a mock function for the type MockStatsService
-func (_mock *MockStatsService) Spots(ctx context.Context, guildID string, rng stats.Range, sort stats.Sort) ([]stats.SpotRow, error) {
-	ret := _mock.Called(ctx, guildID, rng, sort)
+func (_mock *MockStatsService) Spots(ctx context.Context, guildID string, rng stats.Range, sort stats.Sort, limit int) (stats.Page[stats.SpotRow], error) {
+	ret := _mock.Called(ctx, guildID, rng, sort, limit)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Spots")
 	}
 
-	var r0 []stats.SpotRow
+	var r0 stats.Page[stats.SpotRow]
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, stats.Range, stats.Sort) ([]stats.SpotRow, error)); ok {
-		return returnFunc(ctx, guildID, rng, sort)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, stats.Range, stats.Sort, int) (stats.Page[stats.SpotRow], error)); ok {
+		return returnFunc(ctx, guildID, rng, sort, limit)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, stats.Range, stats.Sort) []stats.SpotRow); ok {
-		r0 = returnFunc(ctx, guildID, rng, sort)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, stats.Range, stats.Sort, int) stats.Page[stats.SpotRow]); ok {
+		r0 = returnFunc(ctx, guildID, rng, sort, limit)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]stats.SpotRow)
-		}
+		r0 = ret.Get(0).(stats.Page[stats.SpotRow])
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, stats.Range, stats.Sort) error); ok {
-		r1 = returnFunc(ctx, guildID, rng, sort)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, stats.Range, stats.Sort, int) error); ok {
+		r1 = returnFunc(ctx, guildID, rng, sort, limit)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -554,11 +560,12 @@ type MockStatsService_Spots_Call struct {
 //   - guildID string
 //   - rng stats.Range
 //   - sort stats.Sort
-func (_e *MockStatsService_Expecter) Spots(ctx any, guildID any, rng any, sort any) *MockStatsService_Spots_Call {
-	return &MockStatsService_Spots_Call{Call: _e.mock.On("Spots", ctx, guildID, rng, sort)}
+//   - limit int
+func (_e *MockStatsService_Expecter) Spots(ctx any, guildID any, rng any, sort any, limit any) *MockStatsService_Spots_Call {
+	return &MockStatsService_Spots_Call{Call: _e.mock.On("Spots", ctx, guildID, rng, sort, limit)}
 }
 
-func (_c *MockStatsService_Spots_Call) Run(run func(ctx context.Context, guildID string, rng stats.Range, sort stats.Sort)) *MockStatsService_Spots_Call {
+func (_c *MockStatsService_Spots_Call) Run(run func(ctx context.Context, guildID string, rng stats.Range, sort stats.Sort, limit int)) *MockStatsService_Spots_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -576,22 +583,27 @@ func (_c *MockStatsService_Spots_Call) Run(run func(ctx context.Context, guildID
 		if args[3] != nil {
 			arg3 = args[3].(stats.Sort)
 		}
+		var arg4 int
+		if args[4] != nil {
+			arg4 = args[4].(int)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
+			arg4,
 		)
 	})
 	return _c
 }
 
-func (_c *MockStatsService_Spots_Call) Return(spotRows []stats.SpotRow, err error) *MockStatsService_Spots_Call {
-	_c.Call.Return(spotRows, err)
+func (_c *MockStatsService_Spots_Call) Return(page stats.Page[stats.SpotRow], err error) *MockStatsService_Spots_Call {
+	_c.Call.Return(page, err)
 	return _c
 }
 
-func (_c *MockStatsService_Spots_Call) RunAndReturn(run func(ctx context.Context, guildID string, rng stats.Range, sort stats.Sort) ([]stats.SpotRow, error)) *MockStatsService_Spots_Call {
+func (_c *MockStatsService_Spots_Call) RunAndReturn(run func(ctx context.Context, guildID string, rng stats.Range, sort stats.Sort, limit int) (stats.Page[stats.SpotRow], error)) *MockStatsService_Spots_Call {
 	_c.Call.Return(run)
 	return _c
 }

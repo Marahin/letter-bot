@@ -64,7 +64,7 @@ func TestParse_VueSample(t *testing.T) {
 	assert.Equal(t, "2020-06-01, 11:18:39", s.From)
 	assert.Equal(t, "2020-06-01, 12:31:43", s.To)
 	assert.Equal(t, "01:13h", s.Duration)
-	assert.Equal(t, []Player{
+	assert.Equal(t, []PartyMember{
 		{Name: "Marahin", Loot: 87536, Supplies: 67484, Balance: -100, Damage: 1750214, Healing: 355923},
 		{Name: "Iscarlott", Loot: 0, Supplies: 414235, Balance: 200, Damage: 200, Healing: 1589899},
 		{Name: "Killer Potato", Leader: true, Loot: 1816623, Supplies: 528367, Balance: 0, Damage: 4043228, Healing: 398456},
@@ -157,48 +157,48 @@ func TestParse_Errors(t *testing.T) {
 func TestSplit(t *testing.T) {
 	tests := []struct {
 		name      string
-		players   []Player
+		players   []PartyMember
 		total     int64
 		perHead   int64
 		transfers []Transfer
 	}{
 		{
 			name:    "vue sample",
-			players: []Player{{Name: "Marahin", Balance: -100}, {Name: "Iscarlott", Balance: 200}, {Name: "Killer Potato", Balance: 0}},
+			players: []PartyMember{{Name: "Marahin", Balance: -100}, {Name: "Iscarlott", Balance: 200}, {Name: "Killer Potato", Balance: 0}},
 			total:   100, perHead: 33,
 			transfers: []Transfer{{"Iscarlott", "Marahin", 133}, {"Iscarlott", "Killer Potato", 33}},
 		},
 		{
 			name:    "design sample",
-			players: []Player{{Name: "Marahin", Balance: 20052}, {Name: "Iscarlott", Balance: -414235}, {Name: "Killer Potato", Balance: 1288256}},
+			players: []PartyMember{{Name: "Marahin", Balance: 20052}, {Name: "Iscarlott", Balance: -414235}, {Name: "Killer Potato", Balance: 1288256}},
 			total:   894073, perHead: 298024,
 			transfers: []Transfer{{"Killer Potato", "Marahin", 277972}, {"Killer Potato", "Iscarlott", 712259}},
 		},
 		{
 			name:    "negative total floors toward minus infinity",
-			players: []Player{{Name: "A", Balance: -100}, {Name: "B", Balance: 0}, {Name: "C", Balance: 0}},
+			players: []PartyMember{{Name: "A", Balance: -100}, {Name: "B", Balance: 0}, {Name: "C", Balance: 0}},
 			total:   -100, perHead: -34,
 			transfers: []Transfer{{"B", "A", 34}, {"C", "A", 32}},
 		},
 		{
 			name:    "even split needs no transfer",
-			players: []Player{{Name: "A", Balance: 50}, {Name: "B", Balance: 50}},
+			players: []PartyMember{{Name: "A", Balance: 50}, {Name: "B", Balance: 50}},
 			total:   100, perHead: 50,
 		},
 		{
 			name:    "single player",
-			players: []Player{{Name: "Solo", Balance: 12345}},
+			players: []PartyMember{{Name: "Solo", Balance: 12345}},
 			total:   12345, perHead: 12345,
 		},
 		{
 			name:    "biggest giver first, takers in paste order",
-			players: []Player{{Name: "T1", Balance: 0}, {Name: "G1", Balance: 300}, {Name: "T2", Balance: 0}, {Name: "G2", Balance: 900}},
+			players: []PartyMember{{Name: "T1", Balance: 0}, {Name: "G1", Balance: 300}, {Name: "T2", Balance: 0}, {Name: "G2", Balance: 900}},
 			total:   1200, perHead: 300,
 			transfers: []Transfer{{"G2", "T1", 300}, {"G2", "T2", 300}},
 		},
 		{
 			name:    "two givers share one taker",
-			players: []Player{{Name: "G1", Balance: 200}, {Name: "G2", Balance: 250}, {Name: "T", Balance: -450}},
+			players: []PartyMember{{Name: "G1", Balance: 200}, {Name: "G2", Balance: 250}, {Name: "T", Balance: -450}},
 			total:   0, perHead: 0,
 			transfers: []Transfer{{"G2", "T", 250}, {"G1", "T", 200}},
 		},

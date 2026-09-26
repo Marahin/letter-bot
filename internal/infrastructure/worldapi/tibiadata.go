@@ -38,10 +38,32 @@ type characterResponse struct {
 	} `json:"information"`
 }
 
+// highscoresResponse is one page of /v4/highscores/{world}/{category}/{vocation}/{page}.
+type highscoresResponse struct {
+	Highscores struct {
+		// HighscoreAge is how old the tibia.com highscore data is, in minutes.
+		HighscoreAge  int `json:"highscore_age"`
+		HighscoreList []struct {
+			Name     string `json:"name"`
+			Vocation string `json:"vocation"`
+			Level    int    `json:"level"`
+			Value    int64  `json:"value"`
+		} `json:"highscore_list"`
+		HighscorePage struct {
+			TotalPages int `json:"total_pages"`
+		} `json:"highscore_page"`
+	} `json:"highscores"`
+	Information struct {
+		// Timestamp is when TibiaData scraped tibia.com; a cached response can be older than the request.
+		Timestamp time.Time `json:"timestamp"`
+	} `json:"information"`
+}
+
 // GetHighscoresPage reads /highscores/{world}/experience/all/{page}.
-func (h *HttpWorldService) GetHighscoresPage(ctx context.Context, worldName string, page int) (*world.HighscoresResponse, error) {
-	var data world.HighscoresResponse
+func (h *HttpWorldService) GetHighscoresPage(ctx context.Context, worldName string, page int) (*world.HighscorePage, error) {
+	var data highscoresResponse
 	path := fmt.Sprintf("/highscores/%s/experience/all/%d", url.PathEscape(worldName), page)
+	requested := h.clock()
 	status, err := h.getJSON(ctx, path, &data)
 	if err != nil {
 		return nil, err
@@ -49,7 +71,24 @@ func (h *HttpWorldService) GetHighscoresPage(ctx context.Context, worldName stri
 	if status != http.StatusOK {
 		return nil, statusError(status)
 	}
-	return &data, nil
+	out := &world.HighscorePage{
+		Entries:    make([]world.HighscoreEntry, len(data.Highscores.HighscoreList)),
+		ObservedAt: observedAt(data.Information.Timestamp, data.Highscores.HighscoreAge, requested),
+		TotalPages: data.Highscores.HighscorePage.TotalPages,
+	}
+	for i, e := range data.Highscores.HighscoreList {
+		out.Entries[i] = world.HighscoreEntry{Name: e.Name, Vocation: e.Vocation, Level: e.Level, Value: e.Value}
+	}
+	return out, nil
+}
+
+// observedAt is the scrape time (the request time when it is missing or in the future) minus the
+// highscore age.
+func observedAt(scraped time.Time, ageMinutes int, requested time.Time) time.Time {
+	if scraped.IsZero() || scraped.After(requested) {
+		scraped = requested
+	}
+	return scraped.Add(-time.Duration(max(0, ageMinutes)) * time.Minute)
 }
 
 // GetCharacter reads /character/{name}.

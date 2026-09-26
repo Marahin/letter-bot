@@ -302,16 +302,16 @@ templ leaderboard(id, title, hint string, rows []tableRow, key stats.SortKey, mo
 	</section>
 }
 
-// breakdown is a detail page's table, capped at maxBreakdownRows.
-templ breakdown(title string, rows []tableRow, name string) {
+// breakdown is a detail page's table; the core caps its rows.
+templ breakdown(title string, b breakdownView, name string) {
 	<section class="mt-8">
 		<h2 class="font-display text-lg font-semibold text-zone-50">{ title }</h2>
-		if len(rows) == 0 {
+		if len(b.Rows) == 0 {
 			<p class="mt-2 text-sm text-zone-400">{ i18n.T(ctx, "stats.empty.range") }</p>
 		} else {
-			@statsTable(capRows(rows, maxBreakdownRows), name, nil)
-			if len(rows) > maxBreakdownRows {
-				<p class="mt-2 text-xs text-zone-400">{ i18n.T(ctx, "stats.table.truncated", formatInt(ctx, maxBreakdownRows), formatInt(ctx, int64(len(rows)))) }</p>
+			@statsTable(b.Rows, name, nil)
+			if b.Total > len(b.Rows) {
+				<p class="mt-2 text-xs text-zone-400">{ i18n.T(ctx, "stats.table.truncated", formatInt(ctx, int64(len(b.Rows))), formatInt(ctx, int64(b.Total))) }</p>
 			}
 		}
 	</section>

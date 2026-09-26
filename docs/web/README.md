@@ -118,7 +118,9 @@ one web process runs it at a time (Postgres advisory lock `7419001`). Set
   seen from `observed_at` to `last_seen_at`".
 - **Runs** (`highscore_runs`): one row per complete read. `observed_at` is the
   TibiaData scrape time (`information.timestamp`, or the request time) minus
-  `highscore_age` minutes, the oldest of all pages. A failed page writes no run.
+  `highscore_age` minutes, the oldest of all pages. A failed page writes no run;
+  so does an empty page or a page before the last one with fewer than 50 rows
+  (a partial TibiaData answer would make tracked characters look absent).
 - **Gain per reservation** (`reservation_experience`, one row per character),
   computed once the reservation has ended and a run was observed at or after
   `end_at`:
@@ -126,7 +128,9 @@ one web process runs it at a time (Postgres advisory lock `7419001`). Set
     at most 2 hours before `start_at`. Otherwise the first snapshot within 20
     minutes after `start_at`.
   - end = the latest snapshot at or before that first run after `end_at`, if it
-    was seen at or after `end_at`.
+    was seen at or after `end_at`. When that run did not see the character, the
+    next run stands in if it was observed within two job intervals; until the
+    next run exists, the reservation waits.
   - gain = end - start (negative after a death). A missing start or end gives
     `status = no_data`: the character was outside the top 1000, or was not
     tracked when the job ran.
@@ -167,13 +171,17 @@ and `/servers/{id}/characters/{name}` (the character page).
 - **Characters** come from the author text split on `/` and compared by
   `lower(trim(name))`.
 - **Tables** sort on the server (`?sort=name|reservations|hours|exp|exp_h&dir=asc|desc`);
-  a row without experience data sorts last in both directions. A table shows at
-  most 500 rows; `?format=csv` exports every row (an empty cell means no data).
+  a row without experience data sorts last in both directions. Sorting and the
+  row cap run in SQL: a table shows at most 500 rows (a detail page table 25);
+  `?format=csv` exports every row (an empty cell means no data; a name that
+  starts with `= + - @`, a tab or a carriage return gets a leading `'` so a
+  spreadsheet does not run it as a formula).
 - **Leaderboards** on the overview: the 10 players with the most booked hours,
   the 10 characters with the most experience, and the 10 characters with the
   best experience per hour among those with at least 3 hours of data.
 - **Character page.** The TibiaData profile (`/v4/character/{name}`, cached 5
-  minutes in the web process, including "not found") and the experience history
+  minutes in the web process, including "not found"; a TibiaData failure is
+  cached 30 seconds and a lookup waits at most 5 seconds) and the experience history
   from `highscore_snapshots` of the server's world (the last value of each day).
   When TibiaData fails, the page shows a notice and the statistics. A name that
   TibiaData and the server's reservations do not know answers 404.
@@ -231,7 +239,7 @@ The web reads these environment variables (`.env.sample` has examples):
 | `WEB_EXPERIENCE_JOB_ENABLED` | no | `true` | Set `false` to stop the experience job in this process. |
 | `WEB_EXPERIENCE_JOB_INTERVAL` | no | `15m` | The time between two job runs. Must be more than 0. |
 | `WEB_ASSETS_DIR` | no | | Serve the assets from this directory instead of the embedded copy (development only). |
-| `TZ` | yes in practice | | Must be `Europe/Berlin`, the same as the bot (decision 31). The image sets it. |
+| `TZ` | yes | | Must be `Europe/Berlin`, the same as the bot (decision 31). The image sets it; the web does not start without it. |
 
 The bot reads one new optional variable: `BOT_WEB_BASE_URL` (or `WEB_BASE_URL`).
 It puts this address in its "this server is not premium" reply.

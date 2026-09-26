@@ -13,6 +13,7 @@ import (
 type HttpWorldService struct {
 	BaseURL string
 	Client  *http.Client
+	now     func() time.Time
 }
 
 func NewHttpWorldService(baseURL string) *HttpWorldService {
@@ -45,6 +46,13 @@ func (h *HttpWorldService) GetOnlinePlayerNames(worldName string) ([]string, err
 	})
 
 	return names, nil
+}
+
+func (h *HttpWorldService) clock() time.Time {
+	if h.now == nil {
+		return time.Now()
+	}
+	return h.now()
 }
 
 func (h *HttpWorldService) GetBaseURL() string {

@@ -1,6 +1,6 @@
-// Package players builds the character page: the TibiaData profile, the experience history and
+// Package characters builds the character page: the TibiaData profile, the experience history and
 // the reservation statistics of one character.
-package players
+package characters
 
 import (
 	"context"
@@ -17,8 +17,6 @@ import (
 
 // RecentLimit is the number of reservations the character page lists.
 const RecentLimit = 20
-
-var ErrNotFound = ports.ErrNotFound
 
 type Service struct {
 	characters ports.CharacterAPI
@@ -40,7 +38,7 @@ func (s *Service) Profile(ctx context.Context, guildID, name string, rng stats.R
 	name = strings.TrimSpace(name)
 	key := experience.CharacterKey(name)
 	if key == "" {
-		return nil, ErrNotFound
+		return nil, ports.ErrNotFound
 	}
 	p := &stats.CharacterProfile{Key: key, Name: name, Range: rng}
 	s.loadCharacter(ctx, p)
@@ -60,24 +58,21 @@ func (s *Service) Profile(ctx context.Context, guildID, name string, rng stats.R
 	}
 
 	f := stats.Filter{GuildID: guildID, From: rng.From, To: rng.To, CharacterKey: key}
-	spots, err := s.stats.SpotTotals(ctx, f)
+	daily, err := s.stats.Daily(ctx, f)
 	if err != nil {
 		return nil, err
 	}
-	daily, err := s.stats.Daily(ctx, f)
-	if err != nil {
+	if p.Spots, err = s.stats.SpotTotals(ctx, stats.Query{Filter: f, Sort: stats.Sort{Key: stats.SortHours}, Limit: corestats.BreakdownSize}); err != nil {
 		return nil, err
 	}
 	if p.Recent, err = s.stats.CharacterReservations(ctx, f, RecentLimit); err != nil {
 		return nil, err
 	}
-	corestats.SortRows(spots, stats.Sort{Key: stats.SortHours})
-	p.Spots = spots
-	p.Totals = corestats.Sum(spots)
+	p.Totals = corestats.Sum(daily)
 	p.Daily = corestats.FillDaily(daily, rng.Days)
 
 	if p.Source == stats.ProfileNotFound && p.Totals.Reservations == 0 && len(p.History) == 0 {
-		return nil, ErrNotFound
+		return nil, ports.ErrNotFound
 	}
 	return p, nil
 }

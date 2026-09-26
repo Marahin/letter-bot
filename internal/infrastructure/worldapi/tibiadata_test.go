@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"spot-assistant/internal/core/dto/world"
 	"spot-assistant/internal/ports"
 )
 
@@ -35,23 +36,38 @@ func serveFixture(t *testing.T, wantPath, fixture string, status int) *HttpWorld
 func TestGetHighscoresPage_DecodesTibiaDataFixture(t *testing.T) {
 	// given
 	service := serveFixture(t, "/v4/highscores/Celesta/experience/all/1", "highscores_celesta_experience_1.json", http.StatusOK)
+	service.now = func() time.Time { return time.Date(2026, 9, 26, 2, 0, 0, 0, time.UTC) }
 
 	// when
 	page, err := service.GetHighscoresPage(context.Background(), "Celesta", 1)
 
 	// then
 	require.NoError(t, err)
-	assert.Equal(t, "Celesta", page.Highscores.World)
-	assert.Equal(t, 24, page.Highscores.HighscoreAge)
-	assert.Equal(t, 20, page.Highscores.HighscorePage.TotalPages)
-	assert.Equal(t, 1000, page.Highscores.HighscorePage.TotalRecords)
-	require.Len(t, page.Highscores.HighscoreList, 50)
-	first := page.Highscores.HighscoreList[0]
-	assert.Equal(t, "Elder Reno", first.Name)
-	assert.Equal(t, 2744, first.Level)
-	assert.Equal(t, int64(343769339496), first.Value)
-	assert.Equal(t, "Elder Druid", first.Vocation)
-	assert.Equal(t, time.Date(2026, 9, 26, 1, 4, 15, 0, time.UTC), page.Information.Timestamp)
+	assert.Equal(t, 20, page.TotalPages)
+	require.Len(t, page.Entries, 50)
+	assert.Equal(t, world.HighscoreEntry{Name: "Elder Reno", Level: 2744, Value: 343769339496, Vocation: "Elder Druid"}, page.Entries[0])
+	assert.Equal(t, time.Date(2026, 9, 26, 1, 4, 15, 0, time.UTC).Add(-24*time.Minute), page.ObservedAt, "scrape time - highscore_age")
+}
+
+func TestObservedAt(t *testing.T) {
+	requested := time.Date(2026, 9, 26, 12, 0, 0, 0, time.UTC)
+	tests := []struct {
+		name    string
+		scraped time.Time
+		age     int
+		want    time.Time
+	}{
+		{name: "scrape time minus age", scraped: requested.Add(-time.Minute), age: 5, want: requested.Add(-6 * time.Minute)},
+		{name: "no scrape time uses the request time", age: 20, want: requested.Add(-20 * time.Minute)},
+		{name: "a future scrape time uses the request time", scraped: requested.Add(time.Hour), age: 0, want: requested},
+		{name: "a negative age counts as 0", scraped: requested.Add(-time.Minute), age: -4, want: requested.Add(-time.Minute)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// when / then
+			assert.Equal(t, tt.want, observedAt(tt.scraped, tt.age, requested))
+		})
+	}
 }
 
 func TestGetHighscoresPage_EscapesWorld(t *testing.T) {

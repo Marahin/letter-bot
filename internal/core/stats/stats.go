@@ -2,10 +2,7 @@
 package stats
 
 import (
-	"cmp"
 	"context"
-	"slices"
-	"strings"
 	"time"
 
 	"spot-assistant/internal/core/dto/stats"
@@ -17,13 +14,13 @@ const (
 	MaxDays     = 400
 	// LeaderboardSize is the number of rows in each overview leaderboard.
 	LeaderboardSize = 10
+	// BreakdownSize is the number of rows in each table of a detail page.
+	BreakdownSize = 25
 	// MinExpPerHourHours keeps a single short lucky hunt off the experience-per-hour leaderboard.
 	MinExpPerHourHours = 3.0
 	// DataDaysWindow is how far back the range picker marks days with reservations.
 	DataDaysWindow = 2 * 365
 )
-
-var ErrNotFound = ports.ErrNotFound
 
 type Service struct {
 	repo  ports.StatsRepository
@@ -82,99 +79,11 @@ func FillDaily(rows []stats.Day, days []time.Time) []stats.Day {
 	return out
 }
 
-// ParseSort reads a sort key and a direction ("asc"/"desc"). An unknown key sorts by hours; no
-// direction means ascending for the name and descending for figures.
-func ParseSort(key, dir string) stats.Sort {
-	k := stats.SortKey(key)
-	if !slices.Contains(stats.SortKeys, k) {
-		k = stats.SortHours
-	}
-	asc := k == stats.SortName
-	switch dir {
-	case "asc":
-		asc = true
-	case "desc":
-		asc = false
-	}
-	return stats.Sort{Key: k, Asc: asc}
-}
-
-// metric returns the row figure for key; ok is false when the row has no experience data for it.
-func metric(t stats.Totals, key stats.SortKey) (float64, bool) {
-	switch key {
-	case stats.SortReservations:
-		return float64(t.Reservations), true
-	case stats.SortExp:
-		if v := t.ExpTotal(); v != nil {
-			return float64(*v), true
-		}
-		return 0, false
-	case stats.SortExpPerHour:
-		if v := t.ExpPerHour(); v != nil {
-			return *v, true
-		}
-		return 0, false
-	default:
-		return float64(t.Seconds), true
-	}
-}
-
-// SortRows sorts in place. Rows without the figure come last in both directions; ties go by name.
-func SortRows[T stats.StatsRow](rows []T, s stats.Sort) {
-	byName := func(a, b T) int {
-		return cmp.Compare(strings.ToLower(a.Label()), strings.ToLower(b.Label()))
-	}
-	slices.SortStableFunc(rows, func(a, b T) int {
-		if s.Key == stats.SortName {
-			if s.Asc {
-				return byName(a, b)
-			}
-			return byName(b, a)
-		}
-		va, oka := metric(a.Stats(), s.Key)
-		vb, okb := metric(b.Stats(), s.Key)
-		switch {
-		case oka != okb:
-			if oka {
-				return -1
-			}
-			return 1
-		case va != vb:
-			if s.Asc {
-				return cmp.Compare(va, vb)
-			}
-			return cmp.Compare(vb, va)
-		}
-		return byName(a, b)
-	})
-}
-
-// Top returns the n best rows by key, leaving out rows without the figure. For experience per
-// hour a row also needs minHours of reservations with data.
-func Top[T stats.StatsRow](rows []T, key stats.SortKey, n int, minHours float64) []T {
-	out := make([]T, 0, len(rows))
-	for _, r := range rows {
-		t := r.Stats()
-		if _, ok := metric(t, key); !ok {
-			continue
-		}
-		if key == stats.SortExpPerHour && t.ExpHours() < minHours {
-			continue
-		}
-		out = append(out, r)
-	}
-	SortRows(out, stats.Sort{Key: key})
-	if len(out) > n {
-		out = out[:n]
-	}
-	return out
-}
-
-// Sum adds the totals of every row.
-func Sum[T stats.StatsRow](rows []T) stats.Totals {
+// Sum adds the totals of every day.
+func Sum(days []stats.Day) stats.Totals {
 	var t stats.Totals
-	for _, r := range rows {
-		t = t.Add(r.Stats())
+	for _, d := range days {
+		t = t.Add(d.Totals)
 	}
 	return t
 }
@@ -183,65 +92,54 @@ func filter(guildID string, rng stats.Range) stats.Filter {
 	return stats.Filter{GuildID: guildID, From: rng.From, To: rng.To}
 }
 
+func byHours(f stats.Filter, limit int) stats.Query {
+	return stats.Query{Filter: f, Sort: stats.Sort{Key: stats.SortHours}, Limit: limit}
+}
+
 func (s *Service) Overview(ctx context.Context, guildID string, rng stats.Range) (*stats.Overview, error) {
 	f := filter(guildID, rng)
-	spots, err := s.repo.SpotTotals(ctx, f)
-	if err != nil {
-		return nil, err
-	}
-	players, err := s.repo.PlayerTotals(ctx, f)
-	if err != nil {
-		return nil, err
-	}
-	characters, err := s.repo.CharacterTotals(ctx, f)
-	if err != nil {
-		return nil, err
-	}
 	daily, err := s.repo.Daily(ctx, f)
+	if err != nil {
+		return nil, err
+	}
+	spots, err := s.repo.SpotTotals(ctx, byHours(f, LeaderboardSize))
+	if err != nil {
+		return nil, err
+	}
+	players, err := s.repo.PlayerTotals(ctx, byHours(f, LeaderboardSize))
+	if err != nil {
+		return nil, err
+	}
+	characters, err := s.repo.CharacterLeaderboards(ctx, f, LeaderboardSize, int64(MinExpPerHourHours*3600))
 	if err != nil {
 		return nil, err
 	}
 	return &stats.Overview{
 		Range:      rng,
-		Totals:     Sum(spots),
-		Spots:      len(spots),
-		Players:    len(players),
-		Characters: len(characters),
+		Totals:     Sum(daily),
+		Spots:      spots.Total,
+		Players:    players.Total,
+		Characters: characters.Characters,
 		Daily:      FillDaily(daily, rng.Days),
-		TopSpots:   Top(spots, stats.SortHours, LeaderboardSize, 0),
+		TopSpots:   spots.Rows,
 		Leaderboards: stats.Leaderboards{
-			PlayersByHours:         Top(players, stats.SortHours, LeaderboardSize, 0),
-			CharactersByExp:        Top(characters, stats.SortExp, LeaderboardSize, 0),
-			CharactersByExpPerHour: Top(characters, stats.SortExpPerHour, LeaderboardSize, MinExpPerHourHours),
+			PlayersByHours:         players.Rows,
+			CharactersByExp:        characters.ByExp,
+			CharactersByExpPerHour: characters.ByExpPerHour,
 		},
 	}, nil
 }
 
-func (s *Service) Spots(ctx context.Context, guildID string, rng stats.Range, sort stats.Sort) ([]stats.SpotRow, error) {
-	rows, err := s.repo.SpotTotals(ctx, filter(guildID, rng))
-	if err != nil {
-		return nil, err
-	}
-	SortRows(rows, sort)
-	return rows, nil
+func (s *Service) Spots(ctx context.Context, guildID string, rng stats.Range, sort stats.Sort, limit int) (stats.Page[stats.SpotRow], error) {
+	return s.repo.SpotTotals(ctx, stats.Query{Filter: filter(guildID, rng), Sort: sort, Limit: limit})
 }
 
-func (s *Service) Players(ctx context.Context, guildID string, rng stats.Range, sort stats.Sort) ([]stats.PlayerRow, error) {
-	rows, err := s.repo.PlayerTotals(ctx, filter(guildID, rng))
-	if err != nil {
-		return nil, err
-	}
-	SortRows(rows, sort)
-	return rows, nil
+func (s *Service) Players(ctx context.Context, guildID string, rng stats.Range, sort stats.Sort, limit int) (stats.Page[stats.PlayerRow], error) {
+	return s.repo.PlayerTotals(ctx, stats.Query{Filter: filter(guildID, rng), Sort: sort, Limit: limit})
 }
 
-func (s *Service) Characters(ctx context.Context, guildID string, rng stats.Range, sort stats.Sort) ([]stats.CharacterRow, error) {
-	rows, err := s.repo.CharacterTotals(ctx, filter(guildID, rng))
-	if err != nil {
-		return nil, err
-	}
-	SortRows(rows, sort)
-	return rows, nil
+func (s *Service) Characters(ctx context.Context, guildID string, rng stats.Range, sort stats.Sort, limit int) (stats.Page[stats.CharacterRow], error) {
+	return s.repo.CharacterTotals(ctx, stats.Query{Filter: filter(guildID, rng), Sort: sort, Limit: limit})
 }
 
 func (s *Service) Spot(ctx context.Context, guildID string, spotID int64, rng stats.Range) (*stats.SpotDetail, error) {
@@ -251,28 +149,22 @@ func (s *Service) Spot(ctx context.Context, guildID string, spotID int64, rng st
 	}
 	f := filter(guildID, rng)
 	f.SpotID = spotID
-	spots, err := s.repo.SpotTotals(ctx, f)
-	if err != nil {
-		return nil, err
-	}
 	daily, err := s.repo.Daily(ctx, f)
 	if err != nil {
 		return nil, err
 	}
-	players, err := s.repo.PlayerTotals(ctx, f)
+	players, err := s.repo.PlayerTotals(ctx, byHours(f, BreakdownSize))
 	if err != nil {
 		return nil, err
 	}
-	characters, err := s.repo.CharacterTotals(ctx, f)
+	characters, err := s.repo.CharacterTotals(ctx, byHours(f, BreakdownSize))
 	if err != nil {
 		return nil, err
 	}
-	SortRows(players, stats.Sort{Key: stats.SortHours})
-	SortRows(characters, stats.Sort{Key: stats.SortHours})
 	return &stats.SpotDetail{
 		Spot:       sp,
 		Range:      rng,
-		Totals:     Sum(spots),
+		Totals:     Sum(daily),
 		Daily:      FillDaily(daily, rng.Days),
 		Players:    players,
 		Characters: characters,
@@ -281,7 +173,7 @@ func (s *Service) Spot(ctx context.Context, guildID string, spotID int64, rng st
 
 func (s *Service) Player(ctx context.Context, guildID, userID string, rng stats.Range) (*stats.PlayerDetail, error) {
 	if userID == "" {
-		return nil, ErrNotFound
+		return nil, ports.ErrNotFound
 	}
 	name, err := s.repo.LatestPlayerName(ctx, guildID, userID)
 	if err != nil {
@@ -289,25 +181,23 @@ func (s *Service) Player(ctx context.Context, guildID, userID string, rng stats.
 	}
 	f := filter(guildID, rng)
 	f.UserID = userID
-	spots, err := s.repo.SpotTotals(ctx, f)
-	if err != nil {
-		return nil, err
-	}
 	daily, err := s.repo.Daily(ctx, f)
 	if err != nil {
 		return nil, err
 	}
-	characters, err := s.repo.CharacterTotals(ctx, f)
+	spots, err := s.repo.SpotTotals(ctx, byHours(f, BreakdownSize))
 	if err != nil {
 		return nil, err
 	}
-	SortRows(spots, stats.Sort{Key: stats.SortHours})
-	SortRows(characters, stats.Sort{Key: stats.SortHours})
+	characters, err := s.repo.CharacterTotals(ctx, byHours(f, BreakdownSize))
+	if err != nil {
+		return nil, err
+	}
 	return &stats.PlayerDetail{
 		UserID:     userID,
 		Name:       name,
 		Range:      rng,
-		Totals:     Sum(spots),
+		Totals:     Sum(daily),
 		Daily:      FillDaily(daily, rng.Days),
 		Spots:      spots,
 		Characters: characters,

@@ -2,6 +2,7 @@ package worldapi
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -48,11 +49,11 @@ func TestCachedCharacters_ServesAHitUntilTheTTLEnds(t *testing.T) {
 	assert.Equal(t, 2, third.Level)
 }
 
-func TestCachedCharacters_CachesNotFoundButNotUpstreamErrors(t *testing.T) {
+func TestCachedCharacters_CachesNotFoundAndUpstreamFailuresBriefly(t *testing.T) {
 	// given
-	c, inner, _ := newCached(t)
+	c, inner, clock := newCached(t)
 	inner.EXPECT().GetCharacter(mock.Anything, "Ghost").Return(nil, ports.ErrCharacterNotFound).Once()
-	inner.EXPECT().GetCharacter(mock.Anything, "Flaky").Return(nil, ports.ErrUpstreamUnavailable).Twice()
+	inner.EXPECT().GetCharacter(mock.Anything, "Flaky").Return(nil, ports.ErrUpstreamUnavailable).Once()
 
 	// when
 	_, errA := c.GetCharacter(context.Background(), "Ghost")
@@ -65,4 +66,53 @@ func TestCachedCharacters_CachesNotFoundButNotUpstreamErrors(t *testing.T) {
 	assert.ErrorIs(t, errB, ports.ErrCharacterNotFound)
 	assert.ErrorIs(t, errC, ports.ErrUpstreamUnavailable)
 	assert.ErrorIs(t, errD, ports.ErrUpstreamUnavailable)
+
+	// given
+	*clock = clock.Add(UpstreamFailureTTL)
+	inner.EXPECT().GetCharacter(mock.Anything, "Flaky").Return(&character.Character{Name: "Flaky"}, nil).Once()
+
+	// when
+	ch, err := c.GetCharacter(context.Background(), "Flaky")
+
+	// then
+	require.NoError(t, err)
+	assert.Equal(t, "Flaky", ch.Name)
+}
+
+func TestCachedCharacters_DoesNotCacheOtherErrorsOrACancelledRequest(t *testing.T) {
+	// given
+	c, inner, _ := newCached(t)
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+	inner.EXPECT().GetCharacter(mock.Anything, "Broken").Return(nil, errors.New("decode")).Twice()
+	inner.EXPECT().GetCharacter(mock.Anything, "Gone").Return(nil, ports.ErrUpstreamUnavailable).Twice()
+
+	// when
+	_, err1 := c.GetCharacter(context.Background(), "Broken")
+	_, err2 := c.GetCharacter(context.Background(), "Broken")
+	_, err3 := c.GetCharacter(cancelled, "Gone")
+	_, err4 := c.GetCharacter(context.Background(), "Gone")
+
+	// then
+	assert.Error(t, err1)
+	assert.Error(t, err2)
+	assert.ErrorIs(t, err3, ports.ErrUpstreamUnavailable)
+	assert.ErrorIs(t, err4, ports.ErrUpstreamUnavailable)
+}
+
+func TestCachedCharacters_BoundsTheLookup(t *testing.T) {
+	// given
+	c, inner, _ := newCached(t)
+	inner.EXPECT().GetCharacter(mock.Anything, "Slow").RunAndReturn(func(ctx context.Context, _ string) (*character.Character, error) {
+		deadline, ok := ctx.Deadline()
+		assert.True(t, ok)
+		assert.WithinDuration(t, time.Now().Add(CharacterLookupTimeout), deadline, time.Second)
+		return &character.Character{}, nil
+	})
+
+	// when
+	_, err := c.GetCharacter(context.Background(), "Slow")
+
+	// then
+	assert.NoError(t, err)
 }

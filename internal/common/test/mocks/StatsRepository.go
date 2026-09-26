@@ -48,6 +48,84 @@ func (_m *MockStatsRepository) EXPECT() *MockStatsRepository_Expecter {
 	return &MockStatsRepository_Expecter{mock: &_m.Mock}
 }
 
+// CharacterLeaderboards provides a mock function for the type MockStatsRepository
+func (_mock *MockStatsRepository) CharacterLeaderboards(ctx context.Context, f stats.Filter, n int, minExpSeconds int64) (stats.CharacterBoards, error) {
+	ret := _mock.Called(ctx, f, n, minExpSeconds)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CharacterLeaderboards")
+	}
+
+	var r0 stats.CharacterBoards
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, stats.Filter, int, int64) (stats.CharacterBoards, error)); ok {
+		return returnFunc(ctx, f, n, minExpSeconds)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, stats.Filter, int, int64) stats.CharacterBoards); ok {
+		r0 = returnFunc(ctx, f, n, minExpSeconds)
+	} else {
+		r0 = ret.Get(0).(stats.CharacterBoards)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, stats.Filter, int, int64) error); ok {
+		r1 = returnFunc(ctx, f, n, minExpSeconds)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStatsRepository_CharacterLeaderboards_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CharacterLeaderboards'
+type MockStatsRepository_CharacterLeaderboards_Call struct {
+	*mock.Call
+}
+
+// CharacterLeaderboards is a helper method to define mock.On call
+//   - ctx context.Context
+//   - f stats.Filter
+//   - n int
+//   - minExpSeconds int64
+func (_e *MockStatsRepository_Expecter) CharacterLeaderboards(ctx any, f any, n any, minExpSeconds any) *MockStatsRepository_CharacterLeaderboards_Call {
+	return &MockStatsRepository_CharacterLeaderboards_Call{Call: _e.mock.On("CharacterLeaderboards", ctx, f, n, minExpSeconds)}
+}
+
+func (_c *MockStatsRepository_CharacterLeaderboards_Call) Run(run func(ctx context.Context, f stats.Filter, n int, minExpSeconds int64)) *MockStatsRepository_CharacterLeaderboards_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 stats.Filter
+		if args[1] != nil {
+			arg1 = args[1].(stats.Filter)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		var arg3 int64
+		if args[3] != nil {
+			arg3 = args[3].(int64)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStatsRepository_CharacterLeaderboards_Call) Return(characterBoards stats.CharacterBoards, err error) *MockStatsRepository_CharacterLeaderboards_Call {
+	_c.Call.Return(characterBoards, err)
+	return _c
+}
+
+func (_c *MockStatsRepository_CharacterLeaderboards_Call) RunAndReturn(run func(ctx context.Context, f stats.Filter, n int, minExpSeconds int64) (stats.CharacterBoards, error)) *MockStatsRepository_CharacterLeaderboards_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CharacterReservations provides a mock function for the type MockStatsRepository
 func (_mock *MockStatsRepository) CharacterReservations(ctx context.Context, f stats.Filter, limit int) ([]stats.CharacterReservation, error) {
 	ret := _mock.Called(ctx, f, limit)
@@ -123,27 +201,25 @@ func (_c *MockStatsRepository_CharacterReservations_Call) RunAndReturn(run func(
 }
 
 // CharacterTotals provides a mock function for the type MockStatsRepository
-func (_mock *MockStatsRepository) CharacterTotals(ctx context.Context, f stats.Filter) ([]stats.CharacterRow, error) {
-	ret := _mock.Called(ctx, f)
+func (_mock *MockStatsRepository) CharacterTotals(ctx context.Context, q stats.Query) (stats.Page[stats.CharacterRow], error) {
+	ret := _mock.Called(ctx, q)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CharacterTotals")
 	}
 
-	var r0 []stats.CharacterRow
+	var r0 stats.Page[stats.CharacterRow]
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, stats.Filter) ([]stats.CharacterRow, error)); ok {
-		return returnFunc(ctx, f)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, stats.Query) (stats.Page[stats.CharacterRow], error)); ok {
+		return returnFunc(ctx, q)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, stats.Filter) []stats.CharacterRow); ok {
-		r0 = returnFunc(ctx, f)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, stats.Query) stats.Page[stats.CharacterRow]); ok {
+		r0 = returnFunc(ctx, q)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]stats.CharacterRow)
-		}
+		r0 = ret.Get(0).(stats.Page[stats.CharacterRow])
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, stats.Filter) error); ok {
-		r1 = returnFunc(ctx, f)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, stats.Query) error); ok {
+		r1 = returnFunc(ctx, q)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -157,20 +233,20 @@ type MockStatsRepository_CharacterTotals_Call struct {
 
 // CharacterTotals is a helper method to define mock.On call
 //   - ctx context.Context
-//   - f stats.Filter
-func (_e *MockStatsRepository_Expecter) CharacterTotals(ctx any, f any) *MockStatsRepository_CharacterTotals_Call {
-	return &MockStatsRepository_CharacterTotals_Call{Call: _e.mock.On("CharacterTotals", ctx, f)}
+//   - q stats.Query
+func (_e *MockStatsRepository_Expecter) CharacterTotals(ctx any, q any) *MockStatsRepository_CharacterTotals_Call {
+	return &MockStatsRepository_CharacterTotals_Call{Call: _e.mock.On("CharacterTotals", ctx, q)}
 }
 
-func (_c *MockStatsRepository_CharacterTotals_Call) Run(run func(ctx context.Context, f stats.Filter)) *MockStatsRepository_CharacterTotals_Call {
+func (_c *MockStatsRepository_CharacterTotals_Call) Run(run func(ctx context.Context, q stats.Query)) *MockStatsRepository_CharacterTotals_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 stats.Filter
+		var arg1 stats.Query
 		if args[1] != nil {
-			arg1 = args[1].(stats.Filter)
+			arg1 = args[1].(stats.Query)
 		}
 		run(
 			arg0,
@@ -180,12 +256,12 @@ func (_c *MockStatsRepository_CharacterTotals_Call) Run(run func(ctx context.Con
 	return _c
 }
 
-func (_c *MockStatsRepository_CharacterTotals_Call) Return(characterRows []stats.CharacterRow, err error) *MockStatsRepository_CharacterTotals_Call {
-	_c.Call.Return(characterRows, err)
+func (_c *MockStatsRepository_CharacterTotals_Call) Return(page stats.Page[stats.CharacterRow], err error) *MockStatsRepository_CharacterTotals_Call {
+	_c.Call.Return(page, err)
 	return _c
 }
 
-func (_c *MockStatsRepository_CharacterTotals_Call) RunAndReturn(run func(ctx context.Context, f stats.Filter) ([]stats.CharacterRow, error)) *MockStatsRepository_CharacterTotals_Call {
+func (_c *MockStatsRepository_CharacterTotals_Call) RunAndReturn(run func(ctx context.Context, q stats.Query) (stats.Page[stats.CharacterRow], error)) *MockStatsRepository_CharacterTotals_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -331,27 +407,25 @@ func (_c *MockStatsRepository_LatestPlayerName_Call) RunAndReturn(run func(ctx c
 }
 
 // PlayerTotals provides a mock function for the type MockStatsRepository
-func (_mock *MockStatsRepository) PlayerTotals(ctx context.Context, f stats.Filter) ([]stats.PlayerRow, error) {
-	ret := _mock.Called(ctx, f)
+func (_mock *MockStatsRepository) PlayerTotals(ctx context.Context, q stats.Query) (stats.Page[stats.PlayerRow], error) {
+	ret := _mock.Called(ctx, q)
 
 	if len(ret) == 0 {
 		panic("no return value specified for PlayerTotals")
 	}
 
-	var r0 []stats.PlayerRow
+	var r0 stats.Page[stats.PlayerRow]
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, stats.Filter) ([]stats.PlayerRow, error)); ok {
-		return returnFunc(ctx, f)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, stats.Query) (stats.Page[stats.PlayerRow], error)); ok {
+		return returnFunc(ctx, q)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, stats.Filter) []stats.PlayerRow); ok {
-		r0 = returnFunc(ctx, f)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, stats.Query) stats.Page[stats.PlayerRow]); ok {
+		r0 = returnFunc(ctx, q)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]stats.PlayerRow)
-		}
+		r0 = ret.Get(0).(stats.Page[stats.PlayerRow])
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, stats.Filter) error); ok {
-		r1 = returnFunc(ctx, f)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, stats.Query) error); ok {
+		r1 = returnFunc(ctx, q)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -365,20 +439,20 @@ type MockStatsRepository_PlayerTotals_Call struct {
 
 // PlayerTotals is a helper method to define mock.On call
 //   - ctx context.Context
-//   - f stats.Filter
-func (_e *MockStatsRepository_Expecter) PlayerTotals(ctx any, f any) *MockStatsRepository_PlayerTotals_Call {
-	return &MockStatsRepository_PlayerTotals_Call{Call: _e.mock.On("PlayerTotals", ctx, f)}
+//   - q stats.Query
+func (_e *MockStatsRepository_Expecter) PlayerTotals(ctx any, q any) *MockStatsRepository_PlayerTotals_Call {
+	return &MockStatsRepository_PlayerTotals_Call{Call: _e.mock.On("PlayerTotals", ctx, q)}
 }
 
-func (_c *MockStatsRepository_PlayerTotals_Call) Run(run func(ctx context.Context, f stats.Filter)) *MockStatsRepository_PlayerTotals_Call {
+func (_c *MockStatsRepository_PlayerTotals_Call) Run(run func(ctx context.Context, q stats.Query)) *MockStatsRepository_PlayerTotals_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 stats.Filter
+		var arg1 stats.Query
 		if args[1] != nil {
-			arg1 = args[1].(stats.Filter)
+			arg1 = args[1].(stats.Query)
 		}
 		run(
 			arg0,
@@ -388,12 +462,12 @@ func (_c *MockStatsRepository_PlayerTotals_Call) Run(run func(ctx context.Contex
 	return _c
 }
 
-func (_c *MockStatsRepository_PlayerTotals_Call) Return(playerRows []stats.PlayerRow, err error) *MockStatsRepository_PlayerTotals_Call {
-	_c.Call.Return(playerRows, err)
+func (_c *MockStatsRepository_PlayerTotals_Call) Return(page stats.Page[stats.PlayerRow], err error) *MockStatsRepository_PlayerTotals_Call {
+	_c.Call.Return(page, err)
 	return _c
 }
 
-func (_c *MockStatsRepository_PlayerTotals_Call) RunAndReturn(run func(ctx context.Context, f stats.Filter) ([]stats.PlayerRow, error)) *MockStatsRepository_PlayerTotals_Call {
+func (_c *MockStatsRepository_PlayerTotals_Call) RunAndReturn(run func(ctx context.Context, q stats.Query) (stats.Page[stats.PlayerRow], error)) *MockStatsRepository_PlayerTotals_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -479,27 +553,25 @@ func (_c *MockStatsRepository_ReservationDays_Call) RunAndReturn(run func(ctx co
 }
 
 // SpotTotals provides a mock function for the type MockStatsRepository
-func (_mock *MockStatsRepository) SpotTotals(ctx context.Context, f stats.Filter) ([]stats.SpotRow, error) {
-	ret := _mock.Called(ctx, f)
+func (_mock *MockStatsRepository) SpotTotals(ctx context.Context, q stats.Query) (stats.Page[stats.SpotRow], error) {
+	ret := _mock.Called(ctx, q)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SpotTotals")
 	}
 
-	var r0 []stats.SpotRow
+	var r0 stats.Page[stats.SpotRow]
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, stats.Filter) ([]stats.SpotRow, error)); ok {
-		return returnFunc(ctx, f)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, stats.Query) (stats.Page[stats.SpotRow], error)); ok {
+		return returnFunc(ctx, q)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, stats.Filter) []stats.SpotRow); ok {
-		r0 = returnFunc(ctx, f)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, stats.Query) stats.Page[stats.SpotRow]); ok {
+		r0 = returnFunc(ctx, q)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]stats.SpotRow)
-		}
+		r0 = ret.Get(0).(stats.Page[stats.SpotRow])
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, stats.Filter) error); ok {
-		r1 = returnFunc(ctx, f)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, stats.Query) error); ok {
+		r1 = returnFunc(ctx, q)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -513,20 +585,20 @@ type MockStatsRepository_SpotTotals_Call struct {
 
 // SpotTotals is a helper method to define mock.On call
 //   - ctx context.Context
-//   - f stats.Filter
-func (_e *MockStatsRepository_Expecter) SpotTotals(ctx any, f any) *MockStatsRepository_SpotTotals_Call {
-	return &MockStatsRepository_SpotTotals_Call{Call: _e.mock.On("SpotTotals", ctx, f)}
+//   - q stats.Query
+func (_e *MockStatsRepository_Expecter) SpotTotals(ctx any, q any) *MockStatsRepository_SpotTotals_Call {
+	return &MockStatsRepository_SpotTotals_Call{Call: _e.mock.On("SpotTotals", ctx, q)}
 }
 
-func (_c *MockStatsRepository_SpotTotals_Call) Run(run func(ctx context.Context, f stats.Filter)) *MockStatsRepository_SpotTotals_Call {
+func (_c *MockStatsRepository_SpotTotals_Call) Run(run func(ctx context.Context, q stats.Query)) *MockStatsRepository_SpotTotals_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 stats.Filter
+		var arg1 stats.Query
 		if args[1] != nil {
-			arg1 = args[1].(stats.Filter)
+			arg1 = args[1].(stats.Query)
 		}
 		run(
 			arg0,
@@ -536,12 +608,12 @@ func (_c *MockStatsRepository_SpotTotals_Call) Run(run func(ctx context.Context,
 	return _c
 }
 
-func (_c *MockStatsRepository_SpotTotals_Call) Return(spotRows []stats.SpotRow, err error) *MockStatsRepository_SpotTotals_Call {
-	_c.Call.Return(spotRows, err)
+func (_c *MockStatsRepository_SpotTotals_Call) Return(page stats.Page[stats.SpotRow], err error) *MockStatsRepository_SpotTotals_Call {
+	_c.Call.Return(page, err)
 	return _c
 }
 
-func (_c *MockStatsRepository_SpotTotals_Call) RunAndReturn(run func(ctx context.Context, f stats.Filter) ([]stats.SpotRow, error)) *MockStatsRepository_SpotTotals_Call {
+func (_c *MockStatsRepository_SpotTotals_Call) RunAndReturn(run func(ctx context.Context, q stats.Query) (stats.Page[stats.SpotRow], error)) *MockStatsRepository_SpotTotals_Call {
 	_c.Call.Return(run)
 	return _c
 }

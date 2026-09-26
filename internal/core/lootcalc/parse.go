@@ -58,8 +58,8 @@ func (e *ParseError) Error() string {
 
 func (e *ParseError) Unwrap() error { return e.Err }
 
-// Player is one member of the party as the analyser reports them.
-type Player struct {
+// PartyMember is one member of the party as the analyser reports them.
+type PartyMember struct {
 	Name     string
 	Leader   bool
 	Loot     int64
@@ -75,7 +75,7 @@ type Session struct {
 	From     string
 	To       string
 	Duration string
-	Players  []Player
+	Players  []PartyMember
 }
 
 var headerRe = regexp.MustCompile(`From (\S+, \S+) to (\S+, \S+)`)
@@ -110,7 +110,7 @@ type parser struct {
 	session Session
 	// name is the last unindented line: the player name if indented lines follow.
 	name    string
-	current *Player
+	current *PartyMember
 	seen    map[string]bool
 }
 
@@ -147,7 +147,7 @@ func (p *parser) header(line string) {
 
 func (p *parser) start() {
 	name, leader := strings.CutSuffix(p.name, leaderSuffix)
-	p.current = &Player{Name: strings.TrimSpace(name), Leader: leader}
+	p.current = &PartyMember{Name: strings.TrimSpace(name), Leader: leader}
 	p.seen = map[string]bool{}
 }
 
