@@ -40,6 +40,7 @@ type Deps struct {
 	Auth     ports.AuthService
 	Access   ports.GuildAccessService
 	Premium  ports.PremiumService
+	Settings ports.GuildSettingsService
 	// Routes is nil in a Deps built without a server.
 	Routes *Router
 }

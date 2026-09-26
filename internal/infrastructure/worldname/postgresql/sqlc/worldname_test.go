@@ -2,10 +2,12 @@ package sqlc
 
 import (
 	"context"
-	"errors"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"spot-assistant/internal/core/dto/guildsworld"
+	"spot-assistant/internal/ports"
 
 	"github.com/pashagolub/pgxmock/v3"
 	"github.com/stretchr/testify/assert"
@@ -69,10 +71,10 @@ func TestSelectGuildWorld_NotFound(t *testing.T) {
 	guildID := "guild123"
 	mock.ExpectQuery("SELECT id, guild_id, world_name FROM guilds_world").
 		WithArgs(guildID).
-		WillReturnError(errors.New("no rows in result set"))
+		WillReturnError(pgx.ErrNoRows)
 
 	got, err := repo.SelectGuildWorld(context.Background(), guildID)
-	assert.Error(t, err)
+	assert.ErrorIs(t, err, ports.ErrNotFound)
 	assert.Nil(t, got)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }

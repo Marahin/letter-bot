@@ -34,3 +34,22 @@ out and sends them to the login page.
   404 to everyone else.
 - On a server without premium, the feature pages show "Premium required".
   Settings and Channels work without premium, so an admin can prepare the server.
+
+## Settings and Channels
+
+Only the server owner and administrators open these pages.
+
+- **Settings** (`/servers/{id}/settings`):
+  - Re-invite the bot, to apply missing permissions.
+  - **Refresh server data** sets the durable resync flag and sends
+    `letter_guild_resync`. The bot then copies the channels and roles again. One
+    request per server every 5 minutes (kept in the memory of the web process).
+  - **Tibia world**: the same value as `/world-set`. Saving sends `letter_guild_config`.
+  - Four rank lists: manage, view, reserve, overbook. With no reserve rank, everyone
+    can reserve. With no overbook rank, the `Postman` role can overbook. The lists
+    apply on the next request or command, so no signal is sent.
+- **Channels** (`/servers/{id}/channels`): the command channel (empty = `/book`
+  and `/unbook` work in every channel) and the summary channel (empty =
+  `#letter-summary`). Saving sends `letter_guild_config` and `letter_summary_refresh`.
+- The pickers list only the channels and roles that the bot copied. A value that
+  is not in that list is refused.

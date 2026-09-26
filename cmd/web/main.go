@@ -16,13 +16,17 @@ import (
 	"spot-assistant/internal/core/premium"
 
 	adminhttp "spot-assistant/internal/infrastructure/admin-http"
+	channelshttp "spot-assistant/internal/infrastructure/channels-http"
 	"spot-assistant/internal/infrastructure/db/postgresql"
 	"spot-assistant/internal/infrastructure/discord/oauth"
 	guildRepository "spot-assistant/internal/infrastructure/guild/postgresql/sqlc"
+	"spot-assistant/internal/infrastructure/guildsettings"
 	infrahttp "spot-assistant/internal/infrastructure/http"
 	notifypg "spot-assistant/internal/infrastructure/notify/postgresql"
+	settingshttp "spot-assistant/internal/infrastructure/settings-http"
 	"spot-assistant/internal/infrastructure/web"
 	webUserRepository "spot-assistant/internal/infrastructure/webuser/postgresql/sqlc"
+	worldNameRepository "spot-assistant/internal/infrastructure/worldname/postgresql/sqlc"
 )
 
 func main() {
@@ -64,17 +68,22 @@ func main() {
 
 	guildConfigRepo := guildRepository.NewGuildConfigRepository(db)
 	guildRoleRepo := guildRepository.NewGuildRoleRepository(db)
+	guildChannelRepo := guildRepository.NewGuildChannelRepository(db)
+	worldNameRepo := worldNameRepository.NewWorldNameRepository(db)
 	webUserRepo := webUserRepository.NewWebUserRepository(db)
 	botNotifier := notifypg.NewNotifier(db)
 
 	discordOAuth := oauth.NewCaching(oauth.New(cfg.Discord.ClientID, cfg.Discord.ClientSecret, cfg.CallbackURL(), webUserRepo), log)
 
 	server := web.NewServer(cfg, log, db).WithServices(web.Services{
-		Auth:    auth.New(discordOAuth, webUserRepo),
-		Access:  guildaccess.New(discordOAuth, guildConfigRepo, guildRoleRepo, cfg.AdminDiscordIDs, log),
-		Premium: premium.New(guildConfigRepo, botNotifier, log),
+		Auth:     auth.New(discordOAuth, webUserRepo),
+		Access:   guildaccess.New(discordOAuth, guildConfigRepo, guildRoleRepo, cfg.AdminDiscordIDs, log),
+		Premium:  premium.New(guildConfigRepo, botNotifier, log),
+		Settings: guildsettings.New(guildConfigRepo, guildChannelRepo, guildRoleRepo, worldNameRepo, botNotifier, log),
 	})
 	server.Mount(adminhttp.Register)
+	server.Mount(settingshttp.Register)
+	server.Mount(channelshttp.Register)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

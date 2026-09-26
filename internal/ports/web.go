@@ -2,9 +2,12 @@ package ports
 
 import (
 	"context"
+	"time"
 
 	"spot-assistant/internal/core/dto/access"
+	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/guildconfig"
+	"spot-assistant/internal/core/dto/role"
 	"spot-assistant/internal/core/dto/webuser"
 )
 
@@ -52,4 +55,21 @@ type BotNotifier interface {
 	ResyncRequested(ctx context.Context, guildID string) error
 	ConfigChanged(ctx context.Context, guildID string) error
 	Overbooked(ctx context.Context, payload []byte) error
+}
+
+// GuildSettingsService backs the admin Settings and Channels pages. It lists the
+// synced Discord options, validates each choice against them, stores it and signals the bot.
+type GuildSettingsService interface {
+	// Channels returns the synced text and announcement channels.
+	Channels(ctx context.Context, guildID string) ([]*discord.Channel, error)
+	Roles(ctx context.Context, guildID string) ([]*role.Role, error)
+	// World returns "" when the guild has no world yet.
+	World(ctx context.Context, guildID string) (string, error)
+	// SetChannels stores the command and summary channels. An empty id selects the legacy default channel.
+	SetChannels(ctx context.Context, guildID, commandChannelID, summaryChannelID string) error
+	SetRoleIDs(ctx context.Context, guildID string, kind guildconfig.RoleKind, roleIDs []string) error
+	SetWorld(ctx context.Context, guildID, world string) error
+	// RequestResync asks the bot to sync channels and roles again. During the
+	// cooldown it does nothing and returns the time left.
+	RequestResync(ctx context.Context, guildID string) (retryAfter time.Duration, err error)
 }

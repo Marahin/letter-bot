@@ -1,0 +1,88 @@
+package channelshttp
+
+import (
+	"spot-assistant/internal/core/dto/discord"
+	"spot-assistant/internal/core/dto/guildconfig"
+	"spot-assistant/internal/infrastructure/i18n"
+	"spot-assistant/internal/infrastructure/web"
+)
+
+// Channels is the admin-only channel configuration page: one card, one form and
+// one Save for the command and summary channels.
+templ Channels(baseURL string, guild guildconfig.Config, channels []*discord.Channel, nav web.Nav) {
+	@web.Layout(i18n.T(ctx, "channels.page.title", guild.Name), i18n.T(ctx, "channels.page.description", guild.Name), baseURL, web.GuildPath(guild.GuildID, "/channels"), nav) {
+		<div class="mx-auto w-full max-w-3xl">
+			<div>
+				<h1 class="font-display text-4xl font-bold -tracking-[0.02em] text-zone-50">{ i18n.T(ctx, "channels.page.heading") }</h1>
+				<p class="mt-2 max-w-2xl text-sm leading-relaxed text-zone-400">{ i18n.T(ctx, "channels.page.lede", guild.Name) }</p>
+			</div>
+			<section class="mt-12">
+				<h2 class="font-display text-xl font-semibold text-zone-100">{ i18n.T(ctx, "channels.bot.heading") }</h2>
+				<p class="mt-1 max-w-2xl text-sm leading-relaxed text-zone-400">
+					{ i18n.T(ctx, "channels.bot.body") }
+					{ i18n.T(ctx, "channels.sync.hint") }
+					<a href={ templ.SafeURL(web.GuildPath(guild.GuildID, "/settings")) } class="text-signal transition hover:text-signal-bright">{ i18n.T(ctx, "channels.sync.settings_link") }</a>
+				</p>
+				if len(channels) == 0 {
+					<p class="mt-4 text-sm text-zone-500">{ i18n.T(ctx, "channels.sync.none") }</p>
+				}
+				<form
+					hx-post={ web.GuildPath(guild.GuildID, "/channels") }
+					hx-target="#channels-status"
+					hx-swap="innerHTML"
+					class="mt-4 rounded-lg border border-zone-800 bg-zone-900 shadow-glass p-4"
+				>
+					<div class="flex flex-col gap-5">
+						<div class="flex flex-col gap-1.5">
+							// A sibling label, not a wrapper: a click on an option inside a <label>
+							// re-opens the panel.
+							<label for="command-channel" class="text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-400">{ i18n.T(ctx, "channels.command.label") }</label>
+							@web.Combobox(web.ComboboxProps{
+								ID:       "command-channel",
+								Name:     "command_channel_id",
+								Label:    i18n.T(ctx, "channels.command.label"),
+								Options:  channelOptions(channels, i18n.T(ctx, "channels.command.default")),
+								Selected: guild.CommandChannelID,
+								Class:    "max-w-sm",
+							})
+							<p class="text-xs leading-relaxed text-zone-500">{ i18n.T(ctx, "channels.command.hint") }</p>
+							if missing(channels, guild.CommandChannelID) {
+								<p class="text-xs leading-relaxed text-amber-400">{ i18n.T(ctx, "channels.command.missing") }</p>
+							}
+						</div>
+						<div class="flex flex-col gap-1.5">
+							<label for="summary-channel" class="text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-400">{ i18n.T(ctx, "channels.summary.label") }</label>
+							@web.Combobox(web.ComboboxProps{
+								ID:       "summary-channel",
+								Name:     "summary_channel_id",
+								Label:    i18n.T(ctx, "channels.summary.label"),
+								Options:  channelOptions(channels, i18n.T(ctx, "channels.summary.default")),
+								Selected: guild.SummaryChannelID,
+								Class:    "max-w-sm",
+							})
+							<p class="text-xs leading-relaxed text-zone-500">{ i18n.T(ctx, "channels.summary.hint") }</p>
+							if missing(channels, guild.SummaryChannelID) {
+								<p class="text-xs leading-relaxed text-amber-400">{ i18n.T(ctx, "channels.summary.missing") }</p>
+							}
+						</div>
+					</div>
+					<div class="mt-5 flex items-center gap-3">
+						<button class="rounded-md bg-signal px-4 py-1.5 text-sm font-semibold text-zone-950 transition hover:bg-signal-bright">{ i18n.T(ctx, "channels.form.save") }</button>
+						<span id="channels-status" aria-live="polite" class="text-sm text-zone-400"></span>
+					</div>
+				</form>
+			</section>
+		</div>
+		<script src={ web.AssetURL("/assets/alpine.js") } defer></script>
+	}
+}
+
+// SavedStatus confirms the saved channels.
+templ SavedStatus() {
+	<span class="text-emerald-400">{ i18n.T(ctx, "channels.form.saved") }</span>
+}
+
+// StaleStatus answers a pick of a channel that is no longer synced.
+templ StaleStatus() {
+	<span class="text-amber-400">{ i18n.T(ctx, "channels.form.stale") }</span>
+}

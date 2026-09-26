@@ -26,9 +26,10 @@ const BaseURL = "http://localhost:8080"
 
 // Mocks are the service mocks inside the Deps NewDeps returns.
 type Mocks struct {
-	Auth    *mocks.MockAuthService
-	Access  *mocks.MockGuildAccessService
-	Premium *mocks.MockPremiumService
+	Auth     *mocks.MockAuthService
+	Access   *mocks.MockGuildAccessService
+	Premium  *mocks.MockPremiumService
+	Settings *mocks.MockGuildSettingsService
 }
 
 // NewDeps returns Deps over an scs memstore and fresh mocks.
@@ -36,9 +37,10 @@ func NewDeps(t *testing.T) (*web.Deps, Mocks) {
 	t.Helper()
 	cfg := web.Config{BaseURL: BaseURL, Discord: web.DiscordConfig{ClientID: "4242"}}
 	m := Mocks{
-		Auth:    mocks.NewMockAuthService(t),
-		Access:  mocks.NewMockGuildAccessService(t),
-		Premium: mocks.NewMockPremiumService(t),
+		Auth:     mocks.NewMockAuthService(t),
+		Access:   mocks.NewMockGuildAccessService(t),
+		Premium:  mocks.NewMockPremiumService(t),
+		Settings: mocks.NewMockGuildSettingsService(t),
 	}
 	d := &web.Deps{
 		Cfg:      cfg,
@@ -47,6 +49,7 @@ func NewDeps(t *testing.T) (*web.Deps, Mocks) {
 		Auth:     m.Auth,
 		Access:   m.Access,
 		Premium:  m.Premium,
+		Settings: m.Settings,
 	}
 	return d, m
 }
