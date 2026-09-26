@@ -110,20 +110,31 @@ func (_c *MockPremiumService_List_Call) RunAndReturn(run func(ctx context.Contex
 }
 
 // SetPremium provides a mock function for the type MockPremiumService
-func (_mock *MockPremiumService) SetPremium(ctx context.Context, guildID string, premium bool) error {
+func (_mock *MockPremiumService) SetPremium(ctx context.Context, guildID string, premium bool) (*guildconfig.Config, error) {
 	ret := _mock.Called(ctx, guildID, premium)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SetPremium")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, bool) error); ok {
+	var r0 *guildconfig.Config
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, bool) (*guildconfig.Config, error)); ok {
+		return returnFunc(ctx, guildID, premium)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, bool) *guildconfig.Config); ok {
 		r0 = returnFunc(ctx, guildID, premium)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*guildconfig.Config)
+		}
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, bool) error); ok {
+		r1 = returnFunc(ctx, guildID, premium)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // MockPremiumService_SetPremium_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetPremium'
@@ -162,12 +173,12 @@ func (_c *MockPremiumService_SetPremium_Call) Run(run func(ctx context.Context, 
 	return _c
 }
 
-func (_c *MockPremiumService_SetPremium_Call) Return(err error) *MockPremiumService_SetPremium_Call {
-	_c.Call.Return(err)
+func (_c *MockPremiumService_SetPremium_Call) Return(config *guildconfig.Config, err error) *MockPremiumService_SetPremium_Call {
+	_c.Call.Return(config, err)
 	return _c
 }
 
-func (_c *MockPremiumService_SetPremium_Call) RunAndReturn(run func(ctx context.Context, guildID string, premium bool) error) *MockPremiumService_SetPremium_Call {
+func (_c *MockPremiumService_SetPremium_Call) RunAndReturn(run func(ctx context.Context, guildID string, premium bool) (*guildconfig.Config, error)) *MockPremiumService_SetPremium_Call {
 	_c.Call.Return(run)
 	return _c
 }

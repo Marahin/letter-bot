@@ -192,13 +192,13 @@ func TestKnownAuthors(t *testing.T) {
 	ctx := context.Background()
 	f := newFixture(t)
 	authors := []*reservation.KnownAuthor{{AuthorDiscordID: "u1", Author: "Quiet Nyx"}}
-	f.repo.EXPECT().SelectKnownAuthors(ctx, guildID, "ny").Return(authors, nil)
-	f.repo.EXPECT().SelectKnownAuthors(ctx, guildID, "zz").Return(nil, errors.New("down"))
+	f.repo.EXPECT().SelectKnownAuthors(ctx, guildID, "nyx").Return(authors, nil)
+	f.repo.EXPECT().SelectKnownAuthors(ctx, guildID, "zzz").Return(nil, errors.New("down"))
 
 	// when
-	short, shortErr := f.s.KnownAuthors(ctx, guildID, " n ")
-	got, err := f.s.KnownAuthors(ctx, guildID, " ny ")
-	_, failErr := f.s.KnownAuthors(ctx, guildID, "zz")
+	short, shortErr := f.s.KnownAuthors(ctx, guildID, " ny ")
+	got, err := f.s.KnownAuthors(ctx, guildID, " nyx ")
+	_, failErr := f.s.KnownAuthors(ctx, guildID, "zzz")
 
 	// then
 	assert.NoError(t, shortErr)

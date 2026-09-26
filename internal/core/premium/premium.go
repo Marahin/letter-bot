@@ -29,31 +29,32 @@ func New(configs ports.GuildConfigRepository, notifier ports.BotNotifier, log *z
 	return &Service{configs: configs, notifier: notifier, log: log}
 }
 
-// List returns every stored guild.
+// List returns every stored guild, bot-present first, then by name.
 func (s *Service) List(ctx context.Context) ([]*guildconfig.Config, error) {
 	return s.configs.ListAll(ctx)
 }
 
-// SetPremium changes the premium flag and tells the bot. It returns
-// ports.ErrNotFound for an unknown guild and ErrPremiumForever when turning off a
-// premium-forever guild.
-func (s *Service) SetPremium(ctx context.Context, guildID string, premium bool) error {
+// SetPremium changes the premium flag, tells the bot and returns the updated
+// guild. It returns ports.ErrNotFound for an unknown guild and ErrPremiumForever
+// when turning off a premium-forever guild.
+func (s *Service) SetPremium(ctx context.Context, guildID string, premium bool) (*guildconfig.Config, error) {
 	cfg, err := s.configs.Get(ctx, guildID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !premium && cfg.PremiumForever {
-		return ErrPremiumForever
+		return nil, ErrPremiumForever
 	}
 	if cfg.Premium == premium {
-		return nil
+		return cfg, nil
 	}
 	if err := s.configs.SetPremium(ctx, guildID, premium); err != nil {
-		return fmt.Errorf("set premium: %w", err)
+		return nil, fmt.Errorf("set premium: %w", err)
 	}
+	cfg.Premium = premium
 	// Best-effort: the bot reads the flag again on its next tick.
 	if err := s.notifier.ConfigChanged(ctx, guildID); err != nil {
 		s.log.Warnw("notify bot of config change", "guild_id", guildID, "error", err)
 	}
-	return nil
+	return cfg, nil
 }

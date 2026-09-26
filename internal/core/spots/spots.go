@@ -41,32 +41,19 @@ func New(spots ports.SpotRepository, notifier ports.BotNotifier, log *zap.Sugare
 
 // List returns the spots of one tab that match the query, and the size of both tabs.
 func (s *Service) List(ctx context.Context, guildID string, filter spot.ListFilter) (*spot.List, error) {
-	all, err := s.spots.SelectGuildSpots(ctx, guildID, true)
+	filter.Query = strings.TrimSpace(filter.Query)
+	spots, err := s.spots.SelectGuildSpotList(ctx, guildID, filter)
 	if err != nil {
 		return nil, fmt.Errorf("select spots: %w", err)
 	}
-	counts, err := s.spots.SelectGuildSpotReservationCounts(ctx, guildID)
+	active, archived, err := s.spots.CountGuildSpots(ctx, guildID)
 	if err != nil {
-		return nil, fmt.Errorf("count spot reservations: %w", err)
+		return nil, fmt.Errorf("count spots: %w", err)
 	}
-
-	query := strings.ToLower(strings.TrimSpace(filter.Query))
-	list := &spot.List{Spots: []spot.Listed{}}
-	for _, sp := range all {
-		if sp.IsArchived() {
-			list.ArchivedCount++
-		} else {
-			list.ActiveCount++
-		}
-		if sp.IsArchived() != filter.Archived {
-			continue
-		}
-		if query != "" && !strings.Contains(strings.ToLower(sp.Name), query) {
-			continue
-		}
-		list.Spots = append(list.Spots, spot.Listed{Spot: *sp, Reservations: counts[sp.ID]})
+	if spots == nil {
+		spots = []spot.Listed{}
 	}
-	return list, nil
+	return &spot.List{Spots: spots, ActiveCount: active, ArchivedCount: archived}, nil
 }
 
 func (s *Service) Create(ctx context.Context, guildID, name string) (*spot.Spot, error) {

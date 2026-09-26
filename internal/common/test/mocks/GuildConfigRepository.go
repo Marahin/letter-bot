@@ -246,6 +246,74 @@ func (_c *MockGuildConfigRepository_ListByIDs_Call) RunAndReturn(run func(ctx co
 	return _c
 }
 
+// ListPresentByIDs provides a mock function for the type MockGuildConfigRepository
+func (_mock *MockGuildConfigRepository) ListPresentByIDs(ctx context.Context, guildIDs []string) ([]*guildconfig.Config, error) {
+	ret := _mock.Called(ctx, guildIDs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListPresentByIDs")
+	}
+
+	var r0 []*guildconfig.Config
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string) ([]*guildconfig.Config, error)); ok {
+		return returnFunc(ctx, guildIDs)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string) []*guildconfig.Config); ok {
+		r0 = returnFunc(ctx, guildIDs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*guildconfig.Config)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []string) error); ok {
+		r1 = returnFunc(ctx, guildIDs)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockGuildConfigRepository_ListPresentByIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListPresentByIDs'
+type MockGuildConfigRepository_ListPresentByIDs_Call struct {
+	*mock.Call
+}
+
+// ListPresentByIDs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - guildIDs []string
+func (_e *MockGuildConfigRepository_Expecter) ListPresentByIDs(ctx any, guildIDs any) *MockGuildConfigRepository_ListPresentByIDs_Call {
+	return &MockGuildConfigRepository_ListPresentByIDs_Call{Call: _e.mock.On("ListPresentByIDs", ctx, guildIDs)}
+}
+
+func (_c *MockGuildConfigRepository_ListPresentByIDs_Call) Run(run func(ctx context.Context, guildIDs []string)) *MockGuildConfigRepository_ListPresentByIDs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []string
+		if args[1] != nil {
+			arg1 = args[1].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockGuildConfigRepository_ListPresentByIDs_Call) Return(configs []*guildconfig.Config, err error) *MockGuildConfigRepository_ListPresentByIDs_Call {
+	_c.Call.Return(configs, err)
+	return _c
+}
+
+func (_c *MockGuildConfigRepository_ListPresentByIDs_Call) RunAndReturn(run func(ctx context.Context, guildIDs []string) ([]*guildconfig.Config, error)) *MockGuildConfigRepository_ListPresentByIDs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListResyncRequested provides a mock function for the type MockGuildConfigRepository
 func (_mock *MockGuildConfigRepository) ListResyncRequested(ctx context.Context) ([]string, error) {
 	ret := _mock.Called(ctx)

@@ -32,10 +32,8 @@ func (r *statusRecorder) WriteHeader(code int) {
 	r.ResponseWriter.WriteHeader(code)
 }
 
-// Unwrap exposes the wrapped writer so http.ResponseController can reach the
-// Flusher (and any other optional interface) underneath. Without it a streaming
-// handler (the Fashionista search SSE relay) can't flush, and its progress and
-// queue frames buffer until the handler returns.
+// Unwrap lets http.ResponseController reach the optional interfaces (Flusher, ...)
+// of the wrapped writer.
 func (r *statusRecorder) Unwrap() http.ResponseWriter {
 	return r.ResponseWriter
 }
@@ -96,8 +94,8 @@ func (d *Deps) CSRFMiddleware(next http.Handler) http.Handler {
 			d.Log.Warnw("refused cross-origin request",
 				"method", r.Method, "path", r.URL.Path,
 				"origin", origin, "fetch_site", site, "expected_origin", expected)
-			// Not RenderError: it reaches the session through Nav, and we run outside
-			// LoadAndSave.
+			// Plain text: outside LoadAndSave a rendered page would show a signed-out
+			// shell, and a forged request needs no page.
 			http.Error(w, "cross-origin request refused", http.StatusForbidden)
 			return
 		}

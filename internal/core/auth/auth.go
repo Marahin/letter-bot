@@ -3,6 +3,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"spot-assistant/internal/core/dto/webuser"
@@ -35,4 +36,14 @@ func (s *Service) Complete(ctx context.Context, code string) (*webuser.User, err
 
 func (s *Service) User(ctx context.Context, userID string) (*webuser.User, error) {
 	return s.users.Get(ctx, userID)
+}
+
+// Logout clears the stored token, so it is no longer used on the user's behalf.
+// The user's other sessions must sign in again once their cached Discord data expires.
+func (s *Service) Logout(ctx context.Context, userID string) error {
+	err := s.users.SaveToken(ctx, userID, webuser.Token{})
+	if errors.Is(err, ports.ErrNotFound) {
+		return nil
+	}
+	return err
 }

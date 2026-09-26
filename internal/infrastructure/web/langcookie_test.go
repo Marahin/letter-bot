@@ -32,7 +32,7 @@ func TestSetLanguageCookie_SiteWideAndLongLived(t *testing.T) {
 }
 
 func TestSetLanguageCookie_SecureOnHTTPS(t *testing.T) {
-	d := &Deps{Cfg: Config{BaseURL: "https://scx.example"}}
+	d := &Deps{Cfg: Config{BaseURL: "https://letter.example"}}
 	rec := httptest.NewRecorder()
 	d.SetLanguageCookie(rec, "pl")
 	require.Len(t, rec.Result().Cookies(), 1)

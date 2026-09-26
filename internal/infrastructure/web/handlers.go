@@ -113,6 +113,11 @@ func loginDestination(to string) string {
 
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	d := s.deps()
+	if userID := d.SessionUserID(r.Context()); userID != "" {
+		if err := d.Auth.Logout(r.Context(), userID); err != nil {
+			d.Log.Warnw("clear oauth token on logout", "error", err)
+		}
+	}
 	if err := s.sessions.Destroy(r.Context()); err != nil {
 		d.ServerError(w, r, "destroy session", err)
 		return

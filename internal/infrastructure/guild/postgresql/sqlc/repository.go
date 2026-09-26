@@ -52,6 +52,19 @@ func (r *GuildConfigRepository) ListByIDs(ctx context.Context, guildIDs []string
 	return collections.PoorMansMap(res, mapGuild), nil
 }
 
+func (r *GuildConfigRepository) ListPresentByIDs(ctx context.Context, guildIDs []string) ([]*guildconfig.Config, error) {
+	if len(guildIDs) == 0 {
+		return []*guildconfig.Config{}, nil
+	}
+
+	res, err := r.q.SelectPresentGuildsByIDs(ctx, guildIDs)
+	if err != nil {
+		return []*guildconfig.Config{}, err
+	}
+
+	return collections.PoorMansMap(res, mapGuild), nil
+}
+
 func (r *GuildConfigRepository) ListAll(ctx context.Context) ([]*guildconfig.Config, error) {
 	res, err := r.q.SelectAllGuilds(ctx)
 	if err != nil {
@@ -179,13 +192,16 @@ func (r *GuildChannelRepository) Replace(ctx context.Context, guildID string, ch
 	})
 }
 
-func (r *GuildChannelRepository) List(ctx context.Context, guildID string) ([]*discord.Channel, error) {
-	res, err := r.q.SelectGuildChannels(ctx, guildID)
+func (r *GuildChannelRepository) ListByTypes(ctx context.Context, guildID string, types []discord.ChannelType) ([]*discord.Channel, error) {
+	res, err := r.q.SelectGuildChannelsByTypes(ctx, SelectGuildChannelsByTypesParams{
+		GuildID: guildID,
+		Types:   collections.PoorMansMap(types, func(t discord.ChannelType) int32 { return int32(t) }),
+	})
 	if err != nil {
 		return []*discord.Channel{}, err
 	}
 
-	return collections.PoorMansMap(res, func(row SelectGuildChannelsRow) *discord.Channel {
+	return collections.PoorMansMap(res, func(row SelectGuildChannelsByTypesRow) *discord.Channel {
 		return &discord.Channel{
 			ID:       row.ChannelID,
 			Name:     row.Name,

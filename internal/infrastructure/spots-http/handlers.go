@@ -131,7 +131,7 @@ func (h *Handlers) HandleImport(w http.ResponseWriter, r *http.Request) {
 // done answers a finished change: htmx gets the refreshed region with the flash,
 // a plain form post a redirect back to the list it came from.
 func (h *Handlers) done(w http.ResponseWriter, r *http.Request, v pageView) {
-	if isHTMX(r) {
+	if web.IsHTMX(r) {
 		h.respond(w, r, v)
 		return
 	}
@@ -141,9 +141,8 @@ func (h *Handlers) done(w http.ResponseWriter, r *http.Request, v pageView) {
 // respond renders the region for htmx and the full page otherwise. A refusal
 // also answers 200: htmx does not swap a 4xx body.
 func (h *Handlers) respond(w http.ResponseWriter, r *http.Request, v pageView) {
-	current, ok := web.CurrentAccessFrom(r.Context())
+	current, ok := h.D.MustAccess(w, r)
 	if !ok {
-		h.D.ServerError(w, r, "spots without a guild guard", errors.New("no guild access in context"))
 		return
 	}
 	guildID := current.Config.GuildID
@@ -156,7 +155,7 @@ func (h *Handlers) respond(w http.ResponseWriter, r *http.Request, v pageView) {
 	v.CanManage = current.Caps.Manage
 	v.List = list
 
-	if isHTMX(r) && (r.Method == http.MethodPost || r.Header.Get("HX-Target") == regionID) {
+	if web.IsHTMX(r) && (r.Method == http.MethodPost || r.Header.Get("HX-Target") == regionID) {
 		h.D.Render(w, r, Region(v))
 		return
 	}
@@ -179,5 +178,3 @@ func nameError(r *http.Request, err error) string {
 	}
 	return ""
 }
-
-func isHTMX(r *http.Request) bool { return r.Header.Get("HX-Request") == "true" }

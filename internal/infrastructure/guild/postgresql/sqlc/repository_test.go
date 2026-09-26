@@ -112,11 +112,34 @@ func TestGuildConfigRepository_ListByIDs(t *testing.T) {
 	assert.Empty(t, empty)
 }
 
+func TestGuildConfigRepository_ListPresentByIDs(t *testing.T) {
+	// given
+	mock := newMock(t)
+	mock.ExpectQuery("guild_id = ANY.*AND bot_present").
+		WithArgs([]string{"g1", "g2"}).
+		WillReturnRows(addGuildRow(newGuildRows(), "g1", nil))
+	mock.ExpectQuery("AND bot_present").WithArgs(anyArgs(1)...).WillReturnError(errors.New("boom"))
+	repo := NewGuildConfigRepository(mock)
+
+	// when
+	cfgs, err := repo.ListPresentByIDs(context.Background(), []string{"g1", "g2"})
+	failed, failedErr := repo.ListPresentByIDs(context.Background(), []string{"g1"})
+	empty, emptyErr := repo.ListPresentByIDs(context.Background(), nil)
+
+	// then
+	require.NoError(t, err)
+	assert.Len(t, cfgs, 1)
+	assert.Error(t, failedErr)
+	assert.Empty(t, failed)
+	require.NoError(t, emptyErr)
+	assert.Empty(t, empty)
+}
+
 func TestGuildConfigRepository_ListErrors(t *testing.T) {
 	// given
 	mock := newMock(t)
 	mock.ExpectQuery("guild_id = ANY").WithArgs(anyArgs(1)...).WillReturnError(errors.New("boom"))
-	mock.ExpectQuery("FROM guilds ORDER BY").WillReturnError(errors.New("boom"))
+	mock.ExpectQuery("FROM guilds ORDER BY bot_present DESC").WillReturnError(errors.New("boom"))
 	mock.ExpectQuery("resync_requested_at IS NOT NULL").WillReturnError(errors.New("boom"))
 	repo := NewGuildConfigRepository(mock)
 
@@ -364,19 +387,19 @@ func TestGuildChannelRepository_ReplaceBeginError(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestGuildChannelRepository_List(t *testing.T) {
+func TestGuildChannelRepository_ListByTypes(t *testing.T) {
 	// given
 	mock := newMock(t)
-	mock.ExpectQuery("FROM guild_channels").
-		WithArgs("g1").
+	mock.ExpectQuery("type = ANY").
+		WithArgs("g1", []int32{0, 5}).
 		WillReturnRows(pgxmock.NewRows([]string{"channel_id", "name", "type", "parent_id", "position"}).
 			AddRow("c1", "letter", int32(0), "cat", int32(2)))
-	mock.ExpectQuery("FROM guild_channels").WithArgs("g2").WillReturnError(errors.New("boom"))
+	mock.ExpectQuery("FROM guild_channels").WithArgs("g2", []int32{0}).WillReturnError(errors.New("boom"))
 	repo := NewGuildChannelRepository(mock)
 
 	// when
-	channels, err := repo.List(context.Background(), "g1")
-	failed, failedErr := repo.List(context.Background(), "g2")
+	channels, err := repo.ListByTypes(context.Background(), "g1", []discord.ChannelType{discord.ChannelTypeGuildText, discord.ChannelTypeGuildNews})
+	failed, failedErr := repo.ListByTypes(context.Background(), "g2", []discord.ChannelType{discord.ChannelTypeGuildText})
 
 	// then
 	require.NoError(t, err)

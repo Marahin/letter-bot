@@ -29,7 +29,8 @@ out and sends them to the login page.
   has no reserve rank (decision 23).
 - A server the user may not view answers 404, never 403.
 - Site admins (`WEB_ADMIN_DISCORD_IDS`, comma-separated Discord user ids) see
-  every server the bot is in, with full rights. They also see **Admin > Servers**
+  every stored server, with full rights, including the ones the bot has left
+  (listed after the others). They also see **Admin > Servers**
   (`/admin/guilds`), where they turn premium on and off. The admin routes answer
   404 to everyone else.
 - On a server without premium, the feature pages show "Premium required".
@@ -223,7 +224,7 @@ The web reads these environment variables (`.env.sample` has examples):
 | `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_NAME`, `DATABASE_SSL` | yes | | The shared PostgreSQL database (the same values as the bot). |
 | `WEB_BASE_URL` | yes | | The public address, for example `https://letter.tibialoot.com`. It makes the OAuth redirect URL. With `https`, the session cookie is `Secure`. |
 | `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` | yes | | The OAuth2 credentials of the bot's Discord application. The web does not start without them. |
-| `WEB_ADDR` | no | `:8080` | The address of the web server (`/healthz` is on it too). |
+| `WEB_ADDR` | no | `:8080` | The address of the web server. |
 | `WEB_METRICS_ADDR` | no | `:3005` | `/metrics`, `/livez`, `/readyz`. |
 | `WEB_ADMIN_DISCORD_IDS` | no | | Comma-separated Discord user ids of the site admins. |
 | `TIBIA_WORLD_API_BASE_URL` | no | | TibiaData v4, for example `http://ext-tibiadata-api:8080/v4`. Without it, the experience job does not run and the character page shows "TibiaData does not answer". |

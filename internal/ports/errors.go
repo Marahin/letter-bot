@@ -24,5 +24,14 @@ var (
 	ErrUnauthorized = errors.New("oauth token refused")
 )
 
+// GuildSettingsService refusals: the choice is not among the synced Discord
+// options (or the known worlds and rank kinds).
+var (
+	ErrUnknownChannel  = errors.New("unknown channel")
+	ErrUnknownRole     = errors.New("unknown role")
+	ErrUnknownRoleKind = errors.New("unknown role kind")
+	ErrUnknownWorld    = errors.New("unknown world")
+)
+
 // ErrCharacterNotFound means TibiaData knows no character with that name. It also matches ErrNotFound.
 var ErrCharacterNotFound = fmt.Errorf("character %w", ErrNotFound)

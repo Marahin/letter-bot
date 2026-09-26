@@ -35,10 +35,10 @@ func (d *Deps) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 
 func (d *Deps) redirectToLogin(w http.ResponseWriter, r *http.Request) {
 	target := "/login"
-	if r.Method == http.MethodGet && r.Header.Get("HX-Request") != "true" {
+	if r.Method == http.MethodGet && !IsHTMX(r) {
 		target += "?to=" + url.QueryEscape(r.URL.RequestURI())
 	}
-	if r.Header.Get("HX-Request") == "true" {
+	if IsHTMX(r) {
 		// htmx would swap the login redirect into a fragment; ask for a full navigation.
 		w.Header().Set("HX-Redirect", target)
 		w.WriteHeader(http.StatusUnauthorized)
@@ -118,9 +118,8 @@ func (d *Deps) requireGuildAccess(tier access.Tier, next http.HandlerFunc) http.
 // premium. Site admins pass. It must run inside one of the guild guards.
 func (d *Deps) RequirePremium(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		current, ok := CurrentAccessFrom(r.Context())
+		current, ok := d.MustAccess(w, r)
 		if !ok {
-			d.ServerError(w, r, "premium gate without a guild guard", errors.New("no guild access in context"))
 			return
 		}
 		if current.Config.IsPremium() || d.Access.IsSiteAdmin(d.SessionUserID(r.Context())) {
@@ -161,6 +160,24 @@ func (d *Deps) accessError(w http.ResponseWriter, r *http.Request, err error) {
 func CurrentAccessFrom(ctx context.Context) (access.GuildAccess, bool) {
 	v, ok := ctx.Value(ctxCurrentAccess).(access.GuildAccess)
 	return v, ok
+}
+
+// errNoGuildGuard means a guild route was registered without its guard.
+var errNoGuildGuard = errors.New("no guild access in context")
+
+// MustAccess returns the access the guild guard resolved. Without one it answers
+// 500 and returns false.
+func (d *Deps) MustAccess(w http.ResponseWriter, r *http.Request) (access.GuildAccess, bool) {
+	current, ok := CurrentAccessFrom(r.Context())
+	if !ok {
+		d.ServerError(w, r, "guild route without a guild guard", errNoGuildGuard)
+	}
+	return current, ok
+}
+
+// IsHTMX reports whether htmx sent the request.
+func IsHTMX(r *http.Request) bool {
+	return r.Header.Get("HX-Request") == "true"
 }
 
 // WithCurrentAccess stores a resolved access in the context. Feature tests use it

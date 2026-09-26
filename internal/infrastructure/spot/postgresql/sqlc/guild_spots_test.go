@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/pashagolub/pgxmock/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -277,36 +278,59 @@ func TestSelectSpotReservationCounts_Error(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestSelectGuildSpotReservationCounts(t *testing.T) {
+func TestSelectGuildSpotList(t *testing.T) {
 	// given
 	mock := newSpotMock(t)
-	mock.ExpectQuery("FILTER \\(WHERE r.end_at >= now\\(\\)\\) AS upcoming").
-		WithArgs("guild-1").
-		WillReturnRows(pgxmock.NewRows([]string{"spot_id", "total", "upcoming"}).
-			AddRow(int64(1), int64(12), int64(2)).
-			AddRow(int64(4), int64(3), int64(0)))
+	archivedAt := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
+	mock.ExpectQuery("CROSS JOIN LATERAL").
+		WithArgs("guild-1", true, `50\%`).
+		WillReturnRows(pgxmock.NewRows([]string{"id", "name", "created_at", "guild_id", "archived_at", "total", "upcoming"}).
+			AddRow(int64(4), "50% Cave", pgtype.Timestamptz{Time: archivedAt, Valid: true}, pgtype.Text{String: "guild-1", Valid: true}, pgtype.Timestamptz{Time: archivedAt, Valid: true}, int64(3), int64(1)))
 	repo := NewSpotRepository(mock)
 
 	// when
-	counts, err := repo.SelectGuildSpotReservationCounts(context.Background(), "guild-1")
+	list, err := repo.SelectGuildSpotList(context.Background(), "guild-1", spot.ListFilter{Archived: true, Query: "50%"})
 
 	// then
 	require.NoError(t, err)
-	assert.Equal(t, map[int64]spot.ReservationCounts{1: {Total: 12, Upcoming: 2}, 4: {Total: 3}}, counts)
+	require.Len(t, list, 1)
+	assert.Equal(t, "50% Cave", list[0].Name)
+	assert.True(t, list[0].IsArchived())
+	assert.Equal(t, spot.ReservationCounts{Total: 3, Upcoming: 1}, list[0].Reservations)
 }
 
-func TestSelectGuildSpotReservationCounts_Error(t *testing.T) {
+func TestSelectGuildSpotList_Error(t *testing.T) {
 	// given
 	mock := newSpotMock(t)
-	mock.ExpectQuery("FROM web_reservation").WithArgs("guild-1").WillReturnError(errors.New("boom"))
+	mock.ExpectQuery("CROSS JOIN LATERAL").WithArgs("guild-1", false, "").WillReturnError(errors.New("boom"))
 	repo := NewSpotRepository(mock)
 
 	// when
-	counts, err := repo.SelectGuildSpotReservationCounts(context.Background(), "guild-1")
+	list, err := repo.SelectGuildSpotList(context.Background(), "guild-1", spot.ListFilter{})
 
 	// then
 	assert.Error(t, err)
-	assert.Nil(t, counts)
+	assert.Nil(t, list)
+}
+
+func TestCountGuildSpots(t *testing.T) {
+	// given
+	mock := newSpotMock(t)
+	mock.ExpectQuery("AS archived").
+		WithArgs("guild-1").
+		WillReturnRows(pgxmock.NewRows([]string{"active", "archived"}).AddRow(int64(7), int64(2)))
+	mock.ExpectQuery("AS archived").WithArgs("guild-1").WillReturnError(errors.New("boom"))
+	repo := NewSpotRepository(mock)
+
+	// when
+	active, archived, err := repo.CountGuildSpots(context.Background(), "guild-1")
+	_, _, failErr := repo.CountGuildSpots(context.Background(), "guild-1")
+
+	// then
+	require.NoError(t, err)
+	assert.Equal(t, 7, active)
+	assert.Equal(t, 2, archived)
+	assert.Error(t, failErr)
 }
 
 func TestInsertSpotsIgnoreDuplicates(t *testing.T) {

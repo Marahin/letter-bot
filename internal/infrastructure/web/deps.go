@@ -141,7 +141,7 @@ func (d *Deps) RenderError(w http.ResponseWriter, r *http.Request, status int, t
 }
 
 func wantsHTMLErrorPage(r *http.Request) bool {
-	if r.Header.Get("HX-Request") == "true" {
+	if IsHTMX(r) {
 		return false
 	}
 	return strings.Contains(r.Header.Get("Accept"), "text/html")

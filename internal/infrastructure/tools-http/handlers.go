@@ -38,7 +38,7 @@ func (h *Handlers) HandleLootCalculate(w http.ResponseWriter, r *http.Request) {
 		v = calculate(r.PostFormValue("session"))
 	}
 
-	if r.Header.Get("HX-Request") == "true" {
+	if web.IsHTMX(r) {
 		h.D.Render(w, r, lootMain(v))
 		return
 	}

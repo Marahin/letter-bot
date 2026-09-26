@@ -26,8 +26,9 @@ const (
 	MaxPerPage     = 200
 	// MaxAuthorLength is the web_reservation.author column limit, in characters.
 	MaxAuthorLength = 200
-	// MinAuthorQuery keeps the known-author lookup off the unindexed full scan.
-	MinAuthorQuery = 2
+	// MinAuthorQuery is the shortest query the trigram index on the author can
+	// serve (one trigram); a shorter one scans every reservation of the guild.
+	MinAuthorQuery = 3
 )
 
 // MaxSnowflakeLength is the longest decimal Discord id (2^64 has 20 digits).

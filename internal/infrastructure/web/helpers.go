@@ -61,7 +61,7 @@ type NavServer struct {
 type Nav struct {
 	Authenticated bool
 	Username      string
-	// Servers are the bot-present servers the user may open.
+	// Servers are the servers the user may open (see GuildAccessService.AccessibleGuilds).
 	Servers          []NavServer
 	CurrentGuildID   string // selected server, empty when none is in context
 	CurrentGuildName string
@@ -69,10 +69,6 @@ type Nav struct {
 	CurrentGuildIcon string
 	// IsAdmin gates the Channels and Settings links (owner or Administrator).
 	IsAdmin bool
-	// CanManage gates respawn management and every reservation's edit controls.
-	CanManage bool
-	// CanReserve gates the new-reservation controls.
-	CanReserve bool
 	// SiteAdmin gates the sidebar's site-wide Admin section.
 	SiteAdmin bool
 	// Active is the current section or sub-view: reservations | spots | stats |
@@ -80,8 +76,6 @@ type Nav struct {
 	Active string
 	// Wide drops the centred content max-width so a page can fill the width.
 	Wide bool
-	// Stylesheets are page-specific sheet hrefs the shell links from <head>.
-	Stylesheets []string
 	// Marketing renders the marketing top bar (not the app sidebar) even for a
 	// signed-in visitor, and gives the top bar the landing's section width.
 	Marketing bool
@@ -95,18 +89,6 @@ func (n *Nav) applyAccess(a access.GuildAccess) {
 	n.CurrentGuildName = a.Config.Name
 	n.CurrentGuildIcon = a.Config.Icon
 	n.IsAdmin = a.Caps.Admin
-	n.CanManage = a.Caps.Manage
-	n.CanReserve = a.Caps.Reserve
-}
-
-// WithStylesheet returns a copy of n with href added to the page stylesheets. The
-// copy gets a fresh backing array, so the caller's slice is never written through.
-func (n Nav) WithStylesheet(href string) Nav {
-	sheets := make([]string, 0, len(n.Stylesheets)+1)
-	sheets = append(sheets, n.Stylesheets...)
-	sheets = append(sheets, href)
-	n.Stylesheets = sheets
-	return n
 }
 
 // GuildPath is a server-scoped URL: "/servers/{id}" plus suffix ("/reservations").

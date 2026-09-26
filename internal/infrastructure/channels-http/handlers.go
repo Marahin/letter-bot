@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"spot-assistant/internal/infrastructure/guildsettings"
 	"spot-assistant/internal/infrastructure/web"
+	"spot-assistant/internal/ports"
 )
 
 type Handlers struct {
@@ -16,9 +16,8 @@ type Handlers struct {
 func New(d *web.Deps) *Handlers { return &Handlers{D: d} }
 
 func (h *Handlers) HandleChannels(w http.ResponseWriter, r *http.Request) {
-	current, ok := web.CurrentAccessFrom(r.Context())
+	current, ok := h.D.MustAccess(w, r)
 	if !ok {
-		h.D.ServerError(w, r, "channels without a guild guard", errors.New("no guild access in context"))
 		return
 	}
 	channels, err := h.D.Settings.Channels(r.Context(), current.Config.GuildID)
@@ -42,7 +41,7 @@ func (h *Handlers) HandleSetChannels(w http.ResponseWriter, r *http.Request) {
 	summary := strings.TrimSpace(r.PostFormValue("summary_channel_id"))
 	err := h.D.Settings.SetChannels(r.Context(), r.PathValue("id"), command, summary)
 	switch {
-	case errors.Is(err, guildsettings.ErrUnknownChannel):
+	case errors.Is(err, ports.ErrUnknownChannel):
 		h.D.Render(w, r, StaleStatus())
 	case err != nil:
 		h.D.ServerError(w, r, "set channels", err)

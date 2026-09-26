@@ -72,7 +72,7 @@ func (q *Queries) RequestGuildResync(ctx context.Context, guildID string) (int64
 const selectAllGuilds = `-- name: SelectAllGuilds :many
 SELECT guild_id, name, icon, owner_id, bot_present, premium, premium_forever, command_channel_id, summary_channel_id, manage_role_ids, view_role_ids, reserve_role_ids, overbook_role_ids, resync_requested_at, synced_at, created_at, updated_at
 FROM guilds
-ORDER BY lower(name), guild_id
+ORDER BY bot_present DESC, lower(name), guild_id
 `
 
 func (q *Queries) SelectAllGuilds(ctx context.Context) ([]Guild, error) {
@@ -153,6 +153,52 @@ ORDER BY lower(name), guild_id
 
 func (q *Queries) SelectGuildsByIDs(ctx context.Context, guildIds []string) ([]Guild, error) {
 	rows, err := q.db.Query(ctx, selectGuildsByIDs, guildIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Guild
+	for rows.Next() {
+		var i Guild
+		if err := rows.Scan(
+			&i.GuildID,
+			&i.Name,
+			&i.Icon,
+			&i.OwnerID,
+			&i.BotPresent,
+			&i.Premium,
+			&i.PremiumForever,
+			&i.CommandChannelID,
+			&i.SummaryChannelID,
+			&i.ManageRoleIds,
+			&i.ViewRoleIds,
+			&i.ReserveRoleIds,
+			&i.OverbookRoleIds,
+			&i.ResyncRequestedAt,
+			&i.SyncedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const selectPresentGuildsByIDs = `-- name: SelectPresentGuildsByIDs :many
+SELECT guild_id, name, icon, owner_id, bot_present, premium, premium_forever, command_channel_id, summary_channel_id, manage_role_ids, view_role_ids, reserve_role_ids, overbook_role_ids, resync_requested_at, synced_at, created_at, updated_at
+FROM guilds
+WHERE guild_id = ANY($1::text[])
+  AND bot_present
+ORDER BY lower(name), guild_id
+`
+
+func (q *Queries) SelectPresentGuildsByIDs(ctx context.Context, guildIds []string) ([]Guild, error) {
+	rows, err := q.db.Query(ctx, selectPresentGuildsByIDs, guildIds)
 	if err != nil {
 		return nil, err
 	}

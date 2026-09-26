@@ -30,7 +30,6 @@ type Server struct {
 	cfg      Config
 	log      *zap.SugaredLogger
 	sessions *scs.SessionManager
-	ping     func(context.Context) error
 	services Services
 	// features holds the per-feature route registrars mounted by the composition
 	// root; Handler() calls each with the shared Deps after the shell routes.
@@ -42,9 +41,7 @@ type Server struct {
 // NewServer constructs the web server with a Postgres-backed session store.
 func NewServer(cfg Config, log *zap.SugaredLogger, pool *pgxpool.Pool) *Server {
 	store := pgxstore.NewWithConfig(pool, pgxstore.Config{TableName: sessionTableName, CleanUpInterval: 5 * time.Minute})
-	s := newServer(cfg, log, NewSessionManager(cfg, store))
-	s.ping = pool.Ping
-	return s
+	return newServer(cfg, log, NewSessionManager(cfg, store))
 }
 
 // Services are the core services the shell and the feature packages call.
@@ -132,9 +129,6 @@ func (s *Server) Handler() http.Handler {
 	router.Post("/logout", s.handleLogout)
 	router.Get("/dashboard", d.RequireAuth(s.handleDashboard))
 	router.Get("/servers/{id}", d.RequireAuth(d.RequireView(s.handleGuildRoot)))
-	if s.ping != nil {
-		router.Handle(http.MethodGet, "/healthz", HealthzHandler(s.ping))
-	}
 
 	for _, register := range s.features {
 		register(router, d)

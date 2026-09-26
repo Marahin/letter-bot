@@ -149,17 +149,6 @@ func TestLayout_MarketingNavKeepsTheTopBarWhenSignedIn(t *testing.T) {
 	assert.Contains(t, out, "Knight")
 }
 
-func TestLayout_PageStylesheets(t *testing.T) {
-	// given
-	nav := Nav{}.WithStylesheet("/assets/page.css")
-
-	// when
-	out := render(t, context.Background(), Layout("T", "D", "http://x", "/", nav))
-
-	// then
-	assert.Contains(t, out, `href="/assets/page.css"`)
-}
-
 func TestErrorPage_SignedInLinksToTheDashboard(t *testing.T) {
 	// when
 	out := render(t, context.Background(), ErrorPage("http://x", 403, "Denied", "No.", signedInNav()))
@@ -279,20 +268,6 @@ func TestNav_SubRailFor(t *testing.T) {
 	assert.Equal(t, subRailNone, Nav{Active: "spots"}.subRailFor(statsSubviews, "stats"))
 }
 
-func TestNav_WithStylesheetCopies(t *testing.T) {
-	// given a nav with spare capacity in its slice
-	base := Nav{Stylesheets: make([]string, 0, 4)}
-
-	// when two pages extend it
-	a := base.WithStylesheet("/a.css")
-	b := base.WithStylesheet("/b.css")
-
-	// then neither writes through to the other
-	assert.Equal(t, []string{"/a.css"}, a.Stylesheets)
-	assert.Equal(t, []string{"/b.css"}, b.Stylesheets)
-	assert.Empty(t, base.Stylesheets)
-}
-
 func TestServerBadge_KeepsTheInitialUnderAnIconThatFailsToLoad(t *testing.T) {
 	// given
 	ctx := context.Background()
@@ -309,4 +284,20 @@ func TestServerBadge_KeepsTheInitialUnderAnIconThatFailsToLoad(t *testing.T) {
 	}
 	assert.Contains(t, without, ">C")
 	assert.NotContains(t, without, "<img")
+}
+
+func TestLayout_RendersTheHTMXErrorToastOnEveryShell(t *testing.T) {
+	for name, nav := range map[string]Nav{"signed out": {}, "signed in": signedInNav()} {
+		t.Run(name, func(t *testing.T) {
+			// when
+			out := render(t, context.Background(), Layout("T", "D", "http://x", "/", nav))
+
+			// then
+			assert.Contains(t, out, `id="letter-toast"`)
+			assert.Contains(t, out, `role="status"`)
+			assert.Contains(t, out, `aria-live="polite"`)
+			assert.Contains(t, out, `"shell.toast.error":"Something went wrong. Try again."`)
+			assert.Contains(t, out, "/assets/htmx-errors.js")
+		})
+	}
 }

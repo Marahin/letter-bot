@@ -10,6 +10,7 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import (
 	"strconv"
+	"time"
 
 	"spot-assistant/internal/core/booking"
 	"spot-assistant/internal/core/dto/reservation"
@@ -76,7 +77,7 @@ func Page(baseURL string, v listView, nav web.Nav) templ.Component {
 				var templ_7745c5c3_Var3 templ.SafeURL
 				templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(web.GuildPath(v.GuildID, "/spots")))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 31, Col: 64}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 32, Col: 64}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 				if templ_7745c5c3_Err != nil {
@@ -89,7 +90,7 @@ func Page(baseURL string, v listView, nav web.Nav) templ.Component {
 				var templ_7745c5c3_Var4 string
 				templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.spot.back"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 32, Col: 81}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 33, Col: 81}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 				if templ_7745c5c3_Err != nil {
@@ -102,7 +103,7 @@ func Page(baseURL string, v listView, nav web.Nav) templ.Component {
 				var templ_7745c5c3_Var5 string
 				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(v.Spot.Name)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 34, Col: 99}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 35, Col: 99}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 				if templ_7745c5c3_Err != nil {
@@ -120,7 +121,7 @@ func Page(baseURL string, v listView, nav web.Nav) templ.Component {
 				var templ_7745c5c3_Var6 string
 				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.page.heading"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 36, Col: 123}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 37, Col: 123}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 				if templ_7745c5c3_Err != nil {
@@ -133,7 +134,7 @@ func Page(baseURL string, v listView, nav web.Nav) templ.Component {
 				var templ_7745c5c3_Var7 string
 				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.page.lede", v.GuildName))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 37, Col: 121}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 38, Col: 121}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 				if templ_7745c5c3_Err != nil {
@@ -203,7 +204,7 @@ func Page(baseURL string, v listView, nav web.Nav) templ.Component {
 			var templ_7745c5c3_Var8 string
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.ResolveAttributeValue(web.AssetURL("/assets/reservations.js"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 51, Col: 55}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 52, Col: 55}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var8)
 			if templ_7745c5c3_Err != nil {
@@ -216,7 +217,7 @@ func Page(baseURL string, v listView, nav web.Nav) templ.Component {
 			var templ_7745c5c3_Var9 string
 			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.ResolveAttributeValue(web.AssetURL("/assets/alpine.js"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 52, Col: 49}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 53, Col: 49}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var9)
 			if templ_7745c5c3_Err != nil {
@@ -277,7 +278,7 @@ func spotStrip(v listView) templ.Component {
 			var templ_7745c5c3_Var11 string
 			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.spot.archived"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 62, Col: 128}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 63, Col: 128}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 			if templ_7745c5c3_Err != nil {
@@ -290,7 +291,7 @@ func spotStrip(v listView) templ.Component {
 			var templ_7745c5c3_Var12 string
 			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.spot.archived_hint"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 63, Col: 92}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 64, Col: 92}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 			if templ_7745c5c3_Err != nil {
@@ -359,7 +360,7 @@ func stat(label, value string) templ.Component {
 		var templ_7745c5c3_Var16 string
 		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 71, Col: 34}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 72, Col: 34}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 		if templ_7745c5c3_Err != nil {
@@ -372,7 +373,7 @@ func stat(label, value string) templ.Component {
 		var templ_7745c5c3_Var17 string
 		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(value)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 72, Col: 85}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 73, Col: 85}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 		if templ_7745c5c3_Err != nil {
@@ -416,7 +417,7 @@ func filterBar(v listView) templ.Component {
 		var templ_7745c5c3_Var19 templ.SafeURL
 		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(v.basePath()))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 82, Col: 38}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 83, Col: 38}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 		if templ_7745c5c3_Err != nil {
@@ -429,7 +430,7 @@ func filterBar(v listView) templ.Component {
 		var templ_7745c5c3_Var20 string
 		templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.ResolveAttributeValue(i18n.T(ctx, "reservations.filter.label"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 84, Col: 55}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 85, Col: 55}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var20)
 		if templ_7745c5c3_Err != nil {
@@ -442,7 +443,7 @@ func filterBar(v listView) templ.Component {
 		var templ_7745c5c3_Var21 string
 		templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.basePath())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 85, Col: 23}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 86, Col: 23}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var21)
 		if templ_7745c5c3_Err != nil {
@@ -455,7 +456,7 @@ func filterBar(v listView) templ.Component {
 		var templ_7745c5c3_Var22 string
 		templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.ResolveAttributeValue("#" + regionID)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 87, Col: 28}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 88, Col: 28}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var22)
 		if templ_7745c5c3_Err != nil {
@@ -495,7 +496,7 @@ func filterBar(v listView) templ.Component {
 			var templ_7745c5c3_Var25 string
 			templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.filter.spot"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 93, Col: 91}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 94, Col: 91}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 			if templ_7745c5c3_Err != nil {
@@ -549,7 +550,7 @@ func filterBar(v listView) templ.Component {
 		var templ_7745c5c3_Var28 string
 		templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.filter.author"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 104, Col: 94}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 105, Col: 94}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 		if templ_7745c5c3_Err != nil {
@@ -571,7 +572,7 @@ func filterBar(v listView) templ.Component {
 		var templ_7745c5c3_Var30 string
 		templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.Filter.Author)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 105, Col: 80}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 106, Col: 80}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var30)
 		if templ_7745c5c3_Err != nil {
@@ -584,7 +585,7 @@ func filterBar(v listView) templ.Component {
 		var templ_7745c5c3_Var31 string
 		templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.ResolveAttributeValue(i18n.T(ctx, "reservations.filter.author_placeholder"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 105, Col: 150}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 106, Col: 150}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var31)
 		if templ_7745c5c3_Err != nil {
@@ -632,7 +633,7 @@ func filterBar(v listView) templ.Component {
 		var templ_7745c5c3_Var35 string
 		templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.filter.from"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 108, Col: 90}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 109, Col: 90}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
 		if templ_7745c5c3_Err != nil {
@@ -654,7 +655,7 @@ func filterBar(v listView) templ.Component {
 		var templ_7745c5c3_Var37 string
 		templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.Filter.From)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 109, Col: 72}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 110, Col: 72}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var37)
 		if templ_7745c5c3_Err != nil {
@@ -702,7 +703,7 @@ func filterBar(v listView) templ.Component {
 		var templ_7745c5c3_Var41 string
 		templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.filter.to"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 112, Col: 86}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 113, Col: 86}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 		if templ_7745c5c3_Err != nil {
@@ -724,7 +725,7 @@ func filterBar(v listView) templ.Component {
 		var templ_7745c5c3_Var43 string
 		templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.Filter.To)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 113, Col: 66}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 114, Col: 66}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var43)
 		if templ_7745c5c3_Err != nil {
@@ -772,7 +773,7 @@ func filterBar(v listView) templ.Component {
 		var templ_7745c5c3_Var47 string
 		templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.filter.scope"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 116, Col: 96}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 117, Col: 96}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var47))
 		if templ_7745c5c3_Err != nil {
@@ -816,7 +817,7 @@ func filterBar(v listView) templ.Component {
 			var templ_7745c5c3_Var48 string
 			templ_7745c5c3_Var48, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.filter.mine"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 126, Col: 45}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 127, Col: 45}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var48))
 			if templ_7745c5c3_Err != nil {
@@ -834,7 +835,7 @@ func filterBar(v listView) templ.Component {
 		var templ_7745c5c3_Var49 string
 		templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.filter.apply"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 131, Col: 99}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 132, Col: 99}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var49))
 		if templ_7745c5c3_Err != nil {
@@ -852,7 +853,7 @@ func filterBar(v listView) templ.Component {
 			var templ_7745c5c3_Var50 templ.SafeURL
 			templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(v.clearURL()))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 134, Col: 41}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 135, Col: 41}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var50))
 			if templ_7745c5c3_Err != nil {
@@ -865,7 +866,7 @@ func filterBar(v listView) templ.Component {
 			var templ_7745c5c3_Var51 string
 			templ_7745c5c3_Var51, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.filter.clear"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 134, Col: 209}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 135, Col: 209}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var51))
 			if templ_7745c5c3_Err != nil {
@@ -912,7 +913,7 @@ func scopeOption(v listView, scope reservation.SearchScope, label string) templ.
 		var templ_7745c5c3_Var53 string
 		templ_7745c5c3_Var53, templ_7745c5c3_Err = templ.ResolveAttributeValue(string(scope))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 142, Col: 56}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 143, Col: 56}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var53)
 		if templ_7745c5c3_Err != nil {
@@ -935,7 +936,7 @@ func scopeOption(v listView, scope reservation.SearchScope, label string) templ.
 		var templ_7745c5c3_Var54 string
 		templ_7745c5c3_Var54, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 143, Col: 273}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 144, Col: 273}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var54))
 		if templ_7745c5c3_Err != nil {
@@ -984,7 +985,7 @@ func Status(f flash, oob bool) templ.Component {
 		var templ_7745c5c3_Var57 string
 		templ_7745c5c3_Var57, templ_7745c5c3_Err = templ.ResolveAttributeValue(statusID)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 151, Col: 15}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 152, Col: 15}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var57)
 		if templ_7745c5c3_Err != nil {
@@ -1020,7 +1021,7 @@ func Status(f flash, oob bool) templ.Component {
 		var templ_7745c5c3_Var59 string
 		templ_7745c5c3_Var59, templ_7745c5c3_Err = templ.JoinStringErrs(f.Text)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 158, Col: 10}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 159, Col: 10}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var59))
 		if templ_7745c5c3_Err != nil {
@@ -1064,7 +1065,7 @@ func Region(v listView) templ.Component {
 		var templ_7745c5c3_Var61 string
 		templ_7745c5c3_Var61, templ_7745c5c3_Err = templ.ResolveAttributeValue(regionID)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 164, Col: 19}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 165, Col: 19}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var61)
 		if templ_7745c5c3_Err != nil {
@@ -1077,7 +1078,7 @@ func Region(v listView) templ.Component {
 		var templ_7745c5c3_Var62 string
 		templ_7745c5c3_Var62, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.currentURL())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 164, Col: 45}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 165, Col: 45}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var62)
 		if templ_7745c5c3_Err != nil {
@@ -1090,7 +1091,7 @@ func Region(v listView) templ.Component {
 		var templ_7745c5c3_Var63 string
 		templ_7745c5c3_Var63, templ_7745c5c3_Err = templ.ResolveAttributeValue(savedEvent + " from:body")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 164, Col: 86}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 165, Col: 86}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var63)
 		if templ_7745c5c3_Err != nil {
@@ -1108,7 +1109,7 @@ func Region(v listView) templ.Component {
 			var templ_7745c5c3_Var64 string
 			templ_7745c5c3_Var64, templ_7745c5c3_Err = templ.JoinStringErrs(v.emptyText(ctx))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 166, Col: 129}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 167, Col: 129}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var64))
 			if templ_7745c5c3_Err != nil {
@@ -1126,7 +1127,7 @@ func Region(v listView) templ.Component {
 			var templ_7745c5c3_Var65 string
 			templ_7745c5c3_Var65, templ_7745c5c3_Err = templ.JoinStringErrs(v.pageInfo(ctx))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 168, Col: 58}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 169, Col: 58}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var65))
 			if templ_7745c5c3_Err != nil {
@@ -1187,7 +1188,7 @@ func table(v listView) templ.Component {
 		var templ_7745c5c3_Var67 string
 		templ_7745c5c3_Var67, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.list.caption"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 180, Col: 70}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 181, Col: 70}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var67))
 		if templ_7745c5c3_Err != nil {
@@ -1205,7 +1206,7 @@ func table(v listView) templ.Component {
 			var templ_7745c5c3_Var68 string
 			templ_7745c5c3_Var68, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.list.th_spot"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 184, Col: 82}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 185, Col: 82}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var68))
 			if templ_7745c5c3_Err != nil {
@@ -1223,7 +1224,7 @@ func table(v listView) templ.Component {
 		var templ_7745c5c3_Var69 string
 		templ_7745c5c3_Var69, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.list.th_when"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 186, Col: 81}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 187, Col: 81}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var69))
 		if templ_7745c5c3_Err != nil {
@@ -1236,7 +1237,7 @@ func table(v listView) templ.Component {
 		var templ_7745c5c3_Var70 string
 		templ_7745c5c3_Var70, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.list.th_length"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 187, Col: 104}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 188, Col: 104}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var70))
 		if templ_7745c5c3_Err != nil {
@@ -1249,7 +1250,7 @@ func table(v listView) templ.Component {
 		var templ_7745c5c3_Var71 string
 		templ_7745c5c3_Var71, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.list.th_author"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 188, Col: 83}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 189, Col: 83}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var71))
 		if templ_7745c5c3_Err != nil {
@@ -1262,7 +1263,7 @@ func table(v listView) templ.Component {
 		var templ_7745c5c3_Var72 string
 		templ_7745c5c3_Var72, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.list.th_state"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 189, Col: 103}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 190, Col: 103}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var72))
 		if templ_7745c5c3_Err != nil {
@@ -1280,7 +1281,7 @@ func table(v listView) templ.Component {
 			var templ_7745c5c3_Var73 string
 			templ_7745c5c3_Var73, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.list.th_actions"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 191, Col: 118}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 192, Col: 118}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var73))
 			if templ_7745c5c3_Err != nil {
@@ -1342,7 +1343,7 @@ func row(v listView, r *reservation.ReservationWithSpot) templ.Component {
 		var templ_7745c5c3_Var76 string
 		templ_7745c5c3_Var76, templ_7745c5c3_Err = templ.ResolveAttributeValue(rowID(r.Reservation.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 205, Col: 33}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 206, Col: 33}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var76)
 		if templ_7745c5c3_Err != nil {
@@ -1382,7 +1383,7 @@ func row(v listView, r *reservation.ReservationWithSpot) templ.Component {
 			var templ_7745c5c3_Var79 templ.SafeURL
 			templ_7745c5c3_Var79, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(web.GuildPath(v.GuildID, "/spots/"+strconv.FormatInt(r.Spot.ID, 10))))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 208, Col: 97}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 209, Col: 97}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var79))
 			if templ_7745c5c3_Err != nil {
@@ -1408,7 +1409,7 @@ func row(v listView, r *reservation.ReservationWithSpot) templ.Component {
 			var templ_7745c5c3_Var81 string
 			templ_7745c5c3_Var81, templ_7745c5c3_Err = templ.JoinStringErrs(r.Spot.Name)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 208, Col: 222}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 209, Col: 222}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var81))
 			if templ_7745c5c3_Err != nil {
@@ -1431,7 +1432,7 @@ func row(v listView, r *reservation.ReservationWithSpot) templ.Component {
 		var templ_7745c5c3_Var82 string
 		templ_7745c5c3_Var82, templ_7745c5c3_Err = templ.JoinStringErrs(day)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 213, Col: 50}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 214, Col: 50}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var82))
 		if templ_7745c5c3_Err != nil {
@@ -1466,7 +1467,7 @@ func row(v listView, r *reservation.ReservationWithSpot) templ.Component {
 		var templ_7745c5c3_Var85 string
 		templ_7745c5c3_Var85, templ_7745c5c3_Err = templ.JoinStringErrs(hours)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 214, Col: 100}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 215, Col: 100}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var85))
 		if templ_7745c5c3_Err != nil {
@@ -1479,7 +1480,7 @@ func row(v listView, r *reservation.ReservationWithSpot) templ.Component {
 		var templ_7745c5c3_Var86 string
 		templ_7745c5c3_Var86, templ_7745c5c3_Err = templ.JoinStringErrs(duration(r))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 216, Col: 121}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 217, Col: 121}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var86))
 		if templ_7745c5c3_Err != nil {
@@ -1514,7 +1515,7 @@ func row(v listView, r *reservation.ReservationWithSpot) templ.Component {
 		var templ_7745c5c3_Var89 string
 		templ_7745c5c3_Var89, templ_7745c5c3_Err = templ.JoinStringErrs(r.Author)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 218, Col: 92}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 219, Col: 92}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var89))
 		if templ_7745c5c3_Err != nil {
@@ -1532,7 +1533,7 @@ func row(v listView, r *reservation.ReservationWithSpot) templ.Component {
 			var templ_7745c5c3_Var90 string
 			templ_7745c5c3_Var90, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.list.you"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 220, Col: 183}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 221, Col: 183}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var90))
 			if templ_7745c5c3_Err != nil {
@@ -1568,7 +1569,7 @@ func row(v listView, r *reservation.ReservationWithSpot) templ.Component {
 				var templ_7745c5c3_Var91 templ.SafeURL
 				templ_7745c5c3_Var91, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(reservationPath(v.GuildID, r.Reservation.ID, "edit")))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 231, Col: 81}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 232, Col: 81}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var91))
 				if templ_7745c5c3_Err != nil {
@@ -1581,7 +1582,7 @@ func row(v listView, r *reservation.ReservationWithSpot) templ.Component {
 				var templ_7745c5c3_Var92 string
 				templ_7745c5c3_Var92, templ_7745c5c3_Err = templ.ResolveAttributeValue(reservationPath(v.GuildID, r.Reservation.ID, "edit"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 232, Col: 68}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 233, Col: 68}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var92)
 				if templ_7745c5c3_Err != nil {
@@ -1594,7 +1595,7 @@ func row(v listView, r *reservation.ReservationWithSpot) templ.Component {
 				var templ_7745c5c3_Var93 string
 				templ_7745c5c3_Var93, templ_7745c5c3_Err = templ.ResolveAttributeValue("#" + editBodyID)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 233, Col: 35}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 234, Col: 35}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var93)
 				if templ_7745c5c3_Err != nil {
@@ -1607,7 +1608,7 @@ func row(v listView, r *reservation.ReservationWithSpot) templ.Component {
 				var templ_7745c5c3_Var94 string
 				templ_7745c5c3_Var94, templ_7745c5c3_Err = templ.ResolveAttributeValue(i18n.T(ctx, "reservations.row.edit_label", r.Spot.Name, r.Author))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 237, Col: 85}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 238, Col: 85}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var94)
 				if templ_7745c5c3_Err != nil {
@@ -1620,7 +1621,7 @@ func row(v listView, r *reservation.ReservationWithSpot) templ.Component {
 				var templ_7745c5c3_Var95 string
 				templ_7745c5c3_Var95, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.row.edit"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 238, Col: 45}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 239, Col: 45}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var95))
 				if templ_7745c5c3_Err != nil {
@@ -1639,7 +1640,7 @@ func row(v listView, r *reservation.ReservationWithSpot) templ.Component {
 				var templ_7745c5c3_Var96 templ.SafeURL
 				templ_7745c5c3_Var96, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(reservationPath(v.GuildID, r.Reservation.ID, "delete")))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 243, Col: 85}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 244, Col: 85}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var96))
 				if templ_7745c5c3_Err != nil {
@@ -1652,7 +1653,7 @@ func row(v listView, r *reservation.ReservationWithSpot) templ.Component {
 				var templ_7745c5c3_Var97 string
 				templ_7745c5c3_Var97, templ_7745c5c3_Err = templ.ResolveAttributeValue(reservationPath(v.GuildID, r.Reservation.ID, "delete"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 244, Col: 71}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 245, Col: 71}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var97)
 				if templ_7745c5c3_Err != nil {
@@ -1665,7 +1666,7 @@ func row(v listView, r *reservation.ReservationWithSpot) templ.Component {
 				var templ_7745c5c3_Var98 string
 				templ_7745c5c3_Var98, templ_7745c5c3_Err = templ.ResolveAttributeValue("#" + statusID)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 245, Col: 33}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 246, Col: 33}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var98)
 				if templ_7745c5c3_Err != nil {
@@ -1678,7 +1679,7 @@ func row(v listView, r *reservation.ReservationWithSpot) templ.Component {
 				var templ_7745c5c3_Var99 string
 				templ_7745c5c3_Var99, templ_7745c5c3_Err = templ.ResolveAttributeValue(deleteConfirm(ctx, r))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 247, Col: 43}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 248, Col: 43}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var99)
 				if templ_7745c5c3_Err != nil {
@@ -1691,7 +1692,7 @@ func row(v listView, r *reservation.ReservationWithSpot) templ.Component {
 				var templ_7745c5c3_Var100 string
 				templ_7745c5c3_Var100, templ_7745c5c3_Err = templ.ResolveAttributeValue(i18n.T(ctx, "reservations.row.delete_label", r.Spot.Name, r.Author))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 249, Col: 141}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 250, Col: 141}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var100)
 				if templ_7745c5c3_Err != nil {
@@ -1704,7 +1705,7 @@ func row(v listView, r *reservation.ReservationWithSpot) templ.Component {
 				var templ_7745c5c3_Var101 string
 				templ_7745c5c3_Var101, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.row.delete"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 249, Col: 184}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 250, Col: 184}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var101))
 				if templ_7745c5c3_Err != nil {
@@ -1758,7 +1759,7 @@ func stateChip(state string) templ.Component {
 			var templ_7745c5c3_Var103 string
 			templ_7745c5c3_Var103, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.state.ongoing"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 261, Col: 288}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 262, Col: 288}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var103))
 			if templ_7745c5c3_Err != nil {
@@ -1776,7 +1777,7 @@ func stateChip(state string) templ.Component {
 			var templ_7745c5c3_Var104 string
 			templ_7745c5c3_Var104, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.state.past"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 263, Col: 157}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 264, Col: 157}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var104))
 			if templ_7745c5c3_Err != nil {
@@ -1794,7 +1795,7 @@ func stateChip(state string) templ.Component {
 			var templ_7745c5c3_Var105 string
 			templ_7745c5c3_Var105, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.state.upcoming"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 265, Col: 180}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 266, Col: 180}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var105))
 			if templ_7745c5c3_Err != nil {
@@ -1837,7 +1838,7 @@ func pagination(v listView) templ.Component {
 		var templ_7745c5c3_Var107 string
 		templ_7745c5c3_Var107, templ_7745c5c3_Err = templ.ResolveAttributeValue(i18n.T(ctx, "reservations.pages.label"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 270, Col: 58}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 271, Col: 58}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var107)
 		if templ_7745c5c3_Err != nil {
@@ -1850,7 +1851,7 @@ func pagination(v listView) templ.Component {
 		var templ_7745c5c3_Var108 string
 		templ_7745c5c3_Var108, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.pages.position", v.Page.Page, v.Page.Pages))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 271, Col: 101}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 272, Col: 101}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var108))
 		if templ_7745c5c3_Err != nil {
@@ -1908,7 +1909,7 @@ func pageLink(v listView, page int, label string) templ.Component {
 		var templ_7745c5c3_Var110 templ.SafeURL
 		templ_7745c5c3_Var110, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(v.pageURL(page)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 285, Col: 39}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 286, Col: 39}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var110))
 		if templ_7745c5c3_Err != nil {
@@ -1921,7 +1922,7 @@ func pageLink(v listView, page int, label string) templ.Component {
 		var templ_7745c5c3_Var111 string
 		templ_7745c5c3_Var111, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.pageURL(page))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 286, Col: 26}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 287, Col: 26}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var111)
 		if templ_7745c5c3_Err != nil {
@@ -1934,7 +1935,7 @@ func pageLink(v listView, page int, label string) templ.Component {
 		var templ_7745c5c3_Var112 string
 		templ_7745c5c3_Var112, templ_7745c5c3_Err = templ.ResolveAttributeValue("#" + regionID)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 287, Col: 28}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 288, Col: 28}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var112)
 		if templ_7745c5c3_Err != nil {
@@ -1947,7 +1948,7 @@ func pageLink(v listView, page int, label string) templ.Component {
 		var templ_7745c5c3_Var113 string
 		templ_7745c5c3_Var113, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 290, Col: 9}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 291, Col: 9}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var113))
 		if templ_7745c5c3_Err != nil {
@@ -1992,7 +1993,7 @@ func createModal(f *formView) templ.Component {
 		var templ_7745c5c3_Var115 string
 		templ_7745c5c3_Var115, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.new.open"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 302, Col: 74}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 303, Col: 74}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var115))
 		if templ_7745c5c3_Err != nil {
@@ -2068,7 +2069,7 @@ func editModal() templ.Component {
 			var templ_7745c5c3_Var119 string
 			templ_7745c5c3_Var119, templ_7745c5c3_Err = templ.ResolveAttributeValue(editBodyID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 311, Col: 22}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 312, Col: 22}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var119)
 			if templ_7745c5c3_Err != nil {
@@ -2081,7 +2082,7 @@ func editModal() templ.Component {
 			var templ_7745c5c3_Var120 string
 			templ_7745c5c3_Var120, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.edit.loading"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 312, Col: 83}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 313, Col: 83}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var120))
 			if templ_7745c5c3_Err != nil {
@@ -2129,7 +2130,7 @@ func dialog(id, heading, sub string) templ.Component {
 		var templ_7745c5c3_Var122 string
 		templ_7745c5c3_Var122, templ_7745c5c3_Err = templ.ResolveAttributeValue(id)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 319, Col: 9}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 320, Col: 9}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var122)
 		if templ_7745c5c3_Err != nil {
@@ -2142,7 +2143,7 @@ func dialog(id, heading, sub string) templ.Component {
 		var templ_7745c5c3_Var123 string
 		templ_7745c5c3_Var123, templ_7745c5c3_Err = templ.ResolveAttributeValue(id + "-heading")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 321, Col: 35}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 322, Col: 35}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var123)
 		if templ_7745c5c3_Err != nil {
@@ -2155,7 +2156,7 @@ func dialog(id, heading, sub string) templ.Component {
 		var templ_7745c5c3_Var124 string
 		templ_7745c5c3_Var124, templ_7745c5c3_Err = templ.ResolveAttributeValue(id + "-heading")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 327, Col: 29}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 328, Col: 29}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var124)
 		if templ_7745c5c3_Err != nil {
@@ -2168,7 +2169,7 @@ func dialog(id, heading, sub string) templ.Component {
 		var templ_7745c5c3_Var125 string
 		templ_7745c5c3_Var125, templ_7745c5c3_Err = templ.JoinStringErrs(heading)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 327, Col: 97}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 328, Col: 97}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var125))
 		if templ_7745c5c3_Err != nil {
@@ -2181,7 +2182,7 @@ func dialog(id, heading, sub string) templ.Component {
 		var templ_7745c5c3_Var126 string
 		templ_7745c5c3_Var126, templ_7745c5c3_Err = templ.JoinStringErrs(sub)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 328, Col: 48}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 329, Col: 48}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var126))
 		if templ_7745c5c3_Err != nil {
@@ -2194,7 +2195,7 @@ func dialog(id, heading, sub string) templ.Component {
 		var templ_7745c5c3_Var127 string
 		templ_7745c5c3_Var127, templ_7745c5c3_Err = templ.ResolveAttributeValue(i18n.T(ctx, "reservations.dialog.close"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 330, Col: 330}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 331, Col: 330}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var127)
 		if templ_7745c5c3_Err != nil {
@@ -2246,7 +2247,7 @@ func Form(f *formView) templ.Component {
 		var templ_7745c5c3_Var129 string
 		templ_7745c5c3_Var129, templ_7745c5c3_Err = templ.ResolveAttributeValue(f.prefix() + "-form")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 341, Col: 27}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 342, Col: 27}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var129)
 		if templ_7745c5c3_Err != nil {
@@ -2259,7 +2260,7 @@ func Form(f *formView) templ.Component {
 		var templ_7745c5c3_Var130 templ.SafeURL
 		templ_7745c5c3_Var130, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(f.action()))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 343, Col: 36}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 344, Col: 36}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var130))
 		if templ_7745c5c3_Err != nil {
@@ -2272,7 +2273,7 @@ func Form(f *formView) templ.Component {
 		var templ_7745c5c3_Var131 string
 		templ_7745c5c3_Var131, templ_7745c5c3_Err = templ.ResolveAttributeValue(f.action())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 344, Col: 22}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 345, Col: 22}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var131)
 		if templ_7745c5c3_Err != nil {
@@ -2290,7 +2291,7 @@ func Form(f *formView) templ.Component {
 			var templ_7745c5c3_Var132 string
 			templ_7745c5c3_Var132, templ_7745c5c3_Err = templ.JoinStringErrs(f.General)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 351, Col: 18}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 352, Col: 18}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var132))
 			if templ_7745c5c3_Err != nil {
@@ -2313,7 +2314,7 @@ func Form(f *formView) templ.Component {
 					var templ_7745c5c3_Var133 string
 					templ_7745c5c3_Var133, templ_7745c5c3_Err = templ.JoinStringErrs(conflictLine(ctx, c))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 355, Col: 33}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 356, Col: 33}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var133))
 					if templ_7745c5c3_Err != nil {
@@ -2350,7 +2351,7 @@ func Form(f *formView) templ.Component {
 		var templ_7745c5c3_Var135 string
 		templ_7745c5c3_Var135, templ_7745c5c3_Err = templ.ResolveAttributeValue(f.fieldID("spot"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 362, Col: 33}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 363, Col: 33}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var135)
 		if templ_7745c5c3_Err != nil {
@@ -2376,7 +2377,7 @@ func Form(f *formView) templ.Component {
 		var templ_7745c5c3_Var137 string
 		templ_7745c5c3_Var137, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.form.spot"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 362, Col: 96}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 363, Col: 96}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var137))
 		if templ_7745c5c3_Err != nil {
@@ -2419,7 +2420,7 @@ func Form(f *formView) templ.Component {
 		var templ_7745c5c3_Var138 string
 		templ_7745c5c3_Var138, templ_7745c5c3_Err = templ.ResolveAttributeValue(f.fieldID("time-hint"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 374, Col: 32}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 375, Col: 32}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var138)
 		if templ_7745c5c3_Err != nil {
@@ -2430,9 +2431,9 @@ func Form(f *formView) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var139 string
-		templ_7745c5c3_Var139, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.form.time_hint", int(booking.MaximumReservationLength.Hours()), zoneName()))
+		templ_7745c5c3_Var139, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.form.time_hint", int(booking.MaximumReservationLength.Hours()), f.zoneName(time.Now())))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 374, Col: 204}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 375, Col: 216}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var139))
 		if templ_7745c5c3_Err != nil {
@@ -2473,7 +2474,7 @@ func Form(f *formView) templ.Component {
 			var templ_7745c5c3_Var142 string
 			templ_7745c5c3_Var142, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.form.author"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 379, Col: 72}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 380, Col: 72}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var142))
 			if templ_7745c5c3_Err != nil {
@@ -2486,7 +2487,7 @@ func Form(f *formView) templ.Component {
 			var templ_7745c5c3_Var143 string
 			templ_7745c5c3_Var143, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.form.booking_as"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 380, Col: 82}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 381, Col: 82}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var143))
 			if templ_7745c5c3_Err != nil {
@@ -2499,7 +2500,7 @@ func Form(f *formView) templ.Component {
 			var templ_7745c5c3_Var144 string
 			templ_7745c5c3_Var144, templ_7745c5c3_Err = templ.JoinStringErrs(f.SelfName)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 380, Col: 140}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 381, Col: 140}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var144))
 			if templ_7745c5c3_Err != nil {
@@ -2532,7 +2533,7 @@ func Form(f *formView) templ.Component {
 			var templ_7745c5c3_Var145 string
 			templ_7745c5c3_Var145, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.form.overbook"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 387, Col: 104}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 388, Col: 104}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var145))
 			if templ_7745c5c3_Err != nil {
@@ -2545,7 +2546,7 @@ func Form(f *formView) templ.Component {
 			var templ_7745c5c3_Var146 string
 			templ_7745c5c3_Var146, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.form.overbook_hint"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 388, Col: 118}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 389, Col: 118}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var146))
 			if templ_7745c5c3_Err != nil {
@@ -2564,7 +2565,7 @@ func Form(f *formView) templ.Component {
 			var templ_7745c5c3_Var147 string
 			templ_7745c5c3_Var147, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.form.book"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 395, Col: 44}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 396, Col: 44}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var147))
 			if templ_7745c5c3_Err != nil {
@@ -2574,7 +2575,7 @@ func Form(f *formView) templ.Component {
 			var templ_7745c5c3_Var148 string
 			templ_7745c5c3_Var148, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.form.save"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 397, Col: 44}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 398, Col: 44}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var148))
 			if templ_7745c5c3_Err != nil {
@@ -2588,7 +2589,7 @@ func Form(f *formView) templ.Component {
 		var templ_7745c5c3_Var149 string
 		templ_7745c5c3_Var149, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.form.cancel"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 400, Col: 244}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 401, Col: 244}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var149))
 		if templ_7745c5c3_Err != nil {
@@ -2639,7 +2640,7 @@ func timeField(f *formView, name, label, value string) templ.Component {
 		var templ_7745c5c3_Var152 string
 		templ_7745c5c3_Var152, templ_7745c5c3_Err = templ.ResolveAttributeValue(f.fieldID(name))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 407, Col: 30}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 408, Col: 30}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var152)
 		if templ_7745c5c3_Err != nil {
@@ -2665,7 +2666,7 @@ func timeField(f *formView, name, label, value string) templ.Component {
 		var templ_7745c5c3_Var154 string
 		templ_7745c5c3_Var154, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 407, Col: 61}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 408, Col: 61}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var154))
 		if templ_7745c5c3_Err != nil {
@@ -2687,7 +2688,7 @@ func timeField(f *formView, name, label, value string) templ.Component {
 		var templ_7745c5c3_Var156 string
 		templ_7745c5c3_Var156, templ_7745c5c3_Err = templ.ResolveAttributeValue(f.fieldID(name))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 409, Col: 23}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 410, Col: 23}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var156)
 		if templ_7745c5c3_Err != nil {
@@ -2700,7 +2701,7 @@ func timeField(f *formView, name, label, value string) templ.Component {
 		var templ_7745c5c3_Var157 string
 		templ_7745c5c3_Var157, templ_7745c5c3_Err = templ.ResolveAttributeValue(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 411, Col: 14}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 412, Col: 14}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var157)
 		if templ_7745c5c3_Err != nil {
@@ -2713,7 +2714,7 @@ func timeField(f *formView, name, label, value string) templ.Component {
 		var templ_7745c5c3_Var158 string
 		templ_7745c5c3_Var158, templ_7745c5c3_Err = templ.ResolveAttributeValue(value)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 412, Col: 16}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 413, Col: 16}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var158)
 		if templ_7745c5c3_Err != nil {
@@ -2726,7 +2727,7 @@ func timeField(f *formView, name, label, value string) templ.Component {
 		var templ_7745c5c3_Var159 string
 		templ_7745c5c3_Var159, templ_7745c5c3_Err = templ.ResolveAttributeValue(f.fieldID("time-hint") + " " + f.describedBy(name, false))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 416, Col: 79}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 417, Col: 79}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var159)
 		if templ_7745c5c3_Err != nil {
@@ -2800,7 +2801,7 @@ func fieldError(f *formView, name string) templ.Component {
 			var templ_7745c5c3_Var162 string
 			templ_7745c5c3_Var162, templ_7745c5c3_Err = templ.ResolveAttributeValue(f.fieldID(name) + "-error")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 428, Col: 36}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 429, Col: 36}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var162)
 			if templ_7745c5c3_Err != nil {
@@ -2813,7 +2814,7 @@ func fieldError(f *formView, name string) templ.Component {
 			var templ_7745c5c3_Var163 string
 			templ_7745c5c3_Var163, templ_7745c5c3_Err = templ.JoinStringErrs(f.err(name))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 428, Col: 95}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 429, Col: 95}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var163))
 			if templ_7745c5c3_Err != nil {
@@ -2864,7 +2865,7 @@ func authorPicker(f *formView) templ.Component {
 		var templ_7745c5c3_Var166 string
 		templ_7745c5c3_Var166, templ_7745c5c3_Err = templ.ResolveAttributeValue(f.fieldID("author"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 436, Col: 33}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 437, Col: 33}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var166)
 		if templ_7745c5c3_Err != nil {
@@ -2890,7 +2891,7 @@ func authorPicker(f *formView) templ.Component {
 		var templ_7745c5c3_Var168 string
 		templ_7745c5c3_Var168, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.form.author"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 436, Col: 98}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 437, Col: 98}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var168))
 		if templ_7745c5c3_Err != nil {
@@ -2903,7 +2904,7 @@ func authorPicker(f *formView) templ.Component {
 		var templ_7745c5c3_Var169 string
 		templ_7745c5c3_Var169, templ_7745c5c3_Err = templ.ResolveAttributeValue(f.AuthorID)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 437, Col: 65}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 438, Col: 65}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var169)
 		if templ_7745c5c3_Err != nil {
@@ -2925,7 +2926,7 @@ func authorPicker(f *formView) templ.Component {
 		var templ_7745c5c3_Var171 string
 		templ_7745c5c3_Var171, templ_7745c5c3_Err = templ.ResolveAttributeValue(f.fieldID("author"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 439, Col: 26}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 440, Col: 26}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var171)
 		if templ_7745c5c3_Err != nil {
@@ -2938,7 +2939,7 @@ func authorPicker(f *formView) templ.Component {
 		var templ_7745c5c3_Var172 string
 		templ_7745c5c3_Var172, templ_7745c5c3_Err = templ.ResolveAttributeValue(f.Author)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 442, Col: 18}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 443, Col: 18}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var172)
 		if templ_7745c5c3_Err != nil {
@@ -2951,7 +2952,7 @@ func authorPicker(f *formView) templ.Component {
 		var templ_7745c5c3_Var173 string
 		templ_7745c5c3_Var173, templ_7745c5c3_Err = templ.ResolveAttributeValue(web.GuildPath(f.GuildID, "/reservations/authors"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 446, Col: 60}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 447, Col: 60}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var173)
 		if templ_7745c5c3_Err != nil {
@@ -2964,7 +2965,7 @@ func authorPicker(f *formView) templ.Component {
 		var templ_7745c5c3_Var174 string
 		templ_7745c5c3_Var174, templ_7745c5c3_Err = templ.ResolveAttributeValue("#" + f.fieldID("author-suggestions"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 448, Col: 51}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 449, Col: 51}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var174)
 		if templ_7745c5c3_Err != nil {
@@ -2977,7 +2978,7 @@ func authorPicker(f *formView) templ.Component {
 		var templ_7745c5c3_Var175 string
 		templ_7745c5c3_Var175, templ_7745c5c3_Err = templ.ResolveAttributeValue(f.describedBy("author", true))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 450, Col: 50}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 451, Col: 50}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var175)
 		if templ_7745c5c3_Err != nil {
@@ -3013,7 +3014,7 @@ func authorPicker(f *formView) templ.Component {
 		var templ_7745c5c3_Var177 string
 		templ_7745c5c3_Var177, templ_7745c5c3_Err = templ.ResolveAttributeValue(f.fieldID("author") + "-hint")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 456, Col: 38}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 457, Col: 38}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var177)
 		if templ_7745c5c3_Err != nil {
@@ -3026,7 +3027,7 @@ func authorPicker(f *formView) templ.Component {
 		var templ_7745c5c3_Var178 string
 		templ_7745c5c3_Var178, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.form.author_hint"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 456, Col: 133}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 457, Col: 133}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var178))
 		if templ_7745c5c3_Err != nil {
@@ -3047,7 +3048,7 @@ func authorPicker(f *formView) templ.Component {
 		var templ_7745c5c3_Var179 string
 		templ_7745c5c3_Var179, templ_7745c5c3_Err = templ.ResolveAttributeValue(f.fieldID("author-suggestions"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 458, Col: 42}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 459, Col: 42}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var179)
 		if templ_7745c5c3_Err != nil {
@@ -3091,7 +3092,7 @@ func AuthorSuggestions(authors []*reservation.KnownAuthor) templ.Component {
 			var templ_7745c5c3_Var181 string
 			templ_7745c5c3_Var181, templ_7745c5c3_Err = templ.ResolveAttributeValue(i18n.T(ctx, "reservations.form.suggestions"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 464, Col: 97}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 465, Col: 97}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var181)
 			if templ_7745c5c3_Err != nil {
@@ -3109,7 +3110,7 @@ func AuthorSuggestions(authors []*reservation.KnownAuthor) templ.Component {
 				var templ_7745c5c3_Var182 string
 				templ_7745c5c3_Var182, templ_7745c5c3_Err = templ.ResolveAttributeValue(a.Author)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 467, Col: 66}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 468, Col: 66}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var182)
 				if templ_7745c5c3_Err != nil {
@@ -3122,7 +3123,7 @@ func AuthorSuggestions(authors []*reservation.KnownAuthor) templ.Component {
 				var templ_7745c5c3_Var183 string
 				templ_7745c5c3_Var183, templ_7745c5c3_Err = templ.ResolveAttributeValue(a.AuthorDiscordID)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 467, Col: 96}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 468, Col: 96}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var183)
 				if templ_7745c5c3_Err != nil {
@@ -3135,7 +3136,7 @@ func AuthorSuggestions(authors []*reservation.KnownAuthor) templ.Component {
 				var templ_7745c5c3_Var184 string
 				templ_7745c5c3_Var184, templ_7745c5c3_Err = templ.JoinStringErrs(a.Author)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 467, Col: 154}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 468, Col: 154}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var184))
 				if templ_7745c5c3_Err != nil {
@@ -3234,7 +3235,7 @@ func FormPage(baseURL, guildName string, f *formView, nav web.Nav) templ.Compone
 			var templ_7745c5c3_Var188 templ.SafeURL
 			templ_7745c5c3_Var188, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(web.GuildPath(f.GuildID, "/reservations")))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 488, Col: 69}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 489, Col: 69}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var188))
 			if templ_7745c5c3_Err != nil {
@@ -3247,7 +3248,7 @@ func FormPage(baseURL, guildName string, f *formView, nav web.Nav) templ.Compone
 			var templ_7745c5c3_Var189 string
 			templ_7745c5c3_Var189, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.page.heading"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 489, Col: 82}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 490, Col: 82}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var189))
 			if templ_7745c5c3_Err != nil {
@@ -3261,7 +3262,7 @@ func FormPage(baseURL, guildName string, f *formView, nav web.Nav) templ.Compone
 				var templ_7745c5c3_Var190 string
 				templ_7745c5c3_Var190, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.new.heading"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 493, Col: 46}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 494, Col: 46}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var190))
 				if templ_7745c5c3_Err != nil {
@@ -3271,7 +3272,7 @@ func FormPage(baseURL, guildName string, f *formView, nav web.Nav) templ.Compone
 				var templ_7745c5c3_Var191 string
 				templ_7745c5c3_Var191, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "reservations.edit.heading"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 495, Col: 47}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 496, Col: 47}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var191))
 				if templ_7745c5c3_Err != nil {
@@ -3293,7 +3294,7 @@ func FormPage(baseURL, guildName string, f *formView, nav web.Nav) templ.Compone
 			var templ_7745c5c3_Var192 string
 			templ_7745c5c3_Var192, templ_7745c5c3_Err = templ.ResolveAttributeValue(web.AssetURL("/assets/reservations.js"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 502, Col: 55}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 503, Col: 55}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var192)
 			if templ_7745c5c3_Err != nil {
@@ -3306,7 +3307,7 @@ func FormPage(baseURL, guildName string, f *formView, nav web.Nav) templ.Compone
 			var templ_7745c5c3_Var193 string
 			templ_7745c5c3_Var193, templ_7745c5c3_Err = templ.ResolveAttributeValue(web.AssetURL("/assets/alpine.js"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 503, Col: 49}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/reservations-http/reservations.templ`, Line: 504, Col: 49}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var193)
 			if templ_7745c5c3_Err != nil {

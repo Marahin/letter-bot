@@ -82,17 +82,30 @@ func (repo *SpotRepository) DeleteSpot(ctx context.Context, guildID string, id i
 	return postgresql.RowsAffected(repo.q.DeleteSpot(ctx, DeleteSpotParams{ID: id, GuildID: guildID}))
 }
 
-func (repo *SpotRepository) SelectGuildSpotReservationCounts(ctx context.Context, guildID string) (map[int64]spot.ReservationCounts, error) {
-	rows, err := repo.q.SelectGuildSpotReservationCounts(ctx, guildID)
+func (repo *SpotRepository) SelectGuildSpotList(ctx context.Context, guildID string, filter spot.ListFilter) ([]spot.Listed, error) {
+	rows, err := repo.q.SelectGuildSpotList(ctx, SelectGuildSpotListParams{
+		GuildID:     guildID,
+		Archived:    filter.Archived,
+		NamePattern: postgresql.EscapeLike(filter.Query),
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	counts := make(map[int64]spot.ReservationCounts, len(rows))
+	out := make([]spot.Listed, 0, len(rows))
 	for _, r := range rows {
-		counts[r.SpotID] = spot.ReservationCounts{Total: r.Total, Upcoming: r.Upcoming}
+		sp := mapWebSpot(WebSpot{ID: r.ID, Name: r.Name, CreatedAt: r.CreatedAt, GuildID: r.GuildID, ArchivedAt: r.ArchivedAt})
+		out = append(out, spot.Listed{Spot: *sp, Reservations: spot.ReservationCounts{Total: r.Total, Upcoming: r.Upcoming}})
 	}
-	return counts, nil
+	return out, nil
+}
+
+func (repo *SpotRepository) CountGuildSpots(ctx context.Context, guildID string) (active, archived int, err error) {
+	row, err := repo.q.CountGuildSpots(ctx, guildID)
+	if err != nil {
+		return 0, 0, err
+	}
+	return int(row.Active), int(row.Archived), nil
 }
 
 func (repo *SpotRepository) SelectSpotReservationCounts(ctx context.Context, guildID string, id int64) (spot.ReservationCounts, error) {

@@ -167,7 +167,7 @@
     },
     "reservations.flash.saved": "Rezerwacja zapisana: %s.",
     "reservations.form.author": "Autor",
-    "reservations.form.author_hint": "Wpisz co najmniej 2 litery, aby znaleźć członka, który już rezerwował, albo wpisz dowolną nazwę.",
+    "reservations.form.author_hint": "Wpisz co najmniej 3 litery, aby znaleźć członka, który już rezerwował, albo wpisz dowolną nazwę.",
     "reservations.form.book": "Zarezerwuj",
     "reservations.form.booking_as": "Rezerwacja dla",
     "reservations.form.cancel": "Anuluj",
@@ -291,6 +291,8 @@
       "many": "%d serwerów",
       "other": "%d serwera"
     },
+    "shell.toast.error": "Coś poszło nie tak. Spróbuj ponownie.",
+    "shell.toast.offline": "Nie udało się połączyć z Letter. Sprawdź połączenie i spróbuj ponownie.",
     "shell.topbar.dashboard": "Panel",
     "shell.topbar.features": "Funkcje",
     "shell.topbar.log_in": "Zaloguj się",

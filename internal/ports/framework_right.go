@@ -91,12 +91,16 @@ type SpotRepository interface {
 	// reservation (of any guild) points at it.
 	DeleteSpot(ctx context.Context, guildID string, id int64) error
 
-	// SelectGuildSpotReservationCounts maps each guild spot with reservations to its counts. It
-	// counts every reservation of the spot, as DeleteSpot does, even one with another guild_id.
-	SelectGuildSpotReservationCounts(ctx context.Context, guildID string) (map[int64]spot.ReservationCounts, error)
+	// SelectGuildSpotList returns the spots of one tab whose name contains
+	// filter.Query (case-insensitive), ordered by name, with their reservation counts.
+	// It counts every reservation of the spot, as DeleteSpot does, even one with another guild_id.
+	SelectGuildSpotList(ctx context.Context, guildID string, filter spot.ListFilter) ([]spot.Listed, error)
+
+	// CountGuildSpots returns the size of the active and the archived tab.
+	CountGuildSpots(ctx context.Context, guildID string) (active, archived int, err error)
 
 	// SelectSpotReservationCounts counts the reservations of one guild spot the way
-	// SelectGuildSpotReservationCounts does.
+	// SelectGuildSpotList does.
 	SelectSpotReservationCounts(ctx context.Context, guildID string, id int64) (spot.ReservationCounts, error)
 
 	// InsertSpotsIgnoreDuplicates adds the names that are not active in the guild yet.
@@ -130,6 +134,9 @@ type BotPort interface {
 type GuildConfigRepository interface {
 	Get(ctx context.Context, guildID string) (*guildconfig.Config, error)
 	ListByIDs(ctx context.Context, guildIDs []string) ([]*guildconfig.Config, error)
+	// ListPresentByIDs is ListByIDs limited to the guilds the bot is in, ordered by name.
+	ListPresentByIDs(ctx context.Context, guildIDs []string) ([]*guildconfig.Config, error)
+	// ListAll orders the bot-present guilds first, then by name.
 	ListAll(ctx context.Context) ([]*guildconfig.Config, error)
 
 	// UpsertPresence stores the Discord data of a guild and sets bot_present.
@@ -154,7 +161,8 @@ type GuildConfigRepository interface {
 type GuildChannelRepository interface {
 	// Replace swaps all stored channels of the guild in one transaction.
 	Replace(ctx context.Context, guildID string, channels []*discord.Channel) error
-	List(ctx context.Context, guildID string) ([]*discord.Channel, error)
+	// ListByTypes returns the channels of the given types, in Discord order.
+	ListByTypes(ctx context.Context, guildID string, types []discord.ChannelType) ([]*discord.Channel, error)
 }
 
 // GuildRoleRepository stores the roles the bot synced from Discord.

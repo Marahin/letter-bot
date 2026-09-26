@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"spot-assistant/internal/core/dto/guildconfig"
-	"spot-assistant/internal/infrastructure/guildsettings"
 	"spot-assistant/internal/infrastructure/web"
+	"spot-assistant/internal/ports"
 )
 
 type Handlers struct {
@@ -16,9 +16,8 @@ type Handlers struct {
 func New(d *web.Deps) *Handlers { return &Handlers{D: d} }
 
 func (h *Handlers) HandleSettings(w http.ResponseWriter, r *http.Request) {
-	current, ok := web.CurrentAccessFrom(r.Context())
+	current, ok := h.D.MustAccess(w, r)
 	if !ok {
-		h.D.ServerError(w, r, "settings without a guild guard", errors.New("no guild access in context"))
 		return
 	}
 	guildID := current.Config.GuildID
@@ -51,7 +50,7 @@ func (h *Handlers) HandleSetRanks(w http.ResponseWriter, r *http.Request) {
 	}
 	err := h.D.Settings.SetRoleIDs(r.Context(), r.PathValue("id"), kind, r.PostForm["role_ids"])
 	switch {
-	case errors.Is(err, guildsettings.ErrUnknownRole):
+	case errors.Is(err, ports.ErrUnknownRole):
 		h.D.Render(w, r, StaleStatus())
 	case err != nil:
 		h.D.ServerError(w, r, "set "+string(kind)+" ranks", err)
@@ -66,7 +65,7 @@ func (h *Handlers) HandleSetWorld(w http.ResponseWriter, r *http.Request) {
 	}
 	err := h.D.Settings.SetWorld(r.Context(), r.PathValue("id"), r.PostFormValue("world"))
 	switch {
-	case errors.Is(err, guildsettings.ErrUnknownWorld):
+	case errors.Is(err, ports.ErrUnknownWorld):
 		h.D.Render(w, r, WorldInvalidStatus())
 	case err != nil:
 		h.D.ServerError(w, r, "set world", err)

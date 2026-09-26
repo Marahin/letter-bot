@@ -32,11 +32,14 @@ type AuthService interface {
 	Complete(ctx context.Context, code string) (*webuser.User, error)
 	// User returns ErrNotFound for an unknown user.
 	User(ctx context.Context, userID string) (*webuser.User, error)
+	// Logout drops the user's stored OAuth token.
+	Logout(ctx context.Context, userID string) error
 }
 
 // GuildAccessService decides which stored guilds a web user may open, and with which capabilities.
 type GuildAccessService interface {
-	// AccessibleGuilds returns the bot-present guilds the user may view.
+	// AccessibleGuilds returns the guilds the user may view: the bot-present ones,
+	// or every stored guild for a site admin.
 	AccessibleGuilds(ctx context.Context, userID string) ([]access.GuildAccess, error)
 	// Access returns ErrNotFound when the user may not view the guild, so a caller
 	// cannot tell a foreign guild from a missing one.
@@ -49,7 +52,8 @@ type GuildAccessService interface {
 // PremiumService is the site-admin premium switch.
 type PremiumService interface {
 	List(ctx context.Context) ([]*guildconfig.Config, error)
-	SetPremium(ctx context.Context, guildID string, premium bool) error
+	// SetPremium returns the updated guild.
+	SetPremium(ctx context.Context, guildID string, premium bool) (*guildconfig.Config, error)
 }
 
 // BotNotifier sends best-effort signals from the web to the bot.

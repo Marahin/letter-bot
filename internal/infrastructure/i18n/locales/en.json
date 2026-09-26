@@ -167,7 +167,7 @@
     },
     "reservations.flash.saved": "Reservation saved: %s.",
     "reservations.form.author": "Author",
-    "reservations.form.author_hint": "Type 2 or more letters to find a member who booked before, or enter any name.",
+    "reservations.form.author_hint": "Type 3 or more letters to find a member who booked before, or enter any name.",
     "reservations.form.book": "Book",
     "reservations.form.booking_as": "Reserved for",
     "reservations.form.cancel": "Cancel",
@@ -289,6 +289,8 @@
       "one": "%d server",
       "other": "%d servers"
     },
+    "shell.toast.error": "Something went wrong. Try again.",
+    "shell.toast.offline": "Could not reach Letter. Check your connection and try again.",
     "shell.topbar.dashboard": "Dashboard",
     "shell.topbar.features": "Features",
     "shell.topbar.log_in": "Log in",

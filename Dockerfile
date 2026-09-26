@@ -1,3 +1,4 @@
+# The bot target builds the web toolchain too: accepted, to keep one shared build stage.
 # Debian-based (not Alpine): the Tailwind standalone CLI is glibc-linked.
 FROM golang:1.27-bookworm AS build
 # The base image pins GOTOOLCHAIN=local and can lag go.mod's patch version.

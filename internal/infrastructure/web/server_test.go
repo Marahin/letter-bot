@@ -161,19 +161,6 @@ func TestHandler_ServesAssetsAndStampedManifest(t *testing.T) {
 	assert.Contains(t, manifest.Body.String(), "/assets/favicon-192.png"+AssetQuery())
 }
 
-func TestHandler_HealthzOnlyWithAPing(t *testing.T) {
-	// given a server without a database
-	s := newTestServer(t)
-	assert.Equal(t, http.StatusNotFound, serveReq(t, s.Handler(), httptest.NewRequest(http.MethodGet, "/healthz", nil)).Code)
-
-	// when a ping is wired
-	s.ping = func(context.Context) error { return nil }
-
-	// then
-	rec := serveReq(t, s.Handler(), httptest.NewRequest(http.MethodGet, "/healthz", nil))
-	assert.Equal(t, http.StatusOK, rec.Code)
-}
-
 func TestHandler_MountRegistersFeatureRoutes(t *testing.T) {
 	// given a feature that registers a page
 	s := newTestServer(t)

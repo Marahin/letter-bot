@@ -3,7 +3,6 @@ package adminhttp
 import (
 	"net/http"
 	"net/url"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -80,8 +79,6 @@ func TestHandleGuilds(t *testing.T) {
 	assert.Contains(t, body, "Bot removed")
 	assert.Contains(t, body, `hx-post="/admin/guilds/2/premium"`)
 	assert.NotContains(t, body, `hx-post="/admin/guilds/806152499760201738/premium"`)
-	assert.Less(t, strings.Index(body, "Celesta Community"), strings.Index(body, "Side Guild"))
-	assert.Less(t, strings.Index(body, "Side Guild"), strings.Index(body, "gone"))
 }
 
 func TestHandleGuilds_ListError(t *testing.T) {
@@ -103,7 +100,7 @@ func TestHandleSetPremium_PlainFormRedirects(t *testing.T) {
 	d, m := webtest.NewDeps(t)
 	h := webtest.Handler(d, Register)
 	cookie := webtest.SignInSiteAdmin(t, d, m, "admin")
-	m.Premium.EXPECT().SetPremium(mock.Anything, "2", true).Return(nil)
+	m.Premium.EXPECT().SetPremium(mock.Anything, "2", true).Return(&guildconfig.Config{GuildID: "2", Premium: true}, nil)
 
 	// when
 	rec := webtest.Serve(h, webtest.Post("/admin/guilds/2/premium", url.Values{"premium": {"true"}}, cookie))
@@ -118,10 +115,7 @@ func TestHandleSetPremium_HTMXGetsTheRow(t *testing.T) {
 	d, m := webtest.NewDeps(t)
 	h := webtest.Handler(d, Register)
 	cookie := webtest.SignInSiteAdmin(t, d, m, "admin")
-	m.Premium.EXPECT().SetPremium(mock.Anything, "2", false).Return(nil)
-	list := guilds()
-	list[1].Premium = false
-	m.Premium.EXPECT().List(mock.Anything).Return(list, nil)
+	m.Premium.EXPECT().SetPremium(mock.Anything, "2", false).Return(&guildconfig.Config{GuildID: "2", Name: "Side Guild", BotPresent: true}, nil)
 	r := webtest.Post("/admin/guilds/2/premium", url.Values{"premium": {"false"}}, cookie)
 	r.Header.Set("HX-Request", "true")
 
@@ -154,40 +148,11 @@ func TestHandleSetPremium_Refusals(t *testing.T) {
 			h := webtest.Handler(d, Register)
 			cookie := webtest.SignInSiteAdmin(t, d, m, "admin")
 			if tc.err != nil {
-				m.Premium.EXPECT().SetPremium(mock.Anything, "2", tc.value == "true").Return(tc.err)
+				m.Premium.EXPECT().SetPremium(mock.Anything, "2", tc.value == "true").Return(nil, tc.err)
 			}
 
 			// when
 			rec := webtest.Serve(h, webtest.Post("/admin/guilds/2/premium", url.Values{"premium": {tc.value}}, cookie))
-
-			// then
-			assert.Equal(t, tc.status, rec.Code)
-		})
-	}
-}
-
-func TestHandleSetPremium_HTMXRowErrors(t *testing.T) {
-	cases := map[string]struct {
-		list   []*guildconfig.Config
-		err    error
-		status int
-	}{
-		"list fails":      {nil, assert.AnError, http.StatusInternalServerError},
-		"row disappeared": {[]*guildconfig.Config{}, nil, http.StatusNotFound},
-	}
-	for name, tc := range cases {
-		t.Run(name, func(t *testing.T) {
-			// given
-			d, m := webtest.NewDeps(t)
-			h := webtest.Handler(d, Register)
-			cookie := webtest.SignInSiteAdmin(t, d, m, "admin")
-			m.Premium.EXPECT().SetPremium(mock.Anything, "2", true).Return(nil)
-			m.Premium.EXPECT().List(mock.Anything).Return(tc.list, tc.err)
-			r := webtest.Post("/admin/guilds/2/premium", url.Values{"premium": {"true"}}, cookie)
-			r.Header.Set("HX-Request", "true")
-
-			// when
-			rec := webtest.Serve(h, r)
 
 			// then
 			assert.Equal(t, tc.status, rec.Code)

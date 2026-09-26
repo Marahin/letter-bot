@@ -245,6 +245,35 @@
   100% { transform: scaleX(0.95); }
 }
 
+/* The htmx error toast (htmx-errors.js), in the scxmanager toast style. Its state
+   classes only appear in JS, so it lives outside @layer to survive purge. */
+.letter-toast {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  z-index: 60;
+  max-width: min(90vw, 420px);
+  padding: 14px 22px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 107, 107, 0.4);
+  background: #3a1414;
+  color: #FCA5A5;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, -8px);
+  transition: opacity 0.2s, transform 0.2s, visibility 0.2s;
+  cursor: pointer;
+}
+.letter-toast.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+
 /* The day-range picker's calendar, drawn inline by range-picker.js. Its classes
    only appear in JS, which Tailwind doesn't scan, so these styles live outside
    @layer to survive purge. Days that have recorded data carry a small green dot;

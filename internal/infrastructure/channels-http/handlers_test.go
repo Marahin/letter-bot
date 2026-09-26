@@ -14,8 +14,8 @@ import (
 	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/guildconfig"
 	"spot-assistant/internal/core/permission"
-	"spot-assistant/internal/infrastructure/guildsettings"
 	"spot-assistant/internal/infrastructure/web/webtest"
+	"spot-assistant/internal/ports"
 )
 
 const guildID = "g1"
@@ -130,7 +130,7 @@ func TestHandleSetChannels(t *testing.T) {
 		want string
 	}{
 		"saved": {nil, http.StatusOK, "Channels saved."},
-		"stale": {guildsettings.ErrUnknownChannel, http.StatusOK, "A selected channel is no longer on the server."},
+		"stale": {ports.ErrUnknownChannel, http.StatusOK, "A selected channel is no longer on the server."},
 		"error": {errors.New("db down"), http.StatusInternalServerError, ""},
 	}
 	for name, tc := range cases {

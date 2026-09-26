@@ -74,3 +74,33 @@ func TestService_User(t *testing.T) {
 	assert.Nil(t, missing)
 	assert.True(t, errors.Is(errMissing, ports.ErrNotFound))
 }
+
+func TestService_Logout(t *testing.T) {
+	cases := map[string]struct {
+		saveErr  error
+		expected error
+	}{
+		"clears the token":        {},
+		"unknown user is no-op":   {saveErr: ports.ErrNotFound},
+		"store error is returned": {saveErr: assert.AnError, expected: assert.AnError},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			// given
+			ctx := context.Background()
+			users := mocks.NewMockWebUserRepository(t)
+			users.EXPECT().SaveToken(ctx, "u1", webuser.Token{}).Return(tc.saveErr)
+			s := New(mocks.NewMockOAuthPort(t), users)
+
+			// when
+			err := s.Logout(ctx, "u1")
+
+			// then
+			if tc.expected == nil {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorIs(t, err, tc.expected)
+			}
+		})
+	}
+}

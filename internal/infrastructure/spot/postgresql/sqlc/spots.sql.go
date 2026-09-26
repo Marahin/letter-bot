@@ -7,6 +7,8 @@ package sqlc
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const archiveSpot = `-- name: ArchiveSpot :execrows
@@ -28,6 +30,25 @@ func (q *Queries) ArchiveSpot(ctx context.Context, arg ArchiveSpotParams) (int64
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const countGuildSpots = `-- name: CountGuildSpots :one
+SELECT count(*) FILTER (WHERE archived_at IS NULL) AS active,
+  count(*) FILTER (WHERE archived_at IS NOT NULL) AS archived
+FROM web_spot
+WHERE guild_id = $1::text
+`
+
+type CountGuildSpotsRow struct {
+	Active   int64
+	Archived int64
+}
+
+func (q *Queries) CountGuildSpots(ctx context.Context, guildID string) (CountGuildSpotsRow, error) {
+	row := q.db.QueryRow(ctx, countGuildSpots, guildID)
+	var i CountGuildSpotsRow
+	err := row.Scan(&i.Active, &i.Archived)
+	return i, err
 }
 
 const deleteSpot = `-- name: DeleteSpot :execrows
@@ -188,34 +209,57 @@ func (q *Queries) SelectGuildSpotByName(ctx context.Context, arg SelectGuildSpot
 	return i, err
 }
 
-const selectGuildSpotReservationCounts = `-- name: SelectGuildSpotReservationCounts :many
-SELECT r.spot_id,
-  count(*) AS total,
-  count(*) FILTER (WHERE r.end_at >= now()) AS upcoming
-FROM web_reservation r
-  INNER JOIN web_spot s ON s.id = r.spot_id
+const selectGuildSpotList = `-- name: SelectGuildSpotList :many
+SELECT s.id, s.name, s.created_at, s.guild_id, s.archived_at, c.total, c.upcoming
+FROM web_spot s
+  CROSS JOIN LATERAL (
+    SELECT count(*) AS total,
+      count(*) FILTER (WHERE r.end_at >= now()) AS upcoming
+    FROM web_reservation r
+    WHERE r.spot_id = s.id
+  ) c
 WHERE s.guild_id = $1::text
-GROUP BY r.spot_id
+  AND (s.archived_at IS NOT NULL) = $2::boolean
+  AND lower(s.name) LIKE '%' || lower($3::text) || '%'
+ORDER BY lower(s.name), s.id
 `
 
-type SelectGuildSpotReservationCountsRow struct {
-	SpotID   int64
-	Total    int64
-	Upcoming int64
+type SelectGuildSpotListParams struct {
+	GuildID     string
+	Archived    bool
+	NamePattern string
 }
 
-// Counts every reservation that points at a guild spot, whatever its guild_id,
-// because any of them blocks DeleteSpot.
-func (q *Queries) SelectGuildSpotReservationCounts(ctx context.Context, guildID string) ([]SelectGuildSpotReservationCountsRow, error) {
-	rows, err := q.db.Query(ctx, selectGuildSpotReservationCounts, guildID)
+type SelectGuildSpotListRow struct {
+	ID         int64
+	Name       string
+	CreatedAt  pgtype.Timestamptz
+	GuildID    pgtype.Text
+	ArchivedAt pgtype.Timestamptz
+	Total      int64
+	Upcoming   int64
+}
+
+// One tab of the respawn list. The counts take every reservation that points at
+// the spot, whatever its guild_id, because any of them blocks DeleteSpot.
+func (q *Queries) SelectGuildSpotList(ctx context.Context, arg SelectGuildSpotListParams) ([]SelectGuildSpotListRow, error) {
+	rows, err := q.db.Query(ctx, selectGuildSpotList, arg.GuildID, arg.Archived, arg.NamePattern)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []SelectGuildSpotReservationCountsRow
+	var items []SelectGuildSpotListRow
 	for rows.Next() {
-		var i SelectGuildSpotReservationCountsRow
-		if err := rows.Scan(&i.SpotID, &i.Total, &i.Upcoming); err != nil {
+		var i SelectGuildSpotListRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.CreatedAt,
+			&i.GuildID,
+			&i.ArchivedAt,
+			&i.Total,
+			&i.Upcoming,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -325,7 +369,7 @@ type SelectSpotReservationCountsRow struct {
 	Upcoming int64
 }
 
-// The single-spot variant of SelectGuildSpotReservationCounts.
+// The single-spot variant of the SelectGuildSpotList counts.
 func (q *Queries) SelectSpotReservationCounts(ctx context.Context, arg SelectSpotReservationCountsParams) (SelectSpotReservationCountsRow, error) {
 	row := q.db.QueryRow(ctx, selectSpotReservationCounts, arg.SpotID, arg.GuildID)
 	var i SelectSpotReservationCountsRow

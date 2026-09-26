@@ -43,21 +43,21 @@ func newFixture(t *testing.T) fixture {
 
 func syncedChannels() []*discord.Channel {
 	return []*discord.Channel{
-		{ID: "cat", Name: "Tibia", Type: discord.ChannelTypeGuildCategory},
 		{ID: "c1", Name: "letter", Type: discord.ChannelTypeGuildText},
 		{ID: "c2", Name: "news", Type: discord.ChannelTypeGuildNews},
-		{ID: "v1", Name: "voice", Type: discord.ChannelTypeGuildVoice},
 	}
 }
+
+var textAndNews = []discord.ChannelType{discord.ChannelTypeGuildText, discord.ChannelTypeGuildNews}
 
 func syncedRoles() []*role.Role {
 	return []*role.Role{{ID: "r1", Name: "Leader"}, {ID: "r2", Name: "Member"}}
 }
 
-func TestChannels_KeepsTextAndNewsOnly(t *testing.T) {
+func TestChannels_AsksForTextAndNewsOnly(t *testing.T) {
 	// given
 	f := newFixture(t)
-	f.channels.EXPECT().List(mock.Anything, guildID).Return(syncedChannels(), nil)
+	f.channels.EXPECT().ListByTypes(mock.Anything, guildID, textAndNews).Return(syncedChannels(), nil)
 
 	// when
 	got, err := f.svc.Channels(context.Background(), guildID)
@@ -72,7 +72,7 @@ func TestChannels_KeepsTextAndNewsOnly(t *testing.T) {
 func TestChannels_Error(t *testing.T) {
 	// given
 	f := newFixture(t)
-	f.channels.EXPECT().List(mock.Anything, guildID).Return(nil, errors.New("db down"))
+	f.channels.EXPECT().ListByTypes(mock.Anything, guildID, textAndNews).Return(nil, errors.New("db down"))
 
 	// when
 	_, err := f.svc.Channels(context.Background(), guildID)
@@ -140,7 +140,7 @@ func TestWorld(t *testing.T) {
 func TestSetChannels_StoresAndSignals(t *testing.T) {
 	// given
 	f := newFixture(t)
-	f.channels.EXPECT().List(mock.Anything, guildID).Return(syncedChannels(), nil)
+	f.channels.EXPECT().ListByTypes(mock.Anything, guildID, textAndNews).Return(syncedChannels(), nil)
 	f.configs.EXPECT().SetChannels(mock.Anything, guildID, "c1", "").Return(nil)
 	f.notifier.EXPECT().ConfigChanged(mock.Anything, guildID).Return(nil)
 	f.notifier.EXPECT().SummaryChanged(mock.Anything, guildID).Return(errors.New("notify failed"))
@@ -162,13 +162,13 @@ func TestSetChannels_RefusesUnsyncedChannel(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// given
 			f := newFixture(t)
-			f.channels.EXPECT().List(mock.Anything, guildID).Return(syncedChannels(), nil)
+			f.channels.EXPECT().ListByTypes(mock.Anything, guildID, textAndNews).Return(syncedChannels(), nil)
 
 			// when
 			err := f.svc.SetChannels(context.Background(), guildID, ids[0], ids[1])
 
 			// then
-			assert.ErrorIs(t, err, ErrUnknownChannel)
+			assert.ErrorIs(t, err, ports.ErrUnknownChannel)
 		})
 	}
 }
@@ -177,7 +177,7 @@ func TestSetChannels_Errors(t *testing.T) {
 	t.Run("list", func(t *testing.T) {
 		// given
 		f := newFixture(t)
-		f.channels.EXPECT().List(mock.Anything, guildID).Return(nil, errors.New("db down"))
+		f.channels.EXPECT().ListByTypes(mock.Anything, guildID, textAndNews).Return(nil, errors.New("db down"))
 
 		// when
 		err := f.svc.SetChannels(context.Background(), guildID, "", "")
@@ -188,7 +188,7 @@ func TestSetChannels_Errors(t *testing.T) {
 	t.Run("store", func(t *testing.T) {
 		// given
 		f := newFixture(t)
-		f.channels.EXPECT().List(mock.Anything, guildID).Return(syncedChannels(), nil)
+		f.channels.EXPECT().ListByTypes(mock.Anything, guildID, textAndNews).Return(syncedChannels(), nil)
 		f.configs.EXPECT().SetChannels(mock.Anything, guildID, "", "").Return(errors.New("db down"))
 
 		// when
@@ -234,7 +234,7 @@ func TestSetRoleIDs_Refusals(t *testing.T) {
 		err := f.svc.SetRoleIDs(context.Background(), guildID, "admin", []string{"r1"})
 
 		// then
-		assert.ErrorIs(t, err, ErrUnknownRoleKind)
+		assert.ErrorIs(t, err, ports.ErrUnknownRoleKind)
 	})
 	t.Run("unknown role", func(t *testing.T) {
 		// given
@@ -245,7 +245,7 @@ func TestSetRoleIDs_Refusals(t *testing.T) {
 		err := f.svc.SetRoleIDs(context.Background(), guildID, guildconfig.RoleKindManage, []string{"r1", "gone"})
 
 		// then
-		assert.ErrorIs(t, err, ErrUnknownRole)
+		assert.ErrorIs(t, err, ports.ErrUnknownRole)
 	})
 	t.Run("list error", func(t *testing.T) {
 		// given
@@ -294,7 +294,7 @@ func TestSetWorld_Refusals(t *testing.T) {
 		err := f.svc.SetWorld(context.Background(), guildID, "Atlantis")
 
 		// then
-		assert.ErrorIs(t, err, ErrUnknownWorld)
+		assert.ErrorIs(t, err, ports.ErrUnknownWorld)
 	})
 	t.Run("store error", func(t *testing.T) {
 		// given

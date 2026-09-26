@@ -150,9 +150,8 @@ func (h *Handlers) HandleCharacter(w http.ResponseWriter, r *http.Request) {
 // URL pinned. hidden are the query values the picker must carry over.
 func (h *Handlers) page(w http.ResponseWriter, r *http.Request, hidden ...web.RangePickerHidden) (pageView, bool) {
 	ctx := r.Context()
-	current, ok := web.CurrentAccessFrom(ctx)
+	current, ok := h.D.MustAccess(w, r)
 	if !ok {
-		h.D.ServerError(w, r, "stats without a guild guard", errors.New("no guild access in context"))
 		return pageView{}, false
 	}
 	guildID := current.Config.GuildID

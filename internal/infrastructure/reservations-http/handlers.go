@@ -53,7 +53,7 @@ func (h *Handlers) HandleSpot(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handlers) list(w http.ResponseWriter, r *http.Request, sp *spot.Listed) {
 	ctx := r.Context()
-	current, ok := h.access(w, r)
+	current, ok := h.D.MustAccess(w, r)
 	if !ok {
 		return
 	}
@@ -75,7 +75,7 @@ func (h *Handlers) list(w http.ResponseWriter, r *http.Request, sp *spot.Listed)
 	f.Page = page.Page
 	v := listView{GuildID: guildID, GuildName: current.Config.Name, Actor: actor, Filter: f, Page: page, Now: h.now(), Spot: sp}
 
-	if isHTMX(r) && r.Header.Get("HX-Target") == regionID {
+	if web.IsHTMX(r) && r.Header.Get("HX-Target") == regionID {
 		// A reload after a change keeps the address; a filter or page change updates it.
 		if r.Header.Get("HX-Trigger") != regionID {
 			w.Header().Set("HX-Push-Url", v.currentURL())
@@ -112,7 +112,7 @@ func (h *Handlers) HandleCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
-	current, ok := h.access(w, r)
+	current, ok := h.D.MustAccess(w, r)
 	if !ok {
 		return
 	}
@@ -155,7 +155,7 @@ func (h *Handlers) HandleEditForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
-	current, ok := h.access(w, r)
+	current, ok := h.D.MustAccess(w, r)
 	if !ok {
 		return
 	}
@@ -186,7 +186,7 @@ func (h *Handlers) HandleEdit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
-	current, ok := h.access(w, r)
+	current, ok := h.D.MustAccess(w, r)
 	if !ok {
 		return
 	}
@@ -228,7 +228,7 @@ func (h *Handlers) HandleDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
-	current, ok := h.access(w, r)
+	current, ok := h.D.MustAccess(w, r)
 	if !ok {
 		return
 	}
@@ -246,7 +246,7 @@ func (h *Handlers) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	default:
 		f = flash{Text: i18n.T(ctx, "reservations.flash.deleted")}
 	}
-	if !isHTMX(r) {
+	if !web.IsHTMX(r) {
 		http.Redirect(w, r, web.GuildPath(guildID, "/reservations"), http.StatusSeeOther)
 		return
 	}
@@ -268,7 +268,7 @@ func (h *Handlers) HandleAuthors(w http.ResponseWriter, r *http.Request) {
 // and the event that closes the dialog and reloads the list; a plain form post a
 // redirect back to the list.
 func (h *Handlers) saved(w http.ResponseWriter, r *http.Request, guildID string, next *formView, f flash) {
-	if !isHTMX(r) {
+	if !web.IsHTMX(r) {
 		http.Redirect(w, r, web.GuildPath(guildID, "/reservations"), http.StatusSeeOther)
 		return
 	}
@@ -279,21 +279,13 @@ func (h *Handlers) saved(w http.ResponseWriter, r *http.Request, guildID string,
 // renderForm answers a form: the fragment for htmx (a refusal also answers 200,
 // as htmx does not swap a 4xx body), the form page otherwise.
 func (h *Handlers) renderForm(w http.ResponseWriter, r *http.Request, current access.GuildAccess, f *formView) {
-	if isHTMX(r) {
+	if web.IsHTMX(r) {
 		h.D.Render(w, r, Form(f))
 		return
 	}
 	nav := h.D.Nav(r, current.Config.GuildID)
 	nav.Active = "reservations"
 	h.D.Render(w, r, FormPage(h.D.Cfg.BaseURL, current.Config.Name, f, nav))
-}
-
-func (h *Handlers) access(w http.ResponseWriter, r *http.Request) (access.GuildAccess, bool) {
-	current, ok := web.CurrentAccessFrom(r.Context())
-	if !ok {
-		h.D.ServerError(w, r, "reservations without a guild guard", errors.New("no guild access in context"))
-	}
-	return current, ok
 }
 
 // actor is the signed-in user in this guild. withName also resolves the author
@@ -455,8 +447,3 @@ func pageTitle(ctx context.Context, v listView) string {
 func deleteConfirm(ctx context.Context, r *reservation.ReservationWithSpot) string {
 	return i18n.T(ctx, "reservations.row.delete_confirm", r.Author, r.Spot.Name, dayAndHours(ctx, r.StartAt, r.EndAt))
 }
-
-// zoneName is the abbreviation of the process time zone (D31), for the form hint.
-func zoneName() string { return time.Now().Format("MST") }
-
-func isHTMX(r *http.Request) bool { return r.Header.Get("HX-Request") == "true" }

@@ -50,14 +50,20 @@ func (q *Queries) InsertGuildChannels(ctx context.Context, arg InsertGuildChanne
 	return err
 }
 
-const selectGuildChannels = `-- name: SelectGuildChannels :many
+const selectGuildChannelsByTypes = `-- name: SelectGuildChannelsByTypes :many
 SELECT channel_id, name, type, parent_id, position
 FROM guild_channels
 WHERE guild_id = $1
+  AND type = ANY($2::int[])
 ORDER BY position, lower(name), channel_id
 `
 
-type SelectGuildChannelsRow struct {
+type SelectGuildChannelsByTypesParams struct {
+	GuildID string
+	Types   []int32
+}
+
+type SelectGuildChannelsByTypesRow struct {
 	ChannelID string
 	Name      string
 	Type      int32
@@ -65,15 +71,15 @@ type SelectGuildChannelsRow struct {
 	Position  int32
 }
 
-func (q *Queries) SelectGuildChannels(ctx context.Context, guildID string) ([]SelectGuildChannelsRow, error) {
-	rows, err := q.db.Query(ctx, selectGuildChannels, guildID)
+func (q *Queries) SelectGuildChannelsByTypes(ctx context.Context, arg SelectGuildChannelsByTypesParams) ([]SelectGuildChannelsByTypesRow, error) {
+	rows, err := q.db.Query(ctx, selectGuildChannelsByTypes, arg.GuildID, arg.Types)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []SelectGuildChannelsRow
+	var items []SelectGuildChannelsByTypesRow
 	for rows.Next() {
-		var i SelectGuildChannelsRow
+		var i SelectGuildChannelsByTypesRow
 		if err := rows.Scan(
 			&i.ChannelID,
 			&i.Name,

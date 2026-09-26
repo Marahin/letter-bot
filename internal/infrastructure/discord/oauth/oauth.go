@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"golang.org/x/oauth2"
+	"golang.org/x/sync/singleflight"
 
 	"spot-assistant/internal/core/dto/access"
 	"spot-assistant/internal/core/dto/webuser"
@@ -47,6 +48,9 @@ type Adapter struct {
 	apiBase string
 	users   ports.WebUserRepository
 	now     func() time.Time
+	// refreshes holds one refresh per user: Discord rotates the refresh token, so
+	// a second concurrent refresh with the old one gets invalid_grant.
+	refreshes singleflight.Group
 
 	retryDelays   []time.Duration
 	maxRetryAfter time.Duration
@@ -157,17 +161,49 @@ func (a *Adapter) UserGuildMember(ctx context.Context, userID, guildID string) (
 
 // accessToken loads the user's token and refreshes it when it is about to expire.
 func (a *Adapter) accessToken(ctx context.Context, userID string) (string, error) {
+	stored, err := a.storedToken(ctx, userID)
+	if err != nil {
+		return "", err
+	}
+	if !a.due(stored) {
+		return stored.AccessToken, nil
+	}
+	fresh, err, _ := a.refreshes.Do(userID, func() (any, error) {
+		// Shared by every waiter, so one cancelled request must not fail the others.
+		return a.refresh(context.WithoutCancel(ctx), userID)
+	})
+	if err != nil {
+		return "", err
+	}
+	return fresh.(string), nil
+}
+
+func (a *Adapter) storedToken(ctx context.Context, userID string) (*webuser.Token, error) {
 	stored, err := a.users.AccessToken(ctx, userID)
 	if errors.Is(err, ports.ErrNotFound) {
-		return "", ports.ErrUnauthorized
+		return nil, ports.ErrUnauthorized
 	}
 	if err != nil {
-		return "", fmt.Errorf("load oauth token: %w", err)
+		return nil, fmt.Errorf("load oauth token: %w", err)
 	}
 	if stored.AccessToken == "" {
-		return "", ports.ErrUnauthorized
+		return nil, ports.ErrUnauthorized
 	}
-	if stored.Expiry == nil || a.now().Add(refreshMargin).Before(*stored.Expiry) {
+	return stored, nil
+}
+
+func (a *Adapter) due(t *webuser.Token) bool {
+	return t.Expiry != nil && !a.now().Add(refreshMargin).Before(*t.Expiry)
+}
+
+// refresh re-reads the stored token first: a refresh that finished between our
+// read and winning the flight has already rotated it.
+func (a *Adapter) refresh(ctx context.Context, userID string) (string, error) {
+	stored, err := a.storedToken(ctx, userID)
+	if err != nil {
+		return "", err
+	}
+	if !a.due(stored) {
 		return stored.AccessToken, nil
 	}
 	if stored.RefreshToken == "" {

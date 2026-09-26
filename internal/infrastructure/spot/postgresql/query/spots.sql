@@ -60,18 +60,29 @@ WHERE web_spot.id = @id
   AND web_spot.guild_id = @guild_id::text
   AND NOT EXISTS (SELECT 1 FROM web_reservation r WHERE r.spot_id = web_spot.id);
 
--- Counts every reservation that points at a guild spot, whatever its guild_id,
--- because any of them blocks DeleteSpot.
--- name: SelectGuildSpotReservationCounts :many
-SELECT r.spot_id,
-  count(*) AS total,
-  count(*) FILTER (WHERE r.end_at >= now()) AS upcoming
-FROM web_reservation r
-  INNER JOIN web_spot s ON s.id = r.spot_id
+-- One tab of the respawn list. The counts take every reservation that points at
+-- the spot, whatever its guild_id, because any of them blocks DeleteSpot.
+-- name: SelectGuildSpotList :many
+SELECT s.id, s.name, s.created_at, s.guild_id, s.archived_at, c.total, c.upcoming
+FROM web_spot s
+  CROSS JOIN LATERAL (
+    SELECT count(*) AS total,
+      count(*) FILTER (WHERE r.end_at >= now()) AS upcoming
+    FROM web_reservation r
+    WHERE r.spot_id = s.id
+  ) c
 WHERE s.guild_id = @guild_id::text
-GROUP BY r.spot_id;
+  AND (s.archived_at IS NOT NULL) = @archived::boolean
+  AND lower(s.name) LIKE '%' || lower(@name_pattern::text) || '%'
+ORDER BY lower(s.name), s.id;
 
--- The single-spot variant of SelectGuildSpotReservationCounts.
+-- name: CountGuildSpots :one
+SELECT count(*) FILTER (WHERE archived_at IS NULL) AS active,
+  count(*) FILTER (WHERE archived_at IS NOT NULL) AS archived
+FROM web_spot
+WHERE guild_id = @guild_id::text;
+
+-- The single-spot variant of the SelectGuildSpotList counts.
 -- name: SelectSpotReservationCounts :one
 SELECT count(*) AS total,
   count(*) FILTER (WHERE r.end_at >= now()) AS upcoming

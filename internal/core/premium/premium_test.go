@@ -42,10 +42,11 @@ func TestService_SetPremium_TurnsOnAndNotifies(t *testing.T) {
 	notifier.EXPECT().ConfigChanged(ctx, "g").Return(nil)
 
 	// when
-	err := s.SetPremium(ctx, "g", true)
+	cfg, err := s.SetPremium(ctx, "g", true)
 
 	// then
 	assert.NoError(t, err)
+	assert.True(t, cfg.Premium)
 }
 
 func TestService_SetPremium_NotifierFailureIsNotAnError(t *testing.T) {
@@ -57,10 +58,11 @@ func TestService_SetPremium_NotifierFailureIsNotAnError(t *testing.T) {
 	notifier.EXPECT().ConfigChanged(ctx, "g").Return(errors.New("conn closed"))
 
 	// when
-	err := s.SetPremium(ctx, "g", false)
+	cfg, err := s.SetPremium(ctx, "g", false)
 
 	// then
 	assert.NoError(t, err)
+	assert.False(t, cfg.Premium)
 }
 
 func TestService_SetPremium_Unchanged(t *testing.T) {
@@ -70,10 +72,11 @@ func TestService_SetPremium_Unchanged(t *testing.T) {
 	configs.EXPECT().Get(ctx, "g").Return(&guildconfig.Config{GuildID: "g", Premium: true}, nil)
 
 	// when
-	err := s.SetPremium(ctx, "g", true)
+	cfg, err := s.SetPremium(ctx, "g", true)
 
 	// then
 	assert.NoError(t, err)
+	assert.True(t, cfg.Premium)
 }
 
 func TestService_SetPremium_RefusesToTurnOffForever(t *testing.T) {
@@ -83,7 +86,7 @@ func TestService_SetPremium_RefusesToTurnOffForever(t *testing.T) {
 	configs.EXPECT().Get(ctx, "g").Return(&guildconfig.Config{GuildID: "g", Premium: true, PremiumForever: true}, nil)
 
 	// when
-	err := s.SetPremium(ctx, "g", false)
+	_, err := s.SetPremium(ctx, "g", false)
 
 	// then
 	assert.ErrorIs(t, err, ErrPremiumForever)
@@ -97,7 +100,7 @@ func TestService_SetPremium_Errors(t *testing.T) {
 		configs.EXPECT().Get(ctx, "g").Return(nil, ports.ErrNotFound)
 
 		// when
-		err := s.SetPremium(ctx, "g", true)
+		_, err := s.SetPremium(ctx, "g", true)
 
 		// then
 		assert.ErrorIs(t, err, ports.ErrNotFound)
@@ -110,7 +113,7 @@ func TestService_SetPremium_Errors(t *testing.T) {
 		configs.EXPECT().SetPremium(ctx, "g", true).Return(errors.New("db down"))
 
 		// when
-		err := s.SetPremium(ctx, "g", true)
+		_, err := s.SetPremium(ctx, "g", true)
 
 		// then
 		assert.ErrorContains(t, err, "db down")

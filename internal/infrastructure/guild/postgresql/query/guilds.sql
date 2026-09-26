@@ -9,10 +9,17 @@ FROM guilds
 WHERE guild_id = ANY(@guild_ids::text[])
 ORDER BY lower(name), guild_id;
 
+-- name: SelectPresentGuildsByIDs :many
+SELECT *
+FROM guilds
+WHERE guild_id = ANY(@guild_ids::text[])
+  AND bot_present
+ORDER BY lower(name), guild_id;
+
 -- name: SelectAllGuilds :many
 SELECT *
 FROM guilds
-ORDER BY lower(name), guild_id;
+ORDER BY bot_present DESC, lower(name), guild_id;
 
 -- Never touches the admin-set columns (premium, channels, ranks).
 -- name: UpsertGuildPresence :one

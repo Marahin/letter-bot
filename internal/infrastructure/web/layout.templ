@@ -41,13 +41,9 @@ templ Layout(title, description, baseURL, path string, nav Nav) {
 			<link rel="stylesheet" href={ AssetURL("/assets/app.css") }/>
 			<link rel="stylesheet" href={ AssetURL("/assets/flatpickr.dark.css") }/>
 			<link rel="stylesheet" href={ AssetURL("/assets/flatpickr.theme.css") }/>
-			// After the shell's own, so page CSS wins a specificity tie. The hrefs arrive
-			// stamped from the call site.
-			for _, href := range nav.Stylesheets {
-				<link rel="stylesheet" href={ href }/>
-			}
 			<script src={ AssetURL("/assets/htmx.min.js") } defer></script>
 			<script src={ AssetURL("/assets/nav-loading.js") } defer></script>
+			<script src={ AssetURL("/assets/htmx-errors.js") } defer></script>
 			<script src={ AssetURL("/assets/i18n.js") } defer></script>
 			<script src={ AssetURL("/assets/flatpickr.min.js") } defer></script>
 			// English is built into flatpickr, so only the other locales load a bundle. It
@@ -78,6 +74,7 @@ templ Layout(title, description, baseURL, path string, nav Nav) {
 					</main>
 					@attributionFooter()
 				</div>
+				@errorToast()
 			</body>
 		} else {
 			<body class="flex min-h-screen flex-col bg-zone-950 text-zone-100 antialiased selection:bg-signal/30">
@@ -91,9 +88,20 @@ templ Layout(title, description, baseURL, path string, nav Nav) {
 					{ children... }
 				</main>
 				@attributionFooter()
+				@errorToast()
 			</body>
 		}
 	</html>
+}
+
+// errorToast is the live region htmx-errors.js shows a failed htmx request in.
+// It stays in the DOM, so screen readers pick up the text it later receives.
+templ errorToast() {
+	<div id="letter-toast" class="letter-toast" role="status" aria-live="polite" aria-atomic="true"></div>
+	@TranslatedStrings(map[string]string{
+		"shell.toast.error":   i18n.T(ctx, "shell.toast.error"),
+		"shell.toast.offline": i18n.T(ctx, "shell.toast.offline"),
+	})
 }
 
 // attributionFooter is the shell footer: branding.Notice()'s attribution wording.

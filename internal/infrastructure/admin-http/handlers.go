@@ -3,8 +3,6 @@ package adminhttp
 import (
 	"errors"
 	"net/http"
-	"sort"
-	"strings"
 
 	"spot-assistant/internal/core/dto/guildconfig"
 	"spot-assistant/internal/core/premium"
@@ -25,7 +23,6 @@ func (h *Handlers) HandleGuilds(w http.ResponseWriter, r *http.Request) {
 		h.D.ServerError(w, r, "list guilds", err)
 		return
 	}
-	sortGuilds(guilds)
 	nav := h.D.Nav(r, "")
 	nav.Active = "admin-guilds"
 	h.D.Render(w, r, Guilds(h.D.Cfg.BaseURL, guilds, nav))
@@ -48,7 +45,7 @@ func (h *Handlers) HandleSetPremium(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	guildID := r.PathValue("id")
-	err := h.D.Premium.SetPremium(r.Context(), guildID, on)
+	cfg, err := h.D.Premium.SetPremium(r.Context(), guildID, on)
 	switch {
 	case errors.Is(err, ports.ErrNotFound):
 		h.D.NotFound(w, r)
@@ -63,32 +60,11 @@ func (h *Handlers) HandleSetPremium(w http.ResponseWriter, r *http.Request) {
 	}
 	h.D.Log.Infow("admin action", "action", "set-premium", "actor", h.D.SessionUserID(r.Context()), "guild_id", guildID, "premium", on)
 
-	if r.Header.Get("HX-Request") != "true" {
+	if !web.IsHTMX(r) {
 		http.Redirect(w, r, "/admin/guilds", http.StatusSeeOther)
 		return
 	}
-	guilds, err := h.D.Premium.List(r.Context())
-	if err != nil {
-		h.D.ServerError(w, r, "list guilds", err)
-		return
-	}
-	for _, g := range guilds {
-		if g.GuildID == guildID {
-			h.D.Render(w, r, guildRow(g))
-			return
-		}
-	}
-	h.D.NotFound(w, r)
-}
-
-// sortGuilds puts bot-present servers first, then orders by name.
-func sortGuilds(guilds []*guildconfig.Config) {
-	sort.SliceStable(guilds, func(i, j int) bool {
-		if guilds[i].BotPresent != guilds[j].BotPresent {
-			return guilds[i].BotPresent
-		}
-		return strings.ToLower(guilds[i].Name) < strings.ToLower(guilds[j].Name)
-	})
+	h.D.Render(w, r, guildRow(cfg))
 }
 
 func premiumFormValue(g *guildconfig.Config) string {

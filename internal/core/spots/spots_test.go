@@ -24,52 +24,39 @@ func newService(t *testing.T) (*Service, *mocks.MockSpotRepository, *mocks.MockB
 	return New(repo, notifier, nil), repo, notifier
 }
 
-func guildSpots() []*spot.Spot {
-	archivedAt := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
-	return []*spot.Spot{
-		{ID: 1, Name: "Dragon Lords", GuildID: guildID},
-		{ID: 3, Name: "Empty (old)", GuildID: guildID, ArchivedAt: &archivedAt},
-		{ID: 4, Name: "Hero Cave", GuildID: guildID},
-		{ID: 9, Name: "Dragons Old", GuildID: guildID, ArchivedAt: &archivedAt},
-	}
-}
-
-func TestService_List_ActiveTabWithCounts(t *testing.T) {
+func TestService_List_PassesTheTrimmedFilterAndTabCounts(t *testing.T) {
 	// given
 	ctx := context.Background()
 	s, repo, _ := newService(t)
-	repo.EXPECT().SelectGuildSpots(ctx, guildID, true).Return(guildSpots(), nil)
-	repo.EXPECT().SelectGuildSpotReservationCounts(ctx, guildID).Return(map[int64]spot.ReservationCounts{4: {Total: 5, Upcoming: 2}}, nil)
-
-	// when
-	list, err := s.List(ctx, guildID, spot.ListFilter{})
-
-	// then
-	require.NoError(t, err)
-	require.Len(t, list.Spots, 2)
-	assert.Equal(t, "Dragon Lords", list.Spots[0].Name)
-	assert.Zero(t, list.Spots[0].Reservations)
-	assert.Equal(t, spot.ReservationCounts{Total: 5, Upcoming: 2}, list.Spots[1].Reservations)
-	assert.Equal(t, 2, list.ActiveCount)
-	assert.Equal(t, 2, list.ArchivedCount)
-	assert.Equal(t, 4, list.Total())
-}
-
-func TestService_List_ArchivedTabFiltersByQuery(t *testing.T) {
-	// given
-	ctx := context.Background()
-	s, repo, _ := newService(t)
-	repo.EXPECT().SelectGuildSpots(ctx, guildID, true).Return(guildSpots(), nil)
-	repo.EXPECT().SelectGuildSpotReservationCounts(ctx, guildID).Return(map[int64]spot.ReservationCounts{}, nil)
+	listed := []spot.Listed{{Spot: spot.Spot{ID: 9, Name: "Dragons Old"}, Reservations: spot.ReservationCounts{Total: 5, Upcoming: 2}}}
+	repo.EXPECT().SelectGuildSpotList(ctx, guildID, spot.ListFilter{Archived: true, Query: "DRAGON"}).Return(listed, nil)
+	repo.EXPECT().CountGuildSpots(ctx, guildID).Return(2, 3, nil)
 
 	// when
 	list, err := s.List(ctx, guildID, spot.ListFilter{Archived: true, Query: "  DRAGON "})
 
 	// then
 	require.NoError(t, err)
-	require.Len(t, list.Spots, 1)
-	assert.Equal(t, int64(9), list.Spots[0].ID)
-	assert.Equal(t, 2, list.ArchivedCount)
+	assert.Equal(t, listed, list.Spots)
+	assert.Equal(t, 2, list.ActiveCount)
+	assert.Equal(t, 3, list.ArchivedCount)
+	assert.Equal(t, 5, list.Total())
+}
+
+func TestService_List_NoMatchIsAnEmptyList(t *testing.T) {
+	// given
+	ctx := context.Background()
+	s, repo, _ := newService(t)
+	repo.EXPECT().SelectGuildSpotList(ctx, guildID, spot.ListFilter{}).Return(nil, nil)
+	repo.EXPECT().CountGuildSpots(ctx, guildID).Return(0, 0, nil)
+
+	// when
+	list, err := s.List(ctx, guildID, spot.ListFilter{})
+
+	// then
+	require.NoError(t, err)
+	assert.NotNil(t, list.Spots)
+	assert.Empty(t, list.Spots)
 }
 
 func TestService_List_Errors(t *testing.T) {
@@ -77,7 +64,7 @@ func TestService_List_Errors(t *testing.T) {
 		// given
 		ctx := context.Background()
 		s, repo, _ := newService(t)
-		repo.EXPECT().SelectGuildSpots(ctx, guildID, true).Return(nil, errors.New("boom"))
+		repo.EXPECT().SelectGuildSpotList(ctx, guildID, spot.ListFilter{}).Return(nil, errors.New("boom"))
 
 		// when
 		_, err := s.List(ctx, guildID, spot.ListFilter{})
@@ -89,8 +76,8 @@ func TestService_List_Errors(t *testing.T) {
 		// given
 		ctx := context.Background()
 		s, repo, _ := newService(t)
-		repo.EXPECT().SelectGuildSpots(ctx, guildID, true).Return(guildSpots(), nil)
-		repo.EXPECT().SelectGuildSpotReservationCounts(ctx, guildID).Return(nil, errors.New("boom"))
+		repo.EXPECT().SelectGuildSpotList(ctx, guildID, spot.ListFilter{}).Return(nil, nil)
+		repo.EXPECT().CountGuildSpots(ctx, guildID).Return(0, 0, errors.New("boom"))
 
 		// when
 		_, err := s.List(ctx, guildID, spot.ListFilter{})

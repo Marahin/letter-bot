@@ -47,47 +47,48 @@ func (_m *MockGuildChannelRepository) EXPECT() *MockGuildChannelRepository_Expec
 	return &MockGuildChannelRepository_Expecter{mock: &_m.Mock}
 }
 
-// List provides a mock function for the type MockGuildChannelRepository
-func (_mock *MockGuildChannelRepository) List(ctx context.Context, guildID string) ([]*discord.Channel, error) {
-	ret := _mock.Called(ctx, guildID)
+// ListByTypes provides a mock function for the type MockGuildChannelRepository
+func (_mock *MockGuildChannelRepository) ListByTypes(ctx context.Context, guildID string, types []discord.ChannelType) ([]*discord.Channel, error) {
+	ret := _mock.Called(ctx, guildID, types)
 
 	if len(ret) == 0 {
-		panic("no return value specified for List")
+		panic("no return value specified for ListByTypes")
 	}
 
 	var r0 []*discord.Channel
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) ([]*discord.Channel, error)); ok {
-		return returnFunc(ctx, guildID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []discord.ChannelType) ([]*discord.Channel, error)); ok {
+		return returnFunc(ctx, guildID, types)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) []*discord.Channel); ok {
-		r0 = returnFunc(ctx, guildID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []discord.ChannelType) []*discord.Channel); ok {
+		r0 = returnFunc(ctx, guildID, types)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*discord.Channel)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = returnFunc(ctx, guildID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, []discord.ChannelType) error); ok {
+		r1 = returnFunc(ctx, guildID, types)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// MockGuildChannelRepository_List_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'List'
-type MockGuildChannelRepository_List_Call struct {
+// MockGuildChannelRepository_ListByTypes_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListByTypes'
+type MockGuildChannelRepository_ListByTypes_Call struct {
 	*mock.Call
 }
 
-// List is a helper method to define mock.On call
+// ListByTypes is a helper method to define mock.On call
 //   - ctx context.Context
 //   - guildID string
-func (_e *MockGuildChannelRepository_Expecter) List(ctx any, guildID any) *MockGuildChannelRepository_List_Call {
-	return &MockGuildChannelRepository_List_Call{Call: _e.mock.On("List", ctx, guildID)}
+//   - types []discord.ChannelType
+func (_e *MockGuildChannelRepository_Expecter) ListByTypes(ctx any, guildID any, types any) *MockGuildChannelRepository_ListByTypes_Call {
+	return &MockGuildChannelRepository_ListByTypes_Call{Call: _e.mock.On("ListByTypes", ctx, guildID, types)}
 }
 
-func (_c *MockGuildChannelRepository_List_Call) Run(run func(ctx context.Context, guildID string)) *MockGuildChannelRepository_List_Call {
+func (_c *MockGuildChannelRepository_ListByTypes_Call) Run(run func(ctx context.Context, guildID string, types []discord.ChannelType)) *MockGuildChannelRepository_ListByTypes_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -97,20 +98,25 @@ func (_c *MockGuildChannelRepository_List_Call) Run(run func(ctx context.Context
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
+		var arg2 []discord.ChannelType
+		if args[2] != nil {
+			arg2 = args[2].([]discord.ChannelType)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
 }
 
-func (_c *MockGuildChannelRepository_List_Call) Return(channels []*discord.Channel, err error) *MockGuildChannelRepository_List_Call {
+func (_c *MockGuildChannelRepository_ListByTypes_Call) Return(channels []*discord.Channel, err error) *MockGuildChannelRepository_ListByTypes_Call {
 	_c.Call.Return(channels, err)
 	return _c
 }
 
-func (_c *MockGuildChannelRepository_List_Call) RunAndReturn(run func(ctx context.Context, guildID string) ([]*discord.Channel, error)) *MockGuildChannelRepository_List_Call {
+func (_c *MockGuildChannelRepository_ListByTypes_Call) RunAndReturn(run func(ctx context.Context, guildID string, types []discord.ChannelType) ([]*discord.Channel, error)) *MockGuildChannelRepository_ListByTypes_Call {
 	_c.Call.Return(run)
 	return _c
 }

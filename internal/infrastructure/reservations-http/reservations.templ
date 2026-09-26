@@ -2,6 +2,7 @@ package reservationshttp
 
 import (
 	"strconv"
+	"time"
 
 	"spot-assistant/internal/core/booking"
 	"spot-assistant/internal/core/dto/reservation"
@@ -371,7 +372,7 @@ templ Form(f *formView) {
 		</div>
 		@timeField(f, "start", i18n.T(ctx, "reservations.form.start"), f.Start)
 		@timeField(f, "end", i18n.T(ctx, "reservations.form.end"), f.End)
-		<p id={ f.fieldID("time-hint") } class="-mt-2 text-xs leading-relaxed text-zone-500 sm:col-span-2">{ i18n.T(ctx, "reservations.form.time_hint", int(booking.MaximumReservationLength.Hours()), zoneName()) }</p>
+		<p id={ f.fieldID("time-hint") } class="-mt-2 text-xs leading-relaxed text-zone-500 sm:col-span-2">{ i18n.T(ctx, "reservations.form.time_hint", int(booking.MaximumReservationLength.Hours()), f.zoneName(time.Now())) }</p>
 		<div class="flex flex-col gap-1.5 sm:col-span-2">
 			if f.CanPickAuthor {
 				@authorPicker(f)

@@ -1,7 +1,8 @@
-// Package guildsettings is the service behind the admin Settings and Channels
-// pages. It lists the Discord options the bot synced (channels, roles), validates
-// each choice against them, stores it and signals the bot. It lives in the infra
-// layer, not the core: the options are Discord details the domain does not know.
+// Package guildsettings implements ports.GuildSettingsService, behind the admin
+// Settings and Channels pages. It lists the Discord options the bot synced
+// (channels, roles), validates each choice against them, stores it and signals
+// the bot. As in scxmanager, the service lives in the infra layer; its refusals
+// are ports errors, so the HTTP handlers depend on ports only.
 package guildsettings
 
 import (
@@ -25,12 +26,7 @@ import (
 // ResyncCooldown is the minimum time between two "Refresh server data" requests of one guild.
 const ResyncCooldown = 5 * time.Minute
 
-var (
-	ErrUnknownChannel  = errors.New("unknown channel")
-	ErrUnknownRole     = errors.New("unknown role")
-	ErrUnknownRoleKind = errors.New("unknown role kind")
-	ErrUnknownWorld    = errors.New("unknown world")
-)
+var postableChannelTypes = []discord.ChannelType{discord.ChannelTypeGuildText, discord.ChannelTypeGuildNews}
 
 // Service implements ports.GuildSettingsService.
 type Service struct {
@@ -65,17 +61,11 @@ func New(configs ports.GuildConfigRepository, channels ports.GuildChannelReposit
 
 // Channels returns the synced channels a bot can post to: text and announcement channels.
 func (s *Service) Channels(ctx context.Context, guildID string) ([]*discord.Channel, error) {
-	all, err := s.channels.List(ctx, guildID)
+	channels, err := s.channels.ListByTypes(ctx, guildID, postableChannelTypes)
 	if err != nil {
 		return nil, fmt.Errorf("list channels: %w", err)
 	}
-	postable := make([]*discord.Channel, 0, len(all))
-	for _, c := range all {
-		if c.Type == discord.ChannelTypeGuildText || c.Type == discord.ChannelTypeGuildNews {
-			postable = append(postable, c)
-		}
-	}
-	return postable, nil
+	return channels, nil
 }
 
 func (s *Service) Roles(ctx context.Context, guildID string) ([]*role.Role, error) {
@@ -106,7 +96,7 @@ func (s *Service) SetChannels(ctx context.Context, guildID, commandChannelID, su
 	}
 	for _, id := range []string{commandChannelID, summaryChannelID} {
 		if id != "" && !slices.ContainsFunc(channels, func(c *discord.Channel) bool { return c.ID == id }) {
-			return ErrUnknownChannel
+			return ports.ErrUnknownChannel
 		}
 	}
 	if err := s.configs.SetChannels(ctx, guildID, commandChannelID, summaryChannelID); err != nil {
@@ -121,7 +111,7 @@ func (s *Service) SetChannels(ctx context.Context, guildID, commandChannelID, su
 // The bot and the web read the lists on each command and request, so no signal is needed.
 func (s *Service) SetRoleIDs(ctx context.Context, guildID string, kind guildconfig.RoleKind, roleIDs []string) error {
 	if !kind.Valid() {
-		return ErrUnknownRoleKind
+		return ports.ErrUnknownRoleKind
 	}
 	roles, err := s.Roles(ctx, guildID)
 	if err != nil {
@@ -130,7 +120,7 @@ func (s *Service) SetRoleIDs(ctx context.Context, guildID string, kind guildconf
 	ids := make([]string, 0, len(roleIDs))
 	for _, id := range roleIDs {
 		if !slices.ContainsFunc(roles, func(r *role.Role) bool { return r.ID == id }) {
-			return ErrUnknownRole
+			return ports.ErrUnknownRole
 		}
 		if !slices.Contains(ids, id) {
 			ids = append(ids, id)
@@ -147,7 +137,7 @@ func (s *Service) SetRoleIDs(ctx context.Context, guildID string, kind guildconf
 func (s *Service) SetWorld(ctx context.Context, guildID, world string) error {
 	i := slices.IndexFunc(worlds.Worlds, func(w string) bool { return strings.EqualFold(w, strings.TrimSpace(world)) })
 	if i < 0 {
-		return ErrUnknownWorld
+		return ports.ErrUnknownWorld
 	}
 	if err := s.worlds.UpsertGuildWorld(ctx, guildID, worlds.Worlds[i]); err != nil {
 		return fmt.Errorf("upsert guild world: %w", err)

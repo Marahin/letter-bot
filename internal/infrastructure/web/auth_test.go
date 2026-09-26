@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -258,6 +259,7 @@ func TestLogout(t *testing.T) {
 	// given
 	f := newAuthFixture(t)
 	cookie := f.signIn(t, "u1")
+	f.auth.EXPECT().Logout(mock.Anything, "u1").Return(nil).Once()
 
 	// when
 	forged := httptest.NewRequest(http.MethodPost, "/logout", nil)
@@ -270,6 +272,22 @@ func TestLogout(t *testing.T) {
 	assert.Equal(t, http.StatusForbidden, refused.Code)
 	assert.Equal(t, http.StatusSeeOther, rec.Code)
 	assert.Equal(t, "/", rec.Header().Get("Location"))
+	assert.Equal(t, http.StatusSeeOther, after.Code)
+	assert.Equal(t, "/login?to=%2Fdashboard", after.Header().Get("Location"))
+}
+
+func TestLogout_TokenClearFailureStillSignsOut(t *testing.T) {
+	// given
+	f := newAuthFixture(t)
+	cookie := f.signIn(t, "u1")
+	f.auth.EXPECT().Logout(mock.Anything, "u1").Return(errors.New("db down")).Once()
+
+	// when
+	rec := f.do(sameOriginPost("/logout"), cookie)
+	after := f.do(htmlGet("/dashboard"), cookie)
+
+	// then
+	assert.Equal(t, http.StatusSeeOther, rec.Code)
 	assert.Equal(t, http.StatusSeeOther, after.Code)
 	assert.Equal(t, "/login?to=%2Fdashboard", after.Header().Get("Location"))
 }
@@ -599,7 +617,6 @@ func TestNav_UsesTheExactAccessOfTheCurrentServer(t *testing.T) {
 	assert.True(t, n.Authenticated)
 	assert.Equal(t, "nyx", n.Username)
 	assert.True(t, n.IsAdmin)
-	assert.True(t, n.CanManage)
 	assert.Equal(t, "Celesta", n.CurrentGuildName)
 	assert.Equal(t, "/servers/g1/stats", n.ReturnTo)
 }

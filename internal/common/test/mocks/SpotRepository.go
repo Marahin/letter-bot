@@ -110,6 +110,78 @@ func (_c *MockSpotRepository_ArchiveSpot_Call) RunAndReturn(run func(ctx context
 	return _c
 }
 
+// CountGuildSpots provides a mock function for the type MockSpotRepository
+func (_mock *MockSpotRepository) CountGuildSpots(ctx context.Context, guildID string) (int, int, error) {
+	ret := _mock.Called(ctx, guildID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CountGuildSpots")
+	}
+
+	var r0 int
+	var r1 int
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (int, int, error)); ok {
+		return returnFunc(ctx, guildID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) int); ok {
+		r0 = returnFunc(ctx, guildID)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) int); ok {
+		r1 = returnFunc(ctx, guildID)
+	} else {
+		r1 = ret.Get(1).(int)
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, string) error); ok {
+		r2 = returnFunc(ctx, guildID)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// MockSpotRepository_CountGuildSpots_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountGuildSpots'
+type MockSpotRepository_CountGuildSpots_Call struct {
+	*mock.Call
+}
+
+// CountGuildSpots is a helper method to define mock.On call
+//   - ctx context.Context
+//   - guildID string
+func (_e *MockSpotRepository_Expecter) CountGuildSpots(ctx any, guildID any) *MockSpotRepository_CountGuildSpots_Call {
+	return &MockSpotRepository_CountGuildSpots_Call{Call: _e.mock.On("CountGuildSpots", ctx, guildID)}
+}
+
+func (_c *MockSpotRepository_CountGuildSpots_Call) Run(run func(ctx context.Context, guildID string)) *MockSpotRepository_CountGuildSpots_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSpotRepository_CountGuildSpots_Call) Return(active int, archived int, err error) *MockSpotRepository_CountGuildSpots_Call {
+	_c.Call.Return(active, archived, err)
+	return _c
+}
+
+func (_c *MockSpotRepository_CountGuildSpots_Call) RunAndReturn(run func(ctx context.Context, guildID string) (int, int, error)) *MockSpotRepository_CountGuildSpots_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteSpot provides a mock function for the type MockSpotRepository
 func (_mock *MockSpotRepository) DeleteSpot(ctx context.Context, guildID string, id int64) error {
 	ret := _mock.Called(ctx, guildID, id)
@@ -599,47 +671,48 @@ func (_c *MockSpotRepository_SelectGuildSpotByName_Call) RunAndReturn(run func(c
 	return _c
 }
 
-// SelectGuildSpotReservationCounts provides a mock function for the type MockSpotRepository
-func (_mock *MockSpotRepository) SelectGuildSpotReservationCounts(ctx context.Context, guildID string) (map[int64]spot.ReservationCounts, error) {
-	ret := _mock.Called(ctx, guildID)
+// SelectGuildSpotList provides a mock function for the type MockSpotRepository
+func (_mock *MockSpotRepository) SelectGuildSpotList(ctx context.Context, guildID string, filter spot.ListFilter) ([]spot.Listed, error) {
+	ret := _mock.Called(ctx, guildID, filter)
 
 	if len(ret) == 0 {
-		panic("no return value specified for SelectGuildSpotReservationCounts")
+		panic("no return value specified for SelectGuildSpotList")
 	}
 
-	var r0 map[int64]spot.ReservationCounts
+	var r0 []spot.Listed
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (map[int64]spot.ReservationCounts, error)); ok {
-		return returnFunc(ctx, guildID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, spot.ListFilter) ([]spot.Listed, error)); ok {
+		return returnFunc(ctx, guildID, filter)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) map[int64]spot.ReservationCounts); ok {
-		r0 = returnFunc(ctx, guildID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, spot.ListFilter) []spot.Listed); ok {
+		r0 = returnFunc(ctx, guildID, filter)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[int64]spot.ReservationCounts)
+			r0 = ret.Get(0).([]spot.Listed)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = returnFunc(ctx, guildID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, spot.ListFilter) error); ok {
+		r1 = returnFunc(ctx, guildID, filter)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// MockSpotRepository_SelectGuildSpotReservationCounts_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SelectGuildSpotReservationCounts'
-type MockSpotRepository_SelectGuildSpotReservationCounts_Call struct {
+// MockSpotRepository_SelectGuildSpotList_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SelectGuildSpotList'
+type MockSpotRepository_SelectGuildSpotList_Call struct {
 	*mock.Call
 }
 
-// SelectGuildSpotReservationCounts is a helper method to define mock.On call
+// SelectGuildSpotList is a helper method to define mock.On call
 //   - ctx context.Context
 //   - guildID string
-func (_e *MockSpotRepository_Expecter) SelectGuildSpotReservationCounts(ctx any, guildID any) *MockSpotRepository_SelectGuildSpotReservationCounts_Call {
-	return &MockSpotRepository_SelectGuildSpotReservationCounts_Call{Call: _e.mock.On("SelectGuildSpotReservationCounts", ctx, guildID)}
+//   - filter spot.ListFilter
+func (_e *MockSpotRepository_Expecter) SelectGuildSpotList(ctx any, guildID any, filter any) *MockSpotRepository_SelectGuildSpotList_Call {
+	return &MockSpotRepository_SelectGuildSpotList_Call{Call: _e.mock.On("SelectGuildSpotList", ctx, guildID, filter)}
 }
 
-func (_c *MockSpotRepository_SelectGuildSpotReservationCounts_Call) Run(run func(ctx context.Context, guildID string)) *MockSpotRepository_SelectGuildSpotReservationCounts_Call {
+func (_c *MockSpotRepository_SelectGuildSpotList_Call) Run(run func(ctx context.Context, guildID string, filter spot.ListFilter)) *MockSpotRepository_SelectGuildSpotList_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -649,20 +722,25 @@ func (_c *MockSpotRepository_SelectGuildSpotReservationCounts_Call) Run(run func
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
+		var arg2 spot.ListFilter
+		if args[2] != nil {
+			arg2 = args[2].(spot.ListFilter)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
 }
 
-func (_c *MockSpotRepository_SelectGuildSpotReservationCounts_Call) Return(int64ToReservationCounts map[int64]spot.ReservationCounts, err error) *MockSpotRepository_SelectGuildSpotReservationCounts_Call {
-	_c.Call.Return(int64ToReservationCounts, err)
+func (_c *MockSpotRepository_SelectGuildSpotList_Call) Return(listeds []spot.Listed, err error) *MockSpotRepository_SelectGuildSpotList_Call {
+	_c.Call.Return(listeds, err)
 	return _c
 }
 
-func (_c *MockSpotRepository_SelectGuildSpotReservationCounts_Call) RunAndReturn(run func(ctx context.Context, guildID string) (map[int64]spot.ReservationCounts, error)) *MockSpotRepository_SelectGuildSpotReservationCounts_Call {
+func (_c *MockSpotRepository_SelectGuildSpotList_Call) RunAndReturn(run func(ctx context.Context, guildID string, filter spot.ListFilter) ([]spot.Listed, error)) *MockSpotRepository_SelectGuildSpotList_Call {
 	_c.Call.Return(run)
 	return _c
 }

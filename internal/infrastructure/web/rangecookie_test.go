@@ -33,7 +33,7 @@ func TestSetRangeSelectionCookie_ScopedSessionCookie(t *testing.T) {
 }
 
 func TestSetRangeSelectionCookie_SecureOnHTTPS(t *testing.T) {
-	d := &Deps{Cfg: Config{BaseURL: "https://scx.example"}}
+	d := &Deps{Cfg: Config{BaseURL: "https://letter.example"}}
 	rec := httptest.NewRecorder()
 	d.SetRangeSelectionCookie(rec, "g1", "2026-06-18")
 	require.Len(t, rec.Result().Cookies(), 1)

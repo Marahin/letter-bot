@@ -107,8 +107,9 @@ These items of the request were unclear or had a cost. Each has a decision.
     on Settings. Every other server page shows "Premium required".
 25. **Site admins (`WEB_ADMIN_DISCORD_IDS`) have full access to every stored
     server.** They turn `premium` on and off. `premium_forever` is read-only in
-    the web; only the migration sets it. Other users see a server only while the
-    bot is in it.
+    the web; only the migration sets it. Their server switcher lists the servers
+    the bot has left too, after the others. Other users see a server only while
+    the bot is in it.
 26. **The experience job stores snapshots only for tracked characters, and only
     when the value changed.** Tracked means the character is in the author of a
     reservation that is upcoming, active or ended in the last 24 hours, on a
@@ -213,6 +214,11 @@ These items of the request were unclear or had a cost. Each has a decision.
     tertiary text 1:1.
 44. **mockery is pinned to v3.8.0** (v3.5.4 fails under Go 1.27). Interface
     names must be unique in the module, because every mock goes to one directory.
+45. **Sign-out clears the stored Discord token.** The user's other sessions must
+    then sign in again once their cached guild data (5 minutes) expires.
+46. **A failed htmx request shows a toast** (`htmx-errors.js`): the plain-text
+    error body the handler sent, or a generic localized message, in the
+    scxmanager toast style. htmx itself swaps nothing on a 4xx or 5xx.
 
 ## Open questions for the owner
 

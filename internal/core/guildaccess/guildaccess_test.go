@@ -57,13 +57,13 @@ func TestService_IsSiteAdmin(t *testing.T) {
 	assert.False(t, f.svc.IsSiteAdmin(""))
 }
 
-func TestService_AccessibleGuilds_SiteAdminGetsEveryBotPresentGuild(t *testing.T) {
+func TestService_AccessibleGuilds_SiteAdminGetsEveryStoredGuild(t *testing.T) {
 	// given
 	ctx := context.Background()
 	f := newFixture(t)
 	f.configs.EXPECT().ListAll(ctx).Return([]*guildconfig.Config{
-		cfg("2", "beta"),
 		cfg("1", "Alpha"),
+		cfg("2", "beta"),
 		cfg("3", "gone", func(c *guildconfig.Config) { c.BotPresent = false }),
 	}, nil)
 
@@ -71,12 +71,10 @@ func TestService_AccessibleGuilds_SiteAdminGetsEveryBotPresentGuild(t *testing.T
 	list, err := f.svc.AccessibleGuilds(ctx, adminID)
 
 	// then
+	require.Len(t, list, 3)
 	require.NoError(t, err)
-	require.Len(t, list, 2)
-	assert.Equal(t, "Alpha", list[0].Config.Name)
-	assert.Equal(t, "beta", list[1].Config.Name)
-	assert.True(t, list[0].Caps.Admin)
-	assert.True(t, list[0].Caps.Overbook)
+	assert.Equal(t, []string{"1", "2", "3"}, []string{list[0].Config.GuildID, list[1].Config.GuildID, list[2].Config.GuildID})
+	assert.Equal(t, fullCapabilities, list[2].Caps)
 }
 
 func TestService_AccessibleGuilds_SiteAdminListError(t *testing.T) {
@@ -107,14 +105,13 @@ func TestService_AccessibleGuilds(t *testing.T) {
 		{ID: "left", Name: "Left"},
 		{ID: "broken", Name: "Broken"},
 	}, nil)
-	f.configs.EXPECT().ListByIDs(ctx, []string{"admin", "open", "ranked", "denied", "absent", "unknown", "left", "broken"}).Return([]*guildconfig.Config{
-		cfg("admin", "Zeta", func(c *guildconfig.Config) { c.ReserveRoleIDs = []string{"r"} }),
+	f.configs.EXPECT().ListPresentByIDs(ctx, []string{"admin", "open", "ranked", "denied", "absent", "unknown", "left", "broken"}).Return([]*guildconfig.Config{
 		cfg("open", ""),
-		cfg("ranked", "Ranked", func(c *guildconfig.Config) { c.ReserveRoleIDs = []string{"r"} }),
-		cfg("denied", "Denied", func(c *guildconfig.Config) { c.ReserveRoleIDs = []string{"r"} }),
-		cfg("absent", "Bot Absent", func(c *guildconfig.Config) { c.BotPresent = false }),
-		cfg("left", "Left", func(c *guildconfig.Config) { c.ReserveRoleIDs = []string{"r"} }),
 		cfg("broken", "Broken", func(c *guildconfig.Config) { c.ReserveRoleIDs = []string{"r"} }),
+		cfg("denied", "Denied", func(c *guildconfig.Config) { c.ReserveRoleIDs = []string{"r"} }),
+		cfg("left", "Left", func(c *guildconfig.Config) { c.ReserveRoleIDs = []string{"r"} }),
+		cfg("ranked", "Ranked", func(c *guildconfig.Config) { c.ReserveRoleIDs = []string{"r"} }),
+		cfg("admin", "Zeta", func(c *guildconfig.Config) { c.ReserveRoleIDs = []string{"r"} }),
 	}, nil)
 	f.oauth.EXPECT().UserGuildMember(ctx, userID, "ranked").Return(&access.GuildMember{RoleIDs: []string{"r"}}, nil)
 	f.oauth.EXPECT().UserGuildMember(ctx, userID, "denied").Return(&access.GuildMember{RoleIDs: []string{"x"}}, nil)
@@ -134,6 +131,23 @@ func TestService_AccessibleGuilds(t *testing.T) {
 	assert.Equal(t, "oauth-icon", list[0].Config.Icon)
 	assert.Equal(t, permission.Capabilities{View: true, Reserve: true}, list[0].Caps)
 	assert.True(t, list[2].Caps.Admin)
+}
+
+func TestService_AccessibleGuilds_KeepsTheStoredOrder(t *testing.T) {
+	// given stored names that differ from the Discord ones
+	ctx := context.Background()
+	f := newFixture(t)
+	f.oauth.EXPECT().UserGuilds(ctx, userID).Return([]access.UserGuild{{ID: "a", Name: "Zulu"}, {ID: "b", Name: "Alpha"}}, nil)
+	f.configs.EXPECT().ListPresentByIDs(ctx, []string{"a", "b"}).Return([]*guildconfig.Config{cfg("b", "Bravo"), cfg("a", "Charlie")}, nil)
+
+	// when
+	list, err := f.svc.AccessibleGuilds(ctx, userID)
+
+	// then
+	require.NoError(t, err)
+	require.Len(t, list, 2)
+	assert.Equal(t, "Bravo", list[0].Config.Name)
+	assert.Equal(t, "Charlie", list[1].Config.Name)
 }
 
 func TestService_AccessibleGuilds_NoGuilds(t *testing.T) {
@@ -168,7 +182,7 @@ func TestService_AccessibleGuilds_Errors(t *testing.T) {
 		ctx := context.Background()
 		f := newFixture(t)
 		f.oauth.EXPECT().UserGuilds(ctx, userID).Return([]access.UserGuild{{ID: "1"}}, nil)
-		f.configs.EXPECT().ListByIDs(ctx, []string{"1"}).Return(nil, errors.New("db down"))
+		f.configs.EXPECT().ListPresentByIDs(ctx, []string{"1"}).Return(nil, errors.New("db down"))
 
 		// when
 		_, err := f.svc.AccessibleGuilds(ctx, userID)

@@ -16,7 +16,6 @@ import (
 	"spot-assistant/internal/core/dto/guildconfig"
 	"spot-assistant/internal/core/dto/role"
 	"spot-assistant/internal/core/permission"
-	"spot-assistant/internal/infrastructure/guildsettings"
 	"spot-assistant/internal/infrastructure/web/webtest"
 	"spot-assistant/internal/ports"
 )
@@ -222,7 +221,7 @@ func TestHandleSetRanks_UnknownKind(t *testing.T) {
 func TestHandleSetRanks_StaleRole(t *testing.T) {
 	// given
 	h, m, cookie := signedInAdmin(t, guildconfig.Config{})
-	m.Settings.EXPECT().SetRoleIDs(mock.Anything, guildID, guildconfig.RoleKindManage, []string{"gone"}).Return(guildsettings.ErrUnknownRole)
+	m.Settings.EXPECT().SetRoleIDs(mock.Anything, guildID, guildconfig.RoleKindManage, []string{"gone"}).Return(ports.ErrUnknownRole)
 
 	// when
 	rec := webtest.Serve(h, htmx(webtest.Post("/servers/g1/settings/ranks/manage", url.Values{"role_ids": {"gone"}}, cookie)))
@@ -251,7 +250,7 @@ func TestHandleSetWorld(t *testing.T) {
 		want string
 	}{
 		"saved":   {nil, http.StatusOK, "World saved."},
-		"invalid": {guildsettings.ErrUnknownWorld, http.StatusOK, "Select a world from the list."},
+		"invalid": {ports.ErrUnknownWorld, http.StatusOK, "Select a world from the list."},
 		"error":   {errors.New("db down"), http.StatusInternalServerError, ""},
 	}
 	for name, tc := range cases {

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -469,4 +470,91 @@ func TestParseRetryAfter(t *testing.T) {
 	assert.Equal(t, time.Duration(0), parseRetryAfter("soon"))
 	assert.Equal(t, time.Duration(0), parseRetryAfter("-1"))
 	assert.Equal(t, 1500*time.Millisecond, parseRetryAfter("1.5"))
+}
+
+// tokenStore is a user store whose token SaveToken replaces, counting the reads.
+type tokenStore struct {
+	mu    sync.Mutex
+	token webuser.Token
+	reads int
+}
+
+func (s *tokenStore) mock(t *testing.T) *mocks.MockWebUserRepository {
+	users := mocks.NewMockWebUserRepository(t)
+	users.EXPECT().AccessToken(mock.Anything, "u1").RunAndReturn(func(context.Context, string) (*webuser.Token, error) {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		s.reads++
+		tok := s.token
+		return &tok, nil
+	}).Maybe()
+	users.EXPECT().SaveToken(mock.Anything, "u1", mock.Anything).RunAndReturn(func(_ context.Context, _ string, tok webuser.Token) error {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		s.token = tok
+		return nil
+	}).Maybe()
+	return users
+}
+
+func (s *tokenStore) readCount() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.reads
+}
+
+func TestAccessToken_ConcurrentCallersShareOneRefresh(t *testing.T) {
+	// given a due token and a token endpoint that answers only once every caller
+	// has read it and the refresh has re-read it
+	const callers = 8
+	soon := time.Now().Add(30 * time.Second)
+	store := &tokenStore{token: webuser.Token{AccessToken: "old", RefreshToken: "rt-old", Expiry: &soon}}
+	f := newFakeDiscord(t)
+	f.api = func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(`[]`)) }
+	f.token = func(w http.ResponseWriter, form url.Values) {
+		assert.Equal(t, "rt-old", form.Get("refresh_token"))
+		assert.Eventually(t, func() bool { return store.readCount() >= callers+1 }, time.Second, time.Millisecond)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"access_token":"at-new","refresh_token":"rt-new","token_type":"Bearer","expires_in":3600}`))
+	}
+	a := newAdapter(t, f, store.mock(t))
+
+	// when
+	tokens := make([]string, callers)
+	errs := make([]error, callers)
+	var wg sync.WaitGroup
+	for i := range callers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			tokens[i], errs[i] = a.accessToken(context.Background(), "u1")
+		}()
+	}
+	wg.Wait()
+
+	// then
+	assert.Equal(t, int32(1), f.tokenCalls.Load())
+	for i := range callers {
+		assert.NoError(t, errs[i])
+		assert.Equal(t, "at-new", tokens[i])
+	}
+}
+
+func TestAccessToken_RefreshedMeanwhileIsNotRefreshedAgain(t *testing.T) {
+	// given a caller that read a due token, while another refresh already stored a fresh one
+	f := newFakeDiscord(t)
+	users := mocks.NewMockWebUserRepository(t)
+	soon := time.Now().Add(30 * time.Second)
+	later := time.Now().Add(time.Hour)
+	users.EXPECT().AccessToken(mock.Anything, "u1").Return(&webuser.Token{AccessToken: "old", RefreshToken: "rt-old", Expiry: &soon}, nil).Once()
+	users.EXPECT().AccessToken(mock.Anything, "u1").Return(&webuser.Token{AccessToken: "fresh", RefreshToken: "rt-fresh", Expiry: &later}, nil).Once()
+	a := newAdapter(t, f, users)
+
+	// when
+	tok, err := a.accessToken(context.Background(), "u1")
+
+	// then
+	require.NoError(t, err)
+	assert.Equal(t, "fresh", tok)
+	assert.Equal(t, int32(0), f.tokenCalls.Load())
 }

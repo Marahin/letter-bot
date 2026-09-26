@@ -233,6 +233,16 @@ func (f *formView) action() string {
 	return web.GuildPath(f.GuildID, "/reservations/"+strconv.FormatInt(f.ID, 10)+"/edit")
 }
 
+// zoneName is the abbreviation of the process time zone (D31) at the form's start,
+// so a reservation past a DST change names the offset it is booked in.
+func (f *formView) zoneName(now time.Time) string {
+	t, ok := parseInput(f.Start)
+	if !ok {
+		t = now
+	}
+	return t.In(time.Local).Format("MST")
+}
+
 func (f *formView) fieldID(name string) string { return f.prefix() + "-" + name }
 
 func (f *formView) err(name string) string { return f.Errors[name] }

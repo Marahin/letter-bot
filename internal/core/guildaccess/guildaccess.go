@@ -44,10 +44,10 @@ func (s *Service) IsSiteAdmin(userID string) bool {
 	return userID != "" && s.siteAdmins[userID]
 }
 
-// AccessibleGuilds returns the bot-present guilds the user may view, sorted by
-// name. A site admin gets every bot-present guild with full capabilities. The
-// capabilities in the list are exact for View; Overbook ignores the legacy
-// Postman role (use Access for one guild).
+// AccessibleGuilds returns the guilds the user may view, sorted by name. For a
+// non-admin these are the bot-present ones, and only View is exact in the list:
+// the other capabilities need the member roles (use Access for one guild). A
+// site admin gets every stored guild with full capabilities, bot-present first.
 func (s *Service) AccessibleGuilds(ctx context.Context, userID string) ([]access.GuildAccess, error) {
 	if s.IsSiteAdmin(userID) {
 		return s.allGuilds(ctx)
@@ -60,35 +60,34 @@ func (s *Service) AccessibleGuilds(ctx context.Context, userID string) ([]access
 		return nil, nil
 	}
 	ids := make([]string, 0, len(userGuilds))
+	byID := make(map[string]access.UserGuild, len(userGuilds))
 	for _, g := range userGuilds {
 		ids = append(ids, g.ID)
+		byID[g.ID] = g
 	}
-	configs, err := s.configs.ListByIDs(ctx, ids)
+	configs, err := s.configs.ListPresentByIDs(ctx, ids)
 	if err != nil {
 		return nil, fmt.Errorf("list guild configs: %w", err)
 	}
-	byID := make(map[string]*guildconfig.Config, len(configs))
-	for _, c := range configs {
-		byID[c.GuildID] = c
-	}
 
 	var out []access.GuildAccess
-	for _, g := range userGuilds {
-		cfg, ok := byID[g.ID]
-		if !ok || !cfg.BotPresent {
-			continue
-		}
-		a, err := s.resolve(ctx, userID, g, *cfg, false)
+	renamed := false
+	for _, cfg := range configs {
+		a, err := s.resolve(ctx, userID, byID[cfg.GuildID], *cfg, false)
 		if err != nil {
 			// One guild's member lookup failing must not hide the others.
-			s.log.Warnw("resolve guild access", "guild_id", g.ID, "error", err)
+			s.log.Warnw("resolve guild access", "guild_id", cfg.GuildID, "error", err)
 			continue
 		}
 		if a.Caps.View {
+			renamed = renamed || cfg.Name == ""
 			out = append(out, a)
 		}
 	}
-	sortByName(out)
+	// The SQL order holds unless a guild took its name from Discord.
+	if renamed {
+		sortByName(out)
+	}
 	return out, nil
 }
 
@@ -142,11 +141,8 @@ func (s *Service) allGuilds(ctx context.Context) ([]access.GuildAccess, error) {
 	}
 	out := make([]access.GuildAccess, 0, len(configs))
 	for _, c := range configs {
-		if c.BotPresent {
-			out = append(out, access.GuildAccess{Config: *c, Caps: fullCapabilities})
-		}
+		out = append(out, access.GuildAccess{Config: *c, Caps: fullCapabilities})
 	}
-	sortByName(out)
 	return out, nil
 }
 
