@@ -99,7 +99,12 @@ func (l *Listener) dispatch(ctx context.Context, handler ports.NotifyHandler, ch
 	case ChannelGuildConfig:
 		handler.OnGuildConfig(ctx, payload)
 	case ChannelOverbooked:
-		handler.OnOverbooked(ctx, []byte(payload))
+		p, err := DecodeOverbookedPayload([]byte(payload))
+		if err != nil {
+			l.log.Warnw("ignoring malformed overbooked payload", "error", err)
+			return
+		}
+		handler.OnOverbooked(ctx, p.BookRequest(), p.Reservation())
 	default:
 		l.log.Warnw("ignoring notify on unknown channel", "channel", channel)
 	}

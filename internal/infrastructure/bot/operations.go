@@ -424,31 +424,6 @@ func (b *Bot) GetRoles(g *guild.Guild) ([]*role.Role, error) {
 	return MapRoles(roles), nil
 }
 
-func (b *Bot) MemberHasRole(g *guild.Guild, m *member.Member, targetRoleName string) bool {
-	roles, err := b.GetRoles(g)
-	if err != nil {
-		b.log.Errorf("error occured when getting roles: %s", err)
-
-		return false
-	}
-
-	targetRole, _ := collections.PoorMansFind(roles, func(r *role.Role) bool {
-		return r.Name == targetRoleName
-	})
-
-	if targetRole == nil {
-		return false
-	}
-
-	for _, memberRole := range m.Roles {
-		if memberRole == targetRole.ID {
-			return true
-		}
-	}
-
-	return false
-}
-
 func (b *Bot) OpenDM(m *member.Member) (*discord.Channel, error) {
 	sess := b.mgr.SessionForDM()
 	channel, err := sess.UserChannelCreate(m.ID)

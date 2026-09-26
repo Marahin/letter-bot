@@ -23,10 +23,15 @@ func (d *debouncer) Trigger(key string, fn func()) {
 	if t, ok := d.pending[key]; ok {
 		t.Stop()
 	}
-	d.pending[key] = time.AfterFunc(d.delay, func() {
+	var t *time.Timer
+	t = time.AfterFunc(d.delay, func() {
 		d.mu.Lock()
-		delete(d.pending, key)
+		// Stop can come too late: a later Trigger may already own the key.
+		if d.pending[key] == t {
+			delete(d.pending, key)
+		}
 		d.mu.Unlock()
 		fn()
 	})
+	d.pending[key] = t
 }

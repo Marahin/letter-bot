@@ -5,7 +5,8 @@ import (
 
 	"go.uber.org/zap"
 
-	notify "spot-assistant/internal/infrastructure/notify/postgresql"
+	"spot-assistant/internal/core/dto/book"
+	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/ports"
 )
 
@@ -46,11 +47,6 @@ func (h *NotifyHandler) OnGuildConfig(ctx context.Context, guildID string) {
 	h.guilds.ApplyGuildConfig(ctx, guildID)
 }
 
-func (h *NotifyHandler) OnOverbooked(_ context.Context, payload []byte) {
-	p, err := notify.DecodeOverbookedPayload(payload)
-	if err != nil {
-		h.log.Warnf("ignoring malformed overbooked payload: %s", err)
-		return
-	}
-	h.commSrv.NotifyOverbookedMember(p.BookRequest(), p.Reservation())
+func (h *NotifyHandler) OnOverbooked(_ context.Context, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) {
+	h.commSrv.NotifyOverbookedMember(request, res)
 }

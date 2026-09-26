@@ -170,6 +170,27 @@ func TestGuildConfigRepository_UpsertPresence(t *testing.T) {
 	assert.Error(t, failedErr)
 }
 
+func TestGuildConfigRepository_MarkAbsentExcept(t *testing.T) {
+	// given
+	mock := newMock(t)
+	mock.ExpectExec("SET bot_present = false").
+		WithArgs([]string{"g1"}, int64(2), int64(1)).
+		WillReturnResult(pgxmock.NewResult("UPDATE", 3))
+	mock.ExpectExec("SET bot_present = false").
+		WithArgs([]string{}, int64(1), int64(0)).
+		WillReturnError(errors.New("boom"))
+	repo := NewGuildConfigRepository(mock)
+
+	// when
+	err := repo.MarkAbsentExcept(context.Background(), 1, 2, []string{"g1"})
+	nilErr := repo.MarkAbsentExcept(context.Background(), 0, 1, nil)
+
+	// then
+	assert.NoError(t, err)
+	assert.Error(t, nilErr)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestGuildConfigRepository_Setters(t *testing.T) {
 	syncStartedAt := time.Date(2026, 9, 26, 12, 0, 0, 0, time.UTC)
 	cases := map[string]struct {

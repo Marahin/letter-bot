@@ -230,3 +230,70 @@ func TestBot_ApplyGuildConfig_ConfigError(t *testing.T) {
 	// when / then
 	b.ApplyGuildConfig(context.Background(), "g1")
 }
+
+func TestBot_StorePresence(t *testing.T) {
+	// given
+	b, configs := newConfigBot(t)
+	g := &guild.Guild{ID: "g1", Name: "Celesta", Icon: "icon", OwnerID: "owner"}
+	stored := &guildconfig.Config{GuildID: "g1", Premium: true}
+	configs.On("UpsertPresence", mocks.ContextMock, "g1", "Celesta", "icon", "owner").Return(stored, nil).Once()
+
+	// when
+	got := b.storePresence(context.Background(), g)
+
+	// then
+	assert.Same(t, stored, got)
+}
+
+func TestBot_StorePresence_FallsBackToStoredConfig(t *testing.T) {
+	// given
+	b, configs := newConfigBot(t)
+	g := &guild.Guild{ID: "g1"}
+	stored := &guildconfig.Config{GuildID: "g1", Premium: true}
+	configs.On("UpsertPresence", mocks.ContextMock, "g1", "", "", "").Return(nil, errors.New("db down")).Once()
+	configs.On("Get", mocks.ContextMock, "g1").Return(stored, nil).Once()
+
+	// when
+	got := b.storePresence(context.Background(), g)
+
+	// then
+	assert.Same(t, stored, got)
+	assert.True(t, got.IsPremium())
+}
+
+func TestBot_StorePresence_BothFail(t *testing.T) {
+	// given
+	b, configs := newConfigBot(t)
+	configs.On("UpsertPresence", mocks.ContextMock, "g1", "", "", "").Return(nil, errors.New("db down")).Once()
+	configs.On("Get", mocks.ContextMock, "g1").Return(nil, errors.New("db down")).Once()
+
+	// when
+	got := b.storePresence(context.Background(), &guild.Guild{ID: "g1"})
+
+	// then
+	assert.Nil(t, got)
+}
+
+func TestBot_MarkAbsentGuilds(t *testing.T) {
+	cases := map[string]struct {
+		shard             *[2]int
+		expectedID, count int
+	}{
+		"unsharded":  {shard: nil, expectedID: 0, count: 1},
+		"one shard":  {shard: &[2]int{1, 3}, expectedID: 1, count: 3},
+		"zero count": {shard: &[2]int{0, 0}, expectedID: 0, count: 1},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			// given
+			b, configs := newConfigBot(t)
+			ready := &discordgo.Ready{Shard: tc.shard, Guilds: []*discordgo.Guild{{ID: "g1"}, {ID: "g2"}}}
+			configs.On("MarkAbsentExcept", mocks.ContextMock, tc.expectedID, tc.count, []string{"g1", "g2"}).Return(errors.New("db down")).Once()
+
+			// when
+			b.markAbsentGuilds(ready)
+
+			// then: expectations are asserted on cleanup; the error is only logged
+		})
+	}
+}

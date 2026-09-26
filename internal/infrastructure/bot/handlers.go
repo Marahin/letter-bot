@@ -32,12 +32,9 @@ func (b *Bot) GuildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
 	guild := MapGuild(g.Guild)
 	ctx := context.Background()
 
-	cfg, err := b.guildConfigs.UpsertPresence(ctx, guild.ID, guild.Name, guild.Icon, guild.OwnerID)
-	if err != nil {
-		log.Errorf("could not store guild presence: %s", err)
-	}
+	cfg := b.storePresence(ctx, guild)
 
-	err = b.RegisterCommands(guild)
+	err := b.RegisterCommands(guild)
 	if err != nil {
 		log.Errorf("could not overwrite commands: %s", err)
 
@@ -67,6 +64,24 @@ func (b *Bot) GuildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
 	go b.onlineCheckService.TryRefresh(guild.ID)
 	go b.TryUpdateGuildLetter(guild)
 	defer b.eventHandler.OnGuildCreate(MapGuild(g.Guild))
+}
+
+// storePresence stores the guild and returns its configuration. When the write
+// fails it falls back to the stored configuration, so a premium guild stays active.
+// It returns nil only when neither works.
+func (b *Bot) storePresence(ctx context.Context, g *guild.Guild) *guildconfig.Config {
+	log := b.log.With("guild.ID", g.ID)
+	cfg, err := b.guildConfigs.UpsertPresence(ctx, g.ID, g.Name, g.Icon, g.OwnerID)
+	if err == nil {
+		return cfg
+	}
+	log.Errorf("could not store guild presence: %s", err)
+	cfg, err = b.guildConfig(ctx, g.ID)
+	if err != nil {
+		log.Errorf("could not load guild config: %s", err)
+		return nil
+	}
+	return cfg
 }
 
 func (b *Bot) GuildUpdate(s *discordgo.Session, g *discordgo.GuildUpdate) {
@@ -117,6 +132,7 @@ func (b *Bot) scheduleSync(guildID string) {
 }
 
 func (b *Bot) Ready(s *discordgo.Session, r *discordgo.Ready) {
+	b.markAbsentGuilds(r)
 	for _, g := range s.State.Guilds {
 		if err := b.onlineCheckService.ConfigureWorldNameForGuild(g.ID); err != nil {
 			b.log.Errorf("ConfigureWorldNameForGuild failed for guild %s: %v", g.ID, err)
@@ -125,6 +141,22 @@ func (b *Bot) Ready(s *discordgo.Session, r *discordgo.Ready) {
 	b.StartTicking()
 
 	defer b.eventHandler.OnReady()
+}
+
+// markAbsentGuilds clears bot_present for the guilds that removed the bot while it
+// was offline. Each shard's Ready lists only the guilds of that shard.
+func (b *Bot) markAbsentGuilds(r *discordgo.Ready) {
+	shardID, shardCount := 0, 1
+	if r.Shard != nil && r.Shard[1] > 0 {
+		shardID, shardCount = r.Shard[0], r.Shard[1]
+	}
+	ids := make([]string, 0, len(r.Guilds))
+	for _, g := range r.Guilds {
+		ids = append(ids, g.ID)
+	}
+	if err := b.guildConfigs.MarkAbsentExcept(context.Background(), shardID, shardCount, ids); err != nil {
+		b.log.With("event", "Ready", "shard", shardID).Errorf("could not mark absent guilds: %s", err)
+	}
 }
 
 // InteractionCreate this is the entry point when a slash command is invoked.

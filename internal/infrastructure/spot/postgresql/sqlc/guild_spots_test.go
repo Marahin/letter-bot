@@ -248,20 +248,33 @@ func TestRenameSpot_Duplicate(t *testing.T) {
 	assert.ErrorIs(t, err, ports.ErrDuplicate)
 }
 
-func TestCountSpotReservations(t *testing.T) {
+func TestSelectSpotReservationCounts(t *testing.T) {
 	// given
 	mock := newSpotMock(t)
-	mock.ExpectQuery("SELECT count\\(\\*\\) FROM web_reservation").
+	mock.ExpectQuery("WHERE s.id = \\$1").
 		WithArgs(int64(1), "guild-1").
-		WillReturnRows(pgxmock.NewRows([]string{"count"}).AddRow(int64(12)))
+		WillReturnRows(pgxmock.NewRows([]string{"total", "upcoming"}).AddRow(int64(12), int64(2)))
 	repo := NewSpotRepository(mock)
 
 	// when
-	count, err := repo.CountSpotReservations(context.Background(), "guild-1", 1)
+	counts, err := repo.SelectSpotReservationCounts(context.Background(), "guild-1", 1)
 
 	// then
 	require.NoError(t, err)
-	assert.Equal(t, int64(12), count)
+	assert.Equal(t, spot.ReservationCounts{Total: 12, Upcoming: 2}, counts)
+}
+
+func TestSelectSpotReservationCounts_Error(t *testing.T) {
+	// given
+	mock := newSpotMock(t)
+	mock.ExpectQuery("WHERE s.id = \\$1").WithArgs(int64(1), "guild-1").WillReturnError(errors.New("boom"))
+	repo := NewSpotRepository(mock)
+
+	// when
+	_, err := repo.SelectSpotReservationCounts(context.Background(), "guild-1", 1)
+
+	// then
+	assert.Error(t, err)
 }
 
 func TestSelectGuildSpotReservationCounts(t *testing.T) {

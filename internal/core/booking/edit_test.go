@@ -54,10 +54,8 @@ func TestEdit_UpdatesAndExcludesItselfFromQuotaAndOverlap(t *testing.T) {
 	existing := existingReservation()
 	req := editRequest()
 	res.EXPECT().SelectGuildReservationWithSpot(ctx, "g1", int64(7)).Return(existing, nil)
-	// The reservation itself is 1 h upcoming; counted it would push the new 2 h over the quota.
-	selfCopy := *existing
-	res.EXPECT().SelectUpcomingMemberReservationsWithSpots(ctx, &guild.Guild{ID: "g1"}, &member.Member{ID: "u1"}).
-		Return([]*reservation.ReservationWithSpot{&selfCopy}, nil)
+	res.EXPECT().SelectUpcomingMemberReservationsWithSpots(ctx, &guild.Guild{ID: "g1"}, &member.Member{ID: "u1"}, int64(7)).
+		Return(nil, nil)
 	res.EXPECT().SelectOverlappingReservationsBySpotID(ctx, "g1", int64(1), req.StartAt, req.EndAt, int64(7)).Return(nil, nil)
 	res.EXPECT().UpdateReservation(ctx, "g1", reservation.Reservation{
 		ID: 7, SpotID: 1, StartAt: req.StartAt, EndAt: req.EndAt, Author: "Quiet Nyx", AuthorDiscordID: "u1",
@@ -149,7 +147,7 @@ func TestEdit_QuotaExceeded(t *testing.T) {
 		Spot:        reservation.Spot{Name: "Dragon Lords"},
 	}
 	res.EXPECT().SelectGuildReservationWithSpot(ctx, "g1", int64(7)).Return(existingReservation(), nil)
-	res.EXPECT().SelectUpcomingMemberReservationsWithSpots(ctx, mock.Anything, mock.Anything).Return([]*reservation.ReservationWithSpot{other}, nil)
+	res.EXPECT().SelectUpcomingMemberReservationsWithSpots(ctx, mock.Anything, mock.Anything, int64(7)).Return([]*reservation.ReservationWithSpot{other}, nil)
 
 	// when
 	_, err := a.Edit(ctx, req)
@@ -165,7 +163,7 @@ func TestEdit_ConflictReturnsOverlaps(t *testing.T) {
 	req := editRequest()
 	blocking := []*reservation.Reservation{{ID: 9, Author: "Storm Quiet"}}
 	res.EXPECT().SelectGuildReservationWithSpot(ctx, "g1", int64(7)).Return(existingReservation(), nil)
-	res.EXPECT().SelectUpcomingMemberReservationsWithSpots(ctx, mock.Anything, mock.Anything).Return(nil, nil)
+	res.EXPECT().SelectUpcomingMemberReservationsWithSpots(ctx, mock.Anything, mock.Anything, int64(7)).Return(nil, nil)
 	res.EXPECT().SelectOverlappingReservationsBySpotID(ctx, "g1", int64(1), req.StartAt, req.EndAt, int64(7)).Return(blocking, nil)
 
 	// when
@@ -182,7 +180,7 @@ func TestEdit_ConstraintConflictFromUpdate(t *testing.T) {
 	a, res, _ := newEditAdapter(t)
 	req := editRequest()
 	res.EXPECT().SelectGuildReservationWithSpot(ctx, "g1", int64(7)).Return(existingReservation(), nil)
-	res.EXPECT().SelectUpcomingMemberReservationsWithSpots(ctx, mock.Anything, mock.Anything).Return(nil, nil)
+	res.EXPECT().SelectUpcomingMemberReservationsWithSpots(ctx, mock.Anything, mock.Anything, int64(7)).Return(nil, nil)
 	res.EXPECT().SelectOverlappingReservationsBySpotID(ctx, "g1", int64(1), req.StartAt, req.EndAt, int64(7)).Return(nil, nil)
 	res.EXPECT().UpdateReservation(ctx, "g1", mock.Anything).Return(ports.ErrConflict)
 
@@ -234,7 +232,7 @@ func TestEdit_MovesToActiveSpot(t *testing.T) {
 	req.SpotID = 2
 	res.EXPECT().SelectGuildReservationWithSpot(ctx, "g1", int64(7)).Return(existingReservation(), nil)
 	spots.EXPECT().SelectGuildSpotByID(ctx, "g1", int64(2)).Return(&spot.Spot{ID: 2, Name: "Dragon Lords"}, nil)
-	res.EXPECT().SelectUpcomingMemberReservationsWithSpots(ctx, mock.Anything, mock.Anything).Return(nil, nil)
+	res.EXPECT().SelectUpcomingMemberReservationsWithSpots(ctx, mock.Anything, mock.Anything, int64(7)).Return(nil, nil)
 	res.EXPECT().SelectOverlappingReservationsBySpotID(ctx, "g1", int64(2), req.StartAt, req.EndAt, int64(7)).Return(nil, nil)
 	res.EXPECT().UpdateReservation(ctx, "g1", mock.MatchedBy(func(r reservation.Reservation) bool { return r.SpotID == 2 })).Return(nil)
 
@@ -311,4 +309,140 @@ func TestBook_FreeTextAuthorSkipsQuota(t *testing.T) {
 
 	// then
 	assert.NoError(t, err)
+}
+
+func TestEdit_AuthorizeRefuses(t *testing.T) {
+	// given
+	ctx := context.Background()
+	a, res, _ := newEditAdapter(t)
+	existing := existingReservation()
+	req := editRequest()
+	var seen reservation.Reservation
+	req.Authorize = func(r reservation.Reservation) error {
+		seen = r
+		return assert.AnError
+	}
+	res.EXPECT().SelectGuildReservationWithSpot(ctx, "g1", int64(7)).Return(existing, nil)
+
+	// when
+	_, err := a.Edit(ctx, req)
+
+	// then
+	assert.ErrorIs(t, err, assert.AnError)
+	assert.Equal(t, existing.Reservation, seen)
+}
+
+func TestEdit_EmptyAuthorKeepsTheCurrentOne(t *testing.T) {
+	// given
+	ctx := context.Background()
+	a, res, _ := newEditAdapter(t)
+	req := editRequest()
+	req.Author, req.AuthorDiscordID = "", ""
+	req.Authorize = func(reservation.Reservation) error { return nil }
+	res.EXPECT().SelectGuildReservationWithSpot(ctx, "g1", int64(7)).Return(existingReservation(), nil)
+	res.EXPECT().SelectUpcomingMemberReservationsWithSpots(ctx, &guild.Guild{ID: "g1"}, &member.Member{ID: "u1"}, int64(7)).Return(nil, nil)
+	res.EXPECT().SelectOverlappingReservationsBySpotID(ctx, "g1", int64(1), req.StartAt, req.EndAt, int64(7)).Return(nil, nil)
+	res.EXPECT().UpdateReservation(ctx, "g1", mock.MatchedBy(func(r reservation.Reservation) bool {
+		return r.Author == "Quiet Nyx" && r.AuthorDiscordID == "u1"
+	})).Return(nil)
+
+	// when
+	_, err := a.Edit(ctx, req)
+
+	// then
+	assert.NoError(t, err)
+}
+
+func TestEdit_StartedReservationKeepsItsSpot(t *testing.T) {
+	// given
+	ctx := context.Background()
+	a, res, _ := newEditAdapter(t)
+	existing := existingReservation()
+	existing.StartAt = editNow.Add(-30 * time.Minute)
+	req := editRequest()
+	req.StartAt, req.EndAt, req.SpotID = existing.StartAt, editNow.Add(time.Hour), 2
+	res.EXPECT().SelectGuildReservationWithSpot(ctx, "g1", int64(7)).Return(existing, nil)
+
+	// when
+	_, err := a.Edit(ctx, req)
+
+	// then
+	assert.ErrorIs(t, err, ErrSpotLocked)
+}
+
+func TestEdit_DuplicateFromUpdateIsAConflict(t *testing.T) {
+	// given
+	ctx := context.Background()
+	a, res, _ := newEditAdapter(t)
+	req := editRequest()
+	res.EXPECT().SelectGuildReservationWithSpot(ctx, "g1", int64(7)).Return(existingReservation(), nil)
+	res.EXPECT().SelectUpcomingMemberReservationsWithSpots(ctx, mock.Anything, mock.Anything, int64(7)).Return(nil, nil)
+	res.EXPECT().SelectOverlappingReservationsBySpotID(ctx, "g1", int64(1), req.StartAt, req.EndAt, int64(7)).Return(nil, nil)
+	res.EXPECT().UpdateReservation(ctx, "g1", mock.Anything).Return(ports.ErrDuplicate)
+
+	// when
+	_, err := a.Edit(ctx, req)
+
+	// then
+	assert.ErrorIs(t, err, ErrConflict)
+}
+
+func TestBook_BySpotID(t *testing.T) {
+	archivedAt := editNow.Add(-time.Hour)
+	cases := map[string]struct {
+		spot     *spot.Spot
+		spotErr  error
+		expected error
+	}{
+		"missing":  {spotErr: ports.ErrNotFound, expected: ErrSpotNotFound},
+		"archived": {spot: &spot.Spot{ID: 2, Name: "Old", ArchivedAt: &archivedAt}, expected: ErrSpotArchived},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			// given
+			a, _, spots := newEditAdapter(t)
+			spots.EXPECT().SelectGuildSpotByID(mock.Anything, "g1", int64(2)).Return(tc.spot, tc.spotErr)
+
+			// when
+			_, err := a.Book(book.BookRequest{Guild: &guild.Guild{ID: "g1"}, Member: &member.Member{}, SpotID: 2})
+
+			// then
+			assert.ErrorIs(t, err, tc.expected)
+		})
+	}
+}
+
+func TestBook_BySpotIDNotifiesOverbookedDiscordAuthorsOnly(t *testing.T) {
+	// given
+	spots := mocks.NewMockSpotRepository(t)
+	res := mocks.NewMockReservationRepository(t)
+	comm := mocks.NewMockCommunicationService(t)
+	a := NewAdapter(spots, res, comm)
+	g := &guild.Guild{ID: "g1"}
+	m := &member.Member{Nick: "Boss"}
+	start, end := editNow.Add(time.Hour), editNow.Add(2*time.Hour)
+	withDiscord := &reservation.Reservation{ID: 8, AuthorDiscordID: "u2", StartAt: start, EndAt: end}
+	freeText := &reservation.Reservation{ID: 9, Author: "Someone", StartAt: start, EndAt: end}
+	conflicts := []*reservation.Reservation{withDiscord, freeText}
+	removed := []*reservation.ClippedOrRemovedReservation{{Original: withDiscord}, {Original: freeText}}
+	spots.EXPECT().SelectGuildSpotByID(mock.Anything, "g1", int64(1)).Return(&spot.Spot{ID: 1, Name: "Hero Cave"}, nil)
+	res.EXPECT().SelectOverlappingReservations(mock.Anything, int64(1), start, end, "g1").Return(conflicts, nil)
+	res.EXPECT().CreateAndDeleteConflicting(mock.Anything, m, g, conflicts, int64(1), start, end).Return(removed, nil)
+	notified := make(chan book.BookRequest, 2)
+	comm.EXPECT().NotifyOverbookedMember(mock.Anything, removed[0]).Run(func(r book.BookRequest, _ *reservation.ClippedOrRemovedReservation) {
+		notified <- r
+	}).Once()
+
+	// when
+	got, err := a.Book(book.BookRequest{Guild: g, Member: m, SpotID: 1, StartAt: start, EndAt: end, Overbook: true, HasPermissions: true})
+
+	// then
+	require.NoError(t, err)
+	assert.Equal(t, removed, got)
+	select {
+	case r := <-notified:
+		assert.Equal(t, "Hero Cave", r.Spot)
+	case <-time.After(time.Second):
+		t.Fatal("the Discord author was not notified")
+	}
 }

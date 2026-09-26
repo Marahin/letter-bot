@@ -6,6 +6,8 @@ package mocks
 
 import (
 	"context"
+	"spot-assistant/internal/core/dto/book"
+	"spot-assistant/internal/core/dto/reservation"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -104,16 +106,16 @@ func (_c *MockBotNotifier_ConfigChanged_Call) RunAndReturn(run func(ctx context.
 }
 
 // Overbooked provides a mock function for the type MockBotNotifier
-func (_mock *MockBotNotifier) Overbooked(ctx context.Context, payload []byte) error {
-	ret := _mock.Called(ctx, payload)
+func (_mock *MockBotNotifier) Overbooked(ctx context.Context, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) error {
+	ret := _mock.Called(ctx, request, res)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Overbooked")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []byte) error); ok {
-		r0 = returnFunc(ctx, payload)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, book.BookRequest, *reservation.ClippedOrRemovedReservation) error); ok {
+		r0 = returnFunc(ctx, request, res)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -127,24 +129,30 @@ type MockBotNotifier_Overbooked_Call struct {
 
 // Overbooked is a helper method to define mock.On call
 //   - ctx context.Context
-//   - payload []byte
-func (_e *MockBotNotifier_Expecter) Overbooked(ctx any, payload any) *MockBotNotifier_Overbooked_Call {
-	return &MockBotNotifier_Overbooked_Call{Call: _e.mock.On("Overbooked", ctx, payload)}
+//   - request book.BookRequest
+//   - res *reservation.ClippedOrRemovedReservation
+func (_e *MockBotNotifier_Expecter) Overbooked(ctx any, request any, res any) *MockBotNotifier_Overbooked_Call {
+	return &MockBotNotifier_Overbooked_Call{Call: _e.mock.On("Overbooked", ctx, request, res)}
 }
 
-func (_c *MockBotNotifier_Overbooked_Call) Run(run func(ctx context.Context, payload []byte)) *MockBotNotifier_Overbooked_Call {
+func (_c *MockBotNotifier_Overbooked_Call) Run(run func(ctx context.Context, request book.BookRequest, res *reservation.ClippedOrRemovedReservation)) *MockBotNotifier_Overbooked_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 []byte
+		var arg1 book.BookRequest
 		if args[1] != nil {
-			arg1 = args[1].([]byte)
+			arg1 = args[1].(book.BookRequest)
+		}
+		var arg2 *reservation.ClippedOrRemovedReservation
+		if args[2] != nil {
+			arg2 = args[2].(*reservation.ClippedOrRemovedReservation)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -155,7 +163,7 @@ func (_c *MockBotNotifier_Overbooked_Call) Return(err error) *MockBotNotifier_Ov
 	return _c
 }
 
-func (_c *MockBotNotifier_Overbooked_Call) RunAndReturn(run func(ctx context.Context, payload []byte) error) *MockBotNotifier_Overbooked_Call {
+func (_c *MockBotNotifier_Overbooked_Call) RunAndReturn(run func(ctx context.Context, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) error) *MockBotNotifier_Overbooked_Call {
 	_c.Call.Return(run)
 	return _c
 }

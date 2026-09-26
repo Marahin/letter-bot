@@ -2,6 +2,7 @@ package booking
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	stringsHelper "spot-assistant/internal/common/strings"
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/spot"
+	"spot-assistant/internal/ports"
 )
 
 var HourRegex = regexp.MustCompile(`(\d{2}:\d{2})`)
@@ -82,6 +84,7 @@ func (a *Adapter) Book(request book.BookRequest) ([]*reservation.ClippedOrRemove
 	guild := request.Guild
 	a.log.With(
 		"spot", spotName,
+		"spotID", request.SpotID,
 		"member.id", member.ID,
 		"member.name", member.Nick,
 		"member.username", member.Username,
@@ -91,10 +94,11 @@ func (a *Adapter) Book(request book.BookRequest) ([]*reservation.ClippedOrRemove
 		"endAt", endAt,
 	).Info("booking request")
 
-	spot, err := a.spotRepo.SelectGuildSpotByName(context.Background(), guild.ID, spotName)
+	spot, err := a.bookedSpot(context.Background(), guild.ID, request)
 	if err != nil {
-		return nil, fmt.Errorf("could not find spot called %s: %w", spotName, err)
+		return nil, err
 	}
+	request.Spot = spot.Name
 
 	if err = validateHuntLength(endAt.Sub(startAt)); err != nil {
 		return nil, err
@@ -134,17 +138,46 @@ func (a *Adapter) Book(request book.BookRequest) ([]*reservation.ClippedOrRemove
 	}
 
 	for _, res := range res {
-		res := res
+		// A free-text author booked in the web has nobody to DM.
+		if res.Original.AuthorDiscordID == "" {
+			continue
+		}
 		go a.commSrv.NotifyOverbookedMember(request, res)
 	}
 
 	return res, nil
 }
 
+// bookedSpot resolves the spot of a booking: by SpotID when set, else by name.
+func (a *Adapter) bookedSpot(ctx context.Context, guildID string, request book.BookRequest) (*spot.Spot, error) {
+	if request.SpotID != 0 {
+		return a.activeSpotByID(ctx, guildID, request.SpotID)
+	}
+	sp, err := a.spotRepo.SelectGuildSpotByName(ctx, guildID, request.Spot)
+	if err != nil {
+		return nil, fmt.Errorf("could not find spot called %s: %w", request.Spot, err)
+	}
+	return sp, nil
+}
+
+func (a *Adapter) activeSpotByID(ctx context.Context, guildID string, id int64) (*spot.Spot, error) {
+	sp, err := a.spotRepo.SelectGuildSpotByID(ctx, guildID, id)
+	if errors.Is(err, ports.ErrNotFound) {
+		return nil, ErrSpotNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("select spot: %w", err)
+	}
+	if sp.IsArchived() {
+		return nil, ErrSpotArchived
+	}
+	return sp, nil
+}
+
 func (a *Adapter) UnbookAutocomplete(g *guild.Guild, m *member.Member, filter string) ([]*reservation.ReservationWithSpot, error) {
 	// Get reservations with end_date >= time.Now()
 	// a.reservationRepo.SelectUpcomingReservationsWithSpot(context.Background(), g.ID)
-	reservations, err := a.reservationRepo.SelectUpcomingMemberReservationsWithSpots(context.Background(), g, m)
+	reservations, err := a.reservationRepo.SelectUpcomingMemberReservationsWithSpots(context.Background(), g, m, 0)
 	if err != nil {
 		return []*reservation.ReservationWithSpot{}, err
 	}

@@ -39,3 +39,23 @@ func TestDebouncer_RunsAgainAfterFiring(t *testing.T) {
 	// then
 	assert.Eventually(t, func() bool { return calls.Load() == 2 }, time.Second, time.Millisecond)
 }
+
+func TestDebouncer_FiredTimerKeepsANewerPendingTimer(t *testing.T) {
+	// given
+	d := newDebouncer(30 * time.Millisecond)
+	var calls atomic.Int32
+	d.Trigger("a", func() { calls.Add(1) })
+	newer := time.NewTimer(time.Hour)
+	defer newer.Stop()
+	d.mu.Lock()
+	d.pending["a"] = newer
+	d.mu.Unlock()
+
+	// when
+	assert.Eventually(t, func() bool { return calls.Load() == 1 }, time.Second, time.Millisecond)
+
+	// then
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	assert.Same(t, newer, d.pending["a"])
+}

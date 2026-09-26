@@ -110,78 +110,6 @@ func (_c *MockSpotRepository_ArchiveSpot_Call) RunAndReturn(run func(ctx context
 	return _c
 }
 
-// CountSpotReservations provides a mock function for the type MockSpotRepository
-func (_mock *MockSpotRepository) CountSpotReservations(ctx context.Context, guildID string, id int64) (int64, error) {
-	ret := _mock.Called(ctx, guildID, id)
-
-	if len(ret) == 0 {
-		panic("no return value specified for CountSpotReservations")
-	}
-
-	var r0 int64
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int64) (int64, error)); ok {
-		return returnFunc(ctx, guildID, id)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int64) int64); ok {
-		r0 = returnFunc(ctx, guildID, id)
-	} else {
-		r0 = ret.Get(0).(int64)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, int64) error); ok {
-		r1 = returnFunc(ctx, guildID, id)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// MockSpotRepository_CountSpotReservations_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountSpotReservations'
-type MockSpotRepository_CountSpotReservations_Call struct {
-	*mock.Call
-}
-
-// CountSpotReservations is a helper method to define mock.On call
-//   - ctx context.Context
-//   - guildID string
-//   - id int64
-func (_e *MockSpotRepository_Expecter) CountSpotReservations(ctx any, guildID any, id any) *MockSpotRepository_CountSpotReservations_Call {
-	return &MockSpotRepository_CountSpotReservations_Call{Call: _e.mock.On("CountSpotReservations", ctx, guildID, id)}
-}
-
-func (_c *MockSpotRepository_CountSpotReservations_Call) Run(run func(ctx context.Context, guildID string, id int64)) *MockSpotRepository_CountSpotReservations_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 int64
-		if args[2] != nil {
-			arg2 = args[2].(int64)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *MockSpotRepository_CountSpotReservations_Call) Return(n int64, err error) *MockSpotRepository_CountSpotReservations_Call {
-	_c.Call.Return(n, err)
-	return _c
-}
-
-func (_c *MockSpotRepository_CountSpotReservations_Call) RunAndReturn(run func(ctx context.Context, guildID string, id int64) (int64, error)) *MockSpotRepository_CountSpotReservations_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // DeleteSpot provides a mock function for the type MockSpotRepository
 func (_mock *MockSpotRepository) DeleteSpot(ctx context.Context, guildID string, id int64) error {
 	ret := _mock.Called(ctx, guildID, id)
@@ -883,6 +811,78 @@ func (_c *MockSpotRepository_SelectGuildSpotsLike_Call) Return(spots []*spot.Spo
 }
 
 func (_c *MockSpotRepository_SelectGuildSpotsLike_Call) RunAndReturn(run func(ctx context.Context, guildID string, namePattern string) ([]*spot.Spot, error)) *MockSpotRepository_SelectGuildSpotsLike_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SelectSpotReservationCounts provides a mock function for the type MockSpotRepository
+func (_mock *MockSpotRepository) SelectSpotReservationCounts(ctx context.Context, guildID string, id int64) (spot.ReservationCounts, error) {
+	ret := _mock.Called(ctx, guildID, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SelectSpotReservationCounts")
+	}
+
+	var r0 spot.ReservationCounts
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int64) (spot.ReservationCounts, error)); ok {
+		return returnFunc(ctx, guildID, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int64) spot.ReservationCounts); ok {
+		r0 = returnFunc(ctx, guildID, id)
+	} else {
+		r0 = ret.Get(0).(spot.ReservationCounts)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, int64) error); ok {
+		r1 = returnFunc(ctx, guildID, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockSpotRepository_SelectSpotReservationCounts_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SelectSpotReservationCounts'
+type MockSpotRepository_SelectSpotReservationCounts_Call struct {
+	*mock.Call
+}
+
+// SelectSpotReservationCounts is a helper method to define mock.On call
+//   - ctx context.Context
+//   - guildID string
+//   - id int64
+func (_e *MockSpotRepository_Expecter) SelectSpotReservationCounts(ctx any, guildID any, id any) *MockSpotRepository_SelectSpotReservationCounts_Call {
+	return &MockSpotRepository_SelectSpotReservationCounts_Call{Call: _e.mock.On("SelectSpotReservationCounts", ctx, guildID, id)}
+}
+
+func (_c *MockSpotRepository_SelectSpotReservationCounts_Call) Run(run func(ctx context.Context, guildID string, id int64)) *MockSpotRepository_SelectSpotReservationCounts_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 int64
+		if args[2] != nil {
+			arg2 = args[2].(int64)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSpotRepository_SelectSpotReservationCounts_Call) Return(reservationCounts spot.ReservationCounts, err error) *MockSpotRepository_SelectSpotReservationCounts_Call {
+	_c.Call.Return(reservationCounts, err)
+	return _c
+}
+
+func (_c *MockSpotRepository_SelectSpotReservationCounts_Call) RunAndReturn(run func(ctx context.Context, guildID string, id int64) (spot.ReservationCounts, error)) *MockSpotRepository_SelectSpotReservationCounts_Call {
 	_c.Call.Return(run)
 	return _c
 }

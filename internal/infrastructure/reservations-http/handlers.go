@@ -160,7 +160,7 @@ func (h *Handlers) HandleEditForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	existing, err := h.D.Reservations.Get(ctx, current.Config.GuildID, id)
-	if errors.Is(err, reservations.ErrNotFound) {
+	if errors.Is(err, ports.ErrNotFound) {
 		h.D.NotFound(w, r)
 		return
 	}
@@ -193,7 +193,7 @@ func (h *Handlers) HandleEdit(w http.ResponseWriter, r *http.Request) {
 	guildID := current.Config.GuildID
 	actor := h.actor(ctx, current, false)
 	existing, err := h.D.Reservations.Get(ctx, guildID, id)
-	if errors.Is(err, reservations.ErrNotFound) {
+	if errors.Is(err, ports.ErrNotFound) {
 		h.saved(w, r, guildID, nil, flash{Text: i18n.T(ctx, "reservations.flash.not_found"), Warn: true})
 		return
 	}
@@ -236,7 +236,7 @@ func (h *Handlers) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	err := h.D.Reservations.Delete(ctx, guildID, h.actor(ctx, current, false), id)
 	var f flash
 	switch {
-	case errors.Is(err, reservations.ErrNotFound):
+	case errors.Is(err, ports.ErrNotFound):
 		f = flash{Text: i18n.T(ctx, "reservations.flash.not_found"), Warn: true}
 	case errors.Is(err, reservations.ErrForbidden):
 		f = flash{Text: i18n.T(ctx, "reservations.flash.delete_forbidden"), Warn: true}
@@ -379,17 +379,10 @@ func readDraft(r *http.Request, f *formView) (reservation.Draft, bool) {
 // refusal puts a refused change on the form. It reports false for an error that
 // is not a refusal (a failure to report as a server error).
 func (h *Handlers) refusal(ctx context.Context, f *formView, err error, conflicts []*reservation.Reservation) bool {
+	if fieldRefusal(ctx, f, err) {
+		return true
+	}
 	switch {
-	case errors.Is(err, booking.ErrInvalidRange):
-		f.setErr("end", i18n.T(ctx, "reservations.error.range"))
-	case errors.Is(err, booking.ErrStartInPast):
-		f.setErr("start", i18n.T(ctx, "reservations.error.past"))
-	case errors.Is(err, booking.ErrReservationTooLong):
-		f.setErr("end", i18n.T(ctx, "reservations.error.too_long", int(booking.MaximumReservationLength.Hours())))
-	case errors.Is(err, booking.ErrSpotNotFound), errors.Is(err, booking.ErrSpotArchived):
-		f.setErr("spot", i18n.T(ctx, "reservations.error.spot"))
-	case errors.Is(err, reservations.ErrAuthorTooLong):
-		f.setErr("author", i18n.T(ctx, "reservations.error.author_too_long", reservations.MaxAuthorLength))
 	case errors.Is(err, booking.ErrQuotaExceeded):
 		f.General = i18n.T(ctx, "reservations.error.quota", int(booking.MaximumReservationLength.Hours()))
 	case errors.Is(err, booking.ErrSelfOverbook):
@@ -405,8 +398,33 @@ func (h *Handlers) refusal(ctx context.Context, f *formView, err error, conflict
 		f.General = i18n.T(ctx, "reservations.error.ended")
 	case errors.Is(err, reservations.ErrForbidden):
 		f.General = i18n.T(ctx, "reservations.error.forbidden")
-	case errors.Is(err, reservations.ErrNotFound):
+	case errors.Is(err, reservations.ErrAuthorUnknown):
+		f.General = i18n.T(ctx, "reservations.error.author_unknown")
+	case errors.Is(err, ports.ErrNotFound):
 		f.General = i18n.T(ctx, "reservations.flash.not_found")
+	default:
+		return false
+	}
+	return true
+}
+
+// fieldRefusal puts a refusal that belongs to one field next to that field.
+func fieldRefusal(ctx context.Context, f *formView, err error) bool {
+	switch {
+	case errors.Is(err, booking.ErrInvalidRange):
+		f.setErr("end", i18n.T(ctx, "reservations.error.range"))
+	case errors.Is(err, booking.ErrStartInPast):
+		f.setErr("start", i18n.T(ctx, "reservations.error.past"))
+	case errors.Is(err, booking.ErrReservationTooLong):
+		f.setErr("end", i18n.T(ctx, "reservations.error.too_long", int(booking.MaximumReservationLength.Hours())))
+	case errors.Is(err, booking.ErrSpotNotFound), errors.Is(err, booking.ErrSpotArchived):
+		f.setErr("spot", i18n.T(ctx, "reservations.error.spot"))
+	case errors.Is(err, booking.ErrSpotLocked):
+		f.setErr("spot", i18n.T(ctx, "reservations.error.spot_started"))
+	case errors.Is(err, reservations.ErrAuthorTooLong):
+		f.setErr("author", i18n.T(ctx, "reservations.error.author_too_long", reservations.MaxAuthorLength))
+	case errors.Is(err, reservations.ErrAuthorIDInvalid):
+		f.setErr("author", i18n.T(ctx, "reservations.error.author_id"))
 	default:
 		return false
 	}

@@ -79,6 +79,17 @@ func (r *GuildConfigRepository) SetBotPresent(ctx context.Context, guildID strin
 	return postgresql.RowsAffected(r.q.SetGuildBotPresent(ctx, SetGuildBotPresentParams{BotPresent: present, GuildID: guildID}))
 }
 
+func (r *GuildConfigRepository) MarkAbsentExcept(ctx context.Context, shardID, shardCount int, presentIDs []string) error {
+	if presentIDs == nil {
+		presentIDs = []string{}
+	}
+	return r.q.MarkGuildsAbsentExcept(ctx, MarkGuildsAbsentExceptParams{
+		PresentIds: presentIDs,
+		ShardCount: int64(shardCount),
+		ShardID:    int64(shardID),
+	})
+}
+
 func (r *GuildConfigRepository) SetPremium(ctx context.Context, guildID string, premium bool) error {
 	return postgresql.RowsAffected(r.q.SetGuildPremium(ctx, SetGuildPremiumParams{Premium: premium, GuildID: guildID}))
 }

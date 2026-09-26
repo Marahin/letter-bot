@@ -80,3 +80,15 @@ UPDATE guilds
 SET resync_requested_at = CASE WHEN resync_requested_at <= @started_at::timestamptz THEN NULL ELSE resync_requested_at END,
     synced_at = now()
 WHERE guild_id = @guild_id;
+
+-- Discord routes a guild to shard (guild_id >> 22) % shard_count. The CASE keeps
+-- a non-snowflake id away from the bigint cast.
+-- name: MarkGuildsAbsentExcept :exec
+UPDATE guilds
+SET bot_present = false, updated_at = now()
+WHERE bot_present
+  AND NOT (guild_id = ANY(@present_ids::text[]))
+  AND CASE WHEN guild_id ~ '^[0-9]{1,19}$'
+    THEN (guild_id::bigint >> 22) % @shard_count::bigint = @shard_id::bigint
+    ELSE false
+  END;

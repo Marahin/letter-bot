@@ -3,6 +3,7 @@ package reservations
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -223,9 +224,9 @@ func TestGet(t *testing.T) {
 	// then
 	require.NoError(t, err)
 	assert.Equal(t, int64(7), r.Reservation.ID)
-	assert.ErrorIs(t, missing, ErrNotFound)
+	assert.ErrorIs(t, missing, ports.ErrNotFound)
 	assert.Error(t, broken)
-	assert.NotErrorIs(t, broken, ErrNotFound)
+	assert.NotErrorIs(t, broken, ports.ErrNotFound)
 }
 
 func TestCreate_MemberBooksAsThemselves(t *testing.T) {
@@ -234,11 +235,10 @@ func TestCreate_MemberBooksAsThemselves(t *testing.T) {
 	f := newFixture(t)
 	d := draft()
 	d.Author, d.AuthorDiscordID, d.Overbook = "Not Me", "u9", true
-	f.spots.EXPECT().SelectGuildSpotByID(ctx, guildID, int64(1)).Return(&spot.Spot{ID: 1, Name: "Hero Cave"}, nil)
 	f.booker.EXPECT().Book(book.BookRequest{
 		Guild:    &guild.Guild{ID: guildID},
 		Member:   &member.Member{ID: "u1", Nick: "Quiet Nyx", Username: "Quiet Nyx"},
-		Spot:     "Hero Cave",
+		SpotID:   1,
 		StartAt:  d.StartAt,
 		EndAt:    d.EndAt,
 		Overbook: true,
@@ -257,7 +257,8 @@ func TestCreate_ManagerBooksForAnotherAuthor(t *testing.T) {
 		author, authorID     string
 		wantNick, wantMember string
 	}{
-		"known author": {" Storm Quiet ", "u2", "Storm Quiet", "u2"},
+		"known author": {" Storm Quiet ", " 806152499760201738 ", "Storm Quiet", "806152499760201738"},
+		"20 digits":    {"Storm Quiet", "18446744073709551615", "Storm Quiet", "18446744073709551615"},
 		"free text":    {"Guest Hunter", "", "Guest Hunter", ""},
 		"empty author": {"  ", "u2", "Boss", "m1"},
 	}
@@ -269,9 +270,8 @@ func TestCreate_ManagerBooksForAnotherAuthor(t *testing.T) {
 			d := draft()
 			d.Author, d.AuthorDiscordID = tc.author, tc.authorID
 			overbooked := []*reservation.ClippedOrRemovedReservation{{Original: &reservation.Reservation{ID: 3}}}
-			f.spots.EXPECT().SelectGuildSpotByID(ctx, guildID, int64(1)).Return(&spot.Spot{ID: 1, Name: "Hero Cave"}, nil)
 			f.booker.EXPECT().Book(mock.MatchedBy(func(r book.BookRequest) bool {
-				return r.Member.ID == tc.wantMember && r.Member.Nick == tc.wantNick && r.HasPermissions
+				return r.Member.ID == tc.wantMember && r.Member.Nick == tc.wantNick && r.HasPermissions && r.SpotID == 1
 			})).Return(overbooked, nil)
 			f.notifier.EXPECT().SummaryChanged(ctx, guildID).Return(nil)
 
@@ -286,36 +286,40 @@ func TestCreate_ManagerBooksForAnotherAuthor(t *testing.T) {
 }
 
 func TestCreate_Refusals(t *testing.T) {
-	archivedAt := now
 	long := make([]rune, MaxAuthorLength+1)
 	for i := range long {
 		long[i] = 'a'
 	}
+	withAuthor := func(author, id string) func() reservation.Draft {
+		return func() reservation.Draft {
+			d := draft()
+			d.Author, d.AuthorDiscordID = author, id
+			return d
+		}
+	}
+	nameless := member1()
+	nameless.Name = ""
 	cases := map[string]struct {
 		actor    reservation.Actor
 		draft    func() reservation.Draft
-		spot     *spot.Spot
-		spotErr  error
 		expected error
 	}{
 		"viewer":          {actor: viewer(), draft: draft, expected: ErrForbidden},
-		"author too long": {actor: manager(), draft: func() reservation.Draft { d := draft(); d.Author = string(long); return d }, expected: ErrAuthorTooLong},
+		"author too long": {actor: manager(), draft: withAuthor(string(long), ""), expected: ErrAuthorTooLong},
+		"id not digits":   {actor: manager(), draft: withAuthor("Storm Quiet", "12ab"), expected: ErrAuthorIDInvalid},
+		"id too long":     {actor: manager(), draft: withAuthor("Storm Quiet", "123456789012345678901"), expected: ErrAuthorIDInvalid},
+		"unknown author":  {actor: nameless, draft: draft, expected: ErrAuthorUnknown},
 		"past start": {actor: member1(), draft: func() reservation.Draft {
 			d := draft()
 			d.StartAt = now.Add(-time.Hour)
 			return d
 		}, expected: booking.ErrStartInPast},
-		"unknown spot":  {actor: member1(), draft: draft, spotErr: ports.ErrNotFound, expected: booking.ErrSpotNotFound},
-		"archived spot": {actor: member1(), draft: draft, spot: &spot.Spot{ID: 1, ArchivedAt: &archivedAt}, expected: booking.ErrSpotArchived},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			// given
 			ctx := context.Background()
 			f := newFixture(t)
-			if tc.spot != nil || tc.spotErr != nil {
-				f.spots.EXPECT().SelectGuildSpotByID(ctx, guildID, int64(1)).Return(tc.spot, tc.spotErr)
-			}
 
 			// when
 			_, err := f.s.Create(ctx, guildID, tc.actor, tc.draft())
@@ -326,25 +330,11 @@ func TestCreate_Refusals(t *testing.T) {
 	}
 }
 
-func TestCreate_SpotLookupFails(t *testing.T) {
-	// given
-	ctx := context.Background()
-	f := newFixture(t)
-	f.spots.EXPECT().SelectGuildSpotByID(ctx, guildID, int64(1)).Return(nil, errors.New("down"))
-
-	// when
-	_, err := f.s.Create(ctx, guildID, member1(), draft())
-
-	// then
-	assert.Error(t, err)
-}
-
 func TestCreate_ConflictKeepsBlockingReservations(t *testing.T) {
 	// given
 	ctx := context.Background()
 	f := newFixture(t)
 	blocking := []*reservation.ClippedOrRemovedReservation{{Original: &reservation.Reservation{ID: 3, Author: "Storm Quiet"}}}
-	f.spots.EXPECT().SelectGuildSpotByID(ctx, guildID, int64(1)).Return(&spot.Spot{ID: 1, Name: "Hero Cave"}, nil)
 	f.booker.EXPECT().Book(mock.Anything).Return(blocking, booking.ErrInsufficientPermissions)
 
 	// when
@@ -355,17 +345,23 @@ func TestCreate_ConflictKeepsBlockingReservations(t *testing.T) {
 	assert.Equal(t, blocking, res)
 }
 
+// expectEdit makes the booking mock authorize against existing, as booking.Edit does.
+func expectEdit(f fixture, ctx context.Context, existing *reservation.ReservationWithSpot, match func(book.EditRequest) bool) {
+	f.booker.EXPECT().Edit(ctx, mock.MatchedBy(match)).RunAndReturn(func(_ context.Context, r book.EditRequest) ([]*reservation.Reservation, error) {
+		return nil, r.Authorize(existing.Reservation)
+	}).Once()
+}
+
 func TestEdit_OwnerKeepsAuthor(t *testing.T) {
 	// given
 	ctx := context.Background()
 	f := newFixture(t)
 	d := draft()
 	d.Author, d.AuthorDiscordID = "Hijack", "u9"
-	f.repo.EXPECT().SelectGuildReservationWithSpot(ctx, guildID, int64(7)).Return(upcoming("u1"), nil)
-	f.booker.EXPECT().Edit(ctx, book.EditRequest{
-		GuildID: guildID, ReservationID: 7, SpotID: 1, StartAt: d.StartAt, EndAt: d.EndAt,
-		Author: "Someone", AuthorDiscordID: "u1",
-	}).Return(nil, nil)
+	expectEdit(f, ctx, upcoming("u1"), func(r book.EditRequest) bool {
+		return r.GuildID == guildID && r.ReservationID == 7 && r.SpotID == 1 &&
+			r.StartAt.Equal(d.StartAt) && r.EndAt.Equal(d.EndAt) && r.Author == "" && r.AuthorDiscordID == ""
+	})
 	f.notifier.EXPECT().SummaryChanged(ctx, guildID).Return(nil)
 
 	// when
@@ -380,11 +376,10 @@ func TestEdit_ManagerChangesAuthor(t *testing.T) {
 	ctx := context.Background()
 	f := newFixture(t)
 	d := draft()
-	d.Author, d.AuthorDiscordID = "Storm Quiet", "u2"
-	f.repo.EXPECT().SelectGuildReservationWithSpot(ctx, guildID, int64(7)).Return(upcoming("u1"), nil)
-	f.booker.EXPECT().Edit(ctx, mock.MatchedBy(func(r book.EditRequest) bool {
-		return r.Author == "Storm Quiet" && r.AuthorDiscordID == "u2"
-	})).Return(nil, nil)
+	d.Author, d.AuthorDiscordID = "Storm Quiet", "2"
+	expectEdit(f, ctx, upcoming("u1"), func(r book.EditRequest) bool {
+		return r.Author == "Storm Quiet" && r.AuthorDiscordID == "2"
+	})
 	f.notifier.EXPECT().SummaryChanged(ctx, guildID).Return(nil)
 
 	// when
@@ -399,53 +394,45 @@ func TestEdit_Refusals(t *testing.T) {
 	ctx := context.Background()
 	f := newFixture(t)
 	blocking := []*reservation.Reservation{{ID: 9}}
-	f.repo.EXPECT().SelectGuildReservationWithSpot(ctx, guildID, int64(7)).Return(upcoming("u2"), nil)
-	f.repo.EXPECT().SelectGuildReservationWithSpot(ctx, guildID, int64(8)).Return(nil, ports.ErrNotFound)
-	f.booker.EXPECT().Edit(ctx, mock.Anything).Return(blocking, booking.ErrConflict).Once()
+	expectEdit(f, ctx, upcoming("u2"), func(book.EditRequest) bool { return true })
 	f.booker.EXPECT().Edit(ctx, mock.Anything).Return(nil, ports.ErrNotFound).Once()
+	f.booker.EXPECT().Edit(ctx, mock.Anything).Return(blocking, booking.ErrConflict).Once()
 
 	// when
 	_, forbidden := f.s.Edit(ctx, guildID, member1(), 7, draft())
 	_, missing := f.s.Edit(ctx, guildID, manager(), 8, draft())
 	conflicts, conflict := f.s.Edit(ctx, guildID, manager(), 7, draft())
-	_, gone := f.s.Edit(ctx, guildID, manager(), 7, draft())
 
 	// then
 	assert.ErrorIs(t, forbidden, ErrForbidden)
-	assert.ErrorIs(t, missing, ErrNotFound)
+	assert.ErrorIs(t, missing, ports.ErrNotFound)
 	assert.ErrorIs(t, conflict, booking.ErrConflict)
 	assert.Equal(t, blocking, conflicts)
-	assert.ErrorIs(t, gone, ErrNotFound)
 }
 
-func TestEdit_EndedReservation(t *testing.T) {
-	// given
-	ctx := context.Background()
-	f := newFixture(t)
-	f.repo.EXPECT().SelectGuildReservationWithSpot(ctx, guildID, int64(7)).Return(past("u2"), nil)
-
-	// when
-	_, err := f.s.Edit(ctx, guildID, manager(), 7, draft())
-
-	// then
-	assert.ErrorIs(t, err, booking.ErrReservationEnded)
-}
-
-func TestEdit_AuthorTooLong(t *testing.T) {
-	// given
-	ctx := context.Background()
-	f := newFixture(t)
-	d := draft()
-	for range MaxAuthorLength + 1 {
-		d.Author += "x"
+func TestEdit_AuthorRefusals(t *testing.T) {
+	cases := map[string]struct {
+		author, id string
+		expected   error
+	}{
+		"too long":      {author: strings.Repeat("x", MaxAuthorLength+1), expected: ErrAuthorTooLong},
+		"id not digits": {author: "Storm Quiet", id: "<@123>", expected: ErrAuthorIDInvalid},
 	}
-	f.repo.EXPECT().SelectGuildReservationWithSpot(ctx, guildID, int64(7)).Return(upcoming("u2"), nil)
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			// given
+			ctx := context.Background()
+			f := newFixture(t)
+			d := draft()
+			d.Author, d.AuthorDiscordID = tc.author, tc.id
 
-	// when
-	_, err := f.s.Edit(ctx, guildID, manager(), 7, d)
+			// when
+			_, err := f.s.Edit(ctx, guildID, manager(), 7, d)
 
-	// then
-	assert.ErrorIs(t, err, ErrAuthorTooLong)
+			// then
+			assert.ErrorIs(t, err, tc.expected)
+		})
+	}
 }
 
 func TestDelete(t *testing.T) {
@@ -481,8 +468,8 @@ func TestDelete_Refusals(t *testing.T) {
 
 	// then
 	assert.ErrorIs(t, pastOwn, ErrForbidden)
-	assert.ErrorIs(t, missing, ErrNotFound)
-	assert.ErrorIs(t, raced, ErrNotFound)
+	assert.ErrorIs(t, missing, ports.ErrNotFound)
+	assert.ErrorIs(t, raced, ports.ErrNotFound)
 	assert.Error(t, broken)
 }
 
@@ -510,8 +497,7 @@ func TestSpotOverview(t *testing.T) {
 	f := newFixture(t)
 	spotID := int64(1)
 	f.spots.EXPECT().SelectGuildSpotByID(ctx, guildID, spotID).Return(&spot.Spot{ID: 1, Name: "Hero Cave"}, nil)
-	f.repo.EXPECT().CountReservations(ctx, reservation.SearchFilter{GuildID: guildID, SpotID: &spotID, Scope: reservation.ScopeAll}).Return(12, nil)
-	f.repo.EXPECT().CountReservations(ctx, reservation.SearchFilter{GuildID: guildID, SpotID: &spotID, Scope: reservation.ScopeUpcoming}).Return(2, nil)
+	f.spots.EXPECT().SelectSpotReservationCounts(ctx, guildID, spotID).Return(spot.ReservationCounts{Total: 12, Upcoming: 2}, nil)
 
 	// when
 	got, err := f.s.SpotOverview(ctx, guildID, spotID)
@@ -524,12 +510,11 @@ func TestSpotOverview(t *testing.T) {
 
 func TestSpotOverview_Errors(t *testing.T) {
 	cases := map[string]struct {
-		spotErr, allErr, upcomingErr error
-		expected                     error
+		spotErr, countErr error
+		expected          error
 	}{
-		"missing spot":   {spotErr: ports.ErrNotFound, expected: ports.ErrNotFound},
-		"count fails":    {allErr: errors.New("down")},
-		"upcoming fails": {upcomingErr: errors.New("down")},
+		"missing spot": {spotErr: ports.ErrNotFound, expected: ports.ErrNotFound},
+		"count fails":  {countErr: errors.New("down")},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -540,10 +525,7 @@ func TestSpotOverview_Errors(t *testing.T) {
 				f.spots.EXPECT().SelectGuildSpotByID(ctx, guildID, int64(1)).Return(nil, tc.spotErr)
 			} else {
 				f.spots.EXPECT().SelectGuildSpotByID(ctx, guildID, int64(1)).Return(&spot.Spot{ID: 1}, nil)
-				f.repo.EXPECT().CountReservations(ctx, mock.MatchedBy(func(r reservation.SearchFilter) bool { return r.Scope == reservation.ScopeAll })).Return(1, tc.allErr)
-				if tc.allErr == nil {
-					f.repo.EXPECT().CountReservations(ctx, mock.MatchedBy(func(r reservation.SearchFilter) bool { return r.Scope == reservation.ScopeUpcoming })).Return(1, tc.upcomingErr)
-				}
+				f.spots.EXPECT().SelectSpotReservationCounts(ctx, guildID, int64(1)).Return(spot.ReservationCounts{}, tc.countErr)
 			}
 
 			// when

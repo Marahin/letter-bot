@@ -6,6 +6,8 @@ package mocks
 
 import (
 	"context"
+	"spot-assistant/internal/core/dto/book"
+	"spot-assistant/internal/core/dto/reservation"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -139,8 +141,8 @@ func (_c *MockNotifyHandler_OnGuildResync_Call) RunAndReturn(run func(ctx contex
 }
 
 // OnOverbooked provides a mock function for the type MockNotifyHandler
-func (_mock *MockNotifyHandler) OnOverbooked(ctx context.Context, payload []byte) {
-	_mock.Called(ctx, payload)
+func (_mock *MockNotifyHandler) OnOverbooked(ctx context.Context, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) {
+	_mock.Called(ctx, request, res)
 	return
 }
 
@@ -151,24 +153,30 @@ type MockNotifyHandler_OnOverbooked_Call struct {
 
 // OnOverbooked is a helper method to define mock.On call
 //   - ctx context.Context
-//   - payload []byte
-func (_e *MockNotifyHandler_Expecter) OnOverbooked(ctx any, payload any) *MockNotifyHandler_OnOverbooked_Call {
-	return &MockNotifyHandler_OnOverbooked_Call{Call: _e.mock.On("OnOverbooked", ctx, payload)}
+//   - request book.BookRequest
+//   - res *reservation.ClippedOrRemovedReservation
+func (_e *MockNotifyHandler_Expecter) OnOverbooked(ctx any, request any, res any) *MockNotifyHandler_OnOverbooked_Call {
+	return &MockNotifyHandler_OnOverbooked_Call{Call: _e.mock.On("OnOverbooked", ctx, request, res)}
 }
 
-func (_c *MockNotifyHandler_OnOverbooked_Call) Run(run func(ctx context.Context, payload []byte)) *MockNotifyHandler_OnOverbooked_Call {
+func (_c *MockNotifyHandler_OnOverbooked_Call) Run(run func(ctx context.Context, request book.BookRequest, res *reservation.ClippedOrRemovedReservation)) *MockNotifyHandler_OnOverbooked_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 []byte
+		var arg1 book.BookRequest
 		if args[1] != nil {
-			arg1 = args[1].([]byte)
+			arg1 = args[1].(book.BookRequest)
+		}
+		var arg2 *reservation.ClippedOrRemovedReservation
+		if args[2] != nil {
+			arg2 = args[2].(*reservation.ClippedOrRemovedReservation)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -179,7 +187,7 @@ func (_c *MockNotifyHandler_OnOverbooked_Call) Return() *MockNotifyHandler_OnOve
 	return _c
 }
 
-func (_c *MockNotifyHandler_OnOverbooked_Call) RunAndReturn(run func(ctx context.Context, payload []byte)) *MockNotifyHandler_OnOverbooked_Call {
+func (_c *MockNotifyHandler_OnOverbooked_Call) RunAndReturn(run func(ctx context.Context, request book.BookRequest, res *reservation.ClippedOrRemovedReservation)) *MockNotifyHandler_OnOverbooked_Call {
 	_c.Run(run)
 	return _c
 }

@@ -219,7 +219,7 @@ func TestUnbookAutocomplete(t *testing.T) {
 	reservationService.On(
 		"SelectUpcomingMemberReservationsWithSpots",
 		mocks.ContextMock,
-		guild, member).Return(reservations, nil)
+		guild, member, int64(0)).Return(reservations, nil)
 	adapter := NewAdapter(mocks.NewMockSpotRepository(t), reservationService, mocks.NewMockCommunicationService(t))
 
 	// when
@@ -272,7 +272,7 @@ func TestUnbookAutocompleteWithFilterMatching(t *testing.T) {
 	reservationService.On(
 		"SelectUpcomingMemberReservationsWithSpots",
 		mocks.ContextMock,
-		guild, member).Return(reservations, nil)
+		guild, member, int64(0)).Return(reservations, nil)
 	adapter := NewAdapter(mocks.NewMockSpotRepository(t), reservationService, mocks.NewMockCommunicationService(t))
 
 	// when
@@ -306,7 +306,7 @@ func TestBook(t *testing.T) {
 	spotService.On("SelectGuildSpotByName", mocks.ContextMock, guild.ID, spotInput.Name).Return(spotInput, nil)
 	reservationService := mocks.NewMockReservationRepository(t)
 	reservationService.On("SelectOverlappingReservations", mocks.ContextMock, spotInput.ID, startAt, endAt, guild.ID).Return([]*reservation.Reservation{}, nil)
-	reservationService.On("SelectUpcomingMemberReservationsWithSpots", mocks.ContextMock, guild, member).Return([]*reservation.ReservationWithSpot{}, nil)
+	reservationService.On("SelectUpcomingMemberReservationsWithSpots", mocks.ContextMock, guild, member, int64(0)).Return([]*reservation.ReservationWithSpot{}, nil)
 	reservationService.On("CreateAndDeleteConflicting", mocks.ContextMock, member, guild, []*reservation.Reservation{}, spotInput.ID, startAt, endAt).Return([]*reservation.ClippedOrRemovedReservation{}, nil)
 	adapter := NewAdapter(spotService, reservationService, mocks.NewMockCommunicationService(t))
 
@@ -459,7 +459,7 @@ func TestBookOnMultizoneCase(t *testing.T) {
 	spotService.On("SelectGuildSpotByName", mocks.ContextMock, guild.ID, spotInput.Name).Return(spotInput, nil)
 	reservationService := mocks.NewMockReservationRepository(t)
 	reservationService.On("SelectOverlappingReservations", mocks.ContextMock, spotInput.ID, startAt, endAt, guild.ID).Return([]*reservation.Reservation{}, nil)
-	reservationService.On("SelectUpcomingMemberReservationsWithSpots", mocks.ContextMock, guild, member).Return(existingReservations, nil)
+	reservationService.On("SelectUpcomingMemberReservationsWithSpots", mocks.ContextMock, guild, member, int64(0)).Return(existingReservations, nil)
 	reservationService.On("CreateAndDeleteConflicting", mocks.ContextMock, member, guild, []*reservation.Reservation{}, spotInput.ID, startAt, endAt).Return([]*reservation.ClippedOrRemovedReservation{}, nil)
 	adapter := NewAdapter(spotService, reservationService, mocks.NewMockCommunicationService(t))
 
@@ -504,7 +504,7 @@ func TestBookFailOnOverbookAuthorsReservation(t *testing.T) {
 	spotService.On("SelectGuildSpotByName", mocks.ContextMock, guild.ID, spotInput.Name).Return(spotInput, nil)
 	reservationService := mocks.NewMockReservationRepository(t)
 	reservationService.On("SelectOverlappingReservations", mocks.ContextMock, spotInput.ID, startAt, endAt, guild.ID).Return(conflictingReservations, nil)
-	reservationService.On("SelectUpcomingMemberReservationsWithSpots", mocks.ContextMock, guild, member).Return([]*reservation.ReservationWithSpot{}, nil)
+	reservationService.On("SelectUpcomingMemberReservationsWithSpots", mocks.ContextMock, guild, member, int64(0)).Return([]*reservation.ReservationWithSpot{}, nil)
 	adapter := NewAdapter(spotService, reservationService, mocks.NewMockCommunicationService(t))
 
 	// when

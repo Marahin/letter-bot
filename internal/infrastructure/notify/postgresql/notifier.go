@@ -5,6 +5,9 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgconn"
+
+	"spot-assistant/internal/core/dto/book"
+	"spot-assistant/internal/core/dto/reservation"
 )
 
 // NotifyExecutor runs the pg_notify statement. A pgxpool.Pool satisfies it.
@@ -34,7 +37,11 @@ func (n *Notifier) ConfigChanged(ctx context.Context, guildID string) error {
 	return n.notify(ctx, ChannelGuildConfig, guildID)
 }
 
-func (n *Notifier) Overbooked(ctx context.Context, payload []byte) error {
+func (n *Notifier) Overbooked(ctx context.Context, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) error {
+	payload, err := NewOverbookedPayload(request, res).Encode()
+	if err != nil {
+		return fmt.Errorf("encode overbooked payload: %w", err)
+	}
 	return n.notify(ctx, ChannelOverbooked, string(payload))
 }
 

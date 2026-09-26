@@ -385,11 +385,11 @@ func TestSelectUpcomingMemberReservationsWithSpots_ReturnsDBError(t *testing.T) 
 	assert.NoError(t, err)
 	defer mock.Close()
 	boom := errors.New("boom")
-	mock.ExpectQuery("author_discord_id").WithArgs("guild-1", "u1").WillReturnError(boom)
+	mock.ExpectQuery("author_discord_id").WithArgs("guild-1", "u1", int64(7)).WillReturnError(boom)
 	repo := NewReservationRepository(mock)
 
 	// when
-	res, err := repo.SelectUpcomingMemberReservationsWithSpots(context.Background(), &guild.Guild{ID: "guild-1"}, &member.Member{ID: "u1"})
+	res, err := repo.SelectUpcomingMemberReservationsWithSpots(context.Background(), &guild.Guild{ID: "guild-1"}, &member.Member{ID: "u1"}, 7)
 
 	// then
 	assert.ErrorIs(t, err, boom)

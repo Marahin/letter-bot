@@ -328,6 +328,9 @@ func TestHandleCreate_FieldErrors(t *testing.T) {
 		"past start": {booking.ErrStartInPast, "The start cannot be in the past."},
 		"quota":      {booking.ErrQuotaExceeded, "One author can book 3 hours within 24 hours."},
 		"archived":   {booking.ErrSpotArchived, "Choose an active respawn."},
+		"started":    {booking.ErrSpotLocked, "It cannot move to another respawn."},
+		"author id":  {reservations.ErrAuthorIDInvalid, "This is not a Discord user."},
+		"no author":  {reservations.ErrAuthorUnknown, "We could not read your Discord name."},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -465,7 +468,7 @@ func TestHandleEditForm_PlainGetIsAPageAndMissingIs404(t *testing.T) {
 	// given
 	h, m, cookie := signedIn(t, managerCaps)
 	m.Reservations.EXPECT().Get(mock.Anything, guildID, int64(7)).Return(item(7, "u2", time.Now().Add(time.Hour)), nil)
-	m.Reservations.EXPECT().Get(mock.Anything, guildID, int64(8)).Return(nil, reservations.ErrNotFound)
+	m.Reservations.EXPECT().Get(mock.Anything, guildID, int64(8)).Return(nil, ports.ErrNotFound)
 	m.Reservations.EXPECT().Spots(mock.Anything, guildID).Return(guildSpots(), nil)
 
 	// when
@@ -525,7 +528,7 @@ func TestHandleEdit_ConflictStaysInTheDialog(t *testing.T) {
 func TestHandleEdit_GoneReservation(t *testing.T) {
 	// given
 	h, m, cookie := signedIn(t, managerCaps)
-	m.Reservations.EXPECT().Get(mock.Anything, guildID, int64(8)).Return(nil, reservations.ErrNotFound)
+	m.Reservations.EXPECT().Get(mock.Anything, guildID, int64(8)).Return(nil, ports.ErrNotFound)
 
 	// when
 	rec := webtest.Serve(h, htmx(webtest.Post("/servers/g1/reservations/8/edit", url.Values{}, cookie)))
@@ -542,7 +545,7 @@ func TestHandleDelete(t *testing.T) {
 	}{
 		"deleted":   {nil, "Reservation deleted."},
 		"forbidden": {reservations.ErrForbidden, "You cannot delete this reservation."},
-		"gone":      {reservations.ErrNotFound, "does not exist any more"},
+		"gone":      {ports.ErrNotFound, "does not exist any more"},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {

@@ -82,10 +82,6 @@ func (repo *SpotRepository) DeleteSpot(ctx context.Context, guildID string, id i
 	return postgresql.RowsAffected(repo.q.DeleteSpot(ctx, DeleteSpotParams{ID: id, GuildID: guildID}))
 }
 
-func (repo *SpotRepository) CountSpotReservations(ctx context.Context, guildID string, id int64) (int64, error) {
-	return repo.q.CountSpotReservations(ctx, CountSpotReservationsParams{SpotID: id, GuildID: guildID})
-}
-
 func (repo *SpotRepository) SelectGuildSpotReservationCounts(ctx context.Context, guildID string) (map[int64]spot.ReservationCounts, error) {
 	rows, err := repo.q.SelectGuildSpotReservationCounts(ctx, guildID)
 	if err != nil {
@@ -97,6 +93,14 @@ func (repo *SpotRepository) SelectGuildSpotReservationCounts(ctx context.Context
 		counts[r.SpotID] = spot.ReservationCounts{Total: r.Total, Upcoming: r.Upcoming}
 	}
 	return counts, nil
+}
+
+func (repo *SpotRepository) SelectSpotReservationCounts(ctx context.Context, guildID string, id int64) (spot.ReservationCounts, error) {
+	row, err := repo.q.SelectSpotReservationCounts(ctx, SelectSpotReservationCountsParams{SpotID: id, GuildID: guildID})
+	if err != nil {
+		return spot.ReservationCounts{}, err
+	}
+	return spot.ReservationCounts{Total: row.Total, Upcoming: row.Upcoming}, nil
 }
 
 func (repo *SpotRepository) InsertSpotsIgnoreDuplicates(ctx context.Context, guildID string, names []string) (int64, error) {

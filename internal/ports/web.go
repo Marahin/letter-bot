@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"spot-assistant/internal/core/dto/access"
+	"spot-assistant/internal/core/dto/book"
 	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/guildconfig"
 	"spot-assistant/internal/core/dto/reservation"
@@ -56,7 +57,8 @@ type BotNotifier interface {
 	SummaryChanged(ctx context.Context, guildID string) error
 	ResyncRequested(ctx context.Context, guildID string) error
 	ConfigChanged(ctx context.Context, guildID string) error
-	Overbooked(ctx context.Context, payload []byte) error
+	// Overbooked asks the bot to DM the author of res that request overbooked them.
+	Overbooked(ctx context.Context, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) error
 }
 
 // GuildSettingsService backs the admin Settings and Channels pages. It lists the
@@ -97,17 +99,19 @@ type ReservationService interface {
 	// KnownAuthors returns the Discord users who booked with a matching author text.
 	// A query shorter than 2 characters returns none.
 	KnownAuthors(ctx context.Context, guildID, query string) ([]*reservation.KnownAuthor, error)
-	// Get returns ports.ErrNotFound for a reservation of another guild.
+	// Get returns ErrNotFound for a reservation of another guild.
 	Get(ctx context.Context, guildID string, id int64) (*reservation.ReservationWithSpot, error)
 	// Create books a respawn. It returns the overbooked reservations on success, and
 	// the blocking ones with booking.ErrInsufficientPermissions.
 	Create(ctx context.Context, guildID string, actor reservation.Actor, draft reservation.Draft) ([]*reservation.ClippedOrRemovedReservation, error)
-	// Edit returns the overlapping reservations with booking.ErrConflict.
+	// Edit returns the overlapping reservations with booking.ErrConflict, and
+	// ErrNotFound for a reservation of another guild.
 	Edit(ctx context.Context, guildID string, actor reservation.Actor, id int64, draft reservation.Draft) ([]*reservation.Reservation, error)
+	// Delete returns ErrNotFound for a reservation of another guild.
 	Delete(ctx context.Context, guildID string, actor reservation.Actor, id int64) error
 	// Spots returns every guild spot, active and archived, ordered by name.
 	Spots(ctx context.Context, guildID string) ([]*spot.Spot, error)
 	// SpotOverview returns one spot (active or archived) with its reservation counts.
-	// Returns ports.ErrNotFound for a spot of another guild.
+	// Returns ErrNotFound for a spot of another guild.
 	SpotOverview(ctx context.Context, guildID string, spotID int64) (*spot.Listed, error)
 }

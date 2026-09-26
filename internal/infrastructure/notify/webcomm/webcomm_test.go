@@ -1,14 +1,12 @@
 package webcomm
 
 import (
-	"context"
 	"errors"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 
 	"spot-assistant/internal/common/test/mocks"
 	"spot-assistant/internal/core/dto/book"
@@ -16,7 +14,6 @@ import (
 	"spot-assistant/internal/core/dto/member"
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/summary"
-	notifypg "spot-assistant/internal/infrastructure/notify/postgresql"
 )
 
 func TestNotifyOverbookedMember_SendsThePayload(t *testing.T) {
@@ -32,29 +29,19 @@ func TestNotifyOverbookedMember_SendsThePayload(t *testing.T) {
 		EndAt:   start.Add(time.Hour),
 	}
 	res := &reservation.ClippedOrRemovedReservation{Original: &reservation.Reservation{ID: 3, AuthorDiscordID: "u2"}}
-	var sent []byte
-	notifier.EXPECT().Overbooked(mock.Anything, mock.Anything).RunAndReturn(func(_ context.Context, p []byte) error {
-		sent = p
-		return nil
-	})
+	notifier.EXPECT().Overbooked(mock.Anything, request, res).Return(nil).Once()
 
 	// when
 	a.NotifyOverbookedMember(request, res)
 
-	// then
-	decoded, err := notifypg.DecodeOverbookedPayload(sent)
-	require.NoError(t, err)
-	assert.Equal(t, "g1", decoded.GuildID)
-	assert.Equal(t, "m1", decoded.MemberID)
-	assert.Equal(t, "Hero Cave", decoded.Spot)
-	assert.Equal(t, int64(3), decoded.Original.ID)
+	// then: expectations are asserted on cleanup
 }
 
 func TestNotifyOverbookedMember_NotifyErrorIsOnlyLogged(t *testing.T) {
 	// given
 	notifier := mocks.NewMockBotNotifier(t)
 	a := New(notifier, nil)
-	notifier.EXPECT().Overbooked(mock.Anything, mock.Anything).Return(errors.New("down"))
+	notifier.EXPECT().Overbooked(mock.Anything, mock.Anything, mock.Anything).Return(errors.New("down"))
 
 	// when / then
 	assert.NotPanics(t, func() {
@@ -62,15 +49,13 @@ func TestNotifyOverbookedMember_NotifyErrorIsOnlyLogged(t *testing.T) {
 	})
 }
 
-func TestSummaries_AreNotSupported(t *testing.T) {
+func TestSendPrivateSummary_IsNotSupported(t *testing.T) {
 	// given
 	a := New(mocks.NewMockBotNotifier(t), nil)
 
 	// when
-	guildErr := a.SendGuildSummary(&guild.Guild{}, &summary.Summary{})
 	privateErr := a.SendPrivateSummary(summary.PrivateSummaryRequest{}, &summary.Summary{})
 
 	// then
-	assert.ErrorIs(t, guildErr, ErrNotSupported)
 	assert.ErrorIs(t, privateErr, ErrNotSupported)
 }

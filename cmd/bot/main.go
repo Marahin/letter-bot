@@ -87,7 +87,7 @@ func main() {
 		WithGuildRepositories(guildConfigRepo, guildChannelRepo, guildRoleRepo).
 		WithFormatter(dcFormatter).
 		WithLogger(log)
-	communicationService := communication.NewAdapter(botService, botService, guildConfigRepo).WithLogger(log)
+	communicationService := communication.NewAdapter(botService, botService).WithLogger(log)
 
 	// Bot
 	bookingService := booking.NewAdapter(spotRepo, reservationRepo, communicationService).WithLogger(log)

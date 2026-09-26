@@ -95,7 +95,7 @@ The web uses the rules of `/book`:
 - **Edit**: the author of a reservation and managers can change the respawn and
   the times until the reservation ends. Only managers change the author. An edit
   never overbooks: an overlap is refused and the overlapping reservations are
-  listed. An ongoing reservation keeps its start.
+  listed. An ongoing reservation keeps its start and its respawn.
 - **Delete**: the author before the reservation ends, managers at any time.
 - Every change sends `letter_summary_refresh`.
 - Times are read and shown in the server time zone (`TZ`, Europe/Berlin).

@@ -19,6 +19,7 @@ var (
 	ErrReservationEnded = errors.New("the reservation has already ended")
 	ErrSpotArchived     = errors.New("the respawn is archived")
 	ErrSpotNotFound     = errors.New("the respawn does not exist")
+	ErrSpotLocked       = errors.New("a started reservation cannot move to another respawn")
 	// ErrConflict means another reservation of the respawn overlaps the new times.
 	// An edit never overbooks.
 	ErrConflict = errors.New("another reservation of the respawn overlaps these times")
@@ -38,7 +39,7 @@ func CheckNewWindow(startAt, endAt, now time.Time) error {
 
 // Edit applies the bot's booking rules (maximum length, per-author quota) to a
 // changed reservation and refuses any overlap. On ErrConflict it returns the
-// overlapping reservations.
+// overlapping reservations. Returns ports.ErrNotFound for a reservation of another guild.
 func (a *Adapter) Edit(ctx context.Context, req book.EditRequest) ([]*reservation.Reservation, error) {
 	existing, err := a.reservationRepo.SelectGuildReservationWithSpot(ctx, req.GuildID, req.ReservationID)
 	if err != nil {
@@ -48,30 +49,20 @@ func (a *Adapter) Edit(ctx context.Context, req book.EditRequest) ([]*reservatio
 	if !existing.EndAt.After(now) {
 		return nil, ErrReservationEnded
 	}
-	if !req.EndAt.After(req.StartAt) {
-		return nil, ErrInvalidRange
+	if req.Authorize != nil {
+		if err := req.Authorize(existing.Reservation); err != nil {
+			return nil, err
+		}
 	}
-	// An ongoing reservation keeps its start; a moved start must not be in the past.
-	if !req.StartAt.Equal(existing.StartAt) && req.StartAt.Before(now.Truncate(time.Minute)) {
-		return nil, ErrStartInPast
+	if req.Author == "" {
+		req.Author, req.AuthorDiscordID = existing.Author, existing.AuthorDiscordID
 	}
-	if err := validateHuntLength(req.EndAt.Sub(req.StartAt)); err != nil {
+	if err := checkEditWindow(req, existing.Reservation, now); err != nil {
 		return nil, err
 	}
-
-	spotName := existing.Spot.Name
-	if req.SpotID != existing.SpotID {
-		sp, err := a.spotRepo.SelectGuildSpotByID(ctx, req.GuildID, req.SpotID)
-		if errors.Is(err, ports.ErrNotFound) {
-			return nil, ErrSpotNotFound
-		}
-		if err != nil {
-			return nil, fmt.Errorf("select spot: %w", err)
-		}
-		if sp.IsArchived() {
-			return nil, ErrSpotArchived
-		}
-		spotName = sp.Name
+	spotName, err := a.editedSpotName(ctx, req, existing, now)
+	if err != nil {
+		return nil, err
 	}
 
 	g := &guild.Guild{ID: req.GuildID}
@@ -96,10 +87,37 @@ func (a *Adapter) Edit(ctx context.Context, req book.EditRequest) ([]*reservatio
 		Author:          req.Author,
 		AuthorDiscordID: req.AuthorDiscordID,
 	})
-	if errors.Is(err, ports.ErrConflict) {
+	if errors.Is(err, ports.ErrConflict) || errors.Is(err, ports.ErrDuplicate) {
 		return nil, ErrConflict
 	}
 	return nil, err
+}
+
+func checkEditWindow(req book.EditRequest, existing reservation.Reservation, now time.Time) error {
+	if !req.EndAt.After(req.StartAt) {
+		return ErrInvalidRange
+	}
+	// An ongoing reservation keeps its start; a moved start must not be in the past.
+	if !req.StartAt.Equal(existing.StartAt) && req.StartAt.Before(now.Truncate(time.Minute)) {
+		return ErrStartInPast
+	}
+	return validateHuntLength(req.EndAt.Sub(req.StartAt))
+}
+
+// editedSpotName returns the name of the respawn the edit books. Only a
+// reservation that has not started may move to another active respawn.
+func (a *Adapter) editedSpotName(ctx context.Context, req book.EditRequest, existing *reservation.ReservationWithSpot, now time.Time) (string, error) {
+	if req.SpotID == existing.SpotID {
+		return existing.Spot.Name, nil
+	}
+	if existing.StartAt.Before(now) {
+		return "", ErrSpotLocked
+	}
+	sp, err := a.activeSpotByID(ctx, req.GuildID, req.SpotID)
+	if err != nil {
+		return "", err
+	}
+	return sp.Name, nil
 }
 
 // DeleteForGuild deletes any reservation of the guild. Returns ports.ErrNotFound.
@@ -114,15 +132,9 @@ func (a *Adapter) validateAuthorQuota(ctx context.Context, g *guild.Guild, m *me
 	if m.ID == "" {
 		return nil
 	}
-	upcoming, err := a.reservationRepo.SelectUpcomingMemberReservationsWithSpots(ctx, g, m)
+	others, err := a.reservationRepo.SelectUpcomingMemberReservationsWithSpots(ctx, g, m, excludeID)
 	if err != nil {
 		return fmt.Errorf("could not select upcoming member reservations: %w", err)
-	}
-	others := make([]*reservation.ReservationWithSpot, 0, len(upcoming))
-	for _, r := range upcoming {
-		if r.Reservation.ID != excludeID {
-			others = append(others, r)
-		}
 	}
 	return validateHuntLengthForMultiFloorRespawns(spotName, others, startAt, endAt)
 }

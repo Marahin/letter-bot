@@ -30,10 +30,15 @@ const (
 	MinAuthorQuery = 2
 )
 
+// MaxSnowflakeLength is the longest decimal Discord id (2^64 has 20 digits).
+const MaxSnowflakeLength = 20
+
 var (
-	ErrForbidden     = errors.New("not allowed to change this reservation")
-	ErrNotFound      = errors.New("reservation not found")
-	ErrAuthorTooLong = errors.New("author is too long")
+	ErrForbidden       = errors.New("not allowed to change this reservation")
+	ErrAuthorTooLong   = errors.New("author is too long")
+	ErrAuthorIDInvalid = errors.New("author Discord id is not a Discord id")
+	// ErrAuthorUnknown means the author of a new reservation could not be resolved.
+	ErrAuthorUnknown = errors.New("author is unknown")
 )
 
 // Service implements ports.ReservationService.
@@ -132,9 +137,6 @@ func (s *Service) KnownAuthors(ctx context.Context, guildID, query string) ([]*r
 
 func (s *Service) Get(ctx context.Context, guildID string, id int64) (*reservation.ReservationWithSpot, error) {
 	r, err := s.reservations.SelectGuildReservationWithSpot(ctx, guildID, id)
-	if errors.Is(err, ports.ErrNotFound) {
-		return nil, ErrNotFound
-	}
 	if err != nil {
 		return nil, fmt.Errorf("select reservation: %w", err)
 	}
@@ -149,24 +151,17 @@ func (s *Service) Create(ctx context.Context, guildID string, actor reservation.
 	if err != nil {
 		return nil, err
 	}
+	if author == "" {
+		return nil, ErrAuthorUnknown
+	}
 	if err := booking.CheckNewWindow(draft.StartAt, draft.EndAt, s.now()); err != nil {
 		return nil, err
-	}
-	sp, err := s.spots.SelectGuildSpotByID(ctx, guildID, draft.SpotID)
-	if errors.Is(err, ports.ErrNotFound) {
-		return nil, booking.ErrSpotNotFound
-	}
-	if err != nil {
-		return nil, fmt.Errorf("select spot: %w", err)
-	}
-	if sp.IsArchived() {
-		return nil, booking.ErrSpotArchived
 	}
 
 	res, err := s.booker.Book(book.BookRequest{
 		Guild:          &guild.Guild{ID: guildID},
 		Member:         &member.Member{ID: authorID, Nick: author, Username: author},
-		Spot:           sp.Name,
+		SpotID:         draft.SpotID,
 		StartAt:        draft.StartAt,
 		EndAt:          draft.EndAt,
 		Overbook:       draft.Overbook,
@@ -179,19 +174,10 @@ func (s *Service) Create(ctx context.Context, guildID string, actor reservation.
 	return res, nil
 }
 
+// Edit leaves the load, the ended check and the booking rules to the booking
+// service, and only adds the actor's rights. An empty author keeps the current one.
 func (s *Service) Edit(ctx context.Context, guildID string, actor reservation.Actor, id int64, draft reservation.Draft) ([]*reservation.Reservation, error) {
-	existing, err := s.Get(ctx, guildID, id)
-	if err != nil {
-		return nil, err
-	}
-	now := s.now()
-	if !existing.EndAt.After(now) {
-		return nil, booking.ErrReservationEnded
-	}
-	if !CanEdit(actor, existing.Reservation, now) {
-		return nil, ErrForbidden
-	}
-	author, authorID, err := authorOf(actor, draft, existing.Author, existing.AuthorDiscordID)
+	author, authorID, err := authorOf(actor, draft, "", "")
 	if err != nil {
 		return nil, err
 	}
@@ -203,10 +189,13 @@ func (s *Service) Edit(ctx context.Context, guildID string, actor reservation.Ac
 		EndAt:           draft.EndAt,
 		Author:          author,
 		AuthorDiscordID: authorID,
+		Authorize: func(existing reservation.Reservation) error {
+			if !CanEdit(actor, existing, s.now()) {
+				return ErrForbidden
+			}
+			return nil
+		},
 	})
-	if errors.Is(err, ports.ErrNotFound) {
-		return nil, ErrNotFound
-	}
 	if err != nil {
 		return conflicts, err
 	}
@@ -223,9 +212,6 @@ func (s *Service) Delete(ctx context.Context, guildID string, actor reservation.
 		return ErrForbidden
 	}
 	err = s.booker.DeleteForGuild(ctx, guildID, id)
-	if errors.Is(err, ports.ErrNotFound) {
-		return ErrNotFound
-	}
 	if err != nil {
 		return fmt.Errorf("delete reservation: %w", err)
 	}
@@ -246,17 +232,11 @@ func (s *Service) SpotOverview(ctx context.Context, guildID string, spotID int64
 	if err != nil {
 		return nil, fmt.Errorf("select spot: %w", err)
 	}
-	filter := reservation.SearchFilter{GuildID: guildID, SpotID: &spotID, Scope: reservation.ScopeAll}
-	total, err := s.reservations.CountReservations(ctx, filter)
+	counts, err := s.spots.SelectSpotReservationCounts(ctx, guildID, spotID)
 	if err != nil {
-		return nil, fmt.Errorf("count reservations: %w", err)
+		return nil, fmt.Errorf("count spot reservations: %w", err)
 	}
-	filter.Scope = reservation.ScopeUpcoming
-	upcoming, err := s.reservations.CountReservations(ctx, filter)
-	if err != nil {
-		return nil, fmt.Errorf("count upcoming reservations: %w", err)
-	}
-	return &spot.Listed{Spot: *sp, Reservations: spot.ReservationCounts{Total: total, Upcoming: upcoming}}, nil
+	return &spot.Listed{Spot: *sp, Reservations: counts}, nil
 }
 
 // authorOf picks the author of a reservation. Only a manager chooses one; an
@@ -272,7 +252,23 @@ func authorOf(actor reservation.Actor, draft reservation.Draft, fallback, fallba
 	if utf8.RuneCountInString(author) > MaxAuthorLength {
 		return "", "", ErrAuthorTooLong
 	}
-	return author, strings.TrimSpace(draft.AuthorDiscordID), nil
+	authorID := strings.TrimSpace(draft.AuthorDiscordID)
+	if authorID != "" && !isSnowflake(authorID) {
+		return "", "", ErrAuthorIDInvalid
+	}
+	return author, authorID, nil
+}
+
+func isSnowflake(id string) bool {
+	if len(id) > MaxSnowflakeLength {
+		return false
+	}
+	for _, c := range id {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 func (s *Service) summaryChanged(ctx context.Context, guildID string) {

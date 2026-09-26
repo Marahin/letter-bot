@@ -25,7 +25,6 @@ type CommunicationService interface {
 	NotifyOverbookedMember(
 		request book.BookRequest,
 		res *reservation.ClippedOrRemovedReservation)
-	SendGuildSummary(guild *guild.Guild, summary *summary.Summary) error
 	SendPrivateSummary(request summary.PrivateSummaryRequest, summary *summary.Summary) error
 }
 
@@ -73,5 +72,5 @@ type NotifyHandler interface {
 	OnSummaryRefresh(ctx context.Context, guildID string)
 	OnGuildResync(ctx context.Context, guildID string)
 	OnGuildConfig(ctx context.Context, guildID string)
-	OnOverbooked(ctx context.Context, payload []byte)
+	OnOverbooked(ctx context.Context, request book.BookRequest, res *reservation.ClippedOrRemovedReservation)
 }

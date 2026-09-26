@@ -25,7 +25,8 @@ type ReservationRepository interface {
 	SelectUpcomingReservationsWithSpotForSpot(ctx context.Context, guildId, spotName string) ([]*reservation.ReservationWithSpot, error)
 	// SelectOverlappingReservations returns the upcoming reservations of the spot that overlap [startAt, endAt].
 	SelectOverlappingReservations(ctx context.Context, spotID int64, startAt time.Time, endAt time.Time, guildId string) ([]*reservation.Reservation, error)
-	SelectUpcomingMemberReservationsWithSpots(ctx context.Context, guild *guild.Guild, member *member.Member) ([]*reservation.ReservationWithSpot, error)
+	// SelectUpcomingMemberReservationsWithSpots leaves out excludeID (0 = none).
+	SelectUpcomingMemberReservationsWithSpots(ctx context.Context, guild *guild.Guild, member *member.Member, excludeID int64) ([]*reservation.ReservationWithSpot, error)
 
 	// Creates a new reservation, and removes or shorten any existing conflicting reservations.
 	// Returns removed or shortened conflicting reservations.
@@ -90,12 +91,13 @@ type SpotRepository interface {
 	// reservation (of any guild) points at it.
 	DeleteSpot(ctx context.Context, guildID string, id int64) error
 
-	// CountSpotReservations counts all past and upcoming reservations of the spot.
-	CountSpotReservations(ctx context.Context, guildID string, id int64) (int64, error)
-
 	// SelectGuildSpotReservationCounts maps each guild spot with reservations to its counts. It
 	// counts every reservation of the spot, as DeleteSpot does, even one with another guild_id.
 	SelectGuildSpotReservationCounts(ctx context.Context, guildID string) (map[int64]spot.ReservationCounts, error)
+
+	// SelectSpotReservationCounts counts the reservations of one guild spot the way
+	// SelectGuildSpotReservationCounts does.
+	SelectSpotReservationCounts(ctx context.Context, guildID string, id int64) (spot.ReservationCounts, error)
 
 	// InsertSpotsIgnoreDuplicates adds the names that are not active in the guild yet.
 	// Returns the number of spots added.
@@ -134,6 +136,9 @@ type GuildConfigRepository interface {
 	// It never changes the premium, channel or rank settings.
 	UpsertPresence(ctx context.Context, guildID, name, icon, ownerID string) (*guildconfig.Config, error)
 	SetBotPresent(ctx context.Context, guildID string, present bool) error
+	// MarkAbsentExcept sets bot_present=false for the stored guilds of one gateway shard
+	// that are not in presentIDs.
+	MarkAbsentExcept(ctx context.Context, shardID, shardCount int, presentIDs []string) error
 	SetPremium(ctx context.Context, guildID string, premium bool) error
 	SetChannels(ctx context.Context, guildID, commandChannelID, summaryChannelID string) error
 	SetRoleIDs(ctx context.Context, guildID string, kind guildconfig.RoleKind, roleIDs []string) error
@@ -180,8 +185,6 @@ type GuildRepository interface {
 type MemberRepository interface {
 	// GetMemberByGuildAndId returns member by guild and id.
 	GetMemberByGuildAndId(g *guild.Guild, memberId string) (*member.Member, error)
-	// MemberHasRole checks if a member has a role.
-	MemberHasRole(g *guild.Guild, m *member.Member, roleName string) bool
 }
 
 type WorldApi interface {

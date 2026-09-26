@@ -7,18 +7,16 @@ import (
 )
 
 type Adapter struct {
-	log          *zap.SugaredLogger
-	bot          ports.BotPort
-	memberRepo   ports.MemberRepository
-	guildConfigs ports.GuildConfigRepository
+	log        *zap.SugaredLogger
+	bot        ports.BotPort
+	memberRepo ports.MemberRepository
 }
 
-func NewAdapter(bot ports.BotPort, memberRepo ports.MemberRepository, guildConfigs ports.GuildConfigRepository) *Adapter {
+func NewAdapter(bot ports.BotPort, memberRepo ports.MemberRepository) *Adapter {
 	return &Adapter{
-		bot:          bot,
-		memberRepo:   memberRepo,
-		guildConfigs: guildConfigs,
-		log:          zap.NewNop().Sugar(),
+		bot:        bot,
+		memberRepo: memberRepo,
+		log:        zap.NewNop().Sugar(),
 	}
 }
 

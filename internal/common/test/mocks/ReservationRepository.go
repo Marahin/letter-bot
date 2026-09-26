@@ -889,8 +889,8 @@ func (_c *MockReservationRepository_SelectOverlappingReservationsBySpotID_Call) 
 }
 
 // SelectUpcomingMemberReservationsWithSpots provides a mock function for the type MockReservationRepository
-func (_mock *MockReservationRepository) SelectUpcomingMemberReservationsWithSpots(ctx context.Context, guild1 *guild.Guild, member1 *member.Member) ([]*reservation.ReservationWithSpot, error) {
-	ret := _mock.Called(ctx, guild1, member1)
+func (_mock *MockReservationRepository) SelectUpcomingMemberReservationsWithSpots(ctx context.Context, guild1 *guild.Guild, member1 *member.Member, excludeID int64) ([]*reservation.ReservationWithSpot, error) {
+	ret := _mock.Called(ctx, guild1, member1, excludeID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SelectUpcomingMemberReservationsWithSpots")
@@ -898,18 +898,18 @@ func (_mock *MockReservationRepository) SelectUpcomingMemberReservationsWithSpot
 
 	var r0 []*reservation.ReservationWithSpot
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *guild.Guild, *member.Member) ([]*reservation.ReservationWithSpot, error)); ok {
-		return returnFunc(ctx, guild1, member1)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *guild.Guild, *member.Member, int64) ([]*reservation.ReservationWithSpot, error)); ok {
+		return returnFunc(ctx, guild1, member1, excludeID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *guild.Guild, *member.Member) []*reservation.ReservationWithSpot); ok {
-		r0 = returnFunc(ctx, guild1, member1)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *guild.Guild, *member.Member, int64) []*reservation.ReservationWithSpot); ok {
+		r0 = returnFunc(ctx, guild1, member1, excludeID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*reservation.ReservationWithSpot)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *guild.Guild, *member.Member) error); ok {
-		r1 = returnFunc(ctx, guild1, member1)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *guild.Guild, *member.Member, int64) error); ok {
+		r1 = returnFunc(ctx, guild1, member1, excludeID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -925,11 +925,12 @@ type MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Call st
 //   - ctx context.Context
 //   - guild1 *guild.Guild
 //   - member1 *member.Member
-func (_e *MockReservationRepository_Expecter) SelectUpcomingMemberReservationsWithSpots(ctx any, guild1 any, member1 any) *MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Call {
-	return &MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Call{Call: _e.mock.On("SelectUpcomingMemberReservationsWithSpots", ctx, guild1, member1)}
+//   - excludeID int64
+func (_e *MockReservationRepository_Expecter) SelectUpcomingMemberReservationsWithSpots(ctx any, guild1 any, member1 any, excludeID any) *MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Call {
+	return &MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Call{Call: _e.mock.On("SelectUpcomingMemberReservationsWithSpots", ctx, guild1, member1, excludeID)}
 }
 
-func (_c *MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Call) Run(run func(ctx context.Context, guild1 *guild.Guild, member1 *member.Member)) *MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Call {
+func (_c *MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Call) Run(run func(ctx context.Context, guild1 *guild.Guild, member1 *member.Member, excludeID int64)) *MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -943,10 +944,15 @@ func (_c *MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Ca
 		if args[2] != nil {
 			arg2 = args[2].(*member.Member)
 		}
+		var arg3 int64
+		if args[3] != nil {
+			arg3 = args[3].(int64)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -957,7 +963,7 @@ func (_c *MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Ca
 	return _c
 }
 
-func (_c *MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Call) RunAndReturn(run func(ctx context.Context, guild1 *guild.Guild, member1 *member.Member) ([]*reservation.ReservationWithSpot, error)) *MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Call {
+func (_c *MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Call) RunAndReturn(run func(ctx context.Context, guild1 *guild.Guild, member1 *member.Member, excludeID int64) ([]*reservation.ReservationWithSpot, error)) *MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Call {
 	_c.Call.Return(run)
 	return _c
 }

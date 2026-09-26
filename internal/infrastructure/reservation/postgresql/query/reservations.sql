@@ -26,6 +26,7 @@ from web_reservation
 where web_reservation.end_at >= now()
   AND web_reservation.guild_id = @guild_id
   AND web_reservation.author_discord_id = @author_discord_id
+  AND web_reservation.id <> @exclude_id
 order by start_at asc;
 -- name: SelectOverlappingReservations :many
 SELECT web_reservation.id,

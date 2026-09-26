@@ -198,10 +198,11 @@ func (t *ReservationRepository) CreateAndDeleteConflicting(ctx context.Context, 
 	return modifiedConflicts, tx.Commit(ctx)
 }
 
-func (t *ReservationRepository) SelectUpcomingMemberReservationsWithSpots(ctx context.Context, guild *guild.Guild, member *member.Member) ([]*reservation.ReservationWithSpot, error) {
+func (t *ReservationRepository) SelectUpcomingMemberReservationsWithSpots(ctx context.Context, guild *guild.Guild, member *member.Member, excludeID int64) ([]*reservation.ReservationWithSpot, error) {
 	res, err := t.q.SelectUpcomingMemberReservationsWithSpots(ctx, SelectUpcomingMemberReservationsWithSpotsParams{
 		GuildID:         guild.ID,
 		AuthorDiscordID: member.ID,
+		ExcludeID:       excludeID,
 	})
 	if err != nil {
 		return nil, err

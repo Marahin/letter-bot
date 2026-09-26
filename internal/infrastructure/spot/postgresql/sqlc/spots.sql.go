@@ -30,25 +30,6 @@ func (q *Queries) ArchiveSpot(ctx context.Context, arg ArchiveSpotParams) (int64
 	return result.RowsAffected(), nil
 }
 
-const countSpotReservations = `-- name: CountSpotReservations :one
-SELECT count(*)
-FROM web_reservation
-WHERE spot_id = $1
-  AND guild_id = $2::text
-`
-
-type CountSpotReservationsParams struct {
-	SpotID  int64
-	GuildID string
-}
-
-func (q *Queries) CountSpotReservations(ctx context.Context, arg CountSpotReservationsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countSpotReservations, arg.SpotID, arg.GuildID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const deleteSpot = `-- name: DeleteSpot :execrows
 DELETE FROM web_spot
 WHERE web_spot.id = $1
@@ -323,4 +304,31 @@ func (q *Queries) SelectGuildSpotsLike(ctx context.Context, arg SelectGuildSpots
 		return nil, err
 	}
 	return items, nil
+}
+
+const selectSpotReservationCounts = `-- name: SelectSpotReservationCounts :one
+SELECT count(*) AS total,
+  count(*) FILTER (WHERE r.end_at >= now()) AS upcoming
+FROM web_reservation r
+  INNER JOIN web_spot s ON s.id = r.spot_id
+WHERE s.id = $1
+  AND s.guild_id = $2::text
+`
+
+type SelectSpotReservationCountsParams struct {
+	SpotID  int64
+	GuildID string
+}
+
+type SelectSpotReservationCountsRow struct {
+	Total    int64
+	Upcoming int64
+}
+
+// The single-spot variant of SelectGuildSpotReservationCounts.
+func (q *Queries) SelectSpotReservationCounts(ctx context.Context, arg SelectSpotReservationCountsParams) (SelectSpotReservationCountsRow, error) {
+	row := q.db.QueryRow(ctx, selectSpotReservationCounts, arg.SpotID, arg.GuildID)
+	var i SelectSpotReservationCountsRow
+	err := row.Scan(&i.Total, &i.Upcoming)
+	return i, err
 }

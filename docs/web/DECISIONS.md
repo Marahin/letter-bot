@@ -166,7 +166,7 @@ These items of the request were unclear or had a cost. Each has a decision.
     - Overbooking is possible only on create. Overlap is inclusive, as in the
       bot: 10:00-11:00 and 11:00-12:00 conflict.
     - Edit is refused on a conflict and on an ended reservation. An ongoing
-      reservation keeps its start.
+      reservation keeps its start and its respawn.
     - Owners edit and delete their own reservations until they end.
     - Managers edit and delete any reservation, and may delete past ones. Only
       managers change the author.
@@ -174,7 +174,7 @@ These items of the request were unclear or had a cost. Each has a decision.
       (picked from past reservations, 2 or more letters typed) or for a
       free-text author. A free-text author has no Discord id
       (`author_discord_id = ''`), no quota and no owner, and gets no overbook
-      message.
+      message. A posted Discord id must be a snowflake (digits only, at most 20).
 35. **The Tibia world moves to Server Settings.** `/world-set` stays.
 36. **Stats hours are booked hours** (reservation length), not measured play
     time.

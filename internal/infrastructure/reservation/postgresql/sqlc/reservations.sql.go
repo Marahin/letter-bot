@@ -625,12 +625,14 @@ from web_reservation
 where web_reservation.end_at >= now()
   AND web_reservation.guild_id = $1
   AND web_reservation.author_discord_id = $2
+  AND web_reservation.id <> $3
 order by start_at asc
 `
 
 type SelectUpcomingMemberReservationsWithSpotsParams struct {
 	GuildID         string
 	AuthorDiscordID string
+	ExcludeID       int64
 }
 
 type SelectUpcomingMemberReservationsWithSpotsRow struct {
@@ -639,7 +641,7 @@ type SelectUpcomingMemberReservationsWithSpotsRow struct {
 }
 
 func (q *Queries) SelectUpcomingMemberReservationsWithSpots(ctx context.Context, arg SelectUpcomingMemberReservationsWithSpotsParams) ([]SelectUpcomingMemberReservationsWithSpotsRow, error) {
-	rows, err := q.db.Query(ctx, selectUpcomingMemberReservationsWithSpots, arg.GuildID, arg.AuthorDiscordID)
+	rows, err := q.db.Query(ctx, selectUpcomingMemberReservationsWithSpots, arg.GuildID, arg.AuthorDiscordID, arg.ExcludeID)
 	if err != nil {
 		return nil, err
 	}
