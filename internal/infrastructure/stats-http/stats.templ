@@ -2,6 +2,7 @@ package statshttp
 
 import (
 	"strconv"
+	"time"
 
 	"spot-assistant/internal/core/dto/stats"
 	corestats "spot-assistant/internal/core/stats"
@@ -27,11 +28,11 @@ templ Overview(baseURL string, v overviewView, nav web.Nav) {
 		if v.O.Totals.Reservations == 0 {
 			@empty(i18n.T(ctx, "stats.empty.range"))
 		} else {
-			@dailyCharts(v.O.Daily, v.O.Totals)
+			@dailyCharts(v.O.Daily, v.O.Totals, v.Today)
 			<section class={ cardClass, "mt-6 p-5" } aria-labelledby="top-spots-heading">
 				@cardHeading("top-spots-heading", i18n.T(ctx, "stats.chart.top_spots"), i18n.T(ctx, "stats.chart.top_spots_hint"))
 				<div class="mt-4">
-					@web.Chart(topSpotsChart(ctx, v.O.TopSpots))
+					@web.Chart(topSpotsChart(ctx, v.GuildID, v.O.TopSpots))
 				</div>
 				<a href={ templ.SafeURL(web.GuildPath(v.GuildID, "/stats/spots")) } class="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-signal-bright transition hover:text-signal sm:min-h-0">{ i18n.T(ctx, "stats.overview.all_spots") } <span aria-hidden="true" class="ml-1">→</span></a>
 			</section>
@@ -47,7 +48,7 @@ templ Overview(baseURL string, v overviewView, nav web.Nav) {
 
 // Table is the respawn, player or character list, sorted on the server by any column.
 templ Table(baseURL string, v tableView, nav web.Nav) {
-	@web.Layout(v.title(ctx)+" · "+v.GuildName, v.lede(ctx), baseURL, v.path(), nav) {
+	@web.Layout(v.title(ctx)+" - "+v.GuildName, v.lede(ctx), baseURL, v.path(), nav) {
 		@heading("", v.title(ctx), v.lede(ctx))
 		@toolbar(v.pageView) {
 			if v.Total > 0 {
@@ -81,7 +82,7 @@ templ SpotPage(baseURL string, v spotView, nav web.Nav) {
 		if v.D.Totals.Reservations == 0 {
 			@empty(i18n.T(ctx, "stats.empty.range"))
 		} else {
-			@dailyCharts(v.D.Daily, v.D.Totals)
+			@dailyCharts(v.D.Daily, v.D.Totals, v.Today)
 			@breakdown(i18n.T(ctx, "stats.spot.players"), v.Players, i18n.T(ctx, "stats.table.player"))
 			@breakdown(i18n.T(ctx, "stats.spot.characters"), v.Characters, i18n.T(ctx, "stats.table.character"))
 		}
@@ -98,7 +99,7 @@ templ PlayerPage(baseURL string, v playerView, nav web.Nav) {
 		if v.D.Totals.Reservations == 0 {
 			@empty(i18n.T(ctx, "stats.empty.range"))
 		} else {
-			@dailyCharts(v.D.Daily, v.D.Totals)
+			@dailyCharts(v.D.Daily, v.D.Totals, v.Today)
 			@breakdown(i18n.T(ctx, "stats.player.spots"), v.Spots, i18n.T(ctx, "stats.table.spot"))
 			@breakdown(i18n.T(ctx, "stats.player.characters"), v.Characters, i18n.T(ctx, "stats.table.character"))
 		}
@@ -125,7 +126,7 @@ templ CharacterPage(baseURL string, v characterView, nav web.Nav) {
 			}
 		</section>
 		if v.P.Totals.Reservations > 0 {
-			@dailyCharts(v.P.Daily, v.P.Totals)
+			@dailyCharts(v.P.Daily, v.P.Totals, v.Today)
 			@breakdown(i18n.T(ctx, "stats.character.spots"), v.Spots, i18n.T(ctx, "stats.table.spot"))
 			@recentReservations(v)
 		} else {
@@ -233,18 +234,21 @@ templ cardHeading(id, title, hint string) {
 }
 
 // dailyCharts are small multiples, one measure each, never two scales on one axis.
-templ dailyCharts(days []stats.Day, t stats.Totals) {
+templ dailyCharts(days []stats.Day, t stats.Totals, today time.Time) {
 	<div class="mt-6 grid gap-6 lg:grid-cols-3">
+		if len(days) > 0 && days[len(days)-1].Day.Equal(today) {
+			<p class="text-xs text-zone-400 lg:col-span-3 lg:-mb-3">{ i18n.T(ctx, "stats.chart.today_note") }</p>
+		}
 		<section class={ cardClass, "p-5" } aria-labelledby="chart-reservations">
 			@cardHeading("chart-reservations", i18n.T(ctx, "stats.chart.reservations"), i18n.T(ctx, "stats.chart.per_day"))
 			<div class="mt-4">
-				@web.Chart(reservationsChart(ctx, days))
+				@web.Chart(reservationsChart(ctx, days, today))
 			</div>
 		</section>
 		<section class={ cardClass, "p-5" } aria-labelledby="chart-hours">
 			@cardHeading("chart-hours", i18n.T(ctx, "stats.chart.hours"), i18n.T(ctx, "stats.chart.per_day"))
 			<div class="mt-4">
-				@web.Chart(hoursChart(ctx, days))
+				@web.Chart(hoursChart(ctx, days, today))
 			</div>
 		</section>
 		<section class={ cardClass, "p-5" } aria-labelledby="chart-exp">
@@ -254,7 +258,7 @@ templ dailyCharts(days []stats.Day, t stats.Totals) {
 			} else {
 				{{ withData := expDays(days) }}
 				<div class="mt-4">
-					@web.Chart(expChart(ctx, days))
+					@web.Chart(expChart(ctx, days, today))
 				</div>
 				<p class="mt-2 text-xs text-zone-400">{ i18n.T(ctx, "stats.chart.exp_days", formatInt(ctx, int64(len(withData))), formatInt(ctx, int64(len(days)))) }</p>
 			}
@@ -315,7 +319,7 @@ templ breakdown(title string, rows []tableRow, name string) {
 
 // statsTable is the shared figures table. With sort set, the headers are sort links.
 templ statsTable(rows []tableRow, name string, sort *tableView) {
-	<div class={ cardClass, "mt-4 overflow-x-auto" }>
+	<div class={ cardClass, "relative mt-4 overflow-x-auto" }>
 		<table class="w-full text-sm">
 			<thead>
 				<tr class="border-b border-zone-700 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-400">
@@ -422,7 +426,7 @@ templ fact(label, value string, mono bool) {
 templ recentReservations(v characterView) {
 	<section class="mt-8" aria-labelledby="recent-heading">
 		<h2 id="recent-heading" class="font-display text-lg font-semibold text-zone-50">{ i18n.T(ctx, "stats.character.recent") }</h2>
-		<div class={ cardClass, "mt-4 overflow-x-auto" }>
+		<div class={ cardClass, "relative mt-4 overflow-x-auto" }>
 			<table class="w-full text-sm">
 				<thead>
 					<tr class="border-b border-zone-700 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-400">

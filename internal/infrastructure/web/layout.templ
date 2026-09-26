@@ -517,22 +517,25 @@ templ serverSummary(nav Nav) {
 }
 
 // serverBadge frames the selected server's icon, falling back to its first letter.
+// The letter sits under the image, so it shows when the icon fails to load.
 // alt is empty: the name sits beside it, so the frame is decorative.
 templ serverBadge(iconURL, name string) {
-	if iconURL != "" {
-		<img src={ iconURL } alt="" class="h-9 w-9 flex-none rounded-lg border border-zone-700 bg-zone-800 object-cover"/>
-	} else {
-		<span aria-hidden="true" class="flex h-9 w-9 flex-none items-center justify-center rounded-lg border border-zone-700 bg-zone-800 font-display text-sm font-bold text-zone-400">{ guildInitial(name) }</span>
-	}
+	<span aria-hidden="true" class="relative flex h-9 w-9 flex-none items-center justify-center overflow-hidden rounded-lg border border-zone-700 bg-zone-800 font-display text-sm font-bold text-zone-400">
+		{ guildInitial(name) }
+		if iconURL != "" {
+			<img src={ iconURL } alt="" onerror="this.remove()" class="absolute inset-0 h-full w-full object-cover"/>
+		}
+	</span>
 }
 
 // serverOptionIcon frames one server's icon in the switcher list.
 templ serverOptionIcon(iconURL, name string) {
-	if iconURL != "" {
-		<img src={ iconURL } alt="" class="h-6 w-6 flex-none rounded-md border border-zone-700 bg-zone-800 object-cover"/>
-	} else {
-		<span aria-hidden="true" class="flex h-6 w-6 flex-none items-center justify-center rounded-md border border-zone-700 bg-zone-800 font-display text-xs font-bold text-zone-500">{ guildInitial(name) }</span>
-	}
+	<span aria-hidden="true" class="relative flex h-6 w-6 flex-none items-center justify-center overflow-hidden rounded-md border border-zone-700 bg-zone-800 font-display text-xs font-bold text-zone-500">
+		{ guildInitial(name) }
+		if iconURL != "" {
+			<img src={ iconURL } alt="" onerror="this.remove()" class="absolute inset-0 h-full w-full object-cover"/>
+		}
+	</span>
 }
 
 // serverPickerScript filters the switcher list as the reader types, and focuses

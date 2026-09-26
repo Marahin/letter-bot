@@ -27,6 +27,7 @@ If you like the bot and want to support its development, you can buy me a coffee
   * [Feedback](#Feedback)
   * [Pie chart showing distribution of reservations](#Pie-chart-showing-distribution-of-reservations)
   * [List of upcoming reservations](#List-of-upcoming-reservations)
+* [**Web panel**](#Web-panel)
 * [**Development**](#Development)
 
 
@@ -63,6 +64,41 @@ Letter bot originated within [Refugees](https://www.tibia.com/community/?subtopi
 
 ![summary list](docs/sample_summary_list.png)
 
+## Web panel
+
+Letter has a web panel (`cmd/web`, image `marahin/letter-web`). Server members sign in with Discord and:
+
+* manage the respawn list (add, rename, archive, restore, import the default list),
+* search, create, edit and delete reservations,
+* set the command and summary channels, the Tibia world and the ranks that may manage, view, reserve and overbook,
+* read stats per respawn, player and character, with the experience gained during reservations (from the TibiaData highscores, top 1000 only),
+* use the public Loot Calculator (`/tools/loot-calculator`).
+
+The panel is in English and Polish. The bot works only on premium servers; site admins turn premium on in the panel.
+
+Documentation:
+
+* [docs/web/README.md](docs/web/README.md): configuration, deploy (migration order, Kubernetes, Discord portal, bot invite), and how each page works,
+* [docs/web/DECISIONS.md](docs/web/DECISIONS.md): decisions taken for the web panel, and open questions,
+* [docs/web/VOCABULARY.md](docs/web/VOCABULARY.md): the terms used in the UI, the bot and the code.
+
+To run it locally: `make build`, apply the migrations (`bin/migrate`), then start `bin/letter-web` with the `DATABASE_*` values, `WEB_BASE_URL` and `DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` (see [.env.sample](.env.sample)). With docker-compose, the `web` service does this with hot reload.
+
+Test coverage of the core packages added for the web panel (`make test`):
+
+| Package | Coverage |
+|---|---|
+| `internal/core/auth` | 100% |
+| `internal/core/guildaccess` | 100% |
+| `internal/core/premium` | 100% |
+| `internal/core/permission` | 100% |
+| `internal/core/spots` | 100% |
+| `internal/core/reservations` | 100% |
+| `internal/core/experience` | 100% |
+| `internal/core/players` | 100% |
+| `internal/core/lootcalc` | 100% |
+| `internal/core/stats` | 99.3% |
+
 ## Development
 
 ### Prerequisites
@@ -72,6 +108,7 @@ Letter bot originated within [Refugees](https://www.tibia.com/community/?subtopi
 * `go` (if you want to develop),
 * `atlas` to manage migrations https://atlasgo.io
 * `sqlc` to generate Go wrappers around SQL queries https://sqlc.dev/
+* `templ` and the Tailwind CLI for the web panel (`make install-bins` and `make css` install them)
 
 ### docker-compose
 

@@ -15,7 +15,7 @@ templ Guilds(baseURL string, guilds []*guildconfig.Config, nav web.Nav) {
 			<h1 class="font-display text-4xl font-bold -tracking-[0.02em] text-zone-50">{ i18n.T(ctx, "admin.guilds.heading") }</h1>
 			<p class="mt-2 max-w-2xl text-sm leading-relaxed text-zone-400">{ i18n.T(ctx, "admin.guilds.lede") }</p>
 		</div>
-		<div class="mt-8 overflow-x-auto rounded-lg border border-zone-800 bg-zone-900 shadow-glass">
+		<div class="relative mt-8 overflow-x-auto rounded-lg border border-zone-800 bg-zone-900 shadow-glass">
 			<table class="w-full text-left text-sm">
 				<thead>
 					<tr class="border-b border-zone-800 text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-400">

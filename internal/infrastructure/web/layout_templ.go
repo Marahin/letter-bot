@@ -2636,6 +2636,7 @@ func serverSummary(nav Nav) templ.Component {
 }
 
 // serverBadge frames the selected server's icon, falling back to its first letter.
+// The letter sits under the image, so it shows when the icon fails to load.
 // alt is empty: the name sits beside it, so the frame is decorative.
 func serverBadge(iconURL, name string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
@@ -2658,42 +2659,45 @@ func serverBadge(iconURL, name string) templ.Component {
 			templ_7745c5c3_Var142 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 190, "<span aria-hidden=\"true\" class=\"relative flex h-9 w-9 flex-none items-center justify-center overflow-hidden rounded-lg border border-zone-700 bg-zone-800 font-display text-sm font-bold text-zone-400\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var143 string
+		templ_7745c5c3_Var143, templ_7745c5c3_Err = templ.JoinStringErrs(guildInitial(name))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 524, Col: 22}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var143))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 191, " ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
 		if iconURL != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 190, "<img src=\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var143 string
-			templ_7745c5c3_Var143, templ_7745c5c3_Err = templ.ResolveAttributeValue(iconURL)
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 523, Col: 20}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var143)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 191, "\" alt=\"\" class=\"h-9 w-9 flex-none rounded-lg border border-zone-700 bg-zone-800 object-cover\">")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 192, "<span aria-hidden=\"true\" class=\"flex h-9 w-9 flex-none items-center justify-center rounded-lg border border-zone-700 bg-zone-800 font-display text-sm font-bold text-zone-400\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 192, "<img src=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var144 string
-			templ_7745c5c3_Var144, templ_7745c5c3_Err = templ.JoinStringErrs(guildInitial(name))
+			templ_7745c5c3_Var144, templ_7745c5c3_Err = templ.ResolveAttributeValue(iconURL)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 525, Col: 197}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 526, Col: 21}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var144))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 193, "</span>")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var144)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 193, "\" alt=\"\" onerror=\"this.remove()\" class=\"absolute inset-0 h-full w-full object-cover\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 194, "</span>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
 		}
 		return nil
 	})
@@ -2721,42 +2725,45 @@ func serverOptionIcon(iconURL, name string) templ.Component {
 			templ_7745c5c3_Var145 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 195, "<span aria-hidden=\"true\" class=\"relative flex h-6 w-6 flex-none items-center justify-center overflow-hidden rounded-md border border-zone-700 bg-zone-800 font-display text-xs font-bold text-zone-500\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var146 string
+		templ_7745c5c3_Var146, templ_7745c5c3_Err = templ.JoinStringErrs(guildInitial(name))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 534, Col: 22}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var146))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 196, " ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
 		if iconURL != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 194, "<img src=\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var146 string
-			templ_7745c5c3_Var146, templ_7745c5c3_Err = templ.ResolveAttributeValue(iconURL)
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 532, Col: 20}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var146)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 195, "\" alt=\"\" class=\"h-6 w-6 flex-none rounded-md border border-zone-700 bg-zone-800 object-cover\">")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 196, "<span aria-hidden=\"true\" class=\"flex h-6 w-6 flex-none items-center justify-center rounded-md border border-zone-700 bg-zone-800 font-display text-xs font-bold text-zone-500\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 197, "<img src=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var147 string
-			templ_7745c5c3_Var147, templ_7745c5c3_Err = templ.JoinStringErrs(guildInitial(name))
+			templ_7745c5c3_Var147, templ_7745c5c3_Err = templ.ResolveAttributeValue(iconURL)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 534, Col: 197}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 536, Col: 21}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var147))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 197, "</span>")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var147)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 198, "\" alt=\"\" onerror=\"this.remove()\" class=\"absolute inset-0 h-full w-full object-cover\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 199, "</span>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
 		}
 		return nil
 	})
@@ -2785,7 +2792,7 @@ func serverPickerScript() templ.Component {
 			templ_7745c5c3_Var148 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 198, "<script>\n\t\t(function () {\n\t\t\tdocument\n\t\t\t\t.querySelectorAll(\"[data-server-picker]\")\n\t\t\t\t.forEach(function (picker) {\n\t\t\t\t\tvar filter = picker.querySelector(\"[data-server-filter]\");\n\t\t\t\t\tvar empty = picker.querySelector(\"[data-server-empty]\");\n\t\t\t\t\tvar options = Array.prototype.slice.call(\n\t\t\t\t\t\tpicker.querySelectorAll(\"[data-server-option]\"),\n\t\t\t\t\t);\n\t\t\t\t\tif (!filter) return;\n\t\t\t\t\tfunction apply() {\n\t\t\t\t\t\tvar q = filter.value.trim().toLowerCase();\n\t\t\t\t\t\tvar shown = 0;\n\t\t\t\t\t\toptions.forEach(function (o) {\n\t\t\t\t\t\t\tvar hit = !q || o.textContent.toLowerCase().indexOf(q) >= 0;\n\t\t\t\t\t\t\to.hidden = !hit;\n\t\t\t\t\t\t\tif (hit) shown++;\n\t\t\t\t\t\t});\n\t\t\t\t\t\tif (empty) empty.hidden = shown !== 0;\n\t\t\t\t\t}\n\t\t\t\t\tfilter.addEventListener(\"input\", apply);\n\t\t\t\t\tpicker.addEventListener(\"toggle\", function () {\n\t\t\t\t\t\tif (!picker.open) return;\n\t\t\t\t\t\tfilter.value = \"\";\n\t\t\t\t\t\tapply();\n\t\t\t\t\t\tfilter.focus();\n\t\t\t\t\t});\n\t\t\t\t});\n\t\t})();\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 200, "<script>\n\t\t(function () {\n\t\t\tdocument\n\t\t\t\t.querySelectorAll(\"[data-server-picker]\")\n\t\t\t\t.forEach(function (picker) {\n\t\t\t\t\tvar filter = picker.querySelector(\"[data-server-filter]\");\n\t\t\t\t\tvar empty = picker.querySelector(\"[data-server-empty]\");\n\t\t\t\t\tvar options = Array.prototype.slice.call(\n\t\t\t\t\t\tpicker.querySelectorAll(\"[data-server-option]\"),\n\t\t\t\t\t);\n\t\t\t\t\tif (!filter) return;\n\t\t\t\t\tfunction apply() {\n\t\t\t\t\t\tvar q = filter.value.trim().toLowerCase();\n\t\t\t\t\t\tvar shown = 0;\n\t\t\t\t\t\toptions.forEach(function (o) {\n\t\t\t\t\t\t\tvar hit = !q || o.textContent.toLowerCase().indexOf(q) >= 0;\n\t\t\t\t\t\t\to.hidden = !hit;\n\t\t\t\t\t\t\tif (hit) shown++;\n\t\t\t\t\t\t});\n\t\t\t\t\t\tif (empty) empty.hidden = shown !== 0;\n\t\t\t\t\t}\n\t\t\t\t\tfilter.addEventListener(\"input\", apply);\n\t\t\t\t\tpicker.addEventListener(\"toggle\", function () {\n\t\t\t\t\t\tif (!picker.open) return;\n\t\t\t\t\t\tfilter.value = \"\";\n\t\t\t\t\t\tapply();\n\t\t\t\t\t\tfilter.focus();\n\t\t\t\t\t});\n\t\t\t\t});\n\t\t})();\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

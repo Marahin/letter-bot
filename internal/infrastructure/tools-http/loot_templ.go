@@ -764,7 +764,7 @@ func result(r *resultView) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 56, "</h2><div class=\"-mx-1 overflow-x-auto px-1\"><table class=\"w-full text-sm\"><thead><tr class=\"text-left text-xs font-semibold uppercase tracking-[0.08em] text-zone-300\"><th scope=\"col\" class=\"px-1 pb-2 font-semibold\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 56, "</h2><div class=\"relative -mx-1 overflow-x-auto px-1\"><table class=\"w-full text-sm\"><thead><tr class=\"text-left text-xs font-semibold uppercase tracking-[0.08em] text-zone-300\"><th scope=\"col\" class=\"px-1 pb-2 font-semibold\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

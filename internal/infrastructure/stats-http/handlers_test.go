@@ -87,6 +87,11 @@ func TestHandleOverview_RendersTilesChartsAndLeaderboards(t *testing.T) {
 	assert.Contains(t, body, `href="/servers/g1/characters/Quiet%20Nyx"`)
 	assert.Contains(t, body, "data-range-picker")
 	assert.Contains(t, body, "data-chart-tip")
+	assert.Contains(t, body, `href="/servers/g1/stats/spots/4"`, "the busiest respawns link their page")
+	// The default range ends today, which is not over yet.
+	assert.Contains(t, body, "data-chart-partial")
+	assert.Contains(t, body, "(today so far)")
+	assert.Contains(t, body, "A dashed line ends on today")
 	// The exp/h leaderboard is empty: it must read "no data", not list zeros.
 	assert.Contains(t, body, "No reservation in this range has experience data")
 }

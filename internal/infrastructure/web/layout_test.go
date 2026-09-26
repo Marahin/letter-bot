@@ -292,3 +292,21 @@ func TestNav_WithStylesheetCopies(t *testing.T) {
 	assert.Equal(t, []string{"/b.css"}, b.Stylesheets)
 	assert.Empty(t, base.Stylesheets)
 }
+
+func TestServerBadge_KeepsTheInitialUnderAnIconThatFailsToLoad(t *testing.T) {
+	// given
+	ctx := context.Background()
+
+	// when
+	withIcon := render(t, ctx, serverBadge("https://cdn.discordapp.com/icons/1/abc.png", "celesta"))
+	option := render(t, ctx, serverOptionIcon("https://cdn.discordapp.com/icons/1/abc.png", "celesta"))
+	without := render(t, ctx, serverBadge("", "celesta"))
+
+	// then
+	for _, out := range []string{withIcon, option} {
+		assert.Contains(t, out, ">C")
+		assert.Contains(t, out, `onerror="this.remove()"`)
+	}
+	assert.Contains(t, without, ">C")
+	assert.NotContains(t, without, "<img")
+}

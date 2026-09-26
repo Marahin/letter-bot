@@ -213,3 +213,211 @@ The server does the calculation and stores nothing. The browser keeps the last
 `dist/loot-calculator.js` does the copy buttons (the Clipboard API, with an
 `execCommand` fallback on plain HTTP), the history and the Load button (it posts
 the saved text again). The form limit is 64 KB.
+
+## Configuration
+
+The web reads these environment variables (`.env.sample` has examples):
+
+| Variable | Required | Default | Use |
+|---|---|---|---|
+| `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_NAME`, `DATABASE_SSL` | yes | | The shared PostgreSQL database (the same values as the bot). |
+| `WEB_BASE_URL` | yes | | The public address, for example `https://letter.tibialoot.com`. It makes the OAuth redirect URL. With `https`, the session cookie is `Secure`. |
+| `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` | yes | | The OAuth2 credentials of the bot's Discord application. The web does not start without them. |
+| `WEB_ADDR` | no | `:8080` | The address of the web server (`/healthz` is on it too). |
+| `WEB_METRICS_ADDR` | no | `:3005` | `/metrics`, `/livez`, `/readyz`. |
+| `WEB_ADMIN_DISCORD_IDS` | no | | Comma-separated Discord user ids of the site admins. |
+| `TIBIA_WORLD_API_BASE_URL` | no | | TibiaData v4, for example `http://ext-tibiadata-api:8080/v4`. Without it, the experience job does not run and the character page shows "TibiaData does not answer". |
+| `WEB_EXPERIENCE_JOB_ENABLED` | no | `true` | Set `false` to stop the experience job in this process. |
+| `WEB_EXPERIENCE_JOB_INTERVAL` | no | `15m` | The time between two job runs. Must be more than 0. |
+| `WEB_ASSETS_DIR` | no | | Serve the assets from this directory instead of the embedded copy (development only). |
+| `TZ` | yes in practice | | Must be `Europe/Berlin`, the same as the bot (decision 31). The image sets it. |
+
+The bot reads one new optional variable: `BOT_WEB_BASE_URL` (or `WEB_BASE_URL`).
+It puts this address in its "this server is not premium" reply.
+
+## Deploy
+
+The production setup is in the Kubernetes namespace `refugees` (context
+`default`): `spot-assistant-bot`, the old Django `spot-assistant-web`,
+`spot-assistant-postgres` and `ext-tibiadata-api`. The steps below add the Letter
+web. Nothing in this branch changes the cluster.
+
+### Images
+
+CI builds two images from the one `Dockerfile` and pushes them on `main`:
+
+- `marahin/letter-bot:<sha>` (target `bot`, the default target, entrypoint
+  `/spot-assistant-bot`, unchanged).
+- `marahin/letter-web:<sha>` (target `web`, entrypoint `/letter-web`, ports
+  8080 and 3005).
+
+Locally: `make docker` and `make docker-web`.
+
+### Rollout order
+
+**Apply the migrations and roll out the new bot image together.** Migration
+`20260926100100_spots_per_guild.sql` adds `web_spot.guild_id`. Three queries of
+the bot that runs in production today join `web_spot` and use an unqualified
+`guild_id`, which is then ambiguous: `SelectUpcomingMemberReservationsWithSpots`
+(the `/unbook` autocomplete), `SelectReservationsWithSpots` (the summary) and
+`SelectReservationsWithSpotsForSpot` (the private summary). They fail from the
+migration until the new bot runs. The new bot also needs the `guilds` tables, so
+it cannot go first.
+
+1. Take a database backup (`pg_dump` of `spotassistant`).
+2. Apply the migrations: `bin/migrate` with the `DATABASE_*` values of the
+   production database (atlas, revisions in schema `atlas_schema_revisions`).
+   Five new files: `20260926100000` to `20260926100400`.
+3. Immediately set the new `marahin/letter-bot:<sha>` image on
+   `spot-assistant-bot`. Expect a break of `/unbook` autocomplete and the
+   summaries of about one minute between step 2 and the new bot pod being ready.
+4. Deploy `letter-web` (below). The bot works without the web.
+
+On start the new bot upserts each guild into `guilds`, copies its channels and
+roles, and keeps working for Celesta Community (premium forever, set by
+migration `20260926100000`). The only behaviour change for Celesta: owners,
+administrators and managers can overbook without the `Postman` role
+(decision 23). No manage rank is set at first, so only the owner and the
+administrators are managers until an admin sets ranks in Settings.
+
+### The Django admin
+
+The Django admin (`spot-assistant-web`) keeps running against the same tables,
+but do not use it to manage spots after the migration:
+
+- A spot that Django creates has `guild_id = NULL`. The bot and the web do not
+  see it.
+- Django shows all spots of all guilds as one list, including archived ones,
+  and does not know about `archived_at`.
+
+Remove the Django deployment when the Letter web is live (decision 2).
+
+### Kubernetes manifests for `letter-web`
+
+Add the new keys to the existing secret `spot-assistant-web` (it already holds
+`DATABASE_*` for the bot and Django):
+
+- `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` (Discord developer portal,
+  OAuth2 page of the bot application)
+- `WEB_BASE_URL` (for example `https://letter.tibialoot.com`). The bot reads
+  it too, for its "not premium" reply.
+- `WEB_ADMIN_DISCORD_IDS` (the site admins)
+
+Example (not applied; copy the ingress annotations and TLS settings from the
+existing `spot-assistant-web` ingress):
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: letter-web
+  namespace: refugees
+  labels: { app: letter-web }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: letter-web }
+  template:
+    metadata:
+      labels: { app: letter-web }
+    spec:
+      containers:
+        - name: letter-web
+          image: marahin/letter-web:<sha>
+          ports:
+            - { name: http, containerPort: 8080 }
+            - { name: metrics, containerPort: 3005 }
+          envFrom:
+            - secretRef: { name: spot-assistant-web }
+          env:
+            - { name: TIBIA_WORLD_API_BASE_URL, value: "http://ext-tibiadata-api:8080/v4" }
+            - { name: TZ, value: "Europe/Berlin" }
+          livenessProbe:
+            httpGet: { path: /livez, port: metrics }
+          readinessProbe:
+            httpGet: { path: /readyz, port: metrics }
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: letter-web
+  namespace: refugees
+spec:
+  selector: { app: letter-web }
+  ports:
+    - { name: http, port: 80, targetPort: http }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: letter-web
+  namespace: refugees
+spec:
+  rules:
+    - host: letter.tibialoot.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: letter-web
+                port: { name: http }
+  tls:
+    - hosts: [letter.tibialoot.com]
+      secretName: letter-web-tls
+```
+
+More than one replica is safe: sessions are in the database, and the
+experience job runs in one process at a time (advisory lock). The resync
+cooldown of Settings is kept per process, so with two replicas a user can
+request two refreshes in 5 minutes.
+
+### Discord developer portal
+
+On the bot's application:
+
+1. **OAuth2 > Redirects**: add `<WEB_BASE_URL>/auth/callback`, for example
+   `https://letter.tibialoot.com/auth/callback`.
+2. The sign-in scopes are `identify guilds guilds.members.read`. They need no
+   approval.
+3. **Bot > Privileged Gateway Intents**: no change. The bot asks for no
+   privileged intent.
+
+### Bot invite
+
+The web's "Add Letter to Discord" button asks for the scopes
+`bot applications.commands` and the permissions `268561424`:
+
+| Permission | Why |
+|---|---|
+| View Channels | Read the command and summary channels. |
+| Send Messages | Post the summary and the replies. |
+| Manage Messages | Remove the old summary messages. |
+| Embed Links | The summary embeds. |
+| Attach Files | The summary chart image. |
+| Read Message History | Find the previous summary messages. |
+| Manage Channels | Create `#letter` and `#letter-summary` when no channel is set. |
+| Manage Roles | Create the `Postman` role when no overbook rank is set. |
+
+A server that added the bot before keeps its old permissions. Settings has a
+"Re-invite the bot" button that asks for the missing ones.
+
+### Premium
+
+- Celesta Community (`806152499760201738`) has `premium_forever = true` from
+  migration `20260926100000`. The web cannot turn it off; only SQL can.
+- Every other server starts without premium. A site admin turns it on in
+  **Admin > Servers**. The bot applies it at once (`letter_guild_config`).
+
+## Development
+
+- `make generate` compiles the `.templ` files (commit the `*_templ.go` output).
+- `make css` builds `internal/infrastructure/web/dist/app.css` with the pinned
+  Tailwind CLI (downloaded to `bin/tailwindcss`). The file is not committed.
+- Run the web locally with a database and dummy Discord values:
+  `DATABASE_HOST=127.0.0.1 DATABASE_SSL=disable WEB_BASE_URL=http://localhost:8080 DISCORD_CLIENT_ID=x DISCORD_CLIENT_SECRET=y ./bin/letter-web`.
+  Sign-in needs real credentials and the local redirect URL in the portal.

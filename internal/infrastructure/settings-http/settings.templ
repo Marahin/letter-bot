@@ -165,7 +165,7 @@ templ RankSection(guild guildconfig.Config, roles []*role.Role, kind guildconfig
 				<div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
 					for _, r := range roles {
 						<label class="flex items-center gap-2.5 rounded-md border border-zone-700 bg-zone-850 px-3 py-3 text-sm text-zone-300">
-							<input type="checkbox" name="role_ids" value={ r.ID } checked?={ contains(guild.RoleIDs(kind), r.ID) } class="h-4 w-4 rounded border border-zone-600 bg-zone-850 accent-blue-500 focus:ring-2 focus:ring-blue-500/30"/>
+							<input type="checkbox" name="role_ids" value={ r.ID } checked?={ contains(guild.RoleIDs(kind), r.ID) } class="h-4 w-4 rounded border border-zone-600 bg-zone-850 accent-signal focus-visible:ring-2 focus-visible:ring-signal/30"/>
 							if r.Color != 0 {
 								<span class="h-2.5 w-2.5 shrink-0 rounded-full" style={ roleColorStyle(r.Color) } aria-hidden="true"></span>
 							}

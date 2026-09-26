@@ -1180,7 +1180,7 @@ func table(v listView) templ.Component {
 			templ_7745c5c3_Var66 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 93, "<div class=\"mt-2 overflow-x-auto rounded-lg border border-zone-800 bg-zone-900 shadow-glass\"><table class=\"w-full text-left text-sm\"><caption class=\"sr-only\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 93, "<div class=\"relative mt-2 overflow-x-auto rounded-lg border border-zone-800 bg-zone-900 shadow-glass\"><table class=\"w-full text-left text-sm\"><caption class=\"sr-only\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

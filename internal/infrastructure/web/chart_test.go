@@ -404,3 +404,65 @@ func TestChart_Line_SkipsAnEmptySeries(t *testing.T) {
 	assert.Equal(t, 1, strings.Count(out, "<polyline"))
 	assert.NotContains(t, out, "Empty ·")
 }
+
+func TestChart_Line_PartialLastDashesTheLastSegment(t *testing.T) {
+	// given
+	p := ChartProps{
+		Kind:        ChartLine,
+		Series:      []ChartSeries{{Color: "#F97316", Vals: []float64{4, 6, 1}}},
+		Area:        true,
+		PartialLast: true,
+	}
+
+	// when
+	lines := p.lines()
+	out := renderChart(t, p)
+
+	// then
+	require.Len(t, lines, 1)
+	assert.Equal(t, 2, strings.Count(lines[0].Points, ","), "the solid line stops one point early")
+	assert.Equal(t, 2, strings.Count(lines[0].Dashed, ","), "the dashed segment joins the last two points")
+	assert.Equal(t, 5, strings.Count(lines[0].Area, ","), "the area still covers every point")
+	assert.True(t, lines[0].Markers[2].Partial)
+	assert.Contains(t, out, "data-chart-partial")
+	assert.Contains(t, out, `stroke-dasharray="4 4"`)
+	assert.Contains(t, lines[0].Markers[2].dotStyle(), "background:"+chartSurface, "a partial point is hollow")
+}
+
+func TestChart_Line_PartialLastNeedsTwoPoints(t *testing.T) {
+	// given
+	p := ChartProps{Kind: ChartLine, Series: []ChartSeries{{Color: "#F97316", Vals: []float64{4}}}, PartialLast: true}
+
+	// when
+	out := renderChart(t, p)
+
+	// then
+	assert.NotContains(t, out, "data-chart-partial")
+}
+
+func TestChart_HBar_ListsNamesBesideBars(t *testing.T) {
+	// given
+	p := ChartProps{
+		Kind: ChartHBar,
+		Bars: []ChartBarItem{
+			{Name: "Grim Reaper Yalahar -1 (long name)", Color: "#FB923C", Val: 10, Text: "10,0 h", Href: "/servers/1/stats/spots/4"},
+			{Name: "Hero Cave", Color: "#FB923C", Val: 5},
+		},
+		Decimals: 1,
+		Label:    "Busiest respawns",
+	}
+
+	// when
+	out := renderChart(t, p)
+	bars := p.bars()
+
+	// then
+	assert.Contains(t, out, ">Grim Reaper Yalahar -1 (long name)<")
+	assert.Contains(t, out, `href="/servers/1/stats/spots/4"`)
+	assert.Contains(t, out, ">10,0 h<", "the caller's text replaces the figure")
+	assert.Contains(t, out, ">5.0<")
+	assert.Contains(t, out, "Hero Cave · 5.0")
+	assert.NotContains(t, out, "<svg")
+	assert.Equal(t, "width:"+bars[0].HeightPct+"%;background:#FB923C", bars[0].hFillStyle())
+	assert.Greater(t, bars[0].HeightPct, bars[1].HeightPct)
+}

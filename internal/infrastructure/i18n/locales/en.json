@@ -385,6 +385,8 @@
     "stats.chart.hours_tip": "%s h",
     "stats.chart.per_day": "Per day",
     "stats.chart.reservations": "Reservations",
+    "stats.chart.today_note": "A dashed line ends on today, which is not over yet.",
+    "stats.chart.today_tip": "%s (today so far)",
     "stats.chart.top_spots": "Busiest respawns",
     "stats.chart.top_spots_hint": "Booked hours, top 10",
     "stats.empty.range": "No reservations in this range.",

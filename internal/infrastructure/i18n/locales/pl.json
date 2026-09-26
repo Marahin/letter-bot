@@ -395,6 +395,8 @@
     "stats.chart.hours_tip": "%s h",
     "stats.chart.per_day": "Dziennie",
     "stats.chart.reservations": "Rezerwacje",
+    "stats.chart.today_note": "Linia przerywana kończy się na dzisiejszym dniu, który jeszcze trwa.",
+    "stats.chart.today_tip": "%s (dziś, do tej pory)",
     "stats.chart.top_spots": "Najpopularniejsze respy",
     "stats.chart.top_spots_hint": "Zarezerwowane godziny, top 10",
     "stats.empty.range": "Brak rezerwacji w tym zakresie.",

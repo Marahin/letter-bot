@@ -165,6 +165,7 @@ func (h *Handlers) page(w http.ResponseWriter, r *http.Request, hidden ...web.Ra
 		GuildName: current.Config.Name,
 		Range:     rng,
 		Picker:    h.picker(ctx, r, current, rng, hidden),
+		Today:     corestats.Midnight(h.now()),
 	}, true
 }
 

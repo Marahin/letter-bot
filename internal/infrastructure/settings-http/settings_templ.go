@@ -820,7 +820,7 @@ func RankSection(guild guildconfig.Config, roles []*role.Role, kind guildconfig.
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 49, " class=\"h-4 w-4 rounded border border-zone-600 bg-zone-850 accent-blue-500 focus:ring-2 focus:ring-blue-500/30\"> ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 49, " class=\"h-4 w-4 rounded border border-zone-600 bg-zone-850 accent-signal focus-visible:ring-2 focus-visible:ring-signal/30\"> ")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}

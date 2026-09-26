@@ -76,7 +76,7 @@ func Guilds(baseURL string, guilds []*guildconfig.Config, nav web.Nav) templ.Com
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</p></div><div class=\"mt-8 overflow-x-auto rounded-lg border border-zone-800 bg-zone-900 shadow-glass\"><table class=\"w-full text-left text-sm\"><thead><tr class=\"border-b border-zone-800 text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-400\"><th class=\"px-4 py-3\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</p></div><div class=\"relative mt-8 overflow-x-auto rounded-lg border border-zone-800 bg-zone-900 shadow-glass\"><table class=\"w-full text-left text-sm\"><thead><tr class=\"border-b border-zone-800 text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-400\"><th class=\"px-4 py-3\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

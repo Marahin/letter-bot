@@ -27,6 +27,9 @@ const (
 	ChartBar
 	// ChartSparkline is the tiny fixed-size inline trend, no axes or labels.
 	ChartSparkline
+	// ChartHBar is one horizontal bar per item, the name on its left: for long
+	// names that a column label would truncate.
+	ChartHBar
 )
 
 // chartSurface is the page background, used as the fill behind a point marker
@@ -43,11 +46,14 @@ type ChartSeries struct {
 	Tips  []string
 }
 
-// ChartBarItem is one bar on a bar chart.
+// ChartBarItem is one bar on a bar chart. Text, when set, replaces the value
+// figure (a localized one); Href, when set, links the name (ChartHBar).
 type ChartBarItem struct {
 	Name  string
 	Color string
 	Val   float64
+	Text  string
+	Href  string
 }
 
 // ChartProps configures Chart.
@@ -66,6 +72,9 @@ type ChartProps struct {
 	Ticks int
 	// Area softly fills under the line of a single-series ChartLine.
 	Area bool
+	// PartialLast draws the segment into the last point dashed and that point
+	// hollow: its period is not over yet (today), so a low value is no real fall.
+	PartialLast bool
 	// ZeroBase pulls the axis floor down to zero so a trend reads against a
 	// stable baseline instead of its own minimum.
 	ZeroBase bool
@@ -112,6 +121,7 @@ type chartPoint struct {
 	TopPct  string
 	Color   string
 	Last    bool
+	Partial bool
 	Tip     string
 }
 
@@ -119,13 +129,16 @@ type chartPoint struct {
 type chartLine struct {
 	Color   string
 	Points  string // polyline points
+	Dashed  string // the partial last segment's points; empty when there is none
 	Area    string // polygon points; empty when the area is not filled
 	Markers []chartPoint
 }
 
-// chartBar is one rendered column.
+// chartBar is one rendered bar. HeightPct is its length along the value axis,
+// also for a horizontal bar.
 type chartBar struct {
 	Name      string
+	Href      string
 	Color     string
 	Value     string
 	Tip       string
@@ -252,7 +265,7 @@ func chartTip(name, label string, v float64, decimals int) string {
 // empty reports whether there is nothing to draw, so Chart renders no markup at
 // all (callers gate their surrounding card on their own data).
 func (p ChartProps) empty() bool {
-	if p.Kind == ChartBar {
+	if p.Kind == ChartBar || p.Kind == ChartHBar {
 		return len(p.Bars) == 0
 	}
 	return p.points() == 0
@@ -302,7 +315,7 @@ func (p ChartProps) points() int {
 // rng is the axis span: the padded value range for lines, zero-to-headroom for
 // bars (a bar's length must be readable against a zero floor).
 func (p ChartProps) rng() (lo, hi float64) {
-	if p.Kind == ChartBar {
+	if p.Kind == ChartBar || p.Kind == ChartHBar {
 		return 0, p.barMax()
 	}
 	all := make([]float64, 0, p.points()*len(p.Series))
@@ -409,13 +422,18 @@ func (p ChartProps) lines() []chartLine {
 				TopPct:  y,
 				Color:   s.Color,
 				Last:    i == len(s.Vals)-1,
+				Partial: p.PartialLast && i == len(s.Vals)-1,
 				Tip:     p.tipAt(s, i, v),
 			}
 		}
 		l := chartLine{Color: s.Color, Points: strings.Join(pts, " "), Markers: markers}
+		if last := len(pts) - 1; p.PartialLast && last > 0 {
+			l.Dashed = pts[last-1] + " " + pts[last]
+			l.Points = strings.Join(pts[:last], " ")
+		}
 		if p.Area && len(p.Series) == 1 {
 			floor := chartPct(chartYPct(lo, lo, hi))
-			l.Area = chartPct(chartXPct(0, n)) + "," + floor + " " + l.Points + " " +
+			l.Area = chartPct(chartXPct(0, n)) + "," + floor + " " + strings.Join(pts, " ") + " " +
 				chartPct(chartXPct(len(s.Vals)-1, n)) + "," + floor
 		}
 		out = append(out, l)
@@ -445,11 +463,16 @@ func (p ChartProps) bars() []chartBar {
 		if h < 0 {
 			h = 0
 		}
+		value := strconv.FormatFloat(it.Val, 'f', p.Decimals, 64)
+		if it.Text != "" {
+			value = it.Text
+		}
 		out[i] = chartBar{
 			Name:      it.Name,
+			Href:      it.Href,
 			Color:     it.Color,
-			Value:     strconv.FormatFloat(it.Val, 'f', p.Decimals, 64),
-			Tip:       chartTip(it.Name, "", it.Val, p.Decimals),
+			Value:     value,
+			Tip:       it.Name + " · " + value,
 			HeightPct: chartPct(h),
 		}
 	}
@@ -493,7 +516,10 @@ func (p ChartProps) spark() chartSpark {
 // colour so it stays legible where the line crosses it.
 func (m chartPoint) dotStyle() string {
 	size, fill, ring := "6px", chartSurface, m.Color
-	if m.Last {
+	switch {
+	case m.Partial:
+		size = "9px"
+	case m.Last:
 		size, fill, ring = "9px", m.Color, chartSurface
 	}
 	return "left:" + m.LeftPct + "%;top:" + m.TopPct + "%" +
@@ -509,4 +535,9 @@ func (m chartPoint) tipStyle() string {
 // fillStyle sizes and paints a bar.
 func (b chartBar) fillStyle() string {
 	return "height:" + b.HeightPct + "%;background:" + b.Color
+}
+
+// hFillStyle sizes and paints a horizontal bar.
+func (b chartBar) hFillStyle() string {
+	return "width:" + b.HeightPct + "%;background:" + b.Color
 }

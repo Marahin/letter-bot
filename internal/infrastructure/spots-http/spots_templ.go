@@ -910,7 +910,7 @@ func table(v pageView) templ.Component {
 			templ_7745c5c3_Var49 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 62, "<div class=\"mt-4 overflow-x-auto rounded-lg border border-zone-800 bg-zone-900 shadow-glass\"><table class=\"w-full text-left text-sm\"><thead><tr class=\"border-b border-zone-800 text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-400\"><th class=\"px-4 py-3\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 62, "<div class=\"relative mt-4 overflow-x-auto rounded-lg border border-zone-800 bg-zone-900 shadow-glass\"><table class=\"w-full text-left text-sm\"><thead><tr class=\"border-b border-zone-800 text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-400\"><th class=\"px-4 py-3\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

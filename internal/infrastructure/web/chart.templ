@@ -15,6 +15,8 @@ templ Chart(p ChartProps) {
 				@chartSparkline(p.spark())
 			case ChartBar:
 				@chartBarFigure(p)
+			case ChartHBar:
+				@chartHBarFigure(p)
 			default:
 				@chartLineFigure(p)
 		}
@@ -48,6 +50,30 @@ templ chartBarFigure(p ChartProps) {
 				<span data-chart-label class="min-w-0 flex-1 truncate text-center text-[11px] leading-tight text-zone-300" title={ b.Name }>{ b.Name }</span>
 			}
 		</div>
+	</figure>
+}
+
+// chartHBarFigure is the horizontal bar list: each row is the (possibly long)
+// name, then the bar and its figure. Names wrap to the row above the bar on a
+// phone, where a fixed name column would leave no room for the bar.
+templ chartHBarFigure(p ChartProps) {
+	<figure data-chart class={ "min-w-0", p.Class }>
+		@chartCaption(p.Label)
+		<ol class="space-y-2.5 sm:space-y-2">
+			for _, b := range p.bars() {
+				<li data-chart-tip={ b.Tip } class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)_auto]">
+					if b.Href != "" {
+						<a data-chart-label href={ templ.SafeURL(b.Href) } class="col-span-2 truncate text-sm text-zone-200 transition hover:text-signal-bright sm:col-span-1" title={ b.Name }>{ b.Name }</a>
+					} else {
+						<span data-chart-label class="col-span-2 truncate text-sm text-zone-200 sm:col-span-1" title={ b.Name }>{ b.Name }</span>
+					}
+					<span class="h-2.5 min-w-0 overflow-hidden rounded-full bg-zone-800" aria-hidden="true">
+						<span class="block h-full rounded-full" style={ b.hFillStyle() }></span>
+					</span>
+					<span class="w-14 text-right font-mono text-xs font-semibold tabular-nums text-zone-300">{ b.Value }</span>
+				</li>
+			}
+		</ol>
 	</figure>
 }
 
@@ -109,6 +135,18 @@ templ chartLines(lines []chartLine) {
 				stroke-linecap="round"
 				vector-effect="non-scaling-stroke"
 			></polyline>
+			if l.Dashed != "" {
+				<polyline
+					data-chart-partial
+					points={ l.Dashed }
+					fill="none"
+					stroke={ l.Color }
+					stroke-width="2"
+					stroke-dasharray="4 4"
+					stroke-linecap="round"
+					vector-effect="non-scaling-stroke"
+				></polyline>
+			}
 		}
 	</svg>
 	for _, l := range lines {

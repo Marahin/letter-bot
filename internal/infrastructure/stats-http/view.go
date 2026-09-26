@@ -33,6 +33,8 @@ type pageView struct {
 	GuildName string
 	Range     stats.Range
 	Picker    web.RangePickerProps
+	// Today is the current local midnight: the daily charts mark it as not over yet.
+	Today time.Time
 }
 
 type overviewView struct {
@@ -276,19 +278,25 @@ func dayLabels(ctx context.Context, days []stats.Day) []string {
 	return out
 }
 
-// dailyProps is a single-series line of one daily figure.
-func dailyProps(ctx context.Context, days []stats.Day, label string, value func(stats.Totals) float64, format func(stats.Totals) string) web.ChartProps {
+// dailyProps is a single-series line of one daily figure. A last point on today is partial.
+func dailyProps(ctx context.Context, days []stats.Day, today time.Time, label string, value func(stats.Totals) float64, format func(stats.Totals) string) web.ChartProps {
 	vals := make([]float64, len(days))
 	tips := make([]string, len(days))
+	partial := false
 	for i, d := range days {
 		vals[i] = value(d.Totals)
 		tips[i] = dayLabel(ctx, d.Day) + " · " + format(d.Totals)
+		if i == len(days)-1 && d.Day.Equal(today) {
+			partial = true
+			tips[i] = i18n.T(ctx, "stats.chart.today_tip", tips[i])
+		}
 	}
 	return web.ChartProps{
-		Kind:    web.ChartLine,
-		Series:  []web.ChartSeries{{Name: label, Color: seriesColor, Vals: vals, Tips: tips}},
-		XLabels: dayLabels(ctx, days),
-		Height:  160,
+		PartialLast: partial,
+		Kind:        web.ChartLine,
+		Series:      []web.ChartSeries{{Name: label, Color: seriesColor, Vals: vals, Tips: tips}},
+		XLabels:     dayLabels(ctx, days),
+		Height:      160,
 		// The three daily charts share a row, so each is a third wide.
 		MaxXLabels: 4,
 		Area:       true,
@@ -298,14 +306,14 @@ func dailyProps(ctx context.Context, days []stats.Day, label string, value func(
 	}
 }
 
-func reservationsChart(ctx context.Context, days []stats.Day) web.ChartProps {
-	return dailyProps(ctx, days, i18n.T(ctx, "stats.chart.reservations"),
+func reservationsChart(ctx context.Context, days []stats.Day, today time.Time) web.ChartProps {
+	return dailyProps(ctx, days, today, i18n.T(ctx, "stats.chart.reservations"),
 		func(t stats.Totals) float64 { return float64(t.Reservations) },
 		func(t stats.Totals) string { return formatInt(ctx, t.Reservations) })
 }
 
-func hoursChart(ctx context.Context, days []stats.Day) web.ChartProps {
-	return dailyProps(ctx, days, i18n.T(ctx, "stats.chart.hours"),
+func hoursChart(ctx context.Context, days []stats.Day, today time.Time) web.ChartProps {
+	return dailyProps(ctx, days, today, i18n.T(ctx, "stats.chart.hours"),
 		func(t stats.Totals) float64 { return t.Hours() },
 		func(t stats.Totals) string { return i18n.T(ctx, "stats.chart.hours_tip", formatHours(ctx, t)) })
 }
@@ -322,8 +330,8 @@ func expDays(days []stats.Day) []stats.Day {
 	return out
 }
 
-func expChart(ctx context.Context, days []stats.Day) web.ChartProps {
-	return dailyProps(ctx, expDays(days), i18n.T(ctx, "stats.chart.exp"),
+func expChart(ctx context.Context, days []stats.Day, today time.Time) web.ChartProps {
+	return dailyProps(ctx, expDays(days), today, i18n.T(ctx, "stats.chart.exp"),
 		func(t stats.Totals) float64 { return float64(t.Exp) },
 		func(t stats.Totals) string {
 			s, _ := formatExp(ctx, t)
@@ -331,12 +339,18 @@ func expChart(ctx context.Context, days []stats.Day) web.ChartProps {
 		})
 }
 
-func topSpotsChart(ctx context.Context, rows []stats.SpotRow) web.ChartProps {
+func topSpotsChart(ctx context.Context, guildID string, rows []stats.SpotRow) web.ChartProps {
 	bars := make([]web.ChartBarItem, len(rows))
 	for i, r := range rows {
-		bars[i] = web.ChartBarItem{Name: r.Name, Color: barColor, Val: r.Hours()}
+		bars[i] = web.ChartBarItem{
+			Name:  r.Name,
+			Color: barColor,
+			Val:   r.Hours(),
+			Text:  i18n.T(ctx, "stats.chart.hours_tip", formatHours(ctx, r.Totals)),
+			Href:  spotHref(guildID, r.SpotID),
+		}
 	}
-	return web.ChartProps{Kind: web.ChartBar, Bars: bars, Height: 200, Label: i18n.T(ctx, "stats.chart.top_spots")}
+	return web.ChartProps{Kind: web.ChartHBar, Bars: bars, Label: i18n.T(ctx, "stats.chart.top_spots")}
 }
 
 func historyChart(ctx context.Context, points []stats.HistoryPoint) web.ChartProps {
