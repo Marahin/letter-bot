@@ -7,8 +7,10 @@ package mocks
 import (
 	"spot-assistant/internal/core/dto/book"
 	"spot-assistant/internal/core/dto/guild"
+	"spot-assistant/internal/core/dto/member"
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/summary"
+	"time"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -83,6 +85,75 @@ func (_c *MockCommunicationService_NotifyOverbookedMember_Call) Return() *MockCo
 
 func (_c *MockCommunicationService_NotifyOverbookedMember_Call) RunAndReturn(run func(request book.BookRequest, res *reservation.ClippedOrRemovedReservation)) *MockCommunicationService_NotifyOverbookedMember_Call {
 	_c.Run(run)
+	return _c
+}
+
+// NotifyUpcomingReservation provides a mock function for the type MockCommunicationService
+func (_mock *MockCommunicationService) NotifyUpcomingReservation(guild1 *guild.Guild, member1 *member.Member, spotName string, startAt time.Time) error {
+	ret := _mock.Called(guild1, member1, spotName, startAt)
+
+	if len(ret) == 0 {
+		panic("no return value specified for NotifyUpcomingReservation")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(*guild.Guild, *member.Member, string, time.Time) error); ok {
+		r0 = returnFunc(guild1, member1, spotName, startAt)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockCommunicationService_NotifyUpcomingReservation_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'NotifyUpcomingReservation'
+type MockCommunicationService_NotifyUpcomingReservation_Call struct {
+	*mock.Call
+}
+
+// NotifyUpcomingReservation is a helper method to define mock.On call
+//   - guild1 *guild.Guild
+//   - member1 *member.Member
+//   - spotName string
+//   - startAt time.Time
+func (_e *MockCommunicationService_Expecter) NotifyUpcomingReservation(guild1 interface{}, member1 interface{}, spotName interface{}, startAt interface{}) *MockCommunicationService_NotifyUpcomingReservation_Call {
+	return &MockCommunicationService_NotifyUpcomingReservation_Call{Call: _e.mock.On("NotifyUpcomingReservation", guild1, member1, spotName, startAt)}
+}
+
+func (_c *MockCommunicationService_NotifyUpcomingReservation_Call) Run(run func(guild1 *guild.Guild, member1 *member.Member, spotName string, startAt time.Time)) *MockCommunicationService_NotifyUpcomingReservation_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *guild.Guild
+		if args[0] != nil {
+			arg0 = args[0].(*guild.Guild)
+		}
+		var arg1 *member.Member
+		if args[1] != nil {
+			arg1 = args[1].(*member.Member)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 time.Time
+		if args[3] != nil {
+			arg3 = args[3].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCommunicationService_NotifyUpcomingReservation_Call) Return(err error) *MockCommunicationService_NotifyUpcomingReservation_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockCommunicationService_NotifyUpcomingReservation_Call) RunAndReturn(run func(guild1 *guild.Guild, member1 *member.Member, spotName string, startAt time.Time) error) *MockCommunicationService_NotifyUpcomingReservation_Call {
+	_c.Call.Return(run)
 	return _c
 }
 

@@ -30,6 +30,9 @@ type ReservationRepository interface {
 	// Deletes one of the upcoming member reservations in a given guild. Returns error if operation
 	// did not succeed.
 	DeletePresentMemberReservation(ctx context.Context, g *guild.Guild, m *member.Member, reservationId int64) error
+
+	SelectReservationsForReservationStartsNotification(ctx context.Context, guildID string) ([]*reservation.ReservationWithSpot, error)
+	UpdateReservationStartsNotificationSent(ctx context.Context, id int64) error
 }
 
 type SpotRepository interface {
@@ -56,6 +59,9 @@ type BotPort interface {
 
 	// SendDMOverbookedNotification sends a DM to a member about overbooking.
 	SendDMOverbookedNotification(member *member.Member, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) error
+
+	// SendDMUpcomingReservationNotification sends a DM to a member about reservation start.
+	SendDMUpcomingReservationNotification(guild *guild.Guild, member *member.Member, spotName string, startAt time.Time) error
 
 	// OpenDM opens a DM channel with a member.
 	OpenDM(m *member.Member) (*discord.Channel, error)
@@ -89,9 +95,14 @@ type TextFormatter interface {
 	FormatOverbookedMemberNotification(member *member.Member,
 		request book.BookRequest,
 		res *reservation.ClippedOrRemovedReservation) string
+	FormatUpcomingReservationNotificationMessage(spotName string, startAt time.Time, now time.Time) string
 }
 
 type WorldNameRepository interface {
 	UpsertGuildWorld(ctx context.Context, guildID string, worldName string) error
 	SelectGuildWorld(ctx context.Context, guildID string) (*guildsworld.GuildsWorld, error)
+}
+
+type UpcomingReservationService interface {
+	NotifyUpcomingReservations(ctx context.Context, g *guild.Guild) error
 }

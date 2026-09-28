@@ -74,3 +74,14 @@ where end_at >= now()
 -- name: DeleteReservation :exec
 DELETE FROM web_reservation
 WHERE web_reservation.id = $1;
+-- name: SelectReservationsForReservationStartsNotification :many
+SELECT sqlc.embed(web_spot),
+  sqlc.embed(web_reservation)
+FROM web_reservation
+  INNER JOIN web_spot ON web_reservation.spot_id = web_spot.id
+WHERE start_at BETWEEN now() AND now() + INTERVAL '60 minutes'
+  AND notification_sent = FALSE;
+-- name: UpdateReservationStartsNotificationSent :exec
+UPDATE web_reservation
+SET notification_sent = TRUE
+WHERE id = $1;

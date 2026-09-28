@@ -22,7 +22,7 @@ INSERT INTO web_reservation (
     guild_id
   )
 VALUES ($1, $2, $3, $4, $5, now(), $6)
-RETURNING id, author, created_at, start_at, end_at, spot_id, guild_id, author_discord_id
+RETURNING id, author, created_at, start_at, end_at, spot_id, guild_id, author_discord_id, notification_sent
 `
 
 type CreateReservationParams struct {
@@ -53,6 +53,7 @@ func (q *Queries) CreateReservation(ctx context.Context, arg CreateReservationPa
 		&i.SpotID,
 		&i.GuildID,
 		&i.AuthorDiscordID,
+		&i.NotificationSent,
 	)
 	return i, err
 }
@@ -154,7 +155,7 @@ func (q *Queries) SelectOverlappingReservations(ctx context.Context, arg SelectO
 }
 
 const selectReservation = `-- name: SelectReservation :one
-SELECT id, author, created_at, start_at, end_at, spot_id, guild_id, author_discord_id
+SELECT id, author, created_at, start_at, end_at, spot_id, guild_id, author_discord_id, notification_sent
 FROM web_reservation
 WHERE id = $1
 LIMIT 1
@@ -172,12 +173,13 @@ func (q *Queries) SelectReservation(ctx context.Context, id int64) (WebReservati
 		&i.SpotID,
 		&i.GuildID,
 		&i.AuthorDiscordID,
+		&i.NotificationSent,
 	)
 	return i, err
 }
 
 const selectReservationWithSpot = `-- name: SelectReservationWithSpot :one
-SELECT reservations.id, reservations.author, reservations.created_at, reservations.start_at, reservations.end_at, reservations.spot_id, reservations.guild_id, reservations.author_discord_id,
+SELECT reservations.id, reservations.author, reservations.created_at, reservations.start_at, reservations.end_at, reservations.spot_id, reservations.guild_id, reservations.author_discord_id, reservations.notification_sent,
   spots.id, spots.name, spots.created_at
 FROM web_reservation reservations
   JOIN web_spot spots ON spots.id = reservations.spot_id
@@ -210,6 +212,7 @@ func (q *Queries) SelectReservationWithSpot(ctx context.Context, arg SelectReser
 		&i.WebReservation.SpotID,
 		&i.WebReservation.GuildID,
 		&i.WebReservation.AuthorDiscordID,
+		&i.WebReservation.NotificationSent,
 		&i.WebSpot.ID,
 		&i.WebSpot.Name,
 		&i.WebSpot.CreatedAt,
@@ -217,9 +220,56 @@ func (q *Queries) SelectReservationWithSpot(ctx context.Context, arg SelectReser
 	return i, err
 }
 
+const selectReservationsForReservationStartsNotification = `-- name: SelectReservationsForReservationStartsNotification :many
+SELECT web_spot.id, web_spot.name, web_spot.created_at,
+  web_reservation.id, web_reservation.author, web_reservation.created_at, web_reservation.start_at, web_reservation.end_at, web_reservation.spot_id, web_reservation.guild_id, web_reservation.author_discord_id, web_reservation.notification_sent
+FROM web_reservation
+  INNER JOIN web_spot ON web_reservation.spot_id = web_spot.id
+WHERE start_at BETWEEN now() AND now() + INTERVAL '60 minutes'
+  AND notification_sent = FALSE
+`
+
+type SelectReservationsForReservationStartsNotificationRow struct {
+	WebSpot        WebSpot
+	WebReservation WebReservation
+}
+
+func (q *Queries) SelectReservationsForReservationStartsNotification(ctx context.Context) ([]SelectReservationsForReservationStartsNotificationRow, error) {
+	rows, err := q.db.Query(ctx, selectReservationsForReservationStartsNotification)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SelectReservationsForReservationStartsNotificationRow
+	for rows.Next() {
+		var i SelectReservationsForReservationStartsNotificationRow
+		if err := rows.Scan(
+			&i.WebSpot.ID,
+			&i.WebSpot.Name,
+			&i.WebSpot.CreatedAt,
+			&i.WebReservation.ID,
+			&i.WebReservation.Author,
+			&i.WebReservation.CreatedAt,
+			&i.WebReservation.StartAt,
+			&i.WebReservation.EndAt,
+			&i.WebReservation.SpotID,
+			&i.WebReservation.GuildID,
+			&i.WebReservation.AuthorDiscordID,
+			&i.WebReservation.NotificationSent,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const selectReservationsWithSpots = `-- name: SelectReservationsWithSpots :many
 select web_spot.id, web_spot.name, web_spot.created_at,
-  web_reservation.id, web_reservation.author, web_reservation.created_at, web_reservation.start_at, web_reservation.end_at, web_reservation.spot_id, web_reservation.guild_id, web_reservation.author_discord_id
+  web_reservation.id, web_reservation.author, web_reservation.created_at, web_reservation.start_at, web_reservation.end_at, web_reservation.spot_id, web_reservation.guild_id, web_reservation.author_discord_id, web_reservation.notification_sent
 from web_reservation
   inner join web_spot on web_reservation.spot_id = web_spot.id
 where end_at >= now()
@@ -252,6 +302,7 @@ func (q *Queries) SelectReservationsWithSpots(ctx context.Context, guildID strin
 			&i.WebReservation.SpotID,
 			&i.WebReservation.GuildID,
 			&i.WebReservation.AuthorDiscordID,
+			&i.WebReservation.NotificationSent,
 		); err != nil {
 			return nil, err
 		}
@@ -265,7 +316,7 @@ func (q *Queries) SelectReservationsWithSpots(ctx context.Context, guildID strin
 
 const selectReservationsWithSpotsForSpot = `-- name: SelectReservationsWithSpotsForSpot :many
 select web_spot.id, web_spot.name, web_spot.created_at,
-  web_reservation.id, web_reservation.author, web_reservation.created_at, web_reservation.start_at, web_reservation.end_at, web_reservation.spot_id, web_reservation.guild_id, web_reservation.author_discord_id
+  web_reservation.id, web_reservation.author, web_reservation.created_at, web_reservation.start_at, web_reservation.end_at, web_reservation.spot_id, web_reservation.guild_id, web_reservation.author_discord_id, web_reservation.notification_sent
 from web_reservation
   inner join web_spot on web_reservation.spot_id = web_spot.id
 where end_at >= now()
@@ -304,6 +355,7 @@ func (q *Queries) SelectReservationsWithSpotsForSpot(ctx context.Context, arg Se
 			&i.WebReservation.SpotID,
 			&i.WebReservation.GuildID,
 			&i.WebReservation.AuthorDiscordID,
+			&i.WebReservation.NotificationSent,
 		); err != nil {
 			return nil, err
 		}
@@ -317,7 +369,7 @@ func (q *Queries) SelectReservationsWithSpotsForSpot(ctx context.Context, arg Se
 
 const selectUpcomingMemberReservationsWithSpots = `-- name: SelectUpcomingMemberReservationsWithSpots :many
 select web_spot.id, web_spot.name, web_spot.created_at,
-  web_reservation.id, web_reservation.author, web_reservation.created_at, web_reservation.start_at, web_reservation.end_at, web_reservation.spot_id, web_reservation.guild_id, web_reservation.author_discord_id
+  web_reservation.id, web_reservation.author, web_reservation.created_at, web_reservation.start_at, web_reservation.end_at, web_reservation.spot_id, web_reservation.guild_id, web_reservation.author_discord_id, web_reservation.notification_sent
 from web_reservation
   inner join web_spot on web_reservation.spot_id = web_spot.id
 where end_at >= now()
@@ -357,6 +409,7 @@ func (q *Queries) SelectUpcomingMemberReservationsWithSpots(ctx context.Context,
 			&i.WebReservation.SpotID,
 			&i.WebReservation.GuildID,
 			&i.WebReservation.AuthorDiscordID,
+			&i.WebReservation.NotificationSent,
 		); err != nil {
 			return nil, err
 		}
@@ -366,4 +419,15 @@ func (q *Queries) SelectUpcomingMemberReservationsWithSpots(ctx context.Context,
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateReservationStartsNotificationSent = `-- name: UpdateReservationStartsNotificationSent :exec
+UPDATE web_reservation
+SET notification_sent = TRUE
+WHERE id = $1
+`
+
+func (q *Queries) UpdateReservationStartsNotificationSent(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, updateReservationStartsNotificationSent, id)
+	return err
 }

@@ -1,5 +1,6 @@
-h1:PpefYEkxhzgaHX35j1xv7h0L1lWhWsoTJ5zemmoQRRc=
+h1:Cvmp8pLsLK42RlZpHmdKqpTeIblbkaCL82Ga+t7Fwkc=
 20240429143025_initial_schema.sql h1:XrCU7DGR+St1MmMTZDwGo7tdSFLq8IGEz9cKXK7m5+E=
 20240429143026_actual_schema.sql h1:cM2HxcG49CeQSsz60cmwEdH1ZZfF0T7rYkERAfvBng8=
 20250611195746_add_world_setting.sql h1:Ox6e6V3ECEsovtO3xJo9fjrCZZ6fH1sTFOYe2qvxhyU=
 20251211123500_add_performance_indexes.sql h1:fUTGnMJGsgDEMM+A+sojwQDQj+4FzUV0e/VIkVARP6w=
+20260101120000_add_notification_sent.sql h1:Fd0jT32LR6rjzypiM4uY05tK+NCEEMMIVos1LJmDwww=

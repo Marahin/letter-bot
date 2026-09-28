@@ -40,3 +40,9 @@ Following reservations are conflicting **and have been shortened or removed**:
 Your reservation was overbooked by test-nick (<@!test-id>)
 * <@!test-id>  has been clipped to: 2021-01-01 00:00 - 2021-01-01 01:10, 2021-01-01 01:30 - 2021-01-01 02:00
 ---
+
+[TestDiscordFormatter_FormatUpcomingReservationNotificationMessage - 1]
+Your hunt at **Test Spot** starts in **45** minutes (**2023-10-27 20:00** server time)!
+Please make sure you are there on time!
+If you cannot make it, please cancel your reservation as soon as possible.
+---

@@ -18,7 +18,7 @@ import (
 func newReservationRows() *pgxmock.Rows {
 	return pgxmock.NewRows([]string{
 		"id", "author", "created_at", "start_at", "end_at",
-		"spot_id", "guild_id", "author_discord_id",
+		"spot_id", "guild_id", "author_discord_id", "notification_sent",
 	})
 }
 
@@ -48,7 +48,7 @@ func TestCreateAndDeleteConflictingWithNoConflicting(t *testing.T) {
 		testMember.Nick, testMember.ID, mocks.NewPgTimestamptzTime(startAt),
 		mocks.NewPgTimestamptzTime(endAt), spotId, testGuild.ID,
 	).WillReturnRows(newReservationRows().AddRow(
-		int64(1), testMember.Nick, time.Now(), startAt, endAt, spotId, testGuild.ID, testMember.ID,
+		int64(1), testMember.Nick, time.Now(), startAt, endAt, spotId, testGuild.ID, testMember.ID, false,
 	))
 
 	mock.ExpectCommit()
@@ -116,7 +116,7 @@ func TestCreateAndDeleteConflictingWithOneConflicting(t *testing.T) {
 	).WillReturnRows(newReservationRows().AddRow(
 		int64(1), testMember.Nick, time.Now(),
 		reservationInput.EndAt.Add(1*time.Minute), conflictingReservations[0].EndAt,
-		spotId, testGuild.ID, testMember.ID,
+		spotId, testGuild.ID, testMember.ID, false,
 	))
 	mock.ExpectQuery("INSERT INTO web_reservation").WithArgs(
 		reservationInput.Author, reservationInput.AuthorDiscordID,
@@ -125,7 +125,7 @@ func TestCreateAndDeleteConflictingWithOneConflicting(t *testing.T) {
 	).WillReturnRows(newReservationRows().AddRow(
 		int64(2), testMember.Nick, time.Now(),
 		reservationInput.StartAt, reservationInput.EndAt,
-		spotId, testGuild.ID, testMember.ID,
+		spotId, testGuild.ID, testMember.ID, false,
 	))
 	mock.ExpectCommit()
 	repository := NewReservationRepository(mock)
@@ -206,19 +206,19 @@ func TestCreateAndDeleteConflictingWithTwoConflicting(t *testing.T) {
 		mocks.NewPgTimestamptzTime(conflictingReservations[0].StartAt), mocks.NewPgTimestamptzTime(reservationInput.StartAt.Add(-1*time.Minute)),
 		conflictingReservations[0].SpotID, conflictingReservations[0].GuildID,
 	).WillReturnRows(newReservationRows().AddRow(
-		int64(3), testMember2.Nick, time.Now(), conflictingReservations[0].StartAt, reservationInput.StartAt.Add(-1*time.Minute), spotId, testGuild.ID, testMember.ID,
+		int64(3), testMember2.Nick, time.Now(), conflictingReservations[0].StartAt, reservationInput.StartAt.Add(-1*time.Minute), spotId, testGuild.ID, testMember.ID, false,
 	))
 	mock.ExpectExec("DELETE FROM web_reservation").WithArgs(conflictingReservations[1].ID).WillReturnResult(pgxmock.NewResult("DELETE", 1))
 	mock.ExpectQuery("INSERT INTO web_reservation").WithArgs(
 		conflictingReservations[1].Author, conflictingReservations[1].AuthorDiscordID,
 		mocks.NewPgTimestamptzTime(reservationInput.EndAt.Add(1*time.Minute)), mocks.NewPgTimestamptzTime(conflictingReservations[1].EndAt),
 		conflictingReservations[1].SpotID, conflictingReservations[1].GuildID,
-	).WillReturnRows(newReservationRows().AddRow(int64(4), testMember3.Nick, time.Now(), reservationInput.EndAt.Add(1*time.Minute), conflictingReservations[1].EndAt, spotId, testGuild.ID, testMember.ID))
+	).WillReturnRows(newReservationRows().AddRow(int64(4), testMember3.Nick, time.Now(), reservationInput.EndAt.Add(1*time.Minute), conflictingReservations[1].EndAt, spotId, testGuild.ID, testMember.ID, false))
 	mock.ExpectQuery("INSERT INTO web_reservation").WithArgs(
 		reservationInput.Author, reservationInput.AuthorDiscordID,
 		mocks.NewPgTimestamptzTime(reservationInput.StartAt), mocks.NewPgTimestamptzTime(reservationInput.EndAt),
 		reservationInput.SpotID, reservationInput.GuildID,
-	).WillReturnRows(newReservationRows().AddRow(int64(5), testMember.Nick, time.Now(), reservationInput.EndAt.Add(1*time.Minute), conflictingReservations[1].EndAt, spotId, testGuild.ID, testMember.ID))
+	).WillReturnRows(newReservationRows().AddRow(int64(5), testMember.Nick, time.Now(), reservationInput.EndAt.Add(1*time.Minute), conflictingReservations[1].EndAt, spotId, testGuild.ID, testMember.ID, false))
 	mock.ExpectCommit()
 	repository := NewReservationRepository(mock)
 
@@ -293,14 +293,14 @@ func TestCreateAndDeleteConflictingWithTwoConflictingButSecondOneFromTheSameAuth
 		mocks.NewPgTimestamptzTime(conflictingReservations[0].StartAt), mocks.NewPgTimestamptzTime(reservationInput.StartAt.Add(-1*time.Minute)),
 		conflictingReservations[0].SpotID, conflictingReservations[0].GuildID,
 	).WillReturnRows(newReservationRows().AddRow(
-		int64(3), testMember2.Nick, time.Now(), conflictingReservations[0].StartAt, reservationInput.StartAt.Add(-1*time.Minute), spotId, testGuild.ID, testMember.ID))
+		int64(3), testMember2.Nick, time.Now(), conflictingReservations[0].StartAt, reservationInput.StartAt.Add(-1*time.Minute), spotId, testGuild.ID, testMember.ID, false))
 	mock.ExpectExec("DELETE FROM web_reservation").WithArgs(conflictingReservations[1].ID).WillReturnResult(pgxmock.NewResult("DELETE", 1))
 	mock.ExpectQuery("INSERT INTO web_reservation").WithArgs(
 		reservationInput.Author, reservationInput.AuthorDiscordID,
 		mocks.NewPgTimestamptzTime(reservationInput.StartAt), mocks.NewPgTimestamptzTime(reservationInput.EndAt),
 		reservationInput.SpotID, reservationInput.GuildID,
 	).WillReturnRows(newReservationRows().AddRow(
-		int64(4), testMember.Nick, time.Now(), reservationInput.StartAt, reservationInput.EndAt, spotId, testGuild.ID, testMember.ID,
+		int64(4), testMember.Nick, time.Now(), reservationInput.StartAt, reservationInput.EndAt, spotId, testGuild.ID, testMember.ID, false,
 	))
 	mock.ExpectCommit()
 	repository := NewReservationRepository(mock)
@@ -322,7 +322,7 @@ func newReservationWithSpotRows() *pgxmock.Rows {
 		// web_spot
 		"id", "name", "created_at",
 		// web_reservation
-		"id", "author", "created_at", "start_at", "end_at", "spot_id", "guild_id", "author_discord_id",
+		"id", "author", "created_at", "start_at", "end_at", "spot_id", "guild_id", "author_discord_id", "notification_sent",
 	})
 }
 
@@ -340,11 +340,11 @@ func TestSelectUpcomingReservationsWithSpotForSpot_FiltersBySpotAndGuild(t *test
 		WillReturnRows(newReservationWithSpotRows().
 			AddRow(
 				int64(10), "Flimsy", time.Now(),
-				int64(101), "Mariysz", time.Now(), time.Now(), time.Now().Add(time.Hour), int64(10), "guild-1", "mariysz#1",
+				int64(101), "Mariysz", time.Now(), time.Now(), time.Now().Add(time.Hour), int64(10), "guild-1", "mariysz#1", false,
 			).
 			AddRow(
 				int64(10), "Flimsy", time.Now(),
-				int64(102), "Asar", time.Now(), time.Now().Add(time.Hour), time.Now().Add(2*time.Hour), int64(10), "guild-1", "asar#1",
+				int64(102), "Asar", time.Now(), time.Now().Add(time.Hour), time.Now().Add(2*time.Hour), int64(10), "guild-1", "asar#1", false,
 			))
 
 	repo := NewReservationRepository(mock)

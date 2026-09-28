@@ -192,3 +192,17 @@ func TestDiscordFormatter_FormatOverbookedMemberNotification(t *testing.T) {
 	// assert
 	snaps.MatchSnapshot(t, output)
 }
+
+func TestDiscordFormatter_FormatUpcomingReservationNotificationMessage(t *testing.T) {
+	// given
+	formatter := NewFormatter()
+	spotName := "Test Spot"
+	startAt := time.Date(2023, 10, 27, 20, 00, 0, 0, time.UTC)
+	now := time.Date(2023, 10, 27, 19, 15, 20, 0, time.UTC)
+
+	// when
+	output := formatter.FormatUpcomingReservationNotificationMessage(spotName, startAt, now)
+
+	// assert
+	snaps.MatchSnapshot(t, output)
+}

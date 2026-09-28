@@ -8,6 +8,7 @@ import (
 	"spot-assistant/internal/core/dto/book"
 	"spot-assistant/internal/core/dto/member"
 	"spot-assistant/internal/core/dto/reservation"
+	"time"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -257,6 +258,69 @@ func (_c *MockTextFormatter_FormatOverbookedMemberNotification_Call) Return(s st
 }
 
 func (_c *MockTextFormatter_FormatOverbookedMemberNotification_Call) RunAndReturn(run func(member1 *member.Member, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) string) *MockTextFormatter_FormatOverbookedMemberNotification_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// FormatUpcomingReservationNotificationMessage provides a mock function for the type MockTextFormatter
+func (_mock *MockTextFormatter) FormatUpcomingReservationNotificationMessage(spotName string, startAt time.Time, now time.Time) string {
+	ret := _mock.Called(spotName, startAt, now)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FormatUpcomingReservationNotificationMessage")
+	}
+
+	var r0 string
+	if returnFunc, ok := ret.Get(0).(func(string, time.Time, time.Time) string); ok {
+		r0 = returnFunc(spotName, startAt, now)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	return r0
+}
+
+// MockTextFormatter_FormatUpcomingReservationNotificationMessage_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FormatUpcomingReservationNotificationMessage'
+type MockTextFormatter_FormatUpcomingReservationNotificationMessage_Call struct {
+	*mock.Call
+}
+
+// FormatUpcomingReservationNotificationMessage is a helper method to define mock.On call
+//   - spotName string
+//   - startAt time.Time
+//   - now time.Time
+func (_e *MockTextFormatter_Expecter) FormatUpcomingReservationNotificationMessage(spotName interface{}, startAt interface{}, now interface{}) *MockTextFormatter_FormatUpcomingReservationNotificationMessage_Call {
+	return &MockTextFormatter_FormatUpcomingReservationNotificationMessage_Call{Call: _e.mock.On("FormatUpcomingReservationNotificationMessage", spotName, startAt, now)}
+}
+
+func (_c *MockTextFormatter_FormatUpcomingReservationNotificationMessage_Call) Run(run func(spotName string, startAt time.Time, now time.Time)) *MockTextFormatter_FormatUpcomingReservationNotificationMessage_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 time.Time
+		if args[1] != nil {
+			arg1 = args[1].(time.Time)
+		}
+		var arg2 time.Time
+		if args[2] != nil {
+			arg2 = args[2].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTextFormatter_FormatUpcomingReservationNotificationMessage_Call) Return(s string) *MockTextFormatter_FormatUpcomingReservationNotificationMessage_Call {
+	_c.Call.Return(s)
+	return _c
+}
+
+func (_c *MockTextFormatter_FormatUpcomingReservationNotificationMessage_Call) RunAndReturn(run func(spotName string, startAt time.Time, now time.Time) string) *MockTextFormatter_FormatUpcomingReservationNotificationMessage_Call {
 	_c.Call.Return(run)
 	return _c
 }
