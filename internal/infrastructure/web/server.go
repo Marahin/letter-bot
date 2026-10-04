@@ -7,6 +7,8 @@ package web
 
 import (
 	"context"
+	"errors"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -38,6 +40,7 @@ type Server struct {
 	landingTool templ.Component
 	routes      *Router
 	srv         *http.Server
+	addr        string
 }
 
 // NewServer constructs the web server with a Postgres-backed session store.
@@ -156,19 +159,30 @@ func isHTTPS(baseURL string) bool {
 	return strings.HasPrefix(strings.ToLower(baseURL), "https://")
 }
 
-// Start begins serving and blocks until the server stops.
-func (s *Server) Start() error {
+// Listen builds the handler and binds the address, so a busy port fails here.
+// serve blocks until Shutdown and then returns nil.
+func (s *Server) Listen() (serve func() error, err error) {
+	listener, err := net.Listen("tcp", s.cfg.Addr)
+	if err != nil {
+		return nil, err
+	}
+	s.addr = listener.Addr().String()
 	s.srv = &http.Server{
-		Addr:              s.cfg.Addr,
 		Handler:           s.Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
-	s.log.Infow("web server listening", "addr", s.cfg.Addr)
-	if err := s.srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		return err
-	}
-	return nil
+	s.log.Infow("web server listening", "addr", s.addr)
+	srv := s.srv
+	return func() error {
+		if err := srv.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return err
+		}
+		return nil
+	}, nil
 }
+
+// Addr is the bound address after Listen.
+func (s *Server) Addr() string { return s.addr }
 
 // Shutdown gracefully stops the server.
 func (s *Server) Shutdown(ctx context.Context) error {

@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -260,8 +261,44 @@ func TestNewSessionManager_CookieFlags(t *testing.T) {
 	assert.Equal(t, sessionLifetime, plain.Lifetime)
 }
 
-func TestShutdown_WithoutStartIsANoop(t *testing.T) {
+func TestShutdown_WithoutListenIsANoop(t *testing.T) {
 	assert.NoError(t, newTestServer(t).Shutdown(context.Background()))
+}
+
+func TestListen_ServesUntilShutdown(t *testing.T) {
+	// given
+	s := newTestServer(t)
+	s.cfg.Addr = "127.0.0.1:0"
+	serve, err := s.Listen()
+	require.NoError(t, err)
+	served := make(chan error, 1)
+	go func() { served <- serve() }()
+
+	// when
+	resp, err := http.Get("http://" + s.Addr() + "/")
+	require.NoError(t, err)
+	_ = resp.Body.Close()
+	shutdownErr := s.Shutdown(context.Background())
+
+	// then
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.NoError(t, shutdownErr)
+	assert.NoError(t, <-served)
+}
+
+func TestListen_FailsOnABusyPort(t *testing.T) {
+	// given
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer func() { _ = listener.Close() }()
+	s := newTestServer(t)
+	s.cfg.Addr = listener.Addr().String()
+
+	// when
+	_, err = s.Listen()
+
+	// then
+	assert.Error(t, err)
 }
 
 func TestLanding_RendersTheLandingTool(t *testing.T) {
