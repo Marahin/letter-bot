@@ -1,4 +1,4 @@
-// Command web runs Letter, the web panel that shares the database with the bot.
+// Command web runs TibiaLoot.com, the web panel that shares the database with the bot.
 package main
 
 import (

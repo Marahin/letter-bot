@@ -185,11 +185,7 @@ func (a *Adapter) UnbookAutocomplete(g *guild.Guild, m *member.Member, filter st
 	// If any input value is passed, try to match it with startAt, endAt and spot name
 	if filter != "" {
 		reservations = collections.PoorMansFilter(reservations, func(r *reservation.ReservationWithSpot) bool {
-			searchableString := r.StartAt.Format(stringsHelper.DcLongTimeFormat) +
-				r.EndAt.Format(stringsHelper.DcLongTimeFormat) +
-				r.Spot.Name
-			containsFilterWord := strings.Contains(strings.ToLower(searchableString), strings.ToLower(filter))
-			return containsFilterWord
+			return strings.Contains(strings.ToLower(r.Label()), strings.ToLower(filter))
 		})
 	}
 

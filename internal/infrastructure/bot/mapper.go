@@ -1,14 +1,12 @@
 package bot
 
 import (
-	"fmt"
 	"spot-assistant/internal/core/dto/guild"
 	"spot-assistant/internal/core/dto/member"
 	"spot-assistant/internal/core/dto/role"
 	"strconv"
 
 	"spot-assistant/internal/common/collections"
-	"spot-assistant/internal/common/strings"
 	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/summary"
@@ -130,7 +128,7 @@ func MapStringArrToChoice(texts []string) []*discordgo.ApplicationCommandOptionC
 func MapReservationWithSpotArrToChoice(input []*reservation.ReservationWithSpot) []*discordgo.ApplicationCommandOptionChoice {
 	return collections.PoorMansMap(input, func(i *reservation.ReservationWithSpot) *discordgo.ApplicationCommandOptionChoice {
 		return &discordgo.ApplicationCommandOptionChoice{
-			Name:  fmt.Sprintf("%s - %s %s", i.StartAt.Format(strings.DcLongTimeFormat), i.EndAt.Format(strings.DcLongTimeFormat), i.Spot.Name),
+			Name:  i.Label(),
 			Value: strconv.FormatInt(i.Reservation.ID, 10),
 		}
 	})

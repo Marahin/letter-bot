@@ -9,6 +9,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -556,4 +557,40 @@ func TestAccessToken_RefreshedMeanwhileIsNotRefreshedAgain(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "fresh", tok)
 	assert.Equal(t, int32(0), f.tokenCalls.Load())
+}
+
+func TestAccessToken_NonStringRefreshResultIsAnError(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		// given a due token and an in-flight refresh for the user that yields a non-string
+		a := New("client-1", "secret-1", "http://localhost:8080/auth/callback", nil)
+		release := make(chan struct{})
+		soon := time.Now().Add(30 * time.Second)
+		users := mocks.NewMockWebUserRepository(t)
+		users.EXPECT().AccessToken(mock.Anything, "u1").Return(&webuser.Token{AccessToken: "old", RefreshToken: "rt-old", Expiry: &soon}, nil).Run(func(context.Context, string) {
+			inFlight := make(chan struct{})
+			go func() {
+				_, _, _ = a.refreshes.Do("u1", func() (any, error) {
+					close(inFlight)
+					<-release
+					return 42, nil
+				})
+			}()
+			<-inFlight
+		}).Once()
+		a.users = users
+
+		// when
+		var err error
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			_, err = a.accessToken(context.Background(), "u1")
+		}()
+		synctest.Wait()
+		close(release)
+		<-done
+
+		// then
+		assert.EqualError(t, err, "token refresh returned a non-string")
+	})
 }

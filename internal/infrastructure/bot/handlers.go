@@ -465,7 +465,6 @@ func (b *Bot) SetWorld(i *discordgo.InteractionCreate) error {
 	guildID := i.GuildID
 	userID := i.Member.User.ID
 
-	// Fetch g to check owner
 	g, err := b.mgr.Gateway.Guild(guildID)
 	if err != nil {
 		return fmt.Errorf("could not fetch guild: %w", err)

@@ -31,6 +31,7 @@ subpackage for each binary (`webapp`, `botapp`) that exports only `App()`.
 - fx stops the hooks in the reverse order of the invokes. `fxmodule.Metrics` comes
   before the serve or run invoke, so the metrics server stops after it. The pool
   closes next, and the logger's Sync runs last.
+- A stop past `StopTimeout` skips the remaining hooks and exits 1.
 - Config loaders return `(T, error)` through `fxmodule.Load`. fx fails the start on
   the error.
 - `fxmodule.Repositories` provides every repository as its concrete type. Providers

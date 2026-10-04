@@ -10,8 +10,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
-
-	"spot-assistant/internal/ports"
 )
 
 // Server is the internal metrics and health server. Listen binds the address
@@ -102,12 +100,4 @@ func (s *Server) WithHealth(live, ready CheckFunc) *Server {
 	})
 
 	return s
-}
-
-// WithHealthProvider registers health endpoints using a HealthPort implementation.
-func (s *Server) WithHealthProvider(h ports.HealthPort) *Server {
-	if h == nil {
-		return s
-	}
-	return s.WithHealth(h.Live, h.Ready)
 }

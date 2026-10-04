@@ -66,7 +66,6 @@ func newBot(p botParams) *bot.Bot {
 		WithLogger(p.Log)
 }
 
-// newCommunication uses the bot as the Discord port and as the member repository.
 func newCommunication(b *bot.Bot, log *zap.SugaredLogger) *communication.Adapter {
 	return communication.NewAdapter(b, b).WithLogger(log)
 }

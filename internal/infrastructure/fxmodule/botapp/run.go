@@ -9,6 +9,7 @@ import (
 
 	"spot-assistant/internal/infrastructure/bot"
 	"spot-assistant/internal/infrastructure/eventhandler"
+	"spot-assistant/internal/infrastructure/fxmodule"
 	prommetrics "spot-assistant/internal/infrastructure/metrics/prometheus"
 	notifypg "spot-assistant/internal/infrastructure/notify/postgresql"
 )
@@ -41,24 +42,28 @@ type lifecycleBot interface {
 }
 
 // botHooks starts the NOTIFY listener before the gateway, as the web may signal
-// at any time. The listener takes its own context: a hook's context ends with the hook.
+// at any time. The stop ends the listener first, so no NOTIFY reaches a stopping
+// bot and the listener is done with the pool before the pool closes.
 func botHooks(b lifecycleBot, listen func(ctx context.Context), log *zap.SugaredLogger) fx.Hook {
-	ctx, cancel := context.WithCancel(context.Background())
+	listener := fxmodule.NewLoop(listen)
 	return fx.Hook{
-		OnStart: func(context.Context) error {
-			go listen(ctx)
+		OnStart: func(ctx context.Context) error {
+			listener.Start()
 			if err := b.Start(); err != nil {
-				cancel()
+				_ = listener.Stop(ctx)
 				return fmt.Errorf("bot start failed: %w", err)
 			}
 			return nil
 		},
-		OnStop: func(context.Context) error {
+		OnStop: func(ctx context.Context) error {
 			log.Info("shutting down")
+			listenerErr := listener.Stop(ctx)
 			if err := b.Shutdown(); err != nil {
 				log.Errorw("bot shutdown", "error", err)
 			}
-			cancel()
+			if listenerErr != nil {
+				return fmt.Errorf("notify listener stop: %w", listenerErr)
+			}
 			return nil
 		},
 	}

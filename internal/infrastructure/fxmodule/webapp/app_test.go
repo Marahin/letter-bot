@@ -2,7 +2,6 @@ package webapp
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
@@ -132,39 +131,6 @@ func TestRunExperienceJob_EnabledRunsUntilStop(t *testing.T) {
 
 	// then
 	assert.NoError(t, err)
-}
-
-func TestLoopHook_StopWaitsForTheLoop(t *testing.T) {
-	// given
-	stopped := false
-	hook := loopHook(func(ctx context.Context) {
-		<-ctx.Done()
-		stopped = true
-	})
-	require.NoError(t, hook.OnStart(context.Background()))
-
-	// when
-	err := hook.OnStop(context.Background())
-
-	// then
-	require.NoError(t, err)
-	assert.True(t, stopped)
-}
-
-func TestLoopHook_StopGivesUpWhenItsContextEnds(t *testing.T) {
-	// given
-	release := make(chan struct{})
-	defer close(release)
-	hook := loopHook(func(context.Context) { <-release })
-	require.NoError(t, hook.OnStart(context.Background()))
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-
-	// when
-	err := hook.OnStop(ctx)
-
-	// then
-	assert.True(t, errors.Is(err, context.Canceled))
 }
 
 func TestServe_FailsTheStartOnABusyPort(t *testing.T) {

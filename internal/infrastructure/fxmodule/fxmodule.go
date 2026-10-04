@@ -25,7 +25,7 @@ var Logger = fx.Options(
 )
 
 func logStart(binary Binary, log *zap.SugaredLogger) {
-	log.Infow("starting letter "+string(binary), "version", version.Version, "tz", time.Now().Location().String())
+	log.Infow("starting letter-"+string(binary), "version", version.Version, "tz", time.Now().Location().String())
 }
 
 func newLogger(lc fx.Lifecycle) (*zap.Logger, error) {

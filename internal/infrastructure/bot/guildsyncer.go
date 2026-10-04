@@ -84,7 +84,6 @@ func syncableChannels(input []*discordgo.Channel) []*discord.Channel {
 		case discordgo.ChannelTypeGuildText, discordgo.ChannelTypeGuildNews, discordgo.ChannelTypeGuildCategory:
 			out = append(out, MapChannel(ch))
 		default:
-			// Voice, thread, forum and DM channels are not synced.
 		}
 	}
 	return out

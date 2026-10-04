@@ -265,6 +265,9 @@ The production setup is in the Kubernetes namespace `refugees` (context
 `spot-assistant-postgres` and `ext-tibiadata-api`. The steps below add the Letter
 web. Nothing in this branch changes the cluster.
 
+`DATABASE_SSL` now applies to the bot and the web (before, the bot always used
+`sslmode=disable`). It must be a valid libpq `sslmode`. The default is `disable`.
+
 ### Images
 
 CI builds two images from the one `Dockerfile` and pushes them on `main`:

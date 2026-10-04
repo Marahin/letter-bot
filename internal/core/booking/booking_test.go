@@ -13,6 +13,7 @@ import (
 	member2 "spot-assistant/internal/core/dto/member"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/spot"
@@ -282,6 +283,51 @@ func TestUnbookAutocompleteWithFilterMatching(t *testing.T) {
 	is.Nil(err)
 	is.Len(res, 1)
 	is.Equal(reservations[1].Reservation.ID, res[0].Reservation.ID)
+}
+
+func unbookAutocompleteFixture(t *testing.T) (*guild2.Guild, *member2.Member, *Adapter) {
+	g := &guild2.Guild{ID: "test-id", Name: "test-guild-name"}
+	m := &member2.Member{ID: "test-member", Nick: "test-nick"}
+	day := time.Date(2023, 8, 10, 0, 0, 0, 0, time.UTC)
+	reservations := []*reservation.ReservationWithSpot{
+		{
+			Reservation: reservation.Reservation{ID: 1, StartAt: day.Add(12 * time.Hour), EndAt: day.Add(14 * time.Hour), GuildID: g.ID},
+			Spot:        reservation.Spot{Name: "Prison"},
+		},
+		{
+			Reservation: reservation.Reservation{ID: 2, StartAt: day.Add(16 * time.Hour), EndAt: day.Add(18 * time.Hour), GuildID: g.ID},
+			Spot:        reservation.Spot{Name: "Library"},
+		},
+	}
+	reservationService := mocks.NewMockReservationRepository(t)
+	reservationService.On("SelectUpcomingMemberReservationsWithSpots", mocks.ContextMock, g, m, int64(0)).Return(reservations, nil)
+	return g, m, NewAdapter(mocks.NewMockSpotRepository(t), reservationService, mocks.NewMockCommunicationService(t))
+}
+
+func TestUnbookAutocompleteWithFilterMatchingEndTime(t *testing.T) {
+	// given
+	g, m, adapter := unbookAutocompleteFixture(t)
+
+	// when
+	res, err := adapter.UnbookAutocomplete(g, m, "2023-08-10 18:00")
+
+	// then
+	require.NoError(t, err)
+	require.Len(t, res, 1)
+	assert.Equal(t, int64(2), res[0].Reservation.ID)
+}
+
+func TestUnbookAutocompleteWithFilterMatchingALabelFragment(t *testing.T) {
+	// given
+	g, m, adapter := unbookAutocompleteFixture(t)
+
+	// when
+	res, err := adapter.UnbookAutocomplete(g, m, "16:00 - 2023-08-10")
+
+	// then
+	require.NoError(t, err)
+	require.Len(t, res, 1)
+	assert.Equal(t, int64(2), res[0].Reservation.ID)
 }
 
 func TestBook(t *testing.T) {

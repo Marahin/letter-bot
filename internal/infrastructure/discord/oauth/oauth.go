@@ -179,7 +179,10 @@ func (a *Adapter) accessToken(ctx context.Context, userID string) (string, error
 	if err != nil {
 		return "", err
 	}
-	token, _ := fresh.(string)
+	token, ok := fresh.(string)
+	if !ok {
+		return "", errors.New("token refresh returned a non-string")
+	}
 	return token, nil
 }
 

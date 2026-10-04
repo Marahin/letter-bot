@@ -27,7 +27,7 @@ func TestHealthEndpoints_OK(t *testing.T) {
 	hp := &mocks.MockHealthPort{}
 	hp.On("Live").Return(nil)
 	hp.On("Ready").Return(nil)
-	srv.WithHealthProvider(hp)
+	srv.WithHealth(hp.Live, hp.Ready)
 
 	// when
 	liveReq := httptest.NewRequest(http.MethodGet, "/livez", nil)
@@ -52,7 +52,7 @@ func TestHealthEndpoints_Failures(t *testing.T) {
 	hp := &mocks.MockHealthPort{}
 	hp.On("Live").Return(assert.AnError)
 	hp.On("Ready").Return(assert.AnError)
-	srv.WithHealthProvider(hp)
+	srv.WithHealth(hp.Live, hp.Ready)
 
 	// when
 	liveReq := httptest.NewRequest(http.MethodGet, "/livez", nil)

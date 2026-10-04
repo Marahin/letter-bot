@@ -1,6 +1,11 @@
 package reservation
 
-import "time"
+import (
+	"fmt"
+	"time"
+
+	stringsHelper "spot-assistant/internal/common/strings"
+)
 
 type Reservation struct {
 	ID              int64
@@ -29,4 +34,9 @@ type Spot struct {
 type ReservationWithSpot struct {
 	Reservation
 	Spot
+}
+
+// Label is the text that names the reservation in the unbook autocomplete.
+func (r *ReservationWithSpot) Label() string {
+	return fmt.Sprintf("%s - %s %s", r.StartAt.Format(stringsHelper.DcLongTimeFormat), r.EndAt.Format(stringsHelper.DcLongTimeFormat), r.Spot.Name)
 }

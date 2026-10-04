@@ -183,3 +183,36 @@ func TestSharedModules_ValidateTogether(t *testing.T) {
 
 	require.NoError(t, err)
 }
+
+func TestLoopHook_StopWaitsForTheLoop(t *testing.T) {
+	// given
+	stopped := false
+	hook := LoopHook(func(ctx context.Context) {
+		<-ctx.Done()
+		stopped = true
+	})
+	require.NoError(t, hook.OnStart(context.Background()))
+
+	// when
+	err := hook.OnStop(context.Background())
+
+	// then
+	require.NoError(t, err)
+	assert.True(t, stopped)
+}
+
+func TestLoopHook_StopGivesUpWhenItsContextEnds(t *testing.T) {
+	// given
+	release := make(chan struct{})
+	defer close(release)
+	hook := LoopHook(func(context.Context) { <-release })
+	require.NoError(t, hook.OnStart(context.Background()))
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	// when
+	err := hook.OnStop(ctx)
+
+	// then
+	assert.True(t, errors.Is(err, context.Canceled))
+}

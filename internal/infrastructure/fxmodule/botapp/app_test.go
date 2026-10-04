@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -70,29 +69,32 @@ func (b *fakeBot) Shutdown() error {
 	return errors.New("already closed")
 }
 
-func TestBotHooks_StartFailureStopsTheStart(t *testing.T) {
+func TestBotHooks_StartFailureStopsTheListener(t *testing.T) {
 	// given
 	b := &fakeBot{startErr: errors.New("gateway refused")}
-	listening := make(chan context.Context, 1)
-	hook := botHooks(b, func(ctx context.Context) { listening <- ctx }, zap.NewNop().Sugar())
+	stopped := false
+	hook := botHooks(b, func(ctx context.Context) {
+		<-ctx.Done()
+		stopped = true
+	}, zap.NewNop().Sugar())
 
 	// when
 	err := hook.OnStart(context.Background())
 
 	// then
 	require.ErrorContains(t, err, "bot start failed")
-	ctx := <-listening
-	assert.ErrorIs(t, ctx.Err(), context.Canceled, "a failed start stops the listener")
+	assert.True(t, stopped, "a failed start waits for the listener to stop")
 }
 
-func TestBotHooks_StopShutsDownAndCancelsTheListener(t *testing.T) {
+func TestBotHooks_StopEndsTheListenerBeforeTheShutdown(t *testing.T) {
 	// given
 	b := &fakeBot{}
-	listening := make(chan context.Context, 1)
-	hook := botHooks(b, func(ctx context.Context) { listening <- ctx }, zap.NewNop().Sugar())
+	shutdownsSeenByListener := -1
+	hook := botHooks(b, func(ctx context.Context) {
+		<-ctx.Done()
+		shutdownsSeenByListener = b.shutdowns
+	}, zap.NewNop().Sugar())
 	require.NoError(t, hook.OnStart(context.Background()))
-	ctx := <-listening
-	require.NoError(t, ctx.Err())
 
 	// when
 	err := hook.OnStop(context.Background())
@@ -101,11 +103,25 @@ func TestBotHooks_StopShutsDownAndCancelsTheListener(t *testing.T) {
 	assert.NoError(t, err, "a failed shutdown is logged, not returned")
 	assert.True(t, b.started)
 	assert.Equal(t, 1, b.shutdowns)
-	select {
-	case <-ctx.Done():
-	case <-time.After(time.Second):
-		t.Fatal("the listener context was not cancelled")
-	}
+	assert.Equal(t, 0, shutdownsSeenByListener, "the listener ends before the bot shuts down")
+}
+
+func TestBotHooks_StopShutsDownWhenTheListenerDoesNotEnd(t *testing.T) {
+	// given
+	b := &fakeBot{}
+	release := make(chan struct{})
+	defer close(release)
+	hook := botHooks(b, func(context.Context) { <-release }, zap.NewNop().Sugar())
+	require.NoError(t, hook.OnStart(context.Background()))
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	// when
+	err := hook.OnStop(ctx)
+
+	// then
+	require.ErrorIs(t, err, context.Canceled)
+	assert.Equal(t, 1, b.shutdowns)
 }
 
 func TestMetricsAddr_IsTheBotMetricsAddr(t *testing.T) {

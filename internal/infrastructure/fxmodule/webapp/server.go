@@ -11,13 +11,13 @@ import (
 
 	"spot-assistant/internal/core/experience"
 	experiencesqlc "spot-assistant/internal/infrastructure/experience/postgresql/sqlc"
+	"spot-assistant/internal/infrastructure/fxmodule"
 	"spot-assistant/internal/infrastructure/scheduler"
 	"spot-assistant/internal/infrastructure/web"
 	"spot-assistant/internal/infrastructure/worldapi"
 )
 
 const (
-	// shutdownTimeout bounds the graceful stop of the web server.
 	shutdownTimeout = 10 * time.Second
 	// experienceJobLockKey is the pg_advisory_lock key of the experience job.
 	experienceJobLockKey int64 = 7419001
@@ -64,7 +64,6 @@ type experienceJobParams struct {
 	Log       *zap.SugaredLogger
 }
 
-// runExperienceJob schedules the experience job when it is on and the world API is set.
 func runExperienceJob(p experienceJobParams) {
 	switch {
 	case !p.Cfg.ExperienceJobEnabled:
@@ -77,30 +76,5 @@ func runExperienceJob(p experienceJobParams) {
 	job := experience.New(p.API, p.Repo, p.Cfg.ExperienceJobInterval, p.Log)
 	lock := scheduler.NewPgAdvisoryLock(p.Pool, experienceJobLockKey, p.Log)
 	run := func(ctx context.Context) error { return job.RunOnce(ctx, time.Now()) }
-	p.Lifecycle.Append(loopHook(scheduler.New("experience", run, lock, p.Cfg.ExperienceJobInterval, p.Log).Run))
-}
-
-// loopHook runs loop on its own context: a hook's context ends with the hook.
-// The stop waits for the loop to return, at most until the stop context ends.
-func loopHook(loop func(ctx context.Context)) fx.Hook {
-	ctx, cancel := context.WithCancel(context.Background())
-	done := make(chan struct{})
-	return fx.Hook{
-		OnStart: func(context.Context) error {
-			go func() {
-				defer close(done)
-				loop(ctx)
-			}()
-			return nil
-		},
-		OnStop: func(stopCtx context.Context) error {
-			cancel()
-			select {
-			case <-done:
-				return nil
-			case <-stopCtx.Done():
-				return stopCtx.Err()
-			}
-		},
-	}
+	p.Lifecycle.Append(fxmodule.LoopHook(scheduler.New("experience", run, lock, p.Cfg.ExperienceJobInterval, p.Log).Run))
 }

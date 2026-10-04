@@ -41,7 +41,6 @@ import (
 	worldnamesqlc "spot-assistant/internal/infrastructure/worldname/postgresql/sqlc"
 )
 
-// readyTimeout bounds the database ping of /readyz.
 const readyTimeout = 2 * time.Second
 
 // TimeZone is the IANA zone the stats bucket days in, read from TZ.
