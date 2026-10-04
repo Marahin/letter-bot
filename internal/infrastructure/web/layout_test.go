@@ -164,12 +164,11 @@ func TestLandingCopyIsTranslated(t *testing.T) {
 	ctx := i18n.WithLocale(context.Background(), i18n.Normalize("pl"))
 
 	// when
-	out := render(t, ctx, Landing("http://x", "https://invite", Nav{Marketing: true}, nil))
+	out := render(t, ctx, Landing("http://x", "https://invite", Nav{Marketing: true}, templ.NopComponent))
 
 	// then
 	assert.Contains(t, out, "Dodaj Letter do Discorda")
 	assert.Contains(t, out, "Podziel loot z huntu.")
-	assert.Contains(t, out, "Otwórz kalkulator lootu")
 	assert.Contains(t, out, `href="https://invite"`)
 	assert.Contains(t, out, "Serwis niezwiązany z CipSoft.")
 }
@@ -184,7 +183,6 @@ func TestLanding_EmbedsTheToolAboveTheBotFeatures(t *testing.T) {
 	// then
 	assert.Contains(t, out, `<h1 id="landing-calculator-heading"`)
 	assert.Less(t, strings.Index(out, `id="embedded-tool"`), strings.Index(out, `id="features"`))
-	assert.NotContains(t, out, "Open the Loot Calculator")
 }
 
 func TestLayout_FooterAndLockup(t *testing.T) {
@@ -195,7 +193,17 @@ func TestLayout_FooterAndLockup(t *testing.T) {
 	assert.Contains(t, out, branding.Notice())
 	assert.Contains(t, out, "Not affiliated with CipSoft.")
 	assert.Contains(t, out, `aria-label="TibiaLoot.com"`)
-	assert.Contains(t, out, `<span class="text-zone-100">Tibia</span><span class="text-signal">Loot</span>`)
+}
+
+func TestWordmark_SpellsTheBrandName(t *testing.T) {
+	// given
+	tag := regexp.MustCompile(`<[^>]*>`)
+
+	// when
+	out := render(t, context.Background(), wordmark("/", ""))
+
+	// then
+	assert.Equal(t, branding.Name, tag.ReplaceAllString(out, ""))
 }
 
 func TestDeps_ErrorHelpers(t *testing.T) {

@@ -17,7 +17,7 @@ import (
 func newTestServer(t *testing.T) *Server {
 	t.Helper()
 	cfg := Config{BaseURL: "http://localhost:8080", Discord: DiscordConfig{ClientID: "4242"}}
-	return newServer(cfg, zap.NewNop().Sugar(), NewSessionManager(cfg, nil))
+	return newServer(cfg, zap.NewNop().Sugar(), NewSessionManager(cfg, nil)).WithLandingTool(templ.NopComponent)
 }
 
 func serveReq(t *testing.T, h http.Handler, req *http.Request) *httptest.ResponseRecorder {

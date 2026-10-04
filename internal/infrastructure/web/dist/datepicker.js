@@ -23,8 +23,6 @@
     if (l10n) flatpickr.localize(l10n);
   }
 
-  // placeInViewport puts the calendar under the field, or above it when there is
-  // more room there, kept inside the viewport horizontally.
   function placeInViewport(fp) {
     var cal = fp.calendarContainer;
     var field = fp.altInput || fp.input;
@@ -44,8 +42,11 @@
 
   function dialogOptions(dlg) {
     var reposition = null;
+    function unlisten() {
+      if (reposition) dlg.removeEventListener("scroll", reposition, true);
+      reposition = null;
+    }
     return {
-      static: false,
       appendTo: dlg,
       position: placeInViewport,
       onOpen: function (selectedDates, dateStr, fp) {
@@ -55,10 +56,9 @@
         // Capture: scroll does not bubble, and the dialog's inner box is what scrolls.
         dlg.addEventListener("scroll", reposition, true);
       },
-      onClose: function () {
-        if (reposition) dlg.removeEventListener("scroll", reposition, true);
-        reposition = null;
-      },
+      onClose: unlisten,
+      // destroy() does not fire onClose, and the listener would outlive fp.config.
+      onDestroy: unlisten,
     };
   }
 
@@ -113,6 +113,10 @@
   // A dialog calendar lives outside its field's form, so a swap that drops the
   // field would leave it behind: each reopened edit would add another.
   document.addEventListener("htmx:beforeCleanupElement", function (e) {
-    if (e.target._flatpickr) e.target._flatpickr.destroy();
+    var fp = e.target._flatpickr;
+    if (fp) {
+      fp.close();
+      fp.destroy();
+    }
   });
 })();

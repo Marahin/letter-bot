@@ -8,7 +8,7 @@ type User struct {
 	Username      string
 	GlobalName    string
 	Avatar        string
-	// DefaultGuildID is the server the panel opens on: the last one the user visited.
+	// DefaultGuildID is the last server visited, kept selected on pages without one.
 	DefaultGuildID string
 	CreatedAt      time.Time
 	UpdatedAt      time.Time

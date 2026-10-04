@@ -34,8 +34,7 @@ type Server struct {
 	services Services
 	// features holds the per-feature route registrars mounted by the composition
 	// root; Handler() calls each with the shared Deps after the shell routes.
-	features []func(*Router, *Deps)
-	// landingTool is the tool the landing page opens with (the Loot Calculator).
+	features    []func(*Router, *Deps)
 	landingTool templ.Component
 	routes      *Router
 	srv         *http.Server

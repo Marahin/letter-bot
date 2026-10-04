@@ -84,6 +84,7 @@ These stay exactly as they are in every language:
 | `Letter` | the Discord bot's name |
 | `Tibia` | game name |
 | `TibiaData` | third-party service name |
+| `Party Hunt Analyser` | Tibia's in-game window name; in Polish do not inflect it, let a noun carry the case (`z okna Party Hunt Analyser`) |
 | `Discord` | third-party product name; inflect it in Polish (`na Discordzie`, `do Discorda`) |
 
 Settled Polish wording, used everywhere in `pl.json`:

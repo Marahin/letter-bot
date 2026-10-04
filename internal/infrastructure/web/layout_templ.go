@@ -2104,8 +2104,8 @@ func sidebarIconLink(href, label string, active bool) templ.Component {
 	})
 }
 
-// toolGlyph draws one tool's own mark. The sidebar, the top bar and the landing
-// tool cards share it, so a tool looks the same in every place.
+// toolGlyph draws one tool's own mark. The sidebar and the top bar share it, so
+// a tool looks the same in every place.
 func toolGlyph(icon, class string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -2415,7 +2415,6 @@ func wordmark(href, class string) templ.Component {
 	})
 }
 
-// brandMark is the loot bag logo, the same drawing as dist/favicon.svg.
 func brandMark(class string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -2455,7 +2454,7 @@ func brandMark(class string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 173, "\" viewBox=\"0 0 100 100\" aria-hidden=\"true\"><rect width=\"100\" height=\"100\" rx=\"24\" fill=\"#F97316\"></rect><g fill=\"none\" stroke=\"#141416\" stroke-width=\"8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M36 34 L43 44 M64 34 L57 44\"></path><path d=\"M42 46 C26 54 22 82 50 82 C78 82 74 54 58 46 Z\"></path><line x1=\"40\" y1=\"46\" x2=\"60\" y2=\"46\"></line></g><circle cx=\"20\" cy=\"20\" r=\"6\" fill=\"#141416\"></circle></svg>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 173, "\" viewBox=\"0 0 100 100\" aria-hidden=\"true\"><rect width=\"100\" height=\"100\" rx=\"24\" class=\"fill-signal\"></rect><g fill=\"none\" class=\"stroke-zone-900\" stroke-width=\"8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M36 34 L43 44 M64 34 L57 44\"></path><path d=\"M42 46 C26 54 22 82 50 82 C78 82 74 54 58 46 Z\"></path><line x1=\"40\" y1=\"46\" x2=\"60\" y2=\"46\"></line></g><circle cx=\"20\" cy=\"20\" r=\"6\" class=\"fill-zone-900\"></circle></svg>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -2495,7 +2494,7 @@ func serverSwitcher(nav Nav) templ.Component {
 		var templ_7745c5c3_Var133 string
 		templ_7745c5c3_Var133, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "shell.switcher.server"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 485, Col: 129}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 484, Col: 129}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var133))
 		if templ_7745c5c3_Err != nil {
@@ -2513,7 +2512,7 @@ func serverSwitcher(nav Nav) templ.Component {
 			var templ_7745c5c3_Var134 string
 			templ_7745c5c3_Var134, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "shell.switcher.empty"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 487, Col: 131}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 486, Col: 131}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var134))
 			if templ_7745c5c3_Err != nil {
@@ -2543,7 +2542,7 @@ func serverSwitcher(nav Nav) templ.Component {
 				var templ_7745c5c3_Var136 string
 				templ_7745c5c3_Var136, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.N(ctx, "shell.switcher.server_count", len(nav.Servers)))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 495, Col: 159}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 494, Col: 159}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var136))
 				if templ_7745c5c3_Err != nil {
@@ -2556,7 +2555,7 @@ func serverSwitcher(nav Nav) templ.Component {
 				var templ_7745c5c3_Var137 string
 				templ_7745c5c3_Var137, templ_7745c5c3_Err = templ.ResolveAttributeValue(i18n.T(ctx, "combobox.filter"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 500, Col: 49}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 499, Col: 49}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var137)
 				if templ_7745c5c3_Err != nil {
@@ -2569,7 +2568,7 @@ func serverSwitcher(nav Nav) templ.Component {
 				var templ_7745c5c3_Var138 string
 				templ_7745c5c3_Var138, templ_7745c5c3_Err = templ.ResolveAttributeValue(i18n.T(ctx, "shell.switcher.select"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 501, Col: 54}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 500, Col: 54}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var138)
 				if templ_7745c5c3_Err != nil {
@@ -2594,7 +2593,7 @@ func serverSwitcher(nav Nav) templ.Component {
 					var templ_7745c5c3_Var140 templ.SafeURL
 					templ_7745c5c3_Var140, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(GuildPath(s.ID, "")))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 508, Col: 48}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 507, Col: 48}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var140))
 					if templ_7745c5c3_Err != nil {
@@ -2628,7 +2627,7 @@ func serverSwitcher(nav Nav) templ.Component {
 					var templ_7745c5c3_Var142 string
 					templ_7745c5c3_Var142, templ_7745c5c3_Err = templ.JoinStringErrs(s.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 515, Col: 53}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 514, Col: 53}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var142))
 					if templ_7745c5c3_Err != nil {
@@ -2646,7 +2645,7 @@ func serverSwitcher(nav Nav) templ.Component {
 				var templ_7745c5c3_Var143 string
 				templ_7745c5c3_Var143, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "combobox.no_matches"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 519, Col: 122}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 518, Col: 122}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var143))
 				if templ_7745c5c3_Err != nil {
@@ -2659,7 +2658,7 @@ func serverSwitcher(nav Nav) templ.Component {
 				var templ_7745c5c3_Var144 string
 				templ_7745c5c3_Var144, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "shell.switcher.manage"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 521, Col: 169}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 520, Col: 169}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var144))
 				if templ_7745c5c3_Err != nil {
@@ -2731,7 +2730,7 @@ func serverSummary(nav Nav) templ.Component {
 		var templ_7745c5c3_Var146 string
 		templ_7745c5c3_Var146, templ_7745c5c3_Err = templ.JoinStringErrs(nav.CurrentGuildName)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 532, Col: 98}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 531, Col: 98}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var146))
 		if templ_7745c5c3_Err != nil {
@@ -2776,7 +2775,7 @@ func serverBadge(iconURL, name string) templ.Component {
 		var templ_7745c5c3_Var148 string
 		templ_7745c5c3_Var148, templ_7745c5c3_Err = templ.JoinStringErrs(guildInitial(name))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 541, Col: 22}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 540, Col: 22}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var148))
 		if templ_7745c5c3_Err != nil {
@@ -2794,7 +2793,7 @@ func serverBadge(iconURL, name string) templ.Component {
 			var templ_7745c5c3_Var149 string
 			templ_7745c5c3_Var149, templ_7745c5c3_Err = templ.ResolveAttributeValue(iconURL)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 543, Col: 21}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 542, Col: 21}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var149)
 			if templ_7745c5c3_Err != nil {
@@ -2842,7 +2841,7 @@ func serverOptionIcon(iconURL, name string) templ.Component {
 		var templ_7745c5c3_Var151 string
 		templ_7745c5c3_Var151, templ_7745c5c3_Err = templ.JoinStringErrs(guildInitial(name))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 551, Col: 22}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 550, Col: 22}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var151))
 		if templ_7745c5c3_Err != nil {
@@ -2860,7 +2859,7 @@ func serverOptionIcon(iconURL, name string) templ.Component {
 			var templ_7745c5c3_Var152 string
 			templ_7745c5c3_Var152, templ_7745c5c3_Err = templ.ResolveAttributeValue(iconURL)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 553, Col: 21}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/layout.templ`, Line: 552, Col: 21}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var152)
 			if templ_7745c5c3_Err != nil {

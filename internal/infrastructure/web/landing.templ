@@ -2,10 +2,7 @@ package web
 
 import "spot-assistant/internal/infrastructure/i18n"
 
-// Landing is the home page. The Loot Calculator, the most used feature, opens
-// ready to use at the top; the Letter bot's features and CTAs follow. It renders
-// inside the marketing shell (top bar, no sidebar) for both anonymous and
-// signed-in visitors. tool is the embedded calculator, nil for a link instead.
+// Landing is the home page; tool is injected by cmd/web (see WithLandingTool).
 templ Landing(baseURL, inviteURL string, nav Nav, tool templ.Component) {
 	@Layout(i18n.T(ctx, "landing.meta.title"), i18n.T(ctx, "landing.meta.description"), baseURL, "/", nav) {
 		@landingCalculator(tool)
@@ -14,7 +11,6 @@ templ Landing(baseURL, inviteURL string, nav Nav, tool templ.Component) {
 	}
 }
 
-// landingCalculator is the hero: a short headline over the working calculator.
 templ landingCalculator(tool templ.Component) {
 	<section aria-labelledby="landing-calculator-heading" class="mx-auto max-w-6xl px-6 pb-16 pt-8 sm:pt-10">
 		<div class="mb-6 flex flex-col gap-2">
@@ -25,16 +21,7 @@ templ landingCalculator(tool templ.Component) {
 			<h1 id="landing-calculator-heading" class="font-display text-3xl font-bold leading-tight -tracking-[0.03em] text-zone-50 sm:text-4xl">{ i18n.T(ctx, "landing.calculator.heading") }</h1>
 			<p class="max-w-2xl text-[15px] leading-relaxed text-zone-300">{ i18n.T(ctx, "landing.calculator.sub") }</p>
 		</div>
-		if tool != nil {
-			@tool
-		} else {
-			<a href={ templ.SafeURL(lootCalculatorPath) } class="group flex items-center gap-4 rounded-xl border border-zone-800 bg-zone-900 p-5 transition hover:border-signal/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/60">
-				<div class="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-signal/25 bg-signal/10 text-signal-bright">
-					@toolGlyph("calculator", "h-5 w-5")
-				</div>
-				<span class="flex items-center gap-1.5 text-[15px] font-semibold text-signal-bright">{ i18n.T(ctx, "landing.cta.open_loot") } <span aria-hidden="true">→</span></span>
-			</a>
-		}
+		@tool
 	</section>
 }
 

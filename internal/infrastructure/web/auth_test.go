@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/a-h/templ"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -39,6 +40,7 @@ func newAuthFixture(t *testing.T) *authFixture {
 		premium: mocks.NewMockPremiumService(t),
 	}
 	f.srv = newServer(cfg, zap.NewNop().Sugar(), NewSessionManager(cfg, nil)).
+		WithLandingTool(templ.NopComponent).
 		WithServices(Services{Auth: f.auth, Access: f.access, Premium: f.premium})
 	f.srv.Mount(func(r *Router, d *Deps) {
 		ok := func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("feature ok")) }

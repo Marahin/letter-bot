@@ -1,4 +1,4 @@
-# Letter vocabulary
+# TibiaLoot.com and Letter vocabulary
 
 The words the web panel (TibiaLoot.com), the bot (Letter) and the code use for
 the same things. The
@@ -24,7 +24,7 @@ Polish column is the settled wording of `pl.json` (see
 | Reserve rank | Ranga rezerwująca | `reserve_role_ids`, `Capabilities.Reserve` | Can book. No reserve rank set = every member can book. |
 | Overbook rank | Ranga nadpisująca rezerwacje | `overbook_role_ids`, `Capabilities.Overbook` | Can overbook. No overbook rank set = the `Postman` role can. |
 | Admin (of a server) | Administrator | `Capabilities.Admin` | The server owner or a member with the Administrator permission. Opens Settings and Channels. |
-| Site admin | Administrator serwisu | `WEB_ADMIN_DISCORD_IDS` | A Letter operator: full access to every server, turns premium on and off. |
+| Site admin | Administrator serwisu | `WEB_ADMIN_DISCORD_IDS` | A TibiaLoot.com operator: full access to every server, turns premium on and off. |
 | Player | Gracz | `author_discord_id` | A Discord user who books. Stats group their reservations. |
 | Character | Postać | `experience.CharacterKey` | One Tibia character from an author text, compared as `lower(trim(name))`. |
 | World | Świat | `guilds_world.world_name` | The Tibia world of a server. The experience job reads its highscores. |
@@ -32,3 +32,4 @@ Polish column is the settled wording of `pl.json` (see
 | No data | Brak danych | `status = 'no_data'` | No experience figure: the character was outside the world top 1000 or not tracked. Never shown as 0. |
 | Booked hours | Zarezerwowane godziny | `stats.Totals.Seconds` | The length of the reservations, not measured play time. |
 | Loot Calculator | Kalkulator lootu | `lootcalc` | Splits a Tibia party hunt session into bank transfers. |
+| Party Hunt Analyser | Party Hunt Analyser (not translated; `z okna Party Hunt Analyser`) | `lootcalc.Parse` input | Tibia's in-game window whose copied text the Loot Calculator reads. |

@@ -163,7 +163,7 @@ func TestHandleLootCalculate_HtmxErrors(t *testing.T) {
 		text string
 		want string
 	}{
-		{name: "empty", text: "   ", want: "Paste the Party Hunt analyser text first."},
+		{name: "empty", text: "   ", want: "Paste the Party Hunt Analyser text first."},
 		{name: "no players", text: "Loot: 1\nBalance: 1", want: "No player found."},
 		{name: "missing fields", text: "Iscarlott\n    Loot: 0\n    Supplies: 414,235\n    Balance: -414,235\n", want: "Player “Iscarlott” has no Damage and Healing lines."},
 		{name: "malformed", text: "A\n    Balance: 1x\n", want: "Line 2 has a value that is not a number: “Balance: 1x”."},
@@ -278,9 +278,9 @@ func TestErrorText(t *testing.T) {
 	ctx := i18n.WithLocale(context.Background(), i18n.Match("pl"))
 
 	// when / then
-	assert.Equal(t, "Gracz „A” nie ma wierszy Loot, Damage i Healing. Wklej cały tekst analysera.",
+	assert.Equal(t, "Gracz „A” nie ma wierszy Loot, Damage i Healing. Wklej cały tekst z okna Party Hunt Analyser.",
 		errorText(ctx, &lootcalc.ParseError{Err: lootcalc.ErrMissingFields, Player: "A", Missing: []string{"Loot", "Damage", "Healing"}}))
-	assert.Equal(t, "Gracz „A” nie ma wierszy Healing. Wklej cały tekst analysera.",
+	assert.Equal(t, "Gracz „A” nie ma wierszy Healing. Wklej cały tekst z okna Party Hunt Analyser.",
 		errorText(ctx, &lootcalc.ParseError{Err: lootcalc.ErrMissingFields, Player: "A", Missing: []string{"Healing"}}))
 	assert.Contains(t, errorText(ctx, errors.New("other")), "Nie znaleziono graczy")
 }
@@ -321,14 +321,17 @@ func TestHandleLootCalculate_NewCalculationReturnsToTheStartPage(t *testing.T) {
 
 			// then
 			require.Equal(t, http.StatusOK, rec.Code)
-			assert.Contains(t, rec.Body.String(), want+` class="inline-flex min-h-11`)
+			assert.Contains(t, rec.Body.String(), want+` data-loot-new`)
 		})
 	}
 }
 
 func TestHandleLootCalculator_PageDefaults(t *testing.T) {
+	// given
+	h := anonymous(t)
+
 	// when
-	rec := webtest.Serve(anonymous(t), webtest.Get("/tools/loot-calculator", nil))
+	rec := webtest.Serve(h, webtest.Get("/tools/loot-calculator", nil))
 
 	// then
 	body := rec.Body.String()

@@ -31,8 +31,6 @@ templ LootCalculator(baseURL string, v lootView, nav web.Nav) {
 	}
 }
 
-// calculator is the working tool without a page around it: the main column, the
-// history and the script. The landing page embeds it too (LandingCalculator).
 templ calculator(v lootView) {
 	<div class="grid items-start gap-6 lg:grid-cols-3">
 		@lootMain(v)
@@ -103,7 +101,6 @@ templ pasteForm(v lootView) {
 	</form>
 }
 
-// result is the split. from is where "New calculation" goes back to.
 templ result(r *resultView, from string) {
 	<div id="loot-main" class="flex min-w-0 flex-col gap-5 lg:col-span-2">
 		<dl class="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -115,7 +112,7 @@ templ result(r *resultView, from string) {
 		<section aria-labelledby="loot-transfers-heading" class={ cardClass, "flex flex-col gap-3.5 p-5 sm:p-6" }>
 			<div class="flex items-center justify-between gap-4">
 				<h2 id="loot-transfers-heading" tabindex="-1" data-loot-focus class="font-display text-lg font-semibold text-zone-50 focus:outline-none">{ i18n.T(ctx, "tools.loot.transfers.heading") }</h2>
-				<a href={ templ.SafeURL(from) } class="inline-flex min-h-11 items-center text-[13px] font-semibold text-signal-bright transition hover:text-signal">{ i18n.T(ctx, "tools.loot.transfers.new") }</a>
+				<a href={ templ.SafeURL(from) } data-loot-new class="inline-flex min-h-11 items-center text-[13px] font-semibold text-signal-bright transition hover:text-signal">{ i18n.T(ctx, "tools.loot.transfers.new") }</a>
 			</div>
 			if len(r.Split.Transfers) == 0 {
 				<p class="rounded-md border border-zone-800 bg-zone-850 px-3.5 py-3 text-sm text-zone-300">{ i18n.T(ctx, "tools.loot.transfers.none") }</p>

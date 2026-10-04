@@ -44,7 +44,6 @@ func TestDashboard_PicksAServerWithoutARememberedOne(t *testing.T) {
 	f := newAuthFixture(t)
 	cookie := f.signInUser(t, &webuser.User{DiscordUserID: "u1", Username: "nyx"},
 		guild("g1", "Free", false, viewerCaps), guild("g2", "Paid", true, viewerCaps))
-	f.access.EXPECT().IsSiteAdmin("u1").Return(false).Maybe()
 
 	// when
 	rec := f.do(htmlGet("/dashboard"), cookie)
@@ -73,6 +72,7 @@ func TestGuildPage_RemembersTheServerOnlyOnChange(t *testing.T) {
 	// then
 	assert.Equal(t, http.StatusOK, changed.Code)
 	assert.Equal(t, http.StatusOK, unchanged.Code)
+	f.auth.AssertNotCalled(t, "SetDefaultGuild", mock.Anything, "u2", mock.Anything)
 }
 
 func TestGuildPage_RendersWhenRememberingFails(t *testing.T) {

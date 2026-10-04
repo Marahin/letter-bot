@@ -85,6 +85,5 @@
     true,
   );
 
-  // A saved reservation (HX-Trigger: reservation-saved) closes its dialog.
   document.addEventListener("reservation-saved", closeOpenModals);
 })();
