@@ -1,7 +1,8 @@
-# Letter web panel
+# TibiaLoot.com web panel (`letter-web`)
 
-The web panel is the `cmd/web` binary (`letter-web`). It shares the PostgreSQL
-database with the bot.
+The web panel is the `cmd/web` binary (`letter-web`), served as TibiaLoot.com.
+The Discord bot keeps the name Letter. The panel shares the PostgreSQL database
+with the bot.
 
 ## Discord application
 
@@ -9,7 +10,7 @@ The web uses the OAuth2 settings of the same Discord application as the bot.
 
 1. Open the Discord developer portal, then the application, then **OAuth2**.
 2. Add this redirect URL: `<WEB_BASE_URL>/auth/callback`. For example,
-   `https://letter.tibialoot.com/auth/callback`. For local work, add
+   `https://tibialoot.com/auth/callback`. For local work, add
    `http://localhost:8080/auth/callback`.
 3. Copy the client ID and the client secret into `DISCORD_CLIENT_ID` and
    `DISCORD_CLIENT_SECRET`. The web does not start without them.
@@ -35,6 +36,10 @@ out and sends them to the login page.
   404 to everyone else.
 - On a server without premium, the feature pages show "Premium required".
   Settings and Channels work without premium, so an admin can prepare the server.
+- The server a user opens last is their default (`web_users.default_guild_id`),
+  so the sidebar keeps it selected on every page and after the next sign-in. It
+  is written only when it changes. Without a default (or when the user lost
+  access to it), the sidebar picks the first premium server, else the first.
 
 ## Settings and Channels
 
@@ -201,8 +206,10 @@ The test uses the guild id `it-stats-guild` and deletes its rows after.
 
 ## Loot Calculator
 
-`/tools/loot-calculator` is public. It uses the top bar when you are signed out
-and the sidebar when you are signed in. The logic is a port of the tibialoot.com
+`/tools/loot-calculator` is public, and the landing page (`/`) opens with the
+same calculator ready to use (`toolshttp.LandingCalculator`, handed to the shell
+by `Server.WithLandingTool`). It uses the top bar when you are signed out and the
+sidebar when you are signed in. The logic is a port of the tibialoot.com
 calculator (`tibiadata-front/components/Calculator.vue`) in
 `internal/core/lootcalc`:
 
@@ -230,7 +237,7 @@ The web reads these environment variables (`.env.sample` has examples):
 | Variable | Required | Default | Use |
 |---|---|---|---|
 | `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_NAME`, `DATABASE_SSL` | yes | | The shared PostgreSQL database (the same values as the bot). |
-| `WEB_BASE_URL` | yes | | The public address, for example `https://letter.tibialoot.com`. It makes the OAuth redirect URL. With `https`, the session cookie is `Secure`. |
+| `WEB_BASE_URL` | yes | | The public address, for example `https://tibialoot.com`. It makes the OAuth redirect URL. With `https`, the session cookie is `Secure`. |
 | `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` | yes | | The OAuth2 credentials of the bot's Discord application. The web does not start without them. |
 | `WEB_ADDR` | no | `:8080` | The address of the web server. |
 | `WEB_METRICS_ADDR` | no | `:3005` | `/metrics`, `/livez`, `/readyz`. |
@@ -313,7 +320,7 @@ Add the new keys to the existing secret `spot-assistant-web` (it already holds
 
 - `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` (Discord developer portal,
   OAuth2 page of the bot application)
-- `WEB_BASE_URL` (for example `https://letter.tibialoot.com`). The bot reads
+- `WEB_BASE_URL` (for example `https://tibialoot.com`). The bot reads
   it too, for its "not premium" reply.
 - `WEB_ADMIN_DISCORD_IDS` (the site admins)
 
@@ -371,7 +378,7 @@ metadata:
   namespace: refugees
 spec:
   rules:
-    - host: letter.tibialoot.com
+    - host: tibialoot.com
       http:
         paths:
           - path: /
@@ -381,7 +388,7 @@ spec:
                 name: letter-web
                 port: { name: http }
   tls:
-    - hosts: [letter.tibialoot.com]
+    - hosts: [tibialoot.com]
       secretName: letter-web-tls
 ```
 
@@ -395,7 +402,7 @@ request two refreshes in 5 minutes.
 On the bot's application:
 
 1. **OAuth2 > Redirects**: add `<WEB_BASE_URL>/auth/callback`, for example
-   `https://letter.tibialoot.com/auth/callback`.
+   `https://tibialoot.com/auth/callback`.
 2. The sign-in scopes are `identify guilds guilds.members.read`. They need no
    approval.
 3. **Bot > Privileged Gateway Intents**: no change. The bot asks for no

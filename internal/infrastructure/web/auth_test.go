@@ -56,7 +56,15 @@ func newAuthFixture(t *testing.T) *authFixture {
 // signIn stores a session for userID and returns its cookie.
 func (f *authFixture) signIn(t *testing.T, userID string, servers ...access.GuildAccess) *http.Cookie {
 	t.Helper()
-	f.auth.EXPECT().User(mock.Anything, userID).Return(&webuser.User{DiscordUserID: userID, Username: "nyx", GlobalName: "Quiet Nyx"}, nil).Maybe()
+	f.auth.EXPECT().SetDefaultGuild(mock.Anything, userID, mock.Anything).Return(nil).Maybe()
+	return f.signInUser(t, &webuser.User{DiscordUserID: userID, Username: "nyx", GlobalName: "Quiet Nyx"}, servers...)
+}
+
+// signInUser is signIn for a given user row, with no SetDefaultGuild expectation.
+func (f *authFixture) signInUser(t *testing.T, user *webuser.User, servers ...access.GuildAccess) *http.Cookie {
+	t.Helper()
+	userID := user.DiscordUserID
+	f.auth.EXPECT().User(mock.Anything, userID).Return(user, nil).Maybe()
 	f.access.EXPECT().IsSiteAdmin(userID).Return(userID == "site-admin").Maybe()
 	f.access.EXPECT().AccessibleGuilds(mock.Anything, userID).Return(servers, nil).Maybe()
 	ctx, err := f.srv.sessions.Load(context.Background(), "")
@@ -581,12 +589,10 @@ func TestNav_SignedInSidebar(t *testing.T) {
 	// given
 	f := newAuthFixture(t)
 	celesta := guild("g1", "Celesta Community", true, reserveCaps)
-	cookie := f.signIn(t, "site-admin", celesta, guild("g2", "Other", true, viewerCaps))
-	exact := guild("g1", "Celesta Community", true, adminCaps)
-	f.access.EXPECT().Access(mock.Anything, "site-admin", "g1").Return(&exact, nil)
+	user := &webuser.User{DiscordUserID: "site-admin", Username: "nyx", GlobalName: "Quiet Nyx", DefaultGuildID: "g1"}
+	cookie := f.signInUser(t, user, guild("g2", "Other", true, viewerCaps), celesta)
 
-	// when: a guild page remembers the server, and the dashboard keeps it selected
-	_ = f.do(htmlGet("/servers/g1/premium-only"), cookie)
+	// when: the dashboard keeps the remembered server selected
 	rec := f.do(htmlGet("/dashboard"), cookie)
 
 	// then

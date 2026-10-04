@@ -4,6 +4,8 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/a-h/templ"
+
 	"spot-assistant/internal/core/lootcalc"
 	"spot-assistant/internal/infrastructure/web"
 )
@@ -18,7 +20,13 @@ type Handlers struct {
 func New(d *web.Deps) *Handlers { return &Handlers{D: d} }
 
 func (h *Handlers) HandleLootCalculator(w http.ResponseWriter, r *http.Request) {
-	h.D.Render(w, r, LootCalculator(h.D.Cfg.BaseURL, lootView{}, h.nav(r)))
+	h.D.Render(w, r, LootCalculator(h.D.Cfg.BaseURL, lootView{Autofocus: true}, h.nav(r)))
+}
+
+// LandingCalculator is the empty calculator the landing page opens with. Its form
+// posts to the calculator route, which htmx swaps back in place.
+func LandingCalculator() templ.Component {
+	return calculator(lootView{From: landingFrom, Rows: landingRows, Autofocus: true})
 }
 
 // HandleLootCalculate splits the pasted session. htmx gets the main column
@@ -37,6 +45,7 @@ func (h *Handlers) HandleLootCalculate(w http.ResponseWriter, r *http.Request) {
 	} else {
 		v = calculate(r.PostFormValue("session"))
 	}
+	v.From = startPage(r.PostFormValue("from"))
 
 	if web.IsHTMX(r) {
 		h.D.Render(w, r, lootMain(v))

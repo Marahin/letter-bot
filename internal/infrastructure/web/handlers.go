@@ -13,7 +13,7 @@ import (
 
 func (s *Server) handleLanding(w http.ResponseWriter, r *http.Request) {
 	d := s.deps()
-	d.Render(w, r, Landing(s.cfg.BaseURL, d.InviteURLGeneric(), d.MarketingNav(r)))
+	d.Render(w, r, Landing(s.cfg.BaseURL, d.InviteURLGeneric(), d.MarketingNav(r), s.landingTool))
 }
 
 // handleNotFound serves the branded 404 for any path no route claimed. Registered
@@ -105,7 +105,7 @@ func (s *Server) handleCallback(w http.ResponseWriter, r *http.Request) {
 
 // loginDestination is where a sign-in lands: the validated return path, else the dashboard.
 func loginDestination(to string) string {
-	if to == "" || to == "/" {
+	if to == "" || to == "/" || !isLocalURL(to) {
 		return "/dashboard"
 	}
 	return to
@@ -137,7 +137,7 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		d.accessError(w, r, err)
 		return
 	}
-	nav := d.NavFromAccess(user, list, rememberedGuildID(d.sessionString(r.Context(), sessionGuildKey), list))
+	nav := d.NavFromAccess(user, list, selectedGuildID(user, list))
 	nav.ReturnTo = r.URL.RequestURI()
 	d.Render(w, r, Dashboard(s.cfg.BaseURL, user, list, d.InviteURLGeneric(), nav))
 }

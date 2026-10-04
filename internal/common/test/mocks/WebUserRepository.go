@@ -246,6 +246,69 @@ func (_c *MockWebUserRepository_SaveToken_Call) RunAndReturn(run func(ctx contex
 	return _c
 }
 
+// SetDefaultGuild provides a mock function for the type MockWebUserRepository
+func (_mock *MockWebUserRepository) SetDefaultGuild(ctx context.Context, discordUserID string, guildID string) error {
+	ret := _mock.Called(ctx, discordUserID, guildID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetDefaultGuild")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
+		r0 = returnFunc(ctx, discordUserID, guildID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockWebUserRepository_SetDefaultGuild_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetDefaultGuild'
+type MockWebUserRepository_SetDefaultGuild_Call struct {
+	*mock.Call
+}
+
+// SetDefaultGuild is a helper method to define mock.On call
+//   - ctx context.Context
+//   - discordUserID string
+//   - guildID string
+func (_e *MockWebUserRepository_Expecter) SetDefaultGuild(ctx any, discordUserID any, guildID any) *MockWebUserRepository_SetDefaultGuild_Call {
+	return &MockWebUserRepository_SetDefaultGuild_Call{Call: _e.mock.On("SetDefaultGuild", ctx, discordUserID, guildID)}
+}
+
+func (_c *MockWebUserRepository_SetDefaultGuild_Call) Run(run func(ctx context.Context, discordUserID string, guildID string)) *MockWebUserRepository_SetDefaultGuild_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockWebUserRepository_SetDefaultGuild_Call) Return(err error) *MockWebUserRepository_SetDefaultGuild_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockWebUserRepository_SetDefaultGuild_Call) RunAndReturn(run func(ctx context.Context, discordUserID string, guildID string) error) *MockWebUserRepository_SetDefaultGuild_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Upsert provides a mock function for the type MockWebUserRepository
 func (_mock *MockWebUserRepository) Upsert(ctx context.Context, user webuser.User) (*webuser.User, error) {
 	ret := _mock.Called(ctx, user)

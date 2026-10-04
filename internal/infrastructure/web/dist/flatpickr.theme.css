@@ -132,3 +132,14 @@ span.flatpickr-weekday {
 .numInputWrapper span:hover {
   background: hsla(0, 0%, 100%, 0.05);
 }
+
+/* A dialog's calendar is position:fixed (datepicker.js). The <dialog> must not get
+   transform, filter, contain or will-change: any of them makes it the containing
+   block of fixed children, and the calendar would be clipped again. */
+dialog .flatpickr-calendar {
+  z-index: 50;
+}
+dialog .flatpickr-calendar:before,
+dialog .flatpickr-calendar:after {
+  display: none;
+}

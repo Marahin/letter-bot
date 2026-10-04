@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"net/url"
 	"path"
-	"strings"
 
 	"spot-assistant/internal/infrastructure/i18n"
 )
@@ -61,16 +60,11 @@ func (d *Deps) SetLanguage(w http.ResponseWriter, code string) i18n.Locale {
 // survives when the path validates, minus ?lang=, which would override the pick.
 func (d *Deps) safeReturnTo(to string) string {
 	const home = "/"
-	if d.Routes == nil || to == "" || !strings.HasPrefix(to, "/") || strings.HasPrefix(to, "//") {
-		return home
-	}
-	// A backslash is "/" to some browsers when they resolve Location, so "/\evil"
-	// would escape the origin check above.
-	if strings.Contains(to, `\`) {
+	if d.Routes == nil || !isLocalURL(to) {
 		return home
 	}
 	u, err := url.Parse(to)
-	if err != nil || u.Scheme != "" || u.Host != "" || u.Opaque != "" {
+	if err != nil {
 		return home
 	}
 	if !d.isPage(u.Path) {

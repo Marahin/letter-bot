@@ -2,58 +2,75 @@ package web
 
 import "spot-assistant/internal/infrastructure/i18n"
 
-// Landing is the marketing home page: hero, the server feature grid, the no-login
-// tool cards and a closing CTA. It renders inside the marketing shell (top bar, no
-// sidebar) for both anonymous and signed-in visitors.
-templ Landing(baseURL, inviteURL string, nav Nav) {
+// Landing is the home page. The Loot Calculator, the most used feature, opens
+// ready to use at the top; the Letter bot's features and CTAs follow. It renders
+// inside the marketing shell (top bar, no sidebar) for both anonymous and
+// signed-in visitors. tool is the embedded calculator, nil for a link instead.
+templ Landing(baseURL, inviteURL string, nav Nav, tool templ.Component) {
 	@Layout(i18n.T(ctx, "landing.meta.title"), i18n.T(ctx, "landing.meta.description"), baseURL, "/", nav) {
-		@landingHero(inviteURL)
-		@landingFeaturesSection(landingFeatures(ctx))
-		@landingToolsSection(landingTools(ctx))
+		@landingCalculator(tool)
+		@landingFeaturesSection(inviteURL, landingFeatures(ctx))
 		@landingBottomCTA(inviteURL)
 	}
 }
 
-// landingHero is the top hero: headline, sub-copy and the two primary CTAs.
-templ landingHero(inviteURL string) {
-	<section class="mx-auto max-w-[1440px] px-6 pb-16 pt-20 text-center sm:px-8">
-		<h1 class="mx-auto max-w-4xl font-display text-4xl font-bold leading-[1.05] -tracking-[0.03em] text-zone-50 sm:text-5xl md:text-6xl">
-			{ i18n.T(ctx, "landing.hero.line1") }<br/>
-			{ i18n.T(ctx, "landing.hero.line2") }
-		</h1>
-		<p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-zone-300">
-			{ i18n.T(ctx, "landing.hero.sub") }
-		</p>
-		<div class="mt-9 flex flex-wrap justify-center gap-3.5">
-			<a href={ templ.SafeURL(inviteURL) } class="flex items-center gap-2.5 rounded-lg bg-signal px-6 py-3.5 text-[15px] font-semibold text-zone-950 shadow-accent transition hover:bg-signal-bright">
-				@discordGlyph()
-				{ i18n.T(ctx, "landing.cta.add_bot") }
-			</a>
-			<a href="/login" class="flex items-center gap-2.5 rounded-lg border border-signal/40 px-6 py-3.5 text-[15px] font-semibold text-signal-bright transition hover:border-signal hover:bg-signal/[0.08]">
-				{ i18n.T(ctx, "landing.cta.log_in") }
-			</a>
+// landingCalculator is the hero: a short headline over the working calculator.
+templ landingCalculator(tool templ.Component) {
+	<section aria-labelledby="landing-calculator-heading" class="mx-auto max-w-6xl px-6 pb-16 pt-8 sm:pt-10">
+		<div class="mb-6 flex flex-col gap-2">
+			<span class="flex flex-wrap items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zone-300">
+				{ i18n.T(ctx, "landing.calculator.eyebrow") }
+				@noLoginBadge()
+			</span>
+			<h1 id="landing-calculator-heading" class="font-display text-3xl font-bold leading-tight -tracking-[0.03em] text-zone-50 sm:text-4xl">{ i18n.T(ctx, "landing.calculator.heading") }</h1>
+			<p class="max-w-2xl text-[15px] leading-relaxed text-zone-300">{ i18n.T(ctx, "landing.calculator.sub") }</p>
 		</div>
+		if tool != nil {
+			@tool
+		} else {
+			<a href={ templ.SafeURL(lootCalculatorPath) } class="group flex items-center gap-4 rounded-xl border border-zone-800 bg-zone-900 p-5 transition hover:border-signal/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/60">
+				<div class="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-signal/25 bg-signal/10 text-signal-bright">
+					@toolGlyph("calculator", "h-5 w-5")
+				</div>
+				<span class="flex items-center gap-1.5 text-[15px] font-semibold text-signal-bright">{ i18n.T(ctx, "landing.cta.open_loot") } <span aria-hidden="true">→</span></span>
+			</a>
+		}
 	</section>
 }
 
-// landingFeaturesSection is the six-card feature grid.
-templ landingFeaturesSection(features []serverFeature) {
-	<section id="features" class="mx-auto max-w-[1440px] scroll-mt-20 px-6 pb-10 pt-6 sm:px-8">
-		<div class="mb-11 text-center">
-			<div class="mb-3.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zone-400">{ i18n.T(ctx, "landing.features.eyebrow") }</div>
-			<h2 class="font-display text-3xl font-bold -tracking-[0.02em] text-zone-50 sm:text-4xl">{ i18n.T(ctx, "landing.features.heading") }</h2>
-			<p class="mx-auto mt-3.5 max-w-xl text-zone-300">{ i18n.T(ctx, "landing.features.sub") }</p>
-		</div>
-		<div class="grid gap-4 md:grid-cols-3">
-			for _, f := range features {
-				<div class="rounded-xl border border-zone-800 bg-zone-900 p-6">
-					<div class="mb-3.5 grid h-9 w-9 place-items-center rounded-lg border border-zone-700 bg-zone-850 text-zone-300">
-						@featureGlyph(f.Icon)
-					</div>
-					<h3 class="font-display text-[17px] font-bold text-zone-50">{ f.Name }</h3>
-					<p class="mt-1.5 text-[13.5px] leading-relaxed text-zone-300">{ f.Desc }</p>
+// landingFeaturesSection introduces the Letter bot: headline, the invite and
+// sign-in CTAs, and the six-card feature grid.
+templ landingFeaturesSection(inviteURL string, features []serverFeature) {
+	<section id="features" class="scroll-mt-20 border-t border-zone-800 bg-zone-900/40">
+		<div class="mx-auto max-w-[1440px] px-6 pb-10 pt-16 sm:px-8">
+			<div class="mb-11 text-center">
+				<div class="mb-3.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zone-300">{ i18n.T(ctx, "landing.features.eyebrow") }</div>
+				<h2 class="mx-auto max-w-3xl font-display text-3xl font-bold leading-[1.1] -tracking-[0.02em] text-zone-50 sm:text-4xl">
+					{ i18n.T(ctx, "landing.features.line1") }<br/>
+					{ i18n.T(ctx, "landing.features.line2") }
+				</h2>
+				<p class="mx-auto mt-4 max-w-xl text-zone-300">{ i18n.T(ctx, "landing.features.sub") }</p>
+				<div class="mt-8 flex flex-wrap justify-center gap-3.5">
+					<a href={ templ.SafeURL(inviteURL) } class="flex min-h-11 items-center gap-2.5 rounded-lg bg-signal px-6 py-3 text-[15px] font-semibold text-zone-950 shadow-accent transition hover:bg-signal-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zone-950">
+						@discordGlyph()
+						{ i18n.T(ctx, "landing.cta.add_bot") }
+					</a>
+					<a href="/login" class="flex min-h-11 items-center gap-2.5 rounded-lg border border-signal/40 px-6 py-3 text-[15px] font-semibold text-signal-bright transition hover:border-signal hover:bg-signal/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/60">
+						{ i18n.T(ctx, "landing.cta.log_in") }
+					</a>
 				</div>
-			}
+			</div>
+			<div class="grid gap-4 md:grid-cols-3">
+				for _, f := range features {
+					<div class="rounded-xl border border-zone-800 bg-zone-900 p-6">
+						<div class="mb-3.5 grid h-9 w-9 place-items-center rounded-lg border border-zone-700 bg-zone-850 text-zone-300">
+							@featureGlyph(f.Icon)
+						</div>
+						<h3 class="font-display text-[17px] font-bold text-zone-50">{ f.Name }</h3>
+						<p class="mt-1.5 text-[13.5px] leading-relaxed text-zone-300">{ f.Desc }</p>
+					</div>
+				}
+			</div>
 		</div>
 	</section>
 }
@@ -76,35 +93,6 @@ templ featureGlyph(icon string) {
 	}
 }
 
-// landingToolsSection is the no-login tool cards.
-templ landingToolsSection(tools []toolCard) {
-	<section id="tools" class="mx-auto max-w-[1440px] px-6 pb-6 pt-10 sm:px-8">
-		<div class="mb-11 text-center">
-			<div class="mb-3.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zone-400">{ i18n.T(ctx, "landing.tools.eyebrow") }</div>
-			<h2 class="font-display text-3xl font-bold -tracking-[0.02em] text-zone-50 sm:text-4xl">{ i18n.T(ctx, "landing.tools.heading") }</h2>
-			<p class="mx-auto mt-3.5 max-w-xl text-zone-300">{ i18n.T(ctx, "landing.tools.sub") }</p>
-		</div>
-		<div class="mx-auto grid max-w-md gap-5">
-			for _, t := range tools {
-				@toolCardView(t)
-			}
-		</div>
-	</section>
-}
-
-// toolCardView is one no-login tool card.
-templ toolCardView(t toolCard) {
-	<a href={ templ.SafeURL(t.Href) } class="group flex items-center gap-4 rounded-xl border border-zone-800 bg-zone-900 p-5 transition hover:border-signal/50">
-		<div class="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-signal/25 bg-signal/10 text-signal-bright">
-			@toolGlyph(t.Icon, "h-5 w-5")
-		</div>
-		<div class="min-w-0 flex-1">
-			<h3 class="font-display text-[17px] font-bold text-zone-50">{ t.Name }</h3>
-			<div class="mt-1 flex items-center gap-1.5 text-[13px] font-semibold text-signal-bright">{ t.CTA } <span aria-hidden="true">→</span></div>
-		</div>
-	</a>
-}
-
 // landingBottomCTA is the gradient closing call to action.
 templ landingBottomCTA(inviteURL string) {
 	<section class="mx-auto max-w-[1440px] px-6 pb-20 pt-16 sm:px-8">
@@ -116,9 +104,8 @@ templ landingBottomCTA(inviteURL string) {
 					@discordGlyph()
 					{ i18n.T(ctx, "landing.cta.add_bot") }
 				</a>
-				<a href={ templ.SafeURL(lootCalculatorPath) } class="flex items-center gap-2.5 rounded-lg border border-signal/40 px-7 py-3.5 text-[15px] font-semibold text-signal-bright transition hover:border-signal hover:bg-signal/[0.08]">
-					{ i18n.T(ctx, "landing.cta.open_loot") }
-					@noLoginBadge()
+				<a href="/login" class="flex items-center gap-2.5 rounded-lg border border-signal/40 px-7 py-3.5 text-[15px] font-semibold text-signal-bright transition hover:border-signal hover:bg-signal/[0.08]">
+					{ i18n.T(ctx, "landing.cta.log_in") }
 				</a>
 			</div>
 			<p class="mx-auto mt-7 max-w-lg text-sm text-zone-400">{ i18n.T(ctx, "landing.bottom.premium_note") }</p>
@@ -126,7 +113,7 @@ templ landingBottomCTA(inviteURL string) {
 	</section>
 }
 
-// noLoginBadge is the small "NO LOGIN" pill on the public tool CTAs.
+// noLoginBadge is the small "NO LOGIN" pill beside the public calculator.
 templ noLoginBadge() {
-	<span class="rounded bg-zone-950/25 px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider">{ i18n.T(ctx, "landing.badge.no_login") }</span>
+	<span class="rounded border border-signal/30 bg-signal/10 px-1.5 py-0.5 text-signal-bright font-mono text-[10px] font-bold uppercase tracking-wider">{ i18n.T(ctx, "landing.badge.no_login") }</span>
 }

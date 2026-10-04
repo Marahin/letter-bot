@@ -14,5 +14,5 @@ func TestNotice_CarriesVersionAndName(t *testing.T) {
 	got := branding.Notice()
 
 	// then
-	assert.Equal(t, "Version: "+version.Version+" · Letter by tibialoot.com", got)
+	assert.Equal(t, "Version: "+version.Version+" · TibiaLoot.com", got)
 }

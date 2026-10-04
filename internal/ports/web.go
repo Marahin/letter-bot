@@ -34,6 +34,8 @@ type AuthService interface {
 	User(ctx context.Context, userID string) (*webuser.User, error)
 	// Logout drops the user's stored OAuth token.
 	Logout(ctx context.Context, userID string) error
+	// SetDefaultGuild remembers the server the panel opens on.
+	SetDefaultGuild(ctx context.Context, userID, guildID string) error
 }
 
 // GuildAccessService decides which stored guilds a web user may open, and with which capabilities.

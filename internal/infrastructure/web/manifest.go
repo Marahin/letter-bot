@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"net/http"
 	"path"
+	"slices"
 	"time"
 )
 
@@ -85,10 +86,7 @@ func stampManifestIcons(raw []byte) ([]byte, error) {
 		if open < 0 { // not an array: leave the document alone
 			return raw, nil
 		}
-		out := make([]byte, 0, len(raw)+len(stamped))
-		out = append(out, raw[:afterKey+open]...)
-		out = append(out, stamped...)
-		return append(out, raw[end:]...), nil
+		return slices.Concat(raw[:afterKey+open], stamped, raw[end:]), nil
 	}
 	return raw, nil // no icons to stamp
 }

@@ -68,7 +68,7 @@ func TestHandleLootCalculator_SignedOutTopBar(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	body := rec.Body.String()
 	for _, want := range []string{
-		"<title>Loot Calculator - Letter</title>", "Loot Calculator</h1>",
+		"<title>Loot Calculator - TibiaLoot.com</title>", "Loot Calculator</h1>",
 		`id="loot-main"`, `hx-post="/tools/loot-calculator"`, `name="session"`,
 		`aria-describedby="loot-session-help"`, "Calculate split",
 		`data-loot-history`, "Stored in this browser only.",
@@ -283,4 +283,56 @@ func TestErrorText(t *testing.T) {
 	assert.Equal(t, "Gracz „A” nie ma wierszy Healing. Wklej cały tekst analysera.",
 		errorText(ctx, &lootcalc.ParseError{Err: lootcalc.ErrMissingFields, Player: "A", Missing: []string{"Healing"}}))
 	assert.Contains(t, errorText(ctx, errors.New("other")), "Nie znaleziono graczy")
+}
+
+func TestLandingCalculator_StartsFromTheLandingPage(t *testing.T) {
+	// given
+	var out strings.Builder
+
+	// when
+	err := LandingCalculator().Render(context.Background(), &out)
+
+	// then
+	require.NoError(t, err)
+	body := out.String()
+	for _, want := range []string{
+		`id="loot-main"`, `hx-post="/tools/loot-calculator"`,
+		`name="from" value="/"`, `rows="10"`, "data-loot-autofocus",
+		`data-loot-from="/"`, "/assets/loot-calculator.js",
+	} {
+		assert.Contains(t, body, want)
+	}
+}
+
+func TestHandleLootCalculate_NewCalculationReturnsToTheStartPage(t *testing.T) {
+	cases := map[string]string{
+		"/":                      `href="/"`,
+		"/tools/loot-calculator": `href="/tools/loot-calculator"`,
+		"//evil.example":         `href="/tools/loot-calculator"`,
+		"":                       `href="/tools/loot-calculator"`,
+	}
+	for from, want := range cases {
+		t.Run(from, func(t *testing.T) {
+			// given
+			h := anonymous(t)
+
+			// when
+			rec := webtest.Serve(h, htmx(webtest.Post("/tools/loot-calculator", url.Values{"session": {sample}, "from": {from}}, nil)))
+
+			// then
+			require.Equal(t, http.StatusOK, rec.Code)
+			assert.Contains(t, rec.Body.String(), want+` class="inline-flex min-h-11`)
+		})
+	}
+}
+
+func TestHandleLootCalculator_PageDefaults(t *testing.T) {
+	// when
+	rec := webtest.Serve(anonymous(t), webtest.Get("/tools/loot-calculator", nil))
+
+	// then
+	body := rec.Body.String()
+	assert.Contains(t, body, `rows="17"`)
+	assert.Contains(t, body, `name="from" value="/tools/loot-calculator"`)
+	assert.Contains(t, body, "data-loot-autofocus")
 }

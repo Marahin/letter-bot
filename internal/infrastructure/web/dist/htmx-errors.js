@@ -39,7 +39,7 @@
     show(plainBody(e.detail && e.detail.xhr) || t("shell.toast.error", "Something went wrong. Try again."));
   });
   document.addEventListener("htmx:sendError", function () {
-    show(t("shell.toast.offline", "Could not reach Letter. Check your connection and try again."));
+    show(t("shell.toast.offline", "Could not reach TibiaLoot.com. Check your connection and try again."));
   });
   document.addEventListener("click", function (e) {
     if (e.target && e.target.closest && e.target.closest("#letter-toast")) hide();

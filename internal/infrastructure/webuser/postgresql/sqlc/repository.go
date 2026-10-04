@@ -29,12 +29,13 @@ func (r *WebUserRepository) Upsert(ctx context.Context, user webuser.User) (*web
 	}
 
 	return &webuser.User{
-		DiscordUserID: res.DiscordUserID,
-		Username:      res.Username,
-		GlobalName:    res.GlobalName,
-		Avatar:        res.Avatar,
-		CreatedAt:     res.CreatedAt.Time,
-		UpdatedAt:     res.UpdatedAt.Time,
+		DiscordUserID:  res.DiscordUserID,
+		Username:       res.Username,
+		GlobalName:     res.GlobalName,
+		Avatar:         res.Avatar,
+		DefaultGuildID: res.DefaultGuildID,
+		CreatedAt:      res.CreatedAt.Time,
+		UpdatedAt:      res.UpdatedAt.Time,
 	}, nil
 }
 
@@ -45,12 +46,13 @@ func (r *WebUserRepository) Get(ctx context.Context, discordUserID string) (*web
 	}
 
 	return &webuser.User{
-		DiscordUserID: res.DiscordUserID,
-		Username:      res.Username,
-		GlobalName:    res.GlobalName,
-		Avatar:        res.Avatar,
-		CreatedAt:     res.CreatedAt.Time,
-		UpdatedAt:     res.UpdatedAt.Time,
+		DiscordUserID:  res.DiscordUserID,
+		Username:       res.Username,
+		GlobalName:     res.GlobalName,
+		Avatar:         res.Avatar,
+		DefaultGuildID: res.DefaultGuildID,
+		CreatedAt:      res.CreatedAt.Time,
+		UpdatedAt:      res.UpdatedAt.Time,
 	}, nil
 }
 
@@ -81,4 +83,11 @@ func (r *WebUserRepository) AccessToken(ctx context.Context, discordUserID strin
 	}
 
 	return token, nil
+}
+
+func (r *WebUserRepository) SetDefaultGuild(ctx context.Context, discordUserID, guildID string) error {
+	return postgresql.RowsAffected(r.q.SetWebUserDefaultGuild(ctx, SetWebUserDefaultGuildParams{
+		DefaultGuildID: guildID,
+		DiscordUserID:  discordUserID,
+	}))
 }

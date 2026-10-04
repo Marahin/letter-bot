@@ -1,6 +1,7 @@
 # Letter vocabulary
 
-The words the web panel, the bot and the code use for the same things. The
+The words the web panel (TibiaLoot.com), the bot (Letter) and the code use for
+the same things. The
 Polish column is the settled wording of `pl.json` (see
 `internal/infrastructure/i18n/locales/README.md`).
 

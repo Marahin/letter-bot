@@ -1,6 +1,6 @@
 {
-  "name": "Letter",
-  "short_name": "Letter",
+  "name": "TibiaLoot.com",
+  "short_name": "TibiaLoot",
   "icons": [
     { "src": "/assets/favicon-192.png", "type": "image/png", "sizes": "192x192" },
     { "src": "/assets/favicon-512.png", "type": "image/png", "sizes": "512x512" }

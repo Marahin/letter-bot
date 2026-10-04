@@ -10,7 +10,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Letter (SC:X Manager design), a warm-leaning near-black tactical surface system.
+        // TibiaLoot.com (SC:X Manager design), a warm-leaning near-black tactical surface system.
         // The "zone" scale is kept as the token name so existing markup stays
         // compact; the values are the design system's neutral ramp. Elevation
         // steps up only slightly (#0A0A0B → #111113 → #17171A) and reads through

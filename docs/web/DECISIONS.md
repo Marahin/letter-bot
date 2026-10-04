@@ -225,26 +225,33 @@ These items of the request were unclear or had a cost. Each has a decision.
 46. **A failed htmx request shows a toast** (`htmx-errors.js`): the plain-text
     error body the handler sent, or a generic localized message, in the
     scxmanager toast style. htmx itself swaps nothing on a 4xx or 5xx.
+47. **The site is TibiaLoot.com, the bot is Letter.** The web panel is branded
+    TibiaLoot.com (`branding.Name`) on `https://tibialoot.com`, and every footer
+    says "Not affiliated with CipSoft." The bot, the Go packages, the
+    `letter-web` binary and image, the `letter-` CSS prefix and the storage keys
+    keep the Letter name.
+48. **The landing page opens with the Loot Calculator**, the most used feature.
+    The bot's features and invite follow below it.
+49. **The selected server is stored per user** (`web_users.default_guild_id`), as
+    in scxmanager, not in the session: it survives sign-out and a new browser.
+    Without one, the first premium server is selected, else the first server.
 
 ## Open questions for the owner
 
-1. **Host name of the web.** The docs assume `https://letter.tibialoot.com`.
-   Choose the host, add its DNS record and TLS, and register
-   `<host>/auth/callback` in the Discord portal.
-2. **Site admins.** Which Discord user ids go into `WEB_ADMIN_DISCORD_IDS`?
-3. **Celesta ranks.** After the rollout, only the owner and the administrators
+1. **Site admins.** Which Discord user ids go into `WEB_ADMIN_DISCORD_IDS`?
+2. **Celesta ranks.** After the rollout, only the owner and the administrators
    are managers, and every member can view and reserve (as today). Which roles
    should be the manage, view, reserve and overbook ranks? Until an overbook rank
    is set, `Postman` keeps working.
-4. **Production table constraints.** The migrations assume that `web_spot` has
+3. **Production table constraints.** The migrations assume that `web_spot` has
    no unique index on `name` alone. The Django dump may have one (and may have
    an EXCLUDE constraint on `web_reservation` that a fresh database lacks).
    Check `\d web_spot` and `\d web_reservation` on production before migrating:
    a unique index on `name` blocks the same respawn name in two servers.
-5. **Rollout window.** Accept the short break of `/unbook` autocomplete and the
+4. **Rollout window.** Accept the short break of `/unbook` autocomplete and the
    summaries between the migration and the new bot pod (about one minute), or
    choose a quiet hour.
-6. **Overbook by managers on Celesta.** Owners, administrators and managers can
+5. **Overbook by managers on Celesta.** Owners, administrators and managers can
    now overbook without `Postman` (decision 23). Confirm this is wanted.
-7. **Polish copy.** The Polish catalog needs a review by a native speaker.
-8. **Django admin.** When may `spot-assistant-web` (Django) be removed?
+6. **Polish copy.** The Polish catalog needs a review by a native speaker.
+7. **Django admin.** When may `spot-assistant-web` (Django) be removed?

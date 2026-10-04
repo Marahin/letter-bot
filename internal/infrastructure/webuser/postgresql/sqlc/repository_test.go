@@ -28,7 +28,7 @@ func newMock(t *testing.T) pgxmock.PgxPoolIface {
 }
 
 func newUserRows() *pgxmock.Rows {
-	return pgxmock.NewRows([]string{"discord_user_id", "username", "global_name", "avatar", "created_at", "updated_at"})
+	return pgxmock.NewRows([]string{"discord_user_id", "username", "global_name", "avatar", "default_guild_id", "created_at", "updated_at"})
 }
 
 func TestWebUserRepository_Upsert(t *testing.T) {
@@ -37,7 +37,7 @@ func TestWebUserRepository_Upsert(t *testing.T) {
 	now := time.Now()
 	mock.ExpectQuery("INSERT INTO web_users").
 		WithArgs("u1", "nyx", "Quiet Nyx", "avatar").
-		WillReturnRows(newUserRows().AddRow("u1", "nyx", "Quiet Nyx", "avatar", now, now))
+		WillReturnRows(newUserRows().AddRow("u1", "nyx", "Quiet Nyx", "avatar", "", now, now))
 	mock.ExpectQuery("INSERT INTO web_users").
 		WithArgs("u1", "nyx", "", "").
 		WillReturnError(errors.New("boom"))
@@ -60,7 +60,7 @@ func TestWebUserRepository_Get(t *testing.T) {
 	mock := newMock(t)
 	now := time.Now()
 	mock.ExpectQuery("FROM web_users").WithArgs("u1").
-		WillReturnRows(newUserRows().AddRow("u1", "nyx", "", "", now, now))
+		WillReturnRows(newUserRows().AddRow("u1", "nyx", "", "", "g1", now, now))
 	mock.ExpectQuery("FROM web_users").WithArgs("u2").WillReturnError(pgx.ErrNoRows)
 	repo := NewWebUserRepository(mock)
 
@@ -71,6 +71,7 @@ func TestWebUserRepository_Get(t *testing.T) {
 	// then
 	require.NoError(t, err)
 	assert.Equal(t, "nyx", user.DisplayName())
+	assert.Equal(t, "g1", user.DefaultGuildID)
 	assert.Nil(t, missing)
 	assert.ErrorIs(t, missingErr, ports.ErrNotFound)
 }
@@ -121,5 +122,21 @@ func TestWebUserRepository_AccessToken(t *testing.T) {
 	require.NoError(t, err2)
 	assert.Nil(t, withoutExpiry.Expiry)
 	assert.Nil(t, missing)
+	assert.ErrorIs(t, missingErr, ports.ErrNotFound)
+}
+
+func TestWebUserRepository_SetDefaultGuild(t *testing.T) {
+	// given
+	mock := newMock(t)
+	mock.ExpectExec("UPDATE web_users").WithArgs("g1", "u1").WillReturnResult(pgxmock.NewResult("UPDATE", 1))
+	mock.ExpectExec("UPDATE web_users").WithArgs("g1", "u2").WillReturnResult(pgxmock.NewResult("UPDATE", 0))
+	repo := NewWebUserRepository(mock)
+
+	// when
+	err := repo.SetDefaultGuild(context.Background(), "u1", "g1")
+	missingErr := repo.SetDefaultGuild(context.Background(), "u2", "g1")
+
+	// then
+	assert.NoError(t, err)
 	assert.ErrorIs(t, missingErr, ports.ErrNotFound)
 }

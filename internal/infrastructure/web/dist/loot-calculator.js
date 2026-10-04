@@ -154,18 +154,21 @@
     var section = document.querySelector("[data-loot-history]");
     if (!entry || !section) return;
     var action = section.getAttribute("data-loot-action");
+    var values = { session: entry.text, from: section.getAttribute("data-loot-from") || "" };
     if (window.htmx) {
-      window.htmx.ajax("POST", action, { target: "#loot-main", swap: "outerHTML", values: { session: entry.text } });
+      window.htmx.ajax("POST", action, { target: "#loot-main", swap: "outerHTML", values: values });
       return;
     }
     var form = document.createElement("form");
     form.method = "post";
     form.action = action;
-    var field = document.createElement("input");
-    field.type = "hidden";
-    field.name = "session";
-    field.value = entry.text;
-    form.appendChild(field);
+    Object.keys(values).forEach(function (name) {
+      var field = document.createElement("input");
+      field.type = "hidden";
+      field.name = name;
+      field.value = values[name];
+      form.appendChild(field);
+    });
     document.body.appendChild(form);
     form.submit();
   }
@@ -208,9 +211,18 @@
     captureResult(true);
   });
 
+  // Only on a fine pointer: on a phone, focus would open the keyboard over the page.
+  function autofocus() {
+    var input = document.querySelector("[data-loot-autofocus]");
+    if (!input || !window.matchMedia || !window.matchMedia("(pointer: fine)").matches) return;
+    if (document.activeElement && document.activeElement !== document.body) return;
+    input.focus({ preventScroll: true });
+  }
+
   function init() {
     render();
     captureResult(false);
+    autofocus();
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/a-h/templ"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -122,7 +123,7 @@ func TestHandler_UnknownPathIsBrandedNotFound(t *testing.T) {
 	// then
 	assert.Equal(t, http.StatusNotFound, rec.Code)
 	body := rec.Body.String()
-	assert.Contains(t, body, "<title>Page not found - Letter</title>")
+	assert.Contains(t, body, "<title>Page not found - TibiaLoot.com</title>")
 	assert.Contains(t, body, ">404<")
 	assert.Contains(t, body, "Back to home")
 }
@@ -157,7 +158,7 @@ func TestHandler_ServesAssetsAndStampedManifest(t *testing.T) {
 	assert.Contains(t, svg.Body.String(), "#F97316")
 	assert.Equal(t, http.StatusOK, manifest.Code)
 	assert.Equal(t, "application/manifest+json", manifest.Header().Get("Content-Type"))
-	assert.Contains(t, manifest.Body.String(), `"name": "Letter"`)
+	assert.Contains(t, manifest.Body.String(), `"name": "TibiaLoot.com"`)
 	assert.Contains(t, manifest.Body.String(), "/assets/favicon-192.png"+AssetQuery())
 }
 
@@ -207,7 +208,7 @@ func TestSetLanguage_UnsupportedCodeIsEnglish(t *testing.T) {
 
 func TestSetLanguage_RefusesUnsafeReturnTargets(t *testing.T) {
 	h := newTestServer(t).Handler()
-	for _, to := range []string{"", "https://evil.example", "//evil.example", `/\evil.example`, "/nope", "/../x", "javascript:alert(1)"} {
+	for _, to := range []string{"", "https://evil.example", "//evil.example", `/\evil.example`, "/\t/evil.example", "/nope", "/../x", "javascript:alert(1)"} {
 		t.Run(to, func(t *testing.T) {
 			// when
 			rec := serveReq(t, h, languagePost(url.Values{"lang": {"pl"}, "to": {to}}))
@@ -261,4 +262,17 @@ func TestNewSessionManager_CookieFlags(t *testing.T) {
 
 func TestShutdown_WithoutStartIsANoop(t *testing.T) {
 	assert.NoError(t, newTestServer(t).Shutdown(context.Background()))
+}
+
+func TestLanding_RendersTheLandingTool(t *testing.T) {
+	// given
+	h := newTestServer(t).WithLandingTool(templ.Raw(`<form id="loot-main"></form>`)).Handler()
+
+	// when
+	rec := serveReq(t, h, htmlGet("/"))
+
+	// then
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Contains(t, rec.Body.String(), `<form id="loot-main"></form>`)
+	assert.Contains(t, rec.Body.String(), "<title>TibiaLoot.com: Tibia loot calculator for your party hunts</title>")
 }

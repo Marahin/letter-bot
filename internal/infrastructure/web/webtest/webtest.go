@@ -92,6 +92,7 @@ func SignInSiteAdmin(t *testing.T, d *web.Deps, m Mocks, userID string, servers 
 func signIn(t *testing.T, d *web.Deps, m Mocks, userID string, siteAdmin bool, servers []access.GuildAccess) *http.Cookie {
 	t.Helper()
 	m.Auth.EXPECT().User(mock.Anything, userID).Return(&webuser.User{DiscordUserID: userID, Username: "user-" + userID}, nil).Maybe()
+	m.Auth.EXPECT().SetDefaultGuild(mock.Anything, userID, mock.Anything).Return(nil).Maybe()
 	m.Access.EXPECT().IsSiteAdmin(userID).Return(siteAdmin).Maybe()
 	m.Access.EXPECT().AccessibleGuilds(mock.Anything, userID).Return(servers, nil).Maybe()
 

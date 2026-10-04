@@ -183,6 +183,8 @@ type WebUserRepository interface {
 	SaveToken(ctx context.Context, discordUserID string, token webuser.Token) error
 	// AccessToken returns ports.ErrNotFound for an unknown user.
 	AccessToken(ctx context.Context, discordUserID string) (*webuser.Token, error)
+	// SetDefaultGuild returns ports.ErrNotFound for an unknown user.
+	SetDefaultGuild(ctx context.Context, discordUserID, guildID string) error
 }
 
 type GuildRepository interface {

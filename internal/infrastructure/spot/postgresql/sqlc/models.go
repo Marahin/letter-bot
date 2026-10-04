@@ -185,13 +185,14 @@ type WebSpot struct {
 }
 
 type WebUser struct {
-	DiscordUserID string
-	Username      string
-	GlobalName    string
-	Avatar        string
-	AccessToken   string
-	RefreshToken  string
-	TokenExpiry   pgtype.Timestamptz
-	CreatedAt     pgtype.Timestamptz
-	UpdatedAt     pgtype.Timestamptz
+	DiscordUserID  string
+	Username       string
+	GlobalName     string
+	Avatar         string
+	AccessToken    string
+	RefreshToken   string
+	TokenExpiry    pgtype.Timestamptz
+	DefaultGuildID string
+	CreatedAt      pgtype.Timestamptz
+	UpdatedAt      pgtype.Timestamptz
 }

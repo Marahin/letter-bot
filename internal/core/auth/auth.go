@@ -47,3 +47,7 @@ func (s *Service) Logout(ctx context.Context, userID string) error {
 	}
 	return err
 }
+
+func (s *Service) SetDefaultGuild(ctx context.Context, userID, guildID string) error {
+	return s.users.SetDefaultGuild(ctx, userID, guildID)
+}

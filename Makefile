@@ -62,6 +62,15 @@ templ-diff:
 		exit 1; \
 	fi
 
+# Renders the PNG icons from dist/favicon.svg (needs rsvg-convert). 16px gets a
+# thicker stroke so the bag still reads; the apple-touch icon is full-bleed.
+FAVICON_DIR := internal/infrastructure/web/dist
+favicons:
+	@echo "INFO: Rendering favicons"
+	@cd $(FAVICON_DIR) && for s in 32 48 192 512; do rsvg-convert -w $$s -h $$s favicon.svg -o favicon-$$s.png; done
+	@cd $(FAVICON_DIR) && sed 's/stroke-width="8"/stroke-width="12"/' favicon.svg | rsvg-convert -w 16 -h 16 -o favicon-16.png
+	@cd $(FAVICON_DIR) && sed 's/rx="24"/rx="0"/' favicon.svg | rsvg-convert -w 180 -h 180 -o apple-touch-icon.png
+
 mocks:
 	@echo "INFO: Generating mocks"
 	@mockery

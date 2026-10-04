@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"spot-assistant/internal/infrastructure/branding"
 	"spot-assistant/internal/infrastructure/i18n"
 )
 
@@ -155,7 +156,7 @@ func TestErrorPage_SignedInLinksToTheDashboard(t *testing.T) {
 
 	// then
 	assert.Contains(t, out, "Back to dashboard")
-	assert.Contains(t, out, "<title>Denied - Letter</title>")
+	assert.Contains(t, out, "<title>Denied - TibiaLoot.com</title>")
 }
 
 func TestLandingCopyIsTranslated(t *testing.T) {
@@ -163,12 +164,38 @@ func TestLandingCopyIsTranslated(t *testing.T) {
 	ctx := i18n.WithLocale(context.Background(), i18n.Normalize("pl"))
 
 	// when
-	out := render(t, ctx, Landing("http://x", "https://invite", Nav{Marketing: true}))
+	out := render(t, ctx, Landing("http://x", "https://invite", Nav{Marketing: true}, nil))
 
 	// then
 	assert.Contains(t, out, "Dodaj Letter do Discorda")
-	assert.Contains(t, out, "Kalkulator lootu")
+	assert.Contains(t, out, "Podziel loot z huntu.")
+	assert.Contains(t, out, "Otwórz kalkulator lootu")
 	assert.Contains(t, out, `href="https://invite"`)
+	assert.Contains(t, out, "Serwis niezwiązany z CipSoft.")
+}
+
+func TestLanding_EmbedsTheToolAboveTheBotFeatures(t *testing.T) {
+	// given
+	tool := templ.Raw(`<div id="embedded-tool"></div>`)
+
+	// when
+	out := render(t, context.Background(), Landing("http://x", "https://invite", Nav{Marketing: true}, tool))
+
+	// then
+	assert.Contains(t, out, `<h1 id="landing-calculator-heading"`)
+	assert.Less(t, strings.Index(out, `id="embedded-tool"`), strings.Index(out, `id="features"`))
+	assert.NotContains(t, out, "Open the Loot Calculator")
+}
+
+func TestLayout_FooterAndLockup(t *testing.T) {
+	// when
+	out := render(t, context.Background(), Layout("T", "D", "http://x", "/", Nav{}))
+
+	// then
+	assert.Contains(t, out, branding.Notice())
+	assert.Contains(t, out, "Not affiliated with CipSoft.")
+	assert.Contains(t, out, `aria-label="TibiaLoot.com"`)
+	assert.Contains(t, out, `<span class="text-zone-100">Tibia</span><span class="text-signal">Loot</span>`)
 }
 
 func TestDeps_ErrorHelpers(t *testing.T) {

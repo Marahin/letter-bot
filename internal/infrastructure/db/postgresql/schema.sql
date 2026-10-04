@@ -902,6 +902,7 @@ CREATE TABLE public.web_users (
     access_token text NOT NULL DEFAULT '',
     refresh_token text NOT NULL DEFAULT '',
     token_expiry timestamptz,
+    default_guild_id text NOT NULL DEFAULT '',
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );

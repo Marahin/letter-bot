@@ -18,13 +18,8 @@ import (
 	"spot-assistant/internal/ports"
 )
 
-// Session keys shared across the web layer.
-const (
-	// SessionUserKey holds the signed-in Discord user id.
-	SessionUserKey = "user_id"
-	// sessionGuildKey holds the last server the user opened, so guild-less pages keep it selected.
-	sessionGuildKey = "guild_id"
-)
+// SessionUserKey holds the signed-in Discord user id.
+const SessionUserKey = "user_id"
 
 // InviteBotPermissions is the bitfield requested in the bot invite link: View
 // Channel, Send Messages, Manage Messages, Embed Links, Attach Files, Read Message
@@ -201,7 +196,7 @@ func (d *Deps) Nav(r *http.Request, currentGuildID string) Nav {
 		}
 	}
 	if currentGuildID == "" {
-		currentGuildID = rememberedGuildID(d.sessionString(ctx, sessionGuildKey), list)
+		currentGuildID = selectedGuildID(user, list)
 	}
 	n := d.NavFromAccess(user, list, currentGuildID)
 	if current, ok := CurrentAccessFrom(ctx); ok && current.Config.GuildID == currentGuildID {
@@ -228,12 +223,23 @@ func (d *Deps) NavFromAccess(user *webuser.User, list []access.GuildAccess, curr
 	return n
 }
 
-// rememberedGuildID keeps the last opened server only while it is still accessible.
-func rememberedGuildID(guildID string, list []access.GuildAccess) string {
-	for _, a := range list {
-		if guildID != "" && a.Config.GuildID == guildID {
-			return guildID
+// selectedGuildID is the server a guild-less page shows as selected: the remembered
+// default while still accessible, else the first premium server, else the first.
+func selectedGuildID(user *webuser.User, list []access.GuildAccess) string {
+	if user != nil && user.DefaultGuildID != "" {
+		for _, a := range list {
+			if a.Config.GuildID == user.DefaultGuildID {
+				return a.Config.GuildID
+			}
 		}
+	}
+	for _, a := range list {
+		if a.Config.IsPremium() {
+			return a.Config.GuildID
+		}
+	}
+	if len(list) > 0 {
+		return list[0].Config.GuildID
 	}
 	return ""
 }

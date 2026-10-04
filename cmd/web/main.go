@@ -123,6 +123,7 @@ func main() {
 	server.Mount(reservationshttp.Register)
 	server.Mount(statshttp.Register)
 	server.Mount(toolshttp.Register)
+	server.WithLandingTool(toolshttp.LandingCalculator())
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

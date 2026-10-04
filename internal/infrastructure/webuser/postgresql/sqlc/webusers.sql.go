@@ -41,18 +41,19 @@ func (q *Queries) SaveWebUserToken(ctx context.Context, arg SaveWebUserTokenPara
 }
 
 const selectWebUser = `-- name: SelectWebUser :one
-SELECT discord_user_id, username, global_name, avatar, created_at, updated_at
+SELECT discord_user_id, username, global_name, avatar, default_guild_id, created_at, updated_at
 FROM web_users
 WHERE discord_user_id = $1
 `
 
 type SelectWebUserRow struct {
-	DiscordUserID string
-	Username      string
-	GlobalName    string
-	Avatar        string
-	CreatedAt     pgtype.Timestamptz
-	UpdatedAt     pgtype.Timestamptz
+	DiscordUserID  string
+	Username       string
+	GlobalName     string
+	Avatar         string
+	DefaultGuildID string
+	CreatedAt      pgtype.Timestamptz
+	UpdatedAt      pgtype.Timestamptz
 }
 
 func (q *Queries) SelectWebUser(ctx context.Context, discordUserID string) (SelectWebUserRow, error) {
@@ -63,6 +64,7 @@ func (q *Queries) SelectWebUser(ctx context.Context, discordUserID string) (Sele
 		&i.Username,
 		&i.GlobalName,
 		&i.Avatar,
+		&i.DefaultGuildID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -88,6 +90,26 @@ func (q *Queries) SelectWebUserToken(ctx context.Context, discordUserID string) 
 	return i, err
 }
 
+const setWebUserDefaultGuild = `-- name: SetWebUserDefaultGuild :execrows
+UPDATE web_users
+SET default_guild_id = $1,
+    updated_at = now()
+WHERE discord_user_id = $2
+`
+
+type SetWebUserDefaultGuildParams struct {
+	DefaultGuildID string
+	DiscordUserID  string
+}
+
+func (q *Queries) SetWebUserDefaultGuild(ctx context.Context, arg SetWebUserDefaultGuildParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setWebUserDefaultGuild, arg.DefaultGuildID, arg.DiscordUserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const upsertWebUser = `-- name: UpsertWebUser :one
 INSERT INTO web_users (discord_user_id, username, global_name, avatar)
 VALUES ($1, $2, $3, $4)
@@ -96,7 +118,7 @@ SET username = EXCLUDED.username,
     global_name = EXCLUDED.global_name,
     avatar = EXCLUDED.avatar,
     updated_at = now()
-RETURNING discord_user_id, username, global_name, avatar, created_at, updated_at
+RETURNING discord_user_id, username, global_name, avatar, default_guild_id, created_at, updated_at
 `
 
 type UpsertWebUserParams struct {
@@ -107,12 +129,13 @@ type UpsertWebUserParams struct {
 }
 
 type UpsertWebUserRow struct {
-	DiscordUserID string
-	Username      string
-	GlobalName    string
-	Avatar        string
-	CreatedAt     pgtype.Timestamptz
-	UpdatedAt     pgtype.Timestamptz
+	DiscordUserID  string
+	Username       string
+	GlobalName     string
+	Avatar         string
+	DefaultGuildID string
+	CreatedAt      pgtype.Timestamptz
+	UpdatedAt      pgtype.Timestamptz
 }
 
 func (q *Queries) UpsertWebUser(ctx context.Context, arg UpsertWebUserParams) (UpsertWebUserRow, error) {
@@ -128,6 +151,7 @@ func (q *Queries) UpsertWebUser(ctx context.Context, arg UpsertWebUserParams) (U
 		&i.Username,
 		&i.GlobalName,
 		&i.Avatar,
+		&i.DefaultGuildID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

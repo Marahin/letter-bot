@@ -25,25 +25,33 @@ templ LootCalculator(baseURL string, v lootView, nav web.Nav) {
 			<h1 class="font-display text-4xl font-bold -tracking-[0.02em] text-zone-50">{ i18n.T(ctx, "tools.loot.page.heading") }</h1>
 			<p class="max-w-2xl text-[15px] leading-relaxed text-zone-300">{ i18n.T(ctx, "tools.loot.page.lede") }</p>
 		</header>
-		<div class="mt-8 grid items-start gap-6 lg:grid-cols-3">
-			@lootMain(v)
-			@history()
+		<div class="mt-8">
+			@calculator(v)
 		</div>
-		@web.TranslatedStrings(map[string]string{
-			"tools.loot.copy.copied":        i18n.T(ctx, "tools.loot.copy.copied"),
-			"tools.loot.copy.done":          i18n.T(ctx, "tools.loot.copy.done"),
-			"tools.loot.copy.failed":        i18n.T(ctx, "tools.loot.copy.failed"),
-			"tools.loot.history.clear_confirm": i18n.T(ctx, "tools.loot.history.clear_confirm"),
-			"tools.loot.history.load_label": i18n.T(ctx, "tools.loot.history.load_label"),
-		})
-		<script src={ web.AssetURL("/assets/loot-calculator.js") } defer></script>
 	}
+}
+
+// calculator is the working tool without a page around it: the main column, the
+// history and the script. The landing page embeds it too (LandingCalculator).
+templ calculator(v lootView) {
+	<div class="grid items-start gap-6 lg:grid-cols-3">
+		@lootMain(v)
+		@history(v.from())
+	</div>
+	@web.TranslatedStrings(map[string]string{
+		"tools.loot.copy.copied":        i18n.T(ctx, "tools.loot.copy.copied"),
+		"tools.loot.copy.done":          i18n.T(ctx, "tools.loot.copy.done"),
+		"tools.loot.copy.failed":        i18n.T(ctx, "tools.loot.copy.failed"),
+		"tools.loot.history.clear_confirm": i18n.T(ctx, "tools.loot.history.clear_confirm"),
+		"tools.loot.history.load_label": i18n.T(ctx, "tools.loot.history.load_label"),
+	})
+	<script src={ web.AssetURL("/assets/loot-calculator.js") } defer></script>
 }
 
 // lootMain is the column every calculation replaces.
 templ lootMain(v lootView) {
 	if v.Result != nil {
-		@result(v.Result)
+		@result(v.Result, v.from())
 	} else {
 		@pasteForm(v)
 	}
@@ -60,11 +68,12 @@ templ pasteForm(v lootView) {
 		hx-disabled-elt="find button[type=submit]"
 		class={ cardClass, "flex flex-col gap-3.5 p-5 sm:p-6 lg:col-span-2" }
 	>
+		<input type="hidden" name="from" value={ v.from() }/>
 		<label for="loot-session" class="text-xs font-semibold uppercase tracking-[0.1em] text-zone-300">{ i18n.T(ctx, "tools.loot.form.label") }</label>
 		<textarea
 			id="loot-session"
 			name="session"
-			rows="17"
+			rows={ strconv.Itoa(v.rows()) }
 			spellcheck="false"
 			autocomplete="off"
 			placeholder={ i18n.T(ctx, "tools.loot.form.placeholder") }
@@ -74,6 +83,9 @@ templ pasteForm(v lootView) {
 				autofocus
 			} else {
 				aria-describedby="loot-session-help"
+			}
+			if v.Autofocus && v.Error == nil {
+				data-loot-autofocus
 			}
 			data-loot-input
 			class={ "w-full resize-y rounded-md border bg-zone-850 p-3.5 font-mono text-[13px] leading-relaxed text-zone-100 placeholder:text-zone-500 focus:outline-none focus:ring-2",
@@ -91,7 +103,8 @@ templ pasteForm(v lootView) {
 	</form>
 }
 
-templ result(r *resultView) {
+// result is the split. from is where "New calculation" goes back to.
+templ result(r *resultView, from string) {
 	<div id="loot-main" class="flex min-w-0 flex-col gap-5 lg:col-span-2">
 		<dl class="grid grid-cols-2 gap-3 sm:grid-cols-4">
 			@tile(i18n.T(ctx, "tools.loot.kpi.total"), digits(r.Split.Total), balanceClass(r.Split.Total))
@@ -102,7 +115,7 @@ templ result(r *resultView) {
 		<section aria-labelledby="loot-transfers-heading" class={ cardClass, "flex flex-col gap-3.5 p-5 sm:p-6" }>
 			<div class="flex items-center justify-between gap-4">
 				<h2 id="loot-transfers-heading" tabindex="-1" data-loot-focus class="font-display text-lg font-semibold text-zone-50 focus:outline-none">{ i18n.T(ctx, "tools.loot.transfers.heading") }</h2>
-				<a href={ templ.SafeURL(LootCalculatorPath) } class="inline-flex min-h-11 items-center text-[13px] font-semibold text-signal-bright transition hover:text-signal">{ i18n.T(ctx, "tools.loot.transfers.new") }</a>
+				<a href={ templ.SafeURL(from) } class="inline-flex min-h-11 items-center text-[13px] font-semibold text-signal-bright transition hover:text-signal">{ i18n.T(ctx, "tools.loot.transfers.new") }</a>
 			</div>
 			if len(r.Split.Transfers) == 0 {
 				<p class="rounded-md border border-zone-800 bg-zone-850 px-3.5 py-3 text-sm text-zone-300">{ i18n.T(ctx, "tools.loot.transfers.none") }</p>
@@ -203,8 +216,8 @@ templ playerRow(p lootcalc.PartyMember) {
 
 // history lists the sessions saved in this browser. loot-calculator.js fills
 // the list from localStorage with the item template; the server never sees it.
-templ history() {
-	<section aria-labelledby="loot-history-heading" data-loot-history data-loot-action={ LootCalculatorPath } class={ cardClass, "flex min-w-0 flex-col gap-3 p-5" }>
+templ history(from string) {
+	<section aria-labelledby="loot-history-heading" data-loot-history data-loot-action={ LootCalculatorPath } data-loot-from={ from } class={ cardClass, "flex min-w-0 flex-col gap-3 p-5" }>
 		<h2 id="loot-history-heading" class="font-display text-base font-semibold text-zone-50">{ i18n.T(ctx, "tools.loot.history.heading") }</h2>
 		<p class="text-[13px] text-zone-300">{ i18n.T(ctx, "tools.loot.history.local") }</p>
 		<ul data-loot-history-list class="flex flex-col gap-2"></ul>

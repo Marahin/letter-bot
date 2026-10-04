@@ -104,3 +104,20 @@ func TestService_Logout(t *testing.T) {
 		})
 	}
 }
+
+func TestService_SetDefaultGuild(t *testing.T) {
+	// given
+	ctx := context.Background()
+	users := mocks.NewMockWebUserRepository(t)
+	users.EXPECT().SetDefaultGuild(ctx, "u1", "g1").Return(nil).Once()
+	users.EXPECT().SetDefaultGuild(ctx, "u2", "g1").Return(ports.ErrNotFound).Once()
+	s := New(mocks.NewMockOAuthPort(t), users)
+
+	// when
+	err := s.SetDefaultGuild(ctx, "u1", "g1")
+	missingErr := s.SetDefaultGuild(ctx, "u2", "g1")
+
+	// then
+	assert.NoError(t, err)
+	assert.ErrorIs(t, missingErr, ports.ErrNotFound)
+}

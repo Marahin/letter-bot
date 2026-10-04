@@ -8,8 +8,10 @@ type User struct {
 	Username      string
 	GlobalName    string
 	Avatar        string
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	// DefaultGuildID is the server the panel opens on: the last one the user visited.
+	DefaultGuildID string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 // DisplayName returns the global name, or the username when no global name is set.

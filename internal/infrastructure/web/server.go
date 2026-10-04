@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/a-h/templ"
 	"github.com/alexedwards/scs/pgxstore"
 	"github.com/alexedwards/scs/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -34,8 +35,10 @@ type Server struct {
 	// features holds the per-feature route registrars mounted by the composition
 	// root; Handler() calls each with the shared Deps after the shell routes.
 	features []func(*Router, *Deps)
-	routes   *Router
-	srv      *http.Server
+	// landingTool is the tool the landing page opens with (the Loot Calculator).
+	landingTool templ.Component
+	routes      *Router
+	srv         *http.Server
 }
 
 // NewServer constructs the web server with a Postgres-backed session store.
@@ -86,6 +89,13 @@ func NewSessionManager(cfg Config, store scs.Store) *scs.SessionManager {
 // middleware chain.
 func (s *Server) Mount(register func(*Router, *Deps)) {
 	s.features = append(s.features, register)
+}
+
+// WithLandingTool sets the tool the landing page embeds. web cannot import the
+// feature package that renders it, so the composition root hands it in.
+func (s *Server) WithLandingTool(c templ.Component) *Server {
+	s.landingTool = c
+	return s
 }
 
 func (s *Server) deps() *Deps {

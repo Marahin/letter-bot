@@ -104,10 +104,13 @@ templ errorToast() {
 	})
 }
 
-// attributionFooter is the shell footer: branding.Notice()'s attribution wording.
+// attributionFooter is the shell footer: branding.Notice()'s attribution wording
+// and the CipSoft disclaimer.
 templ attributionFooter() {
 	<footer class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 border-t border-zone-800 px-6 py-6 text-center font-mono text-xs text-zone-600">
 		<span>{ branding.Notice() }</span>
+		<span aria-hidden="true" class="hidden text-zone-700 sm:inline">·</span>
+		<span data-not-affiliated>{ i18n.T(ctx, "shell.footer.not_affiliated") }</span>
 	</footer>
 }
 
@@ -458,13 +461,19 @@ templ sidebarLink(href, label string, active bool) {
 	>{ label }</a>
 }
 
-// wordmark is the Letter lockup in accent orange, set in the display family with
-// the tight display tracking. overflow-hidden drops its min-height to 0, so a
-// column flex parent must pass shrink-0 in class.
+// wordmark is the TibiaLoot.com lockup: the loot bag mark beside the name, set in
+// the display family with the tight display tracking. overflow-hidden drops its
+// min-height to 0, so a column flex parent must pass shrink-0 in class.
 templ wordmark(href, class string) {
-	<a href={ templ.SafeURL(href) } class={ class, "flex h-[1lh] min-w-0 flex-wrap content-start items-center gap-x-1.5 overflow-hidden font-display text-[19px] font-bold -tracking-[0.02em]" }>
-		<span class="text-signal-bright">{ branding.Name }</span>
+	<a href={ templ.SafeURL(href) } aria-label={ branding.Name } class={ class, "flex h-[1lh] min-w-0 flex-wrap content-start items-center gap-x-2 overflow-hidden font-display text-[19px] font-bold -tracking-[0.02em]" }>
+		@brandMark("h-6 w-6 shrink-0")
+		<span class="whitespace-nowrap"><span class="text-zone-100">Tibia</span><span class="text-signal">Loot</span><span class="font-mono text-[13px] font-medium tracking-normal text-zone-400">.com</span></span>
 	</a>
+}
+
+// brandMark is the loot bag logo, the same drawing as dist/favicon.svg.
+templ brandMark(class string) {
+	<svg class={ class } viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="#F97316"></rect><g fill="none" stroke="#141416" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"><path d="M36 34 L43 44 M64 34 L57 44"></path><path d="M42 46 C26 54 22 82 50 82 C78 82 74 54 58 46 Z"></path><line x1="40" y1="46" x2="60" y2="46"></line></g><circle cx="20" cy="20" r="6" fill="#141416"></circle></svg>
 }
 
 // serverSwitcher lets a signed-in user move between servers from any page. The

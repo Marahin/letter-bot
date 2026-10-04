@@ -7,6 +7,7 @@ import (
 	"net/url"
 
 	"spot-assistant/internal/core/dto/access"
+	"spot-assistant/internal/core/dto/webuser"
 	"spot-assistant/internal/infrastructure/i18n"
 	"spot-assistant/internal/ports"
 )
@@ -107,10 +108,21 @@ func (d *Deps) requireGuildAccess(tier access.Tier, next http.HandlerFunc) http.
 			d.Forbidden(w, r)
 			return
 		}
-		if d.sessionString(r.Context(), sessionGuildKey) != guildID {
-			d.Sessions.Put(r.Context(), sessionGuildKey, guildID)
-		}
+		d.rememberGuild(r.Context(), guildID)
 		next(w, r.WithContext(context.WithValue(r.Context(), ctxCurrentAccess, *current)))
+	}
+}
+
+// rememberGuild makes the routed server the user's default, so the next visit opens
+// on it. It writes only on a change, and a failed write keeps the old default
+// rather than failing the page.
+func (d *Deps) rememberGuild(ctx context.Context, guildID string) {
+	user, ok := ctx.Value(ctxUser).(*webuser.User)
+	if !ok || user.DefaultGuildID == guildID {
+		return
+	}
+	if err := d.Auth.SetDefaultGuild(ctx, user.DiscordUserID, guildID); err != nil {
+		d.Log.Warnw("remember default guild", "error", err)
 	}
 }
 

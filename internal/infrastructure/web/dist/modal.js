@@ -1,4 +1,4 @@
-// Drives the native <dialog> modals (currently the "New session" composer).
+// Drives the native <dialog> modals (the new and edit reservation forms).
 // Opening with showModal() gives ESC-to-close and a ::backdrop for free; this
 // module wires the rest by event delegation on document, so htmx-swapped content
 // inside a dialog keeps working with no re-init:
@@ -6,8 +6,8 @@
 //   * click [data-modal-close]       -> close the enclosing dialog
 //   * click the dialog's backdrop     -> close (the click lands on the <dialog>
 //     element itself; clicks on the inner wrapper/children do not)
-// A successful create fires an `HX-Trigger: session-created` response header;
-// htmx dispatches that as a `session-created` event, which closes any open modal.
+// A saved reservation fires an `HX-Trigger: reservation-saved` response header;
+// htmx dispatches that as an event, which closes any open modal.
 (function () {
   function openModal(id) {
     var dlg = document.getElementById(id);
@@ -18,6 +18,14 @@
     document.querySelectorAll("dialog[data-modal][open]").forEach(function (dlg) {
       dlg.close();
     });
+  }
+
+  function openPickers(dlg) {
+    var open = [];
+    dlg.querySelectorAll("input").forEach(function (el) {
+      if (el._flatpickr && el._flatpickr.isOpen) open.push(el._flatpickr);
+    });
+    return open;
   }
 
   document.addEventListener("click", function (e) {
@@ -36,10 +44,47 @@
     if (e.target.matches("dialog[data-modal]")) e.target.close();
   });
 
-  // Close the modal once a create succeeds (HX-Trigger: session-created). The
-  // event bubbles from the form (or the body, if the form was swapped out), so
-  // listening on document catches it either way.
-  document.addEventListener("session-created", closeOpenModals);
-  // A saved reservation (HX-Trigger: reservation-saved) closes its dialog too.
+  // Escape closes an open calendar first, not the whole dialog. flatpickr may
+  // close the calendar on keydown before the dialog's cancel fires, so the
+  // keydown (capture, ahead of flatpickr) records that a calendar was open.
+  var escapedPicker = null;
+  window.addEventListener(
+    "keydown",
+    function (e) {
+      if (e.key !== "Escape") return;
+      var dlg = document.querySelector("dialog[data-modal][open]");
+      escapedPicker = dlg && openPickers(dlg).length ? dlg : null;
+    },
+    true,
+  );
+  document.addEventListener(
+    "cancel",
+    function (e) {
+      var dlg = e.target;
+      if (!dlg.matches || !dlg.matches("dialog[data-modal]")) return;
+      var pickers = openPickers(dlg);
+      if (escapedPicker === dlg || pickers.length) {
+        e.preventDefault();
+        pickers.forEach(function (fp) {
+          fp.close();
+        });
+      }
+      escapedPicker = null;
+    },
+    true,
+  );
+  document.addEventListener(
+    "close",
+    function (e) {
+      if (e.target.matches && e.target.matches("dialog[data-modal]")) {
+        openPickers(e.target).forEach(function (fp) {
+          fp.close();
+        });
+      }
+    },
+    true,
+  );
+
+  // A saved reservation (HX-Trigger: reservation-saved) closes its dialog.
   document.addEventListener("reservation-saved", closeOpenModals);
 })();

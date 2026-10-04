@@ -1,7 +1,7 @@
 # letter-bot
 
 This project is a Go Discord bot, which handles bookings and reservations for Tibia players.
-It also has a web panel, "Letter" (`cmd/web`), which shares the PostgreSQL database with the bot.
+It also has a web panel, "TibiaLoot.com" (`cmd/web`), which shares the PostgreSQL database with the bot. The bot keeps the name "Letter".
 See `docs/web/README.md` (web panel, deploy), `docs/web/DECISIONS.md` and `docs/web/VOCABULARY.md`.
 
 ## Build & commands

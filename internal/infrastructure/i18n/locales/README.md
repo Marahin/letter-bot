@@ -1,4 +1,4 @@
-# Translating Letter
+# Translating TibiaLoot.com
 
 Every string the web panel shows lives in one of the JSON files in this directory,
 one per language. To translate, you edit **one file**. You need no Go and no build
@@ -43,7 +43,7 @@ translation is always safe to merge.
 ```
 
 - **Keys** are `<area>.<component>.<thing>` (`shell.nav.reservations`,
-  `landing.hero.sub`, `error.not_found.title`), sorted alphabetically.
+  `landing.calculator.sub`, `error.not_found.title`), sorted alphabetically.
 - **`%s` / `%d`** are placeholders the app fills in. Keep every placeholder the
   English text has. `%[1]s` / `%[2]s` pin an explicit order when you need to
   reorder two of them.
@@ -80,7 +80,8 @@ These stay exactly as they are in every language:
 
 | term | why |
 |---|---|
-| `Letter` | product name |
+| `TibiaLoot.com` | the site's name (the web panel) |
+| `Letter` | the Discord bot's name |
 | `Tibia` | game name |
 | `TibiaData` | third-party service name |
 | `Discord` | third-party product name; inflect it in Polish (`na Discordzie`, `do Discorda`) |

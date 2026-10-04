@@ -15,27 +15,12 @@ import (
 // lootCalculatorPath is the public tool the marketing top bar and the sidebar link to.
 const lootCalculatorPath = "/tools/loot-calculator"
 
-// toolCard is one no-login tool card on the landing page.
-type toolCard struct {
-	Name string
-	CTA  string
-	Href string
-	// Icon names the toolGlyph the card draws.
-	Icon string
-}
-
 // serverFeature is one card in the landing feature grid.
 type serverFeature struct {
 	Name string
 	Desc string
 	// Icon names the glyph landingFeaturesSection draws.
 	Icon string
-}
-
-func landingTools(ctx context.Context) []toolCard {
-	return []toolCard{
-		{Icon: "calculator", Name: i18n.T(ctx, "shell.nav.loot_calculator"), CTA: i18n.T(ctx, "landing.tool.loot.cta"), Href: lootCalculatorPath},
-	}
 }
 
 func landingFeatures(ctx context.Context) []serverFeature {

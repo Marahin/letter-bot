@@ -66,7 +66,7 @@ Letter bot originated within [Refugees](https://www.tibia.com/community/?subtopi
 
 ## Web panel
 
-Letter has a web panel (`cmd/web`, image `marahin/letter-web`). Server members sign in with Discord and:
+Letter has a web panel, [TibiaLoot.com](https://tibialoot.com) (`cmd/web`, image `marahin/letter-web`). Its landing page opens with the public Loot Calculator. Server members sign in with Discord and:
 
 * manage the respawn list (add, rename, archive, restore, import the default list),
 * search, create, edit and delete reservations,

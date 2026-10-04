@@ -20,6 +20,39 @@ type lootView struct {
 	Text   string
 	Error  error
 	Result *resultView
+	// From is the page the calculation started on, the target of "New calculation".
+	From string
+	// Rows is the paste box height, 0 for the full-page default.
+	Rows int
+	// Autofocus focuses the empty paste box on a fine pointer (loot-calculator.js).
+	Autofocus bool
+}
+
+const (
+	defaultRows = 17
+	landingRows = 10
+)
+
+// landingFrom is the landing page, the only start page besides the calculator's own.
+const landingFrom = "/"
+
+func (v lootView) from() string {
+	return startPage(v.From)
+}
+
+func (v lootView) rows() int {
+	if v.Rows > 0 {
+		return v.Rows
+	}
+	return defaultRows
+}
+
+// startPage allowlists the posted "from": it ends up in a link href.
+func startPage(from string) string {
+	if from == landingFrom {
+		return landingFrom
+	}
+	return LootCalculatorPath
 }
 
 type resultView struct {
