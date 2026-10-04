@@ -30,6 +30,7 @@ import (
 	guildRepository "spot-assistant/internal/infrastructure/guild/postgresql/sqlc"
 	"spot-assistant/internal/infrastructure/guildsettings"
 	infrahttp "spot-assistant/internal/infrastructure/http"
+	prommetrics "spot-assistant/internal/infrastructure/metrics/prometheus"
 	notifypg "spot-assistant/internal/infrastructure/notify/postgresql"
 	"spot-assistant/internal/infrastructure/notify/webcomm"
 	reservationRepository "spot-assistant/internal/infrastructure/reservation/postgresql/sqlc"
@@ -85,7 +86,9 @@ func main() {
 		defer cancel()
 		return db.Ping(ctx)
 	}
-	infrahttp.NewServerWithMetrics(cfg.MetricsAddr, log).WithHealth(nil, ready).Start()
+	if err := infrahttp.NewServerWithMetrics(cfg.MetricsAddr, prommetrics.NewRegistry(), log).WithHealth(nil, ready).Listen(); err != nil {
+		log.Panic(err)
+	}
 
 	guildConfigRepo := guildRepository.NewGuildConfigRepository(db)
 	guildRoleRepo := guildRepository.NewGuildRoleRepository(db)

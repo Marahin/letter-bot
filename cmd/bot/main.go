@@ -104,16 +104,22 @@ func main() {
 	eventHandler := eventhandler.NewHandler(bookingService, reservationRepo, communicationService, summaryService)
 
 	// Metrics
-	metrics := prommetrics.New()
+	registry := prommetrics.NewRegistry()
+	metrics, err := prommetrics.New(registry)
+	if err != nil {
+		log.Panic(err)
+	}
 	botService.WithMetrics(metrics)
 	eventHandler.WithMetrics(metrics)
 
 	// Expose Prometheus metrics + health endpoints via infrastructure HTTP server
 	metricsAddr := os.Getenv("METRICS_ADDR")
-	server := infrahttp.NewServerWithMetrics(metricsAddr, log)
+	server := infrahttp.NewServerWithMetrics(metricsAddr, registry, log)
 	health := healthadapter.NewAdapter(db, botService).WithLogger(log)
 	server.WithHealthProvider(health)
-	server.Start()
+	if err := server.Listen(); err != nil {
+		log.Panic(err)
+	}
 
 	listenCtx, stopListening := context.WithCancel(context.Background())
 	defer stopListening()

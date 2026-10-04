@@ -1,21 +1,26 @@
 package http
 
 import (
+	"context"
+	"errors"
+	"net"
 	stdhttp "net/http"
+	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	promhttp "github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 
 	"spot-assistant/internal/ports"
 )
 
-// Server is a simple HTTP server wrapper living in the infrastructure layer.
-// It exposes a mux for registering handlers (e.g., Prometheus /metrics) and
-// starts listening in a background goroutine.
+// Server is the internal metrics and health server. Listen binds the address
+// and serves in a background goroutine; Shutdown stops it.
 type Server struct {
 	addr string
 	mux  *stdhttp.ServeMux
 	log  *zap.SugaredLogger
+	srv  *stdhttp.Server
 }
 
 // NewServer constructs a new Server with the provided address and logger.
@@ -34,19 +39,38 @@ func NewServer(addr string, log *zap.SugaredLogger) *Server {
 // Mux returns the server's mux so callers can attach handlers.
 func (s *Server) Mux() *stdhttp.ServeMux { return s.mux }
 
-// Start begins listening and serving HTTP requests in a background goroutine.
-func (s *Server) Start() {
+// Listen binds the address, so a busy port fails here, and then serves in the background.
+func (s *Server) Listen() error {
+	listener, err := net.Listen("tcp", s.addr)
+	if err != nil {
+		return err
+	}
+	s.addr = listener.Addr().String()
+	s.srv = &stdhttp.Server{Handler: s.mux, ReadHeaderTimeout: 10 * time.Second}
+	s.log.Infow("metrics server listening", "addr", s.addr)
 	go func() {
-		if err := stdhttp.ListenAndServe(s.addr, s.mux); err != nil {
-			s.log.With("addr", s.addr).Warnf("http server stopped: %v", err)
+		if err := s.srv.Serve(listener); err != nil && !errors.Is(err, stdhttp.ErrServerClosed) {
+			s.log.Errorw("metrics server stopped", "addr", s.addr, "error", err)
 		}
 	}()
+	return nil
 }
 
-// NewServerWithMetrics constructs a Server pre-configured with Prometheus /metrics handler.
-func NewServerWithMetrics(addr string, log *zap.SugaredLogger) *Server {
+// Addr is the listen address. After Listen it is the bound address, with the real port.
+func (s *Server) Addr() string { return s.addr }
+
+// Shutdown stops the server. It does nothing before Listen.
+func (s *Server) Shutdown(ctx context.Context) error {
+	if s.srv == nil {
+		return nil
+	}
+	return s.srv.Shutdown(ctx)
+}
+
+// NewServerWithMetrics constructs a Server that serves reg on /metrics.
+func NewServerWithMetrics(addr string, reg *prometheus.Registry, log *zap.SugaredLogger) *Server {
 	srv := NewServer(addr, log)
-	srv.Mux().Handle("/metrics", promhttp.Handler())
+	srv.Mux().Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 	return srv
 }
 
