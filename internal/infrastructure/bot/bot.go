@@ -1,13 +1,11 @@
 package bot
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
-	"os"
-	"os/signal"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -57,11 +55,38 @@ func connectManager(create func(string) (*shards.Manager, error), token string, 
 	return nil, err
 }
 
-type cfg struct {
-	Token           string
-	CharactersLimit int `default:"5000"`
-	// WebBaseURL is read from BOT_WEB_BASE_URL, else WEB_BASE_URL. It is optional.
-	WebBaseURL string `envconfig:"WEB_BASE_URL"`
+// Config is read from BOT_*. A field with an envconfig tag falls back to the
+// unprefixed name, so WEB_BASE_URL and METRICS_ADDR also work.
+type Config struct {
+	Token string
+	// WebBaseURL is optional.
+	WebBaseURL  string `envconfig:"WEB_BASE_URL"`
+	MetricsAddr string `envconfig:"METRICS_ADDR" default:":2112"`
+}
+
+// LoadConfig reads BOT_* from the environment.
+func LoadConfig() (Config, error) {
+	var cfg Config
+	if err := envconfig.Process("bot", &cfg); err != nil {
+		return Config{}, err
+	}
+	if cfg.Token == "" {
+		return Config{}, errors.New("BOT_TOKEN must be set")
+	}
+	return cfg, nil
+}
+
+// ConnectShards creates the shard manager. It asks Discord for the gateway, with retries.
+func ConnectShards(token string) (*shards.Manager, error) {
+	return connectShardsWith(token, shardBackoff)
+}
+
+func connectShardsWith(token string, delay func(attempt int) time.Duration) (*shards.Manager, error) {
+	mgr, err := connectManager(newShardManager, "Bot "+token, shardConnectAttempts, delay)
+	if err != nil {
+		return nil, fmt.Errorf("could not create shards manager after %d attempts: %w", shardConnectAttempts, err)
+	}
+	return mgr, nil
 }
 
 type Bot struct {
@@ -74,31 +99,23 @@ type Bot struct {
 	eventHandler       ports.APIPort
 	metrics            ports.MetricsPort
 	mgr                *shards.Manager
+	webBaseURL         string
 	log                *zap.SugaredLogger
 	quit               chan struct{}
 	formatter          *formatter.DiscordFormatter
 	channelLocks       cmap.ConcurrentMap[string, *sync.RWMutex]
 	started            atomic.Bool
 	stopped            atomic.Bool
+	shutdown           sync.Once
+	shutdownErr        error
 }
 
-var (
-	Config cfg
-)
-
-func init() {
-	envconfig.MustProcess("bot", &Config)
-}
-
-func NewManager(summarySrv ports.SummaryService, reservationRepo ports.ReservationRepository, checkOnlineSrv ports.OnlineCheckService) *Bot {
-	mgr, err := connectManager(newShardManager, "Bot "+Config.Token, shardConnectAttempts, shardBackoff)
-	if err != nil {
-		panic(fmt.Errorf("could not create shards manager after %d attempts: %w", shardConnectAttempts, err))
-	}
-
+// NewManager builds the bot over mgr. webBaseURL may be empty.
+func NewManager(mgr *shards.Manager, webBaseURL string, summarySrv ports.SummaryService, reservationRepo ports.ReservationRepository, checkOnlineSrv ports.OnlineCheckService) *Bot {
 	mgr.Intent = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages | discordgo.IntentsGuildVoiceStates
 	bot := &Bot{
 		mgr:                mgr,
+		webBaseURL:         webBaseURL,
 		quit:               make(chan struct{}),
 		channelLocks:       cmap.New[*sync.RWMutex](),
 		summarySrv:         summarySrv,
@@ -162,35 +179,25 @@ func (b *Bot) WithLogger(log *zap.SugaredLogger) *Bot {
 	return b
 }
 
-func (b *Bot) Run() error {
+// Start opens the gateway connections.
+func (b *Bot) Start() error {
 	b.log.Info("Starting bot...")
-	err := b.mgr.Start()
-	if err != nil {
+	if err := b.mgr.Start(); err != nil {
 		return err
 	}
 	b.started.Store(true)
-
-	// Wait here until CTRL-C or other term signal is received.
 	b.log.Info("bot is now running")
-	sc := make(chan os.Signal, 1)
-	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
-	<-sc
-
-	// Cleanly close down the Manager.
-	b.log.Warn("stopping shard manager...")
-	err = b.mgr.Shutdown()
-	if err != nil {
-		return err
-	}
-	b.stopped.Store(true)
-
-	b.log.Info("shard manager stopped. Bot is shut down.")
 	return nil
 }
 
+// Shutdown stops the ticker and closes the gateway connections. Only the first call has an effect.
 func (b *Bot) Shutdown() error {
-	close(b.quit) // Tell other goroutines, such as ticker, to shut down
-	return b.mgr.Shutdown()
+	b.shutdown.Do(func() {
+		close(b.quit)
+		b.shutdownErr = b.mgr.Shutdown()
+		b.stopped.Store(true)
+	})
+	return b.shutdownErr
 }
 
 // IsRunning indicates whether the bot started successfully and hasn't been stopped yet.

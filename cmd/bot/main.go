@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -83,7 +85,15 @@ func main() {
 
 	// Discord
 	dcFormatter := formatter.NewFormatter()
-	botService := bot.NewManager(summaryService, reservationRepo, onlineChecker).
+	botCfg, err := bot.LoadConfig()
+	if err != nil {
+		log.Panic(err)
+	}
+	shardManager, err := bot.ConnectShards(botCfg.Token)
+	if err != nil {
+		log.Panic(err)
+	}
+	botService := bot.NewManager(shardManager, botCfg.WebBaseURL, summaryService, reservationRepo, onlineChecker).
 		WithGuildRepositories(guildConfigRepo, guildChannelRepo, guildRoleRepo).
 		WithFormatter(dcFormatter).
 		WithLogger(log)
@@ -110,9 +120,14 @@ func main() {
 	notifyHandler := bot.NewNotifyHandler(botService, communicationService).WithLogger(log)
 	go notifypg.NewListener(postgresql.Dsn(), log).Listen(listenCtx, notifyHandler)
 
-	err = botService.WithEventHandler(eventHandler).Run()
-
-	if err != nil {
+	botService.WithEventHandler(eventHandler)
+	if err := botService.Start(); err != nil {
 		panic(err)
+	}
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	<-ctx.Done()
+	if err := botService.Shutdown(); err != nil {
+		log.Error(err)
 	}
 }

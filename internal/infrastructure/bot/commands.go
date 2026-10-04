@@ -32,7 +32,7 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 		return
 	}
 
-	if reply := commandGateReply(cfg, name, i.ChannelID, Config.WebBaseURL); reply != "" {
+	if reply := commandGateReply(cfg, name, i.ChannelID, b.webBaseURL); reply != "" {
 		b.respondEphemeral(i, reply)
 		return
 	}

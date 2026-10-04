@@ -109,9 +109,6 @@ type SpotRepository interface {
 }
 
 type BotPort interface {
-	// Run Starts the bot instance, blocks until the bot is stopped.
-	Run() error
-
 	// FindChannelByName finds a channel by name in a given guild.
 	FindChannelByName(g *guild.Guild, channelName string) (*discord.Channel, error)
 
