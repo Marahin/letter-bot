@@ -236,11 +236,12 @@ The web reads these environment variables (`.env.sample` has examples):
 
 | Variable | Required | Default | Use |
 |---|---|---|---|
-| `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_NAME`, `DATABASE_SSL` | yes | | The shared PostgreSQL database (the same values as the bot). |
+| `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_NAME` | yes | | The shared PostgreSQL database (the same values as the bot). |
+| `DATABASE_SSL` | no | `disable` | The libpq `sslmode`, for example `require`. The bot reads it too. |
 | `WEB_BASE_URL` | yes | | The public address, for example `https://tibialoot.com`. It makes the OAuth redirect URL. With `https`, the session cookie is `Secure`. |
 | `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` | yes | | The OAuth2 credentials of the bot's Discord application. The web does not start without them. |
 | `WEB_ADDR` | no | `:8080` | The address of the web server. |
-| `WEB_METRICS_ADDR` | no | `:3005` | `/metrics`, `/livez`, `/readyz`. |
+| `WEB_METRICS_ADDR` | no | `:3005` | `/metrics`, `/livez`, `/readyz` (`/readyz` pings the database). |
 | `WEB_ADMIN_DISCORD_IDS` | no | | Comma-separated Discord user ids of the site admins. |
 | `TIBIA_WORLD_API_BASE_URL` | no | | TibiaData v4, for example `http://ext-tibiadata-api:8080/v4`. Without it, the experience job does not run and the character page shows "TibiaData does not answer". |
 | `WEB_EXPERIENCE_JOB_ENABLED` | no | `true` | Set `false` to stop the experience job in this process. |
@@ -249,7 +250,13 @@ The web reads these environment variables (`.env.sample` has examples):
 | `TZ` | yes | | Must be `Europe/Berlin`, the same as the bot (decision 31). The image sets it; the web does not start without it. |
 
 The bot reads one new optional variable: `BOT_WEB_BASE_URL` (or `WEB_BASE_URL`).
-It puts this address in its "this server is not premium" reply.
+It puts this address in its "this server is not premium" reply. Its metrics
+address is `BOT_METRICS_ADDR` or `METRICS_ADDR` (default `:2112`), and
+`BOT_TOKEN` is required.
+
+Both binaries stop cleanly on SIGINT and SIGTERM. A missing or invalid variable,
+an unreachable database or a listen port in use stops the start with exit code 1
+and an error in the log.
 
 ## Deploy
 
@@ -440,5 +447,11 @@ A server that added the bot before keeps its old permissions. Settings has a
 - `make css` builds `internal/infrastructure/web/dist/app.css` with the pinned
   Tailwind CLI (downloaded to `bin/tailwindcss`). The file is not committed.
 - Run the web locally with a database and dummy Discord values:
-  `DATABASE_HOST=127.0.0.1 DATABASE_SSL=disable WEB_BASE_URL=http://localhost:8080 DISCORD_CLIENT_ID=x DISCORD_CLIENT_SECRET=y ./bin/letter-web`.
-  Sign-in needs real credentials and the local redirect URL in the portal.
+  `DATABASE_HOST=127.0.0.1 TZ=Europe/Berlin WEB_BASE_URL=http://localhost:8080 DISCORD_CLIENT_ID=x DISCORD_CLIENT_SECRET=y make run-web`
+  (or `./bin/letter-web` after `make build-only`). `docker compose up -d db` starts
+  a database. Sign-in needs real credentials and the local redirect URL in the
+  portal.
+- `make run-bot` runs the bot; it needs `BOT_TOKEN`.
+- `make lint` runs the templ check and golangci-lint. `make help` lists the
+  targets.
+- The wiring is in `internal/infrastructure/fxmodule` (fx); see its `AGENTS.md`.

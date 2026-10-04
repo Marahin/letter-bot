@@ -51,7 +51,9 @@ These items of the request were unclear or had a cost. Each has a decision.
 
 ## Stack and structure
 
-12. **No fx.** `cmd/web/main.go` is wired by hand, like the bot.
+12. **fx wires both binaries.** The owner asked for parity with scxmanager.
+    `cmd/web` and `cmd/bot` are `fx.New(<bin>app.App()).Run()`; the wiring is in
+    `internal/infrastructure/fxmodule` (see "Parity with scxmanager").
 13. **The bot binary moves to `cmd/bot`.** The web is `cmd/web`. Both images
     build from one Dockerfile with two targets. `bot` stays the default target,
     so the current deployment (`/spot-assistant-bot`) is unchanged. CI pushes
@@ -235,6 +237,56 @@ These items of the request were unclear or had a cost. Each has a decision.
 49. **The selected server is stored per user** (`web_users.default_guild_id`), as
     in scxmanager, not in the session: it survives sign-out and a new browser.
     Without one, the first premium server is selected, else the first server.
+
+## Parity with scxmanager
+
+The owner asked for the same stack and code style as scxmanager (review of
+PR #59). This branch adopts:
+
+- **uber-go/fx** for both binaries, with the scxmanager layout:
+  `internal/infrastructure/fxmodule` (shared modules) and `botapp`/`webapp`.
+  fx handles SIGINT and SIGTERM and stops the hooks in reverse order. A busy
+  listen port or an unreachable database fails the start with exit code 1.
+- **golangci-lint v2** with scxmanager's `.golangci.yml`, and the uber-go style
+  guide vendored as `style.md`. It replaces the separate gofmt, go vet, gocyclo
+  and staticcheck steps.
+- **A Prometheus registry for each binary**, with the Go and process collectors.
+  Nothing registers on the global default registry.
+- **`make help`, `make run-web`, `make run-bot`**; Go 1.27 in `.go-version` and
+  `shell.nix`; pgx v5.10, zap v1.27.1, x/sync and x/text as in scxmanager.
+- **Config loaders return errors** instead of panicking (`postgresql.LoadConfig`,
+  `worldapi.LoadConfig`, `bot.LoadConfig`). `DATABASE_SSL` is now used
+  (`sslmode`, default `disable`). The bot adapter has no `init()` any more.
+- **`go.uber.org/automaxprocs` is removed.** Go 1.25 and later read the container
+  CPU limit.
+
+Exclusions in `.golangci.yml` that scxmanager does not have:
+
+- `staticcheck` QF1008 ("could remove embedded field from selector"):
+  `r.Spot.Name` on a `ReservationWithSpot` is clearer than `r.Name`. It is a
+  quick-fix suggestion, like the QF1003 that scxmanager already excludes.
+- `misspell` ignores `Victoris`, a Tibia world.
+- `forbidigo` on `web/assets.go` and `i18n/i18n.go`: the same fail-fast panics
+  over embedded files that scxmanager excludes for its asset and i18n packages.
+- Two `//nolint` lines with a reason: `nilnil` in `experience.optional` (a
+  missing snapshot is nil, not an error) and `musttag` on the overbooked NOTIFY
+  payload (its field names are the wire format between bot and web versions).
+
+Kept differences, on purpose:
+
+- `internal/infrastructure` keeps its name (scxmanager: `internal/infra`) and
+  the ports stay in `internal/ports`.
+- atlas migrations applied by hand (scxmanager: goose at start), because the
+  Django admin shares the tables. The binaries do not migrate.
+- sqlc keeps one config for each repository package; mockery stays at v3.8.0.
+- GitHub Actions (scxmanager: GitLab CI); the Dockerfile targets stay.
+- Health paths stay `/livez` and `/readyz` (scxmanager: `/healthz`).
+- Only Tailwind `--minify` (decision 18); no `make minify` or `lint-dupes`.
+- discordgo stays at v0.27.1 (scxmanager: v0.29.0). The shards library and
+  the bot's gateway code depend on it, and no test covers a live gateway.
+
+Follow-ups: a go-rod browser e2e suite (decision 20) and the rename to
+`internal/infra`.
 
 ## Open questions for the owner
 

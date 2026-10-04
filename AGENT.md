@@ -8,9 +8,12 @@ See `docs/web/README.md` (web panel, deploy), `docs/web/DECISIONS.md` and `docs/
 
 Avoid using `go` directly, instead use `make` commands to ensure consistency across environments.
 
-- Run tests: `make test` (also runs `sqlc diff`, gofmt, vet, gocyclo, staticcheck, the templ check and `make css`)
+- List the targets: `make help`
+- Run tests: `make test` (also runs `sqlc diff`, `make lint` and `make css`)
+- Lint: `make lint` (the templ check and golangci-lint, pinned in the Makefile; the rules are in `.golangci.yml`)
 - Run build: `make build` (builds `bin/spot-assistant-bot` and `bin/letter-web`)
 - Build without tests: `make build-only`
+- Run locally: `make run-web` and `make run-bot` (they read the environment, see `.env.sample`)
 - Compile templ components: `make generate`
 - Build the Tailwind CSS: `make css` (downloads the pinned Tailwind CLI to `bin/tailwindcss`)
 - Generate mocks: `make mocks`
@@ -22,8 +25,9 @@ Avoid using `go` directly, instead use `make` commands to ensure consistency acr
 
 It's written in a flavour of hexagonal architecture, with the following layers:
 
-* `cmd/` - the entry points: `cmd/bot` (the Discord bot) and `cmd/web` (the web panel). Both are wired by hand (no fx).
+* `cmd/` - the entry points: `cmd/bot` (the Discord bot) and `cmd/web` (the web panel). Each `main.go` is one line: `fx.New(<bin>app.App()).Run()`.
 * `internal/infrastructure` - infrastructure code, such as the Discord client, database implementations (sqlc), HTTP handlers, etc.
+  * `fxmodule` - the [fx](https://uber-go.github.io/fx/) wiring: the shared modules, and `botapp` and `webapp` for the binaries. Its rules are in `internal/infrastructure/fxmodule/AGENTS.md`.
   * `web` - the web shell (router, middleware, layout, sessions, shared components such as `Chart`, `Combobox`, `RangePicker`),
   * `<feature>-http` - the web handlers and templates of one feature (package names without the dash, e.g. `spotshttp`),
   * `i18n` - the web catalogs (`locales/en.json`, `locales/pl.json`).
@@ -33,7 +37,11 @@ It's written in a flavour of hexagonal architecture, with the following layers:
   * `test/mocks` - implementations of interfaces for testing purposes, mocks for dependency injection,
 * `internal/ports` - contains interfaces that define how the core interacts with the infrastructure. This allows for easy swapping of implementations, such as using a mock for testing.
 
-The web binary must never import `internal/infrastructure/bot` (its `init()` reads `BOT_*` and it dials the Discord gateway).
+The web binary must never import `internal/infrastructure/bot` (it dials the Discord gateway). Only `fxmodule/botapp` imports it; a test in `webapp` fails when `cmd/web` depends on it.
+
+Go code follows `style.md` (the uber-go guide, vendored without changes). `.golangci.yml` enforces the parts of it that a linter can check.
+
+Logging is zap, sugared (`*zap.SugaredLogger`). fx writes its own events through the same logger at Debug.
 
 Each functionality should be tested thoroughly with unit tests. We are using dependency injection to make testing easier.
 New core packages need at least 80% test coverage.

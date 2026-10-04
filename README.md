@@ -164,7 +164,7 @@ There are examples in [.env.sample](.env.sample) file, along with [docker-compos
 The bot exposes Prometheus metrics via an internal HTTP server.
 
 - Endpoint: `/metrics`
-- Address: configured by `METRICS_ADDR`
+- Address: configured by `BOT_METRICS_ADDR` or `METRICS_ADDR` (default `:2112`)
 - Implementation: Prometheus client, wired by infrastructure HTTP server
 
 Exposed metrics
@@ -189,7 +189,7 @@ Two HTTP endpoints are provided for container health probes:
 - `/livez`: liveness probe. Returns 200 when the bot process is running; 503 otherwise.
 - `/readyz`: readiness probe. Returns 200 when the bot is running and database ping succeeds; 503 otherwise.
 
-Configure your probes to hit these endpoints on the same port as metrics (default `:2112`, configurable with `METRICS_ADDR`).
+Configure your probes to hit these endpoints on the same port as metrics (default `:2112`, configurable with `BOT_METRICS_ADDR` or `METRICS_ADDR`).
 
 ## Credits
 Letter-bot is one of many tools prototyped by (and for) [TibiaLoot.com](https://tibialoot.com)  
