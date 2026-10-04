@@ -117,8 +117,8 @@ func (_c *MockReservationRepository_CountReservations_Call) RunAndReturn(run fun
 }
 
 // CreateAndDeleteConflicting provides a mock function for the type MockReservationRepository
-func (_mock *MockReservationRepository) CreateAndDeleteConflicting(ctx context.Context, member1 *member.Member, guild1 *guild.Guild, conflicts []*reservation.Reservation, spotId int64, startAt time.Time, endAt time.Time) ([]*reservation.ClippedOrRemovedReservation, error) {
-	ret := _mock.Called(ctx, member1, guild1, conflicts, spotId, startAt, endAt)
+func (_mock *MockReservationRepository) CreateAndDeleteConflicting(ctx context.Context, member1 *member.Member, guild1 *guild.Guild, conflicts []*reservation.Reservation, spotID int64, startAt time.Time, endAt time.Time) ([]*reservation.ClippedOrRemovedReservation, error) {
+	ret := _mock.Called(ctx, member1, guild1, conflicts, spotID, startAt, endAt)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateAndDeleteConflicting")
@@ -127,17 +127,17 @@ func (_mock *MockReservationRepository) CreateAndDeleteConflicting(ctx context.C
 	var r0 []*reservation.ClippedOrRemovedReservation
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, *member.Member, *guild.Guild, []*reservation.Reservation, int64, time.Time, time.Time) ([]*reservation.ClippedOrRemovedReservation, error)); ok {
-		return returnFunc(ctx, member1, guild1, conflicts, spotId, startAt, endAt)
+		return returnFunc(ctx, member1, guild1, conflicts, spotID, startAt, endAt)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, *member.Member, *guild.Guild, []*reservation.Reservation, int64, time.Time, time.Time) []*reservation.ClippedOrRemovedReservation); ok {
-		r0 = returnFunc(ctx, member1, guild1, conflicts, spotId, startAt, endAt)
+		r0 = returnFunc(ctx, member1, guild1, conflicts, spotID, startAt, endAt)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*reservation.ClippedOrRemovedReservation)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, *member.Member, *guild.Guild, []*reservation.Reservation, int64, time.Time, time.Time) error); ok {
-		r1 = returnFunc(ctx, member1, guild1, conflicts, spotId, startAt, endAt)
+		r1 = returnFunc(ctx, member1, guild1, conflicts, spotID, startAt, endAt)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -154,14 +154,14 @@ type MockReservationRepository_CreateAndDeleteConflicting_Call struct {
 //   - member1 *member.Member
 //   - guild1 *guild.Guild
 //   - conflicts []*reservation.Reservation
-//   - spotId int64
+//   - spotID int64
 //   - startAt time.Time
 //   - endAt time.Time
-func (_e *MockReservationRepository_Expecter) CreateAndDeleteConflicting(ctx any, member1 any, guild1 any, conflicts any, spotId any, startAt any, endAt any) *MockReservationRepository_CreateAndDeleteConflicting_Call {
-	return &MockReservationRepository_CreateAndDeleteConflicting_Call{Call: _e.mock.On("CreateAndDeleteConflicting", ctx, member1, guild1, conflicts, spotId, startAt, endAt)}
+func (_e *MockReservationRepository_Expecter) CreateAndDeleteConflicting(ctx any, member1 any, guild1 any, conflicts any, spotID any, startAt any, endAt any) *MockReservationRepository_CreateAndDeleteConflicting_Call {
+	return &MockReservationRepository_CreateAndDeleteConflicting_Call{Call: _e.mock.On("CreateAndDeleteConflicting", ctx, member1, guild1, conflicts, spotID, startAt, endAt)}
 }
 
-func (_c *MockReservationRepository_CreateAndDeleteConflicting_Call) Run(run func(ctx context.Context, member1 *member.Member, guild1 *guild.Guild, conflicts []*reservation.Reservation, spotId int64, startAt time.Time, endAt time.Time)) *MockReservationRepository_CreateAndDeleteConflicting_Call {
+func (_c *MockReservationRepository_CreateAndDeleteConflicting_Call) Run(run func(ctx context.Context, member1 *member.Member, guild1 *guild.Guild, conflicts []*reservation.Reservation, spotID int64, startAt time.Time, endAt time.Time)) *MockReservationRepository_CreateAndDeleteConflicting_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -209,7 +209,7 @@ func (_c *MockReservationRepository_CreateAndDeleteConflicting_Call) Return(clip
 	return _c
 }
 
-func (_c *MockReservationRepository_CreateAndDeleteConflicting_Call) RunAndReturn(run func(ctx context.Context, member1 *member.Member, guild1 *guild.Guild, conflicts []*reservation.Reservation, spotId int64, startAt time.Time, endAt time.Time) ([]*reservation.ClippedOrRemovedReservation, error)) *MockReservationRepository_CreateAndDeleteConflicting_Call {
+func (_c *MockReservationRepository_CreateAndDeleteConflicting_Call) RunAndReturn(run func(ctx context.Context, member1 *member.Member, guild1 *guild.Guild, conflicts []*reservation.Reservation, spotID int64, startAt time.Time, endAt time.Time) ([]*reservation.ClippedOrRemovedReservation, error)) *MockReservationRepository_CreateAndDeleteConflicting_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -278,8 +278,8 @@ func (_c *MockReservationRepository_DeleteGuildReservation_Call) RunAndReturn(ru
 }
 
 // DeletePresentMemberReservation provides a mock function for the type MockReservationRepository
-func (_mock *MockReservationRepository) DeletePresentMemberReservation(ctx context.Context, g *guild.Guild, m *member.Member, reservationId int64) error {
-	ret := _mock.Called(ctx, g, m, reservationId)
+func (_mock *MockReservationRepository) DeletePresentMemberReservation(ctx context.Context, g *guild.Guild, m *member.Member, reservationID int64) error {
+	ret := _mock.Called(ctx, g, m, reservationID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeletePresentMemberReservation")
@@ -287,7 +287,7 @@ func (_mock *MockReservationRepository) DeletePresentMemberReservation(ctx conte
 
 	var r0 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, *guild.Guild, *member.Member, int64) error); ok {
-		r0 = returnFunc(ctx, g, m, reservationId)
+		r0 = returnFunc(ctx, g, m, reservationID)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -303,12 +303,12 @@ type MockReservationRepository_DeletePresentMemberReservation_Call struct {
 //   - ctx context.Context
 //   - g *guild.Guild
 //   - m *member.Member
-//   - reservationId int64
-func (_e *MockReservationRepository_Expecter) DeletePresentMemberReservation(ctx any, g any, m any, reservationId any) *MockReservationRepository_DeletePresentMemberReservation_Call {
-	return &MockReservationRepository_DeletePresentMemberReservation_Call{Call: _e.mock.On("DeletePresentMemberReservation", ctx, g, m, reservationId)}
+//   - reservationID int64
+func (_e *MockReservationRepository_Expecter) DeletePresentMemberReservation(ctx any, g any, m any, reservationID any) *MockReservationRepository_DeletePresentMemberReservation_Call {
+	return &MockReservationRepository_DeletePresentMemberReservation_Call{Call: _e.mock.On("DeletePresentMemberReservation", ctx, g, m, reservationID)}
 }
 
-func (_c *MockReservationRepository_DeletePresentMemberReservation_Call) Run(run func(ctx context.Context, g *guild.Guild, m *member.Member, reservationId int64)) *MockReservationRepository_DeletePresentMemberReservation_Call {
+func (_c *MockReservationRepository_DeletePresentMemberReservation_Call) Run(run func(ctx context.Context, g *guild.Guild, m *member.Member, reservationID int64)) *MockReservationRepository_DeletePresentMemberReservation_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -341,7 +341,7 @@ func (_c *MockReservationRepository_DeletePresentMemberReservation_Call) Return(
 	return _c
 }
 
-func (_c *MockReservationRepository_DeletePresentMemberReservation_Call) RunAndReturn(run func(ctx context.Context, g *guild.Guild, m *member.Member, reservationId int64) error) *MockReservationRepository_DeletePresentMemberReservation_Call {
+func (_c *MockReservationRepository_DeletePresentMemberReservation_Call) RunAndReturn(run func(ctx context.Context, g *guild.Guild, m *member.Member, reservationID int64) error) *MockReservationRepository_DeletePresentMemberReservation_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -711,8 +711,8 @@ func (_c *MockReservationRepository_SelectKnownAuthors_Call) RunAndReturn(run fu
 }
 
 // SelectOverlappingReservations provides a mock function for the type MockReservationRepository
-func (_mock *MockReservationRepository) SelectOverlappingReservations(ctx context.Context, spotID int64, startAt time.Time, endAt time.Time, guildId string) ([]*reservation.Reservation, error) {
-	ret := _mock.Called(ctx, spotID, startAt, endAt, guildId)
+func (_mock *MockReservationRepository) SelectOverlappingReservations(ctx context.Context, spotID int64, startAt time.Time, endAt time.Time, guildID string) ([]*reservation.Reservation, error) {
+	ret := _mock.Called(ctx, spotID, startAt, endAt, guildID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SelectOverlappingReservations")
@@ -721,17 +721,17 @@ func (_mock *MockReservationRepository) SelectOverlappingReservations(ctx contex
 	var r0 []*reservation.Reservation
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, int64, time.Time, time.Time, string) ([]*reservation.Reservation, error)); ok {
-		return returnFunc(ctx, spotID, startAt, endAt, guildId)
+		return returnFunc(ctx, spotID, startAt, endAt, guildID)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, int64, time.Time, time.Time, string) []*reservation.Reservation); ok {
-		r0 = returnFunc(ctx, spotID, startAt, endAt, guildId)
+		r0 = returnFunc(ctx, spotID, startAt, endAt, guildID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*reservation.Reservation)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, int64, time.Time, time.Time, string) error); ok {
-		r1 = returnFunc(ctx, spotID, startAt, endAt, guildId)
+		r1 = returnFunc(ctx, spotID, startAt, endAt, guildID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -748,12 +748,12 @@ type MockReservationRepository_SelectOverlappingReservations_Call struct {
 //   - spotID int64
 //   - startAt time.Time
 //   - endAt time.Time
-//   - guildId string
-func (_e *MockReservationRepository_Expecter) SelectOverlappingReservations(ctx any, spotID any, startAt any, endAt any, guildId any) *MockReservationRepository_SelectOverlappingReservations_Call {
-	return &MockReservationRepository_SelectOverlappingReservations_Call{Call: _e.mock.On("SelectOverlappingReservations", ctx, spotID, startAt, endAt, guildId)}
+//   - guildID string
+func (_e *MockReservationRepository_Expecter) SelectOverlappingReservations(ctx any, spotID any, startAt any, endAt any, guildID any) *MockReservationRepository_SelectOverlappingReservations_Call {
+	return &MockReservationRepository_SelectOverlappingReservations_Call{Call: _e.mock.On("SelectOverlappingReservations", ctx, spotID, startAt, endAt, guildID)}
 }
 
-func (_c *MockReservationRepository_SelectOverlappingReservations_Call) Run(run func(ctx context.Context, spotID int64, startAt time.Time, endAt time.Time, guildId string)) *MockReservationRepository_SelectOverlappingReservations_Call {
+func (_c *MockReservationRepository_SelectOverlappingReservations_Call) Run(run func(ctx context.Context, spotID int64, startAt time.Time, endAt time.Time, guildID string)) *MockReservationRepository_SelectOverlappingReservations_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -791,7 +791,7 @@ func (_c *MockReservationRepository_SelectOverlappingReservations_Call) Return(r
 	return _c
 }
 
-func (_c *MockReservationRepository_SelectOverlappingReservations_Call) RunAndReturn(run func(ctx context.Context, spotID int64, startAt time.Time, endAt time.Time, guildId string) ([]*reservation.Reservation, error)) *MockReservationRepository_SelectOverlappingReservations_Call {
+func (_c *MockReservationRepository_SelectOverlappingReservations_Call) RunAndReturn(run func(ctx context.Context, spotID int64, startAt time.Time, endAt time.Time, guildID string) ([]*reservation.Reservation, error)) *MockReservationRepository_SelectOverlappingReservations_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -889,8 +889,8 @@ func (_c *MockReservationRepository_SelectOverlappingReservationsBySpotID_Call) 
 }
 
 // SelectUpcomingMemberReservationsWithSpots provides a mock function for the type MockReservationRepository
-func (_mock *MockReservationRepository) SelectUpcomingMemberReservationsWithSpots(ctx context.Context, guild1 *guild.Guild, member1 *member.Member, excludeID int64) ([]*reservation.ReservationWithSpot, error) {
-	ret := _mock.Called(ctx, guild1, member1, excludeID)
+func (_mock *MockReservationRepository) SelectUpcomingMemberReservationsWithSpots(ctx context.Context, g *guild.Guild, member1 *member.Member, excludeID int64) ([]*reservation.ReservationWithSpot, error) {
+	ret := _mock.Called(ctx, g, member1, excludeID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SelectUpcomingMemberReservationsWithSpots")
@@ -899,17 +899,17 @@ func (_mock *MockReservationRepository) SelectUpcomingMemberReservationsWithSpot
 	var r0 []*reservation.ReservationWithSpot
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, *guild.Guild, *member.Member, int64) ([]*reservation.ReservationWithSpot, error)); ok {
-		return returnFunc(ctx, guild1, member1, excludeID)
+		return returnFunc(ctx, g, member1, excludeID)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, *guild.Guild, *member.Member, int64) []*reservation.ReservationWithSpot); ok {
-		r0 = returnFunc(ctx, guild1, member1, excludeID)
+		r0 = returnFunc(ctx, g, member1, excludeID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*reservation.ReservationWithSpot)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, *guild.Guild, *member.Member, int64) error); ok {
-		r1 = returnFunc(ctx, guild1, member1, excludeID)
+		r1 = returnFunc(ctx, g, member1, excludeID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -923,14 +923,14 @@ type MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Call st
 
 // SelectUpcomingMemberReservationsWithSpots is a helper method to define mock.On call
 //   - ctx context.Context
-//   - guild1 *guild.Guild
+//   - g *guild.Guild
 //   - member1 *member.Member
 //   - excludeID int64
-func (_e *MockReservationRepository_Expecter) SelectUpcomingMemberReservationsWithSpots(ctx any, guild1 any, member1 any, excludeID any) *MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Call {
-	return &MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Call{Call: _e.mock.On("SelectUpcomingMemberReservationsWithSpots", ctx, guild1, member1, excludeID)}
+func (_e *MockReservationRepository_Expecter) SelectUpcomingMemberReservationsWithSpots(ctx any, g any, member1 any, excludeID any) *MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Call {
+	return &MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Call{Call: _e.mock.On("SelectUpcomingMemberReservationsWithSpots", ctx, g, member1, excludeID)}
 }
 
-func (_c *MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Call) Run(run func(ctx context.Context, guild1 *guild.Guild, member1 *member.Member, excludeID int64)) *MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Call {
+func (_c *MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Call) Run(run func(ctx context.Context, g *guild.Guild, member1 *member.Member, excludeID int64)) *MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -963,14 +963,14 @@ func (_c *MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Ca
 	return _c
 }
 
-func (_c *MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Call) RunAndReturn(run func(ctx context.Context, guild1 *guild.Guild, member1 *member.Member, excludeID int64) ([]*reservation.ReservationWithSpot, error)) *MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Call {
+func (_c *MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Call) RunAndReturn(run func(ctx context.Context, g *guild.Guild, member1 *member.Member, excludeID int64) ([]*reservation.ReservationWithSpot, error)) *MockReservationRepository_SelectUpcomingMemberReservationsWithSpots_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SelectUpcomingReservationsWithSpot provides a mock function for the type MockReservationRepository
-func (_mock *MockReservationRepository) SelectUpcomingReservationsWithSpot(ctx context.Context, guildId string) ([]*reservation.ReservationWithSpot, error) {
-	ret := _mock.Called(ctx, guildId)
+func (_mock *MockReservationRepository) SelectUpcomingReservationsWithSpot(ctx context.Context, guildID string) ([]*reservation.ReservationWithSpot, error) {
+	ret := _mock.Called(ctx, guildID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SelectUpcomingReservationsWithSpot")
@@ -979,17 +979,17 @@ func (_mock *MockReservationRepository) SelectUpcomingReservationsWithSpot(ctx c
 	var r0 []*reservation.ReservationWithSpot
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string) ([]*reservation.ReservationWithSpot, error)); ok {
-		return returnFunc(ctx, guildId)
+		return returnFunc(ctx, guildID)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string) []*reservation.ReservationWithSpot); ok {
-		r0 = returnFunc(ctx, guildId)
+		r0 = returnFunc(ctx, guildID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*reservation.ReservationWithSpot)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = returnFunc(ctx, guildId)
+		r1 = returnFunc(ctx, guildID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1003,12 +1003,12 @@ type MockReservationRepository_SelectUpcomingReservationsWithSpot_Call struct {
 
 // SelectUpcomingReservationsWithSpot is a helper method to define mock.On call
 //   - ctx context.Context
-//   - guildId string
-func (_e *MockReservationRepository_Expecter) SelectUpcomingReservationsWithSpot(ctx any, guildId any) *MockReservationRepository_SelectUpcomingReservationsWithSpot_Call {
-	return &MockReservationRepository_SelectUpcomingReservationsWithSpot_Call{Call: _e.mock.On("SelectUpcomingReservationsWithSpot", ctx, guildId)}
+//   - guildID string
+func (_e *MockReservationRepository_Expecter) SelectUpcomingReservationsWithSpot(ctx any, guildID any) *MockReservationRepository_SelectUpcomingReservationsWithSpot_Call {
+	return &MockReservationRepository_SelectUpcomingReservationsWithSpot_Call{Call: _e.mock.On("SelectUpcomingReservationsWithSpot", ctx, guildID)}
 }
 
-func (_c *MockReservationRepository_SelectUpcomingReservationsWithSpot_Call) Run(run func(ctx context.Context, guildId string)) *MockReservationRepository_SelectUpcomingReservationsWithSpot_Call {
+func (_c *MockReservationRepository_SelectUpcomingReservationsWithSpot_Call) Run(run func(ctx context.Context, guildID string)) *MockReservationRepository_SelectUpcomingReservationsWithSpot_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -1031,14 +1031,14 @@ func (_c *MockReservationRepository_SelectUpcomingReservationsWithSpot_Call) Ret
 	return _c
 }
 
-func (_c *MockReservationRepository_SelectUpcomingReservationsWithSpot_Call) RunAndReturn(run func(ctx context.Context, guildId string) ([]*reservation.ReservationWithSpot, error)) *MockReservationRepository_SelectUpcomingReservationsWithSpot_Call {
+func (_c *MockReservationRepository_SelectUpcomingReservationsWithSpot_Call) RunAndReturn(run func(ctx context.Context, guildID string) ([]*reservation.ReservationWithSpot, error)) *MockReservationRepository_SelectUpcomingReservationsWithSpot_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SelectUpcomingReservationsWithSpotForSpot provides a mock function for the type MockReservationRepository
-func (_mock *MockReservationRepository) SelectUpcomingReservationsWithSpotForSpot(ctx context.Context, guildId string, spotName string) ([]*reservation.ReservationWithSpot, error) {
-	ret := _mock.Called(ctx, guildId, spotName)
+func (_mock *MockReservationRepository) SelectUpcomingReservationsWithSpotForSpot(ctx context.Context, guildID string, spotName string) ([]*reservation.ReservationWithSpot, error) {
+	ret := _mock.Called(ctx, guildID, spotName)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SelectUpcomingReservationsWithSpotForSpot")
@@ -1047,17 +1047,17 @@ func (_mock *MockReservationRepository) SelectUpcomingReservationsWithSpotForSpo
 	var r0 []*reservation.ReservationWithSpot
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) ([]*reservation.ReservationWithSpot, error)); ok {
-		return returnFunc(ctx, guildId, spotName)
+		return returnFunc(ctx, guildID, spotName)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) []*reservation.ReservationWithSpot); ok {
-		r0 = returnFunc(ctx, guildId, spotName)
+		r0 = returnFunc(ctx, guildID, spotName)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*reservation.ReservationWithSpot)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
-		r1 = returnFunc(ctx, guildId, spotName)
+		r1 = returnFunc(ctx, guildID, spotName)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1071,13 +1071,13 @@ type MockReservationRepository_SelectUpcomingReservationsWithSpotForSpot_Call st
 
 // SelectUpcomingReservationsWithSpotForSpot is a helper method to define mock.On call
 //   - ctx context.Context
-//   - guildId string
+//   - guildID string
 //   - spotName string
-func (_e *MockReservationRepository_Expecter) SelectUpcomingReservationsWithSpotForSpot(ctx any, guildId any, spotName any) *MockReservationRepository_SelectUpcomingReservationsWithSpotForSpot_Call {
-	return &MockReservationRepository_SelectUpcomingReservationsWithSpotForSpot_Call{Call: _e.mock.On("SelectUpcomingReservationsWithSpotForSpot", ctx, guildId, spotName)}
+func (_e *MockReservationRepository_Expecter) SelectUpcomingReservationsWithSpotForSpot(ctx any, guildID any, spotName any) *MockReservationRepository_SelectUpcomingReservationsWithSpotForSpot_Call {
+	return &MockReservationRepository_SelectUpcomingReservationsWithSpotForSpot_Call{Call: _e.mock.On("SelectUpcomingReservationsWithSpotForSpot", ctx, guildID, spotName)}
 }
 
-func (_c *MockReservationRepository_SelectUpcomingReservationsWithSpotForSpot_Call) Run(run func(ctx context.Context, guildId string, spotName string)) *MockReservationRepository_SelectUpcomingReservationsWithSpotForSpot_Call {
+func (_c *MockReservationRepository_SelectUpcomingReservationsWithSpotForSpot_Call) Run(run func(ctx context.Context, guildID string, spotName string)) *MockReservationRepository_SelectUpcomingReservationsWithSpotForSpot_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -1105,7 +1105,7 @@ func (_c *MockReservationRepository_SelectUpcomingReservationsWithSpotForSpot_Ca
 	return _c
 }
 
-func (_c *MockReservationRepository_SelectUpcomingReservationsWithSpotForSpot_Call) RunAndReturn(run func(ctx context.Context, guildId string, spotName string) ([]*reservation.ReservationWithSpot, error)) *MockReservationRepository_SelectUpcomingReservationsWithSpotForSpot_Call {
+func (_c *MockReservationRepository_SelectUpcomingReservationsWithSpotForSpot_Call) RunAndReturn(run func(ctx context.Context, guildID string, spotName string) ([]*reservation.ReservationWithSpot, error)) *MockReservationRepository_SelectUpcomingReservationsWithSpotForSpot_Call {
 	_c.Call.Return(run)
 	return _c
 }

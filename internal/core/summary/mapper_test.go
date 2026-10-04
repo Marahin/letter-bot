@@ -13,7 +13,7 @@ import (
 
 func TestMapReservation(t *testing.T) {
 	// Given
-	assert := assert.New(t)
+	is := assert.New(t)
 	chartSrvMock := new(mocks.MockChartAdapter)
 	mockOnlineCheckService := new(mocks.MockOnlineCheckService)
 	adapter := NewAdapter(chartSrvMock, mockOnlineCheckService)
@@ -30,16 +30,16 @@ func TestMapReservation(t *testing.T) {
 	res := adapter.MapReservation(input)
 
 	// assert
-	assert.NotNil(res)
-	assert.Equal(input.Author, res.Author)
-	assert.Equal(input.StartAt, res.StartAt)
-	assert.Equal(input.EndAt, res.EndAt)
-	assert.Equal(dto.Online, res.Status)
+	is.NotNil(res)
+	is.Equal(input.Author, res.Author)
+	is.Equal(input.StartAt, res.StartAt)
+	is.Equal(input.EndAt, res.EndAt)
+	is.Equal(dto.Online, res.Status)
 }
 
 func TestMapReservations(t *testing.T) {
 	// Given
-	assert := assert.New(t)
+	is := assert.New(t)
 	chartSrvMock := new(mocks.MockChartAdapter)
 	mockOnlineCheckService := new(mocks.MockOnlineCheckService)
 	adapter := NewAdapter(chartSrvMock, mockOnlineCheckService)
@@ -65,12 +65,12 @@ func TestMapReservations(t *testing.T) {
 	res := adapter.MapReservations(input)
 
 	// assert
-	assert.Len(res, 2)
+	is.Len(res, 2)
 	for i, booking := range res {
-		assert.Equal(input[i].Author, booking.Author)
-		assert.Equal(input[i].StartAt, booking.StartAt)
-		assert.Equal(input[i].EndAt, booking.EndAt)
+		is.Equal(input[i].Author, booking.Author)
+		is.Equal(input[i].StartAt, booking.StartAt)
+		is.Equal(input[i].EndAt, booking.EndAt)
 	}
-	assert.Equal(dto.Online, res[0].Status)
-	assert.Equal(dto.Offline, res[1].Status)
+	is.Equal(dto.Online, res[0].Status)
+	is.Equal(dto.Offline, res[1].Status)
 }

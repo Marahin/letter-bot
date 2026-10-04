@@ -102,7 +102,7 @@ func newStatsService(stats *statssqlc.StatsRepository, spotRepo *spotsqlc.SpotRe
 	return corestats.New(stats, spotRepo)
 }
 
-func newCharacterService(api *worldapi.HttpWorldService, worlds *worldnamesqlc.WorldNameRepository, exp *experiencesqlc.ExperienceRepository, stats *statssqlc.StatsRepository, log *zap.SugaredLogger) *characters.Service {
+func newCharacterService(api *worldapi.HTTPWorldService, worlds *worldnamesqlc.WorldNameRepository, exp *experiencesqlc.ExperienceRepository, stats *statssqlc.StatsRepository, log *zap.SugaredLogger) *characters.Service {
 	return characters.New(worldapi.NewCachedCharacters(api), worlds, exp, stats, log)
 }
 

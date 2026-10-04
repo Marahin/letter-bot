@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	mocks "spot-assistant/internal/common/test/mocks"
+	"spot-assistant/internal/common/test/mocks"
 )
 
 func newTestLogger() *zap.SugaredLogger {
@@ -89,7 +89,10 @@ func TestListen_ServesUntilShutdown(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, http.StatusOK, metricsResp.StatusCode)
 	assert.NoError(t, shutdownErr)
-	_, err = http.Get("http://" + srv.Addr() + "/livez")
+	after, err := http.Get("http://" + srv.Addr() + "/livez")
+	if after != nil {
+		_ = after.Body.Close()
+	}
 	assert.Error(t, err)
 }
 

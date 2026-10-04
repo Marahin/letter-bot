@@ -59,7 +59,7 @@ func (r *ExperienceRepository) SaveRun(ctx context.Context, result experience.Ru
 	if err != nil {
 		return err
 	}
-	defer errors.ExecuteAndIgnoreErrorF(tx.Rollback, ctx)
+	defer errors.ExecuteAndIgnoreErrorF(ctx, tx.Rollback)
 	qtx := New(tx)
 
 	if len(result.Inserted) > 0 {

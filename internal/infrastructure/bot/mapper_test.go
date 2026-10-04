@@ -14,7 +14,7 @@ import (
 
 func TestMapChannel(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	channel := &discordgo.Channel{
 		ID:       "channel-id",
 		Name:     "channel-name",
@@ -26,16 +26,16 @@ func TestMapChannel(t *testing.T) {
 	res := MapChannel(channel)
 
 	// assert
-	assert.NotNil(res)
-	assert.Equal(channel.Name, res.Name)
-	assert.Equal(channel.ID, res.ID)
-	assert.Equal(channel.ParentID, res.ParentID)
-	assert.Equal(channel.Position, res.Position)
+	is.NotNil(res)
+	is.Equal(channel.Name, res.Name)
+	is.Equal(channel.ID, res.ID)
+	is.Equal(channel.ParentID, res.ParentID)
+	is.Equal(channel.Position, res.Position)
 }
 
 func TestMapRoles(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	roles := []*discordgo.Role{
 		{
 			ID:          "test-role-id",
@@ -55,19 +55,19 @@ func TestMapRoles(t *testing.T) {
 	res := MapRoles(roles)
 
 	// assert
-	assert.Len(res, len(roles))
+	is.Len(res, len(roles))
 	for index, resRole := range res {
-		assert.Equal(roles[index].ID, resRole.ID)
-		assert.Equal(roles[index].Name, resRole.Name)
-		assert.Equal(roles[index].Permissions, resRole.Permissions)
-		assert.Equal(roles[index].Position, resRole.Position)
-		assert.Equal(roles[index].Color, resRole.Color)
+		is.Equal(roles[index].ID, resRole.ID)
+		is.Equal(roles[index].Name, resRole.Name)
+		is.Equal(roles[index].Permissions, resRole.Permissions)
+		is.Equal(roles[index].Position, resRole.Position)
+		is.Equal(roles[index].Color, resRole.Color)
 	}
 }
 
 func TestMapGuild(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	guild := &discordgo.Guild{
 		ID:      "test-guild-id",
 		Name:    "test-guild-name",
@@ -91,23 +91,23 @@ func TestMapGuild(t *testing.T) {
 	res := MapGuild(guild)
 
 	// res
-	assert.NotNil(res)
-	assert.Equal(guild.ID, res.ID)
-	assert.Equal(guild.Name, res.Name)
-	assert.Equal(guild.Icon, res.Icon)
-	assert.Equal(guild.OwnerID, res.OwnerID)
+	is.NotNil(res)
+	is.Equal(guild.ID, res.ID)
+	is.Equal(guild.Name, res.Name)
+	is.Equal(guild.Icon, res.Icon)
+	is.Equal(guild.OwnerID, res.OwnerID)
 	for index, gRole := range guild.Roles {
 		expectedRole := guild.Roles[index]
 
-		assert.Equal(expectedRole.ID, gRole.ID)
-		assert.Equal(expectedRole.Name, gRole.Name)
-		assert.Equal(expectedRole.Permissions, gRole.Permissions)
+		is.Equal(expectedRole.ID, gRole.ID)
+		is.Equal(expectedRole.Name, gRole.Name)
+		is.Equal(expectedRole.Permissions, gRole.Permissions)
 	}
 }
 
 func TestMapGuilds(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	guilds := []*discordgo.Guild{
 		{
 			ID:   "test-guild-id",
@@ -148,25 +148,25 @@ func TestMapGuilds(t *testing.T) {
 	resGuilds := MapGuilds(guilds)
 
 	// res
-	assert.Len(resGuilds, 2)
+	is.Len(resGuilds, 2)
 	for index, res := range resGuilds {
 		guild := guilds[index]
 
-		assert.Equal(guild.ID, res.ID)
-		assert.Equal(guild.Name, res.Name)
+		is.Equal(guild.ID, res.ID)
+		is.Equal(guild.Name, res.Name)
 		for index, gRole := range guild.Roles {
 			expectedRole := guild.Roles[index]
 
-			assert.Equal(expectedRole.ID, gRole.ID)
-			assert.Equal(expectedRole.Name, gRole.Name)
-			assert.Equal(expectedRole.Permissions, gRole.Permissions)
+			is.Equal(expectedRole.ID, gRole.ID)
+			is.Equal(expectedRole.Name, gRole.Name)
+			is.Equal(expectedRole.Permissions, gRole.Permissions)
 		}
 	}
 }
 
 func TestMapUser(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	user := &discordgo.User{
 		ID:       "test-user-id",
 		Username: "test-user-username",
@@ -176,25 +176,25 @@ func TestMapUser(t *testing.T) {
 	res := MapUser(user)
 
 	// assert
-	assert.NotNil(res)
-	assert.Equal(user.ID, res.ID)
-	assert.Equal(user.Username, res.Username)
+	is.NotNil(res)
+	is.Equal(user.ID, res.ID)
+	is.Equal(user.Username, res.Username)
 }
 
 func TestMapUserIfNil(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 
 	// when
 	res := MapUser(nil)
 
 	// assert
-	assert.Nil(res)
+	is.Nil(res)
 }
 
 func TestMapMember(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	member := &discordgo.Member{
 		Nick:        "test-member-nick",
 		Roles:       []string{"test-member-role1", "test-member-role2"},
@@ -209,28 +209,28 @@ func TestMapMember(t *testing.T) {
 	res := MapMember(member)
 
 	// assert
-	assert.NotNil(res)
-	assert.Equal(member.User.ID, res.ID)
-	assert.Equal(member.Nick, res.Nick)
-	assert.Equal(member.User.Username, res.Username)
-	assert.Equal(member.Roles, res.Roles)
-	assert.Equal(member.Permissions, res.Permissions)
+	is.NotNil(res)
+	is.Equal(member.User.ID, res.ID)
+	is.Equal(member.Nick, res.Nick)
+	is.Equal(member.User.Username, res.Username)
+	is.Equal(member.Roles, res.Roles)
+	is.Equal(member.Permissions, res.Permissions)
 }
 
 func TestMapMemberIfNil(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 
 	// when
 	res := MapMember(nil)
 
 	// assert
-	assert.Nil(res)
+	is.Nil(res)
 }
 
 func TestMapMessage(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	msg := &discordgo.Message{
 		ID:              "test-message-id",
 		ChannelID:       "test-message-channel-id",
@@ -251,61 +251,61 @@ func TestMapMessage(t *testing.T) {
 	res := MapMessage(msg)
 
 	// assert
-	assert.NotNil(res)
-	assert.Equal(msg.ID, res.ID)
-	assert.Equal(msg.ChannelID, res.ChannelID)
-	assert.Equal(msg.Content, res.Content)
-	assert.Equal(msg.Timestamp, res.Timestamp)
-	assert.Equal(msg.EditedTimestamp, res.EditedTimestamp)
-	assert.NotNil(res.Member)
+	is.NotNil(res)
+	is.Equal(msg.ID, res.ID)
+	is.Equal(msg.ChannelID, res.ChannelID)
+	is.Equal(msg.Content, res.Content)
+	is.Equal(msg.Timestamp, res.Timestamp)
+	is.Equal(msg.EditedTimestamp, res.EditedTimestamp)
+	is.NotNil(res.Member)
 }
 
 func TestMapFooter(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	input := "test footer"
 
 	// when
 	res := MapFooter(input)
 
 	// assert
-	assert.NotNil(res)
-	assert.Equal(input, res.Text)
+	is.NotNil(res)
+	is.Equal(input, res.Text)
 }
 
 func TestMapStringToChoice(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	input := "test-choice"
 
 	// when
 	res := MapStringToChoice(input)
 
 	// assert
-	assert.NotNil(res)
-	assert.Equal(input, res.Name)
-	assert.Equal(input, res.Value)
+	is.NotNil(res)
+	is.Equal(input, res.Name)
+	is.Equal(input, res.Value)
 }
 
 func TestMapStringArrToChoice(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	input := []string{"test-choice-1", "test-choice-2"}
 
 	// when
 	res := MapStringArrToChoice(input)
 
 	// assert
-	assert.Len(res, len(input))
+	is.Len(res, len(input))
 	for index, choice := range res {
-		assert.Equal(input[index], choice.Name)
-		assert.Equal(input[index], choice.Value)
+		is.Equal(input[index], choice.Name)
+		is.Equal(input[index], choice.Value)
 	}
 }
 
 func TestMapReservationWithSpotArrToChoice(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	startAt := time.Date(2023, 8, 10, 16, 0, 0, 0, time.Now().Location())
 	endAt := time.Date(2023, 8, 10, 18, 0, 0, 0, time.Now().Location())
 	input := []*reservation.ReservationWithSpot{
@@ -325,10 +325,10 @@ func TestMapReservationWithSpotArrToChoice(t *testing.T) {
 	res := MapReservationWithSpotArrToChoice(input)
 
 	// assert
-	assert.Len(res, len(input))
+	is.Len(res, len(input))
 	result := res[0]
-	assert.Equal("2023-08-10 16:00 - 2023-08-10 18:00 test-spot", result.Name)
-	assert.Equal(strconv.FormatInt(input[0].Reservation.ID, 10), result.Value)
+	is.Equal("2023-08-10 16:00 - 2023-08-10 18:00 test-spot", result.Name)
+	is.Equal(strconv.FormatInt(input[0].Reservation.ID, 10), result.Value)
 }
 
 func TestMapOnlineStatus(t *testing.T) {
@@ -345,8 +345,8 @@ func TestMapOnlineStatus(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := MapOnlineStatus(tt.status)
-			assert := assert.New(t)
-			assert.Equal(tt.expected, got)
+			is := assert.New(t)
+			is.Equal(tt.expected, got)
 		})
 	}
 }

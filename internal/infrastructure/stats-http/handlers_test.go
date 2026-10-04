@@ -143,7 +143,9 @@ func TestHandleOverview_PinnedRangeIsResolvedAndPersisted(t *testing.T) {
 	assert.Len(t, got.Days, 5)
 	assert.Equal(t, "2026-09-01", got.From.Format(time.DateOnly))
 	var persisted string
-	for _, c := range rec.Result().Cookies() {
+	res := rec.Result()
+	defer func() { _ = res.Body.Close() }()
+	for _, c := range res.Cookies() {
 		if c.Name == "letter_range_"+guildID {
 			persisted = c.Value
 		}

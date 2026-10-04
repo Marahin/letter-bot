@@ -49,8 +49,8 @@ func (_m *MockExperienceRepository) EXPECT() *MockExperienceRepository_Expecter 
 }
 
 // FirstRunObservedAt provides a mock function for the type MockExperienceRepository
-func (_mock *MockExperienceRepository) FirstRunObservedAt(ctx context.Context, world string) (time.Time, error) {
-	ret := _mock.Called(ctx, world)
+func (_mock *MockExperienceRepository) FirstRunObservedAt(ctx context.Context, worldName string) (time.Time, error) {
+	ret := _mock.Called(ctx, worldName)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FirstRunObservedAt")
@@ -59,15 +59,15 @@ func (_mock *MockExperienceRepository) FirstRunObservedAt(ctx context.Context, w
 	var r0 time.Time
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (time.Time, error)); ok {
-		return returnFunc(ctx, world)
+		return returnFunc(ctx, worldName)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string) time.Time); ok {
-		r0 = returnFunc(ctx, world)
+		r0 = returnFunc(ctx, worldName)
 	} else {
 		r0 = ret.Get(0).(time.Time)
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = returnFunc(ctx, world)
+		r1 = returnFunc(ctx, worldName)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -81,12 +81,12 @@ type MockExperienceRepository_FirstRunObservedAt_Call struct {
 
 // FirstRunObservedAt is a helper method to define mock.On call
 //   - ctx context.Context
-//   - world string
-func (_e *MockExperienceRepository_Expecter) FirstRunObservedAt(ctx any, world any) *MockExperienceRepository_FirstRunObservedAt_Call {
-	return &MockExperienceRepository_FirstRunObservedAt_Call{Call: _e.mock.On("FirstRunObservedAt", ctx, world)}
+//   - worldName string
+func (_e *MockExperienceRepository_Expecter) FirstRunObservedAt(ctx any, worldName any) *MockExperienceRepository_FirstRunObservedAt_Call {
+	return &MockExperienceRepository_FirstRunObservedAt_Call{Call: _e.mock.On("FirstRunObservedAt", ctx, worldName)}
 }
 
-func (_c *MockExperienceRepository_FirstRunObservedAt_Call) Run(run func(ctx context.Context, world string)) *MockExperienceRepository_FirstRunObservedAt_Call {
+func (_c *MockExperienceRepository_FirstRunObservedAt_Call) Run(run func(ctx context.Context, worldName string)) *MockExperienceRepository_FirstRunObservedAt_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -109,14 +109,14 @@ func (_c *MockExperienceRepository_FirstRunObservedAt_Call) Return(time1 time.Ti
 	return _c
 }
 
-func (_c *MockExperienceRepository_FirstRunObservedAt_Call) RunAndReturn(run func(ctx context.Context, world string) (time.Time, error)) *MockExperienceRepository_FirstRunObservedAt_Call {
+func (_c *MockExperienceRepository_FirstRunObservedAt_Call) RunAndReturn(run func(ctx context.Context, worldName string) (time.Time, error)) *MockExperienceRepository_FirstRunObservedAt_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FirstRunObservedAtOrAfter provides a mock function for the type MockExperienceRepository
-func (_mock *MockExperienceRepository) FirstRunObservedAtOrAfter(ctx context.Context, world string, t time.Time) (time.Time, error) {
-	ret := _mock.Called(ctx, world, t)
+func (_mock *MockExperienceRepository) FirstRunObservedAtOrAfter(ctx context.Context, worldName string, t time.Time) (time.Time, error) {
+	ret := _mock.Called(ctx, worldName, t)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FirstRunObservedAtOrAfter")
@@ -125,15 +125,15 @@ func (_mock *MockExperienceRepository) FirstRunObservedAtOrAfter(ctx context.Con
 	var r0 time.Time
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, time.Time) (time.Time, error)); ok {
-		return returnFunc(ctx, world, t)
+		return returnFunc(ctx, worldName, t)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, time.Time) time.Time); ok {
-		r0 = returnFunc(ctx, world, t)
+		r0 = returnFunc(ctx, worldName, t)
 	} else {
 		r0 = ret.Get(0).(time.Time)
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string, time.Time) error); ok {
-		r1 = returnFunc(ctx, world, t)
+		r1 = returnFunc(ctx, worldName, t)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -147,13 +147,13 @@ type MockExperienceRepository_FirstRunObservedAtOrAfter_Call struct {
 
 // FirstRunObservedAtOrAfter is a helper method to define mock.On call
 //   - ctx context.Context
-//   - world string
+//   - worldName string
 //   - t time.Time
-func (_e *MockExperienceRepository_Expecter) FirstRunObservedAtOrAfter(ctx any, world any, t any) *MockExperienceRepository_FirstRunObservedAtOrAfter_Call {
-	return &MockExperienceRepository_FirstRunObservedAtOrAfter_Call{Call: _e.mock.On("FirstRunObservedAtOrAfter", ctx, world, t)}
+func (_e *MockExperienceRepository_Expecter) FirstRunObservedAtOrAfter(ctx any, worldName any, t any) *MockExperienceRepository_FirstRunObservedAtOrAfter_Call {
+	return &MockExperienceRepository_FirstRunObservedAtOrAfter_Call{Call: _e.mock.On("FirstRunObservedAtOrAfter", ctx, worldName, t)}
 }
 
-func (_c *MockExperienceRepository_FirstRunObservedAtOrAfter_Call) Run(run func(ctx context.Context, world string, t time.Time)) *MockExperienceRepository_FirstRunObservedAtOrAfter_Call {
+func (_c *MockExperienceRepository_FirstRunObservedAtOrAfter_Call) Run(run func(ctx context.Context, worldName string, t time.Time)) *MockExperienceRepository_FirstRunObservedAtOrAfter_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -181,14 +181,14 @@ func (_c *MockExperienceRepository_FirstRunObservedAtOrAfter_Call) Return(time1 
 	return _c
 }
 
-func (_c *MockExperienceRepository_FirstRunObservedAtOrAfter_Call) RunAndReturn(run func(ctx context.Context, world string, t time.Time) (time.Time, error)) *MockExperienceRepository_FirstRunObservedAtOrAfter_Call {
+func (_c *MockExperienceRepository_FirstRunObservedAtOrAfter_Call) RunAndReturn(run func(ctx context.Context, worldName string, t time.Time) (time.Time, error)) *MockExperienceRepository_FirstRunObservedAtOrAfter_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FirstSnapshotAfter provides a mock function for the type MockExperienceRepository
-func (_mock *MockExperienceRepository) FirstSnapshotAfter(ctx context.Context, world string, key string, from time.Time, to time.Time) (*experience.Snapshot, error) {
-	ret := _mock.Called(ctx, world, key, from, to)
+func (_mock *MockExperienceRepository) FirstSnapshotAfter(ctx context.Context, worldName string, key string, from time.Time, to time.Time) (*experience.Snapshot, error) {
+	ret := _mock.Called(ctx, worldName, key, from, to)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FirstSnapshotAfter")
@@ -197,17 +197,17 @@ func (_mock *MockExperienceRepository) FirstSnapshotAfter(ctx context.Context, w
 	var r0 *experience.Snapshot
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, time.Time, time.Time) (*experience.Snapshot, error)); ok {
-		return returnFunc(ctx, world, key, from, to)
+		return returnFunc(ctx, worldName, key, from, to)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, time.Time, time.Time) *experience.Snapshot); ok {
-		r0 = returnFunc(ctx, world, key, from, to)
+		r0 = returnFunc(ctx, worldName, key, from, to)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*experience.Snapshot)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, time.Time, time.Time) error); ok {
-		r1 = returnFunc(ctx, world, key, from, to)
+		r1 = returnFunc(ctx, worldName, key, from, to)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -221,15 +221,15 @@ type MockExperienceRepository_FirstSnapshotAfter_Call struct {
 
 // FirstSnapshotAfter is a helper method to define mock.On call
 //   - ctx context.Context
-//   - world string
+//   - worldName string
 //   - key string
 //   - from time.Time
 //   - to time.Time
-func (_e *MockExperienceRepository_Expecter) FirstSnapshotAfter(ctx any, world any, key any, from any, to any) *MockExperienceRepository_FirstSnapshotAfter_Call {
-	return &MockExperienceRepository_FirstSnapshotAfter_Call{Call: _e.mock.On("FirstSnapshotAfter", ctx, world, key, from, to)}
+func (_e *MockExperienceRepository_Expecter) FirstSnapshotAfter(ctx any, worldName any, key any, from any, to any) *MockExperienceRepository_FirstSnapshotAfter_Call {
+	return &MockExperienceRepository_FirstSnapshotAfter_Call{Call: _e.mock.On("FirstSnapshotAfter", ctx, worldName, key, from, to)}
 }
 
-func (_c *MockExperienceRepository_FirstSnapshotAfter_Call) Run(run func(ctx context.Context, world string, key string, from time.Time, to time.Time)) *MockExperienceRepository_FirstSnapshotAfter_Call {
+func (_c *MockExperienceRepository_FirstSnapshotAfter_Call) Run(run func(ctx context.Context, worldName string, key string, from time.Time, to time.Time)) *MockExperienceRepository_FirstSnapshotAfter_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -267,7 +267,7 @@ func (_c *MockExperienceRepository_FirstSnapshotAfter_Call) Return(snapshot *exp
 	return _c
 }
 
-func (_c *MockExperienceRepository_FirstSnapshotAfter_Call) RunAndReturn(run func(ctx context.Context, world string, key string, from time.Time, to time.Time) (*experience.Snapshot, error)) *MockExperienceRepository_FirstSnapshotAfter_Call {
+func (_c *MockExperienceRepository_FirstSnapshotAfter_Call) RunAndReturn(run func(ctx context.Context, worldName string, key string, from time.Time, to time.Time) (*experience.Snapshot, error)) *MockExperienceRepository_FirstSnapshotAfter_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -330,8 +330,8 @@ func (_c *MockExperienceRepository_InsertReservationExperience_Call) RunAndRetur
 }
 
 // LatestSnapshots provides a mock function for the type MockExperienceRepository
-func (_mock *MockExperienceRepository) LatestSnapshots(ctx context.Context, world string, keys []string) (map[string]experience.Snapshot, error) {
-	ret := _mock.Called(ctx, world, keys)
+func (_mock *MockExperienceRepository) LatestSnapshots(ctx context.Context, worldName string, keys []string) (map[string]experience.Snapshot, error) {
+	ret := _mock.Called(ctx, worldName, keys)
 
 	if len(ret) == 0 {
 		panic("no return value specified for LatestSnapshots")
@@ -340,17 +340,17 @@ func (_mock *MockExperienceRepository) LatestSnapshots(ctx context.Context, worl
 	var r0 map[string]experience.Snapshot
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []string) (map[string]experience.Snapshot, error)); ok {
-		return returnFunc(ctx, world, keys)
+		return returnFunc(ctx, worldName, keys)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []string) map[string]experience.Snapshot); ok {
-		r0 = returnFunc(ctx, world, keys)
+		r0 = returnFunc(ctx, worldName, keys)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(map[string]experience.Snapshot)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string, []string) error); ok {
-		r1 = returnFunc(ctx, world, keys)
+		r1 = returnFunc(ctx, worldName, keys)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -364,13 +364,13 @@ type MockExperienceRepository_LatestSnapshots_Call struct {
 
 // LatestSnapshots is a helper method to define mock.On call
 //   - ctx context.Context
-//   - world string
+//   - worldName string
 //   - keys []string
-func (_e *MockExperienceRepository_Expecter) LatestSnapshots(ctx any, world any, keys any) *MockExperienceRepository_LatestSnapshots_Call {
-	return &MockExperienceRepository_LatestSnapshots_Call{Call: _e.mock.On("LatestSnapshots", ctx, world, keys)}
+func (_e *MockExperienceRepository_Expecter) LatestSnapshots(ctx any, worldName any, keys any) *MockExperienceRepository_LatestSnapshots_Call {
+	return &MockExperienceRepository_LatestSnapshots_Call{Call: _e.mock.On("LatestSnapshots", ctx, worldName, keys)}
 }
 
-func (_c *MockExperienceRepository_LatestSnapshots_Call) Run(run func(ctx context.Context, world string, keys []string)) *MockExperienceRepository_LatestSnapshots_Call {
+func (_c *MockExperienceRepository_LatestSnapshots_Call) Run(run func(ctx context.Context, worldName string, keys []string)) *MockExperienceRepository_LatestSnapshots_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -398,14 +398,14 @@ func (_c *MockExperienceRepository_LatestSnapshots_Call) Return(stringToSnapshot
 	return _c
 }
 
-func (_c *MockExperienceRepository_LatestSnapshots_Call) RunAndReturn(run func(ctx context.Context, world string, keys []string) (map[string]experience.Snapshot, error)) *MockExperienceRepository_LatestSnapshots_Call {
+func (_c *MockExperienceRepository_LatestSnapshots_Call) RunAndReturn(run func(ctx context.Context, worldName string, keys []string) (map[string]experience.Snapshot, error)) *MockExperienceRepository_LatestSnapshots_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ListTrackedCharacterKeys provides a mock function for the type MockExperienceRepository
-func (_mock *MockExperienceRepository) ListTrackedCharacterKeys(ctx context.Context, world string, since time.Time) ([]string, error) {
-	ret := _mock.Called(ctx, world, since)
+func (_mock *MockExperienceRepository) ListTrackedCharacterKeys(ctx context.Context, worldName string, since time.Time) ([]string, error) {
+	ret := _mock.Called(ctx, worldName, since)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListTrackedCharacterKeys")
@@ -414,17 +414,17 @@ func (_mock *MockExperienceRepository) ListTrackedCharacterKeys(ctx context.Cont
 	var r0 []string
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, time.Time) ([]string, error)); ok {
-		return returnFunc(ctx, world, since)
+		return returnFunc(ctx, worldName, since)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, time.Time) []string); ok {
-		r0 = returnFunc(ctx, world, since)
+		r0 = returnFunc(ctx, worldName, since)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]string)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string, time.Time) error); ok {
-		r1 = returnFunc(ctx, world, since)
+		r1 = returnFunc(ctx, worldName, since)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -438,13 +438,13 @@ type MockExperienceRepository_ListTrackedCharacterKeys_Call struct {
 
 // ListTrackedCharacterKeys is a helper method to define mock.On call
 //   - ctx context.Context
-//   - world string
+//   - worldName string
 //   - since time.Time
-func (_e *MockExperienceRepository_Expecter) ListTrackedCharacterKeys(ctx any, world any, since any) *MockExperienceRepository_ListTrackedCharacterKeys_Call {
-	return &MockExperienceRepository_ListTrackedCharacterKeys_Call{Call: _e.mock.On("ListTrackedCharacterKeys", ctx, world, since)}
+func (_e *MockExperienceRepository_Expecter) ListTrackedCharacterKeys(ctx any, worldName any, since any) *MockExperienceRepository_ListTrackedCharacterKeys_Call {
+	return &MockExperienceRepository_ListTrackedCharacterKeys_Call{Call: _e.mock.On("ListTrackedCharacterKeys", ctx, worldName, since)}
 }
 
-func (_c *MockExperienceRepository_ListTrackedCharacterKeys_Call) Run(run func(ctx context.Context, world string, since time.Time)) *MockExperienceRepository_ListTrackedCharacterKeys_Call {
+func (_c *MockExperienceRepository_ListTrackedCharacterKeys_Call) Run(run func(ctx context.Context, worldName string, since time.Time)) *MockExperienceRepository_ListTrackedCharacterKeys_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -472,7 +472,7 @@ func (_c *MockExperienceRepository_ListTrackedCharacterKeys_Call) Return(strings
 	return _c
 }
 
-func (_c *MockExperienceRepository_ListTrackedCharacterKeys_Call) RunAndReturn(run func(ctx context.Context, world string, since time.Time) ([]string, error)) *MockExperienceRepository_ListTrackedCharacterKeys_Call {
+func (_c *MockExperienceRepository_ListTrackedCharacterKeys_Call) RunAndReturn(run func(ctx context.Context, worldName string, since time.Time) ([]string, error)) *MockExperienceRepository_ListTrackedCharacterKeys_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -540,8 +540,8 @@ func (_c *MockExperienceRepository_ListTrackedWorlds_Call) RunAndReturn(run func
 }
 
 // PendingReservations provides a mock function for the type MockExperienceRepository
-func (_mock *MockExperienceRepository) PendingReservations(ctx context.Context, world string, startFrom time.Time, endFrom time.Time, endTo time.Time) ([]experience.PendingReservation, error) {
-	ret := _mock.Called(ctx, world, startFrom, endFrom, endTo)
+func (_mock *MockExperienceRepository) PendingReservations(ctx context.Context, worldName string, startFrom time.Time, endFrom time.Time, endTo time.Time) ([]experience.PendingReservation, error) {
+	ret := _mock.Called(ctx, worldName, startFrom, endFrom, endTo)
 
 	if len(ret) == 0 {
 		panic("no return value specified for PendingReservations")
@@ -550,17 +550,17 @@ func (_mock *MockExperienceRepository) PendingReservations(ctx context.Context, 
 	var r0 []experience.PendingReservation
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, time.Time, time.Time, time.Time) ([]experience.PendingReservation, error)); ok {
-		return returnFunc(ctx, world, startFrom, endFrom, endTo)
+		return returnFunc(ctx, worldName, startFrom, endFrom, endTo)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, time.Time, time.Time, time.Time) []experience.PendingReservation); ok {
-		r0 = returnFunc(ctx, world, startFrom, endFrom, endTo)
+		r0 = returnFunc(ctx, worldName, startFrom, endFrom, endTo)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]experience.PendingReservation)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string, time.Time, time.Time, time.Time) error); ok {
-		r1 = returnFunc(ctx, world, startFrom, endFrom, endTo)
+		r1 = returnFunc(ctx, worldName, startFrom, endFrom, endTo)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -574,15 +574,15 @@ type MockExperienceRepository_PendingReservations_Call struct {
 
 // PendingReservations is a helper method to define mock.On call
 //   - ctx context.Context
-//   - world string
+//   - worldName string
 //   - startFrom time.Time
 //   - endFrom time.Time
 //   - endTo time.Time
-func (_e *MockExperienceRepository_Expecter) PendingReservations(ctx any, world any, startFrom any, endFrom any, endTo any) *MockExperienceRepository_PendingReservations_Call {
-	return &MockExperienceRepository_PendingReservations_Call{Call: _e.mock.On("PendingReservations", ctx, world, startFrom, endFrom, endTo)}
+func (_e *MockExperienceRepository_Expecter) PendingReservations(ctx any, worldName any, startFrom any, endFrom any, endTo any) *MockExperienceRepository_PendingReservations_Call {
+	return &MockExperienceRepository_PendingReservations_Call{Call: _e.mock.On("PendingReservations", ctx, worldName, startFrom, endFrom, endTo)}
 }
 
-func (_c *MockExperienceRepository_PendingReservations_Call) Run(run func(ctx context.Context, world string, startFrom time.Time, endFrom time.Time, endTo time.Time)) *MockExperienceRepository_PendingReservations_Call {
+func (_c *MockExperienceRepository_PendingReservations_Call) Run(run func(ctx context.Context, worldName string, startFrom time.Time, endFrom time.Time, endTo time.Time)) *MockExperienceRepository_PendingReservations_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -620,7 +620,7 @@ func (_c *MockExperienceRepository_PendingReservations_Call) Return(pendingReser
 	return _c
 }
 
-func (_c *MockExperienceRepository_PendingReservations_Call) RunAndReturn(run func(ctx context.Context, world string, startFrom time.Time, endFrom time.Time, endTo time.Time) ([]experience.PendingReservation, error)) *MockExperienceRepository_PendingReservations_Call {
+func (_c *MockExperienceRepository_PendingReservations_Call) RunAndReturn(run func(ctx context.Context, worldName string, startFrom time.Time, endFrom time.Time, endTo time.Time) ([]experience.PendingReservation, error)) *MockExperienceRepository_PendingReservations_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -683,8 +683,8 @@ func (_c *MockExperienceRepository_SaveRun_Call) RunAndReturn(run func(ctx conte
 }
 
 // SnapshotAtOrBefore provides a mock function for the type MockExperienceRepository
-func (_mock *MockExperienceRepository) SnapshotAtOrBefore(ctx context.Context, world string, key string, t time.Time) (*experience.Snapshot, error) {
-	ret := _mock.Called(ctx, world, key, t)
+func (_mock *MockExperienceRepository) SnapshotAtOrBefore(ctx context.Context, worldName string, key string, t time.Time) (*experience.Snapshot, error) {
+	ret := _mock.Called(ctx, worldName, key, t)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SnapshotAtOrBefore")
@@ -693,17 +693,17 @@ func (_mock *MockExperienceRepository) SnapshotAtOrBefore(ctx context.Context, w
 	var r0 *experience.Snapshot
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, time.Time) (*experience.Snapshot, error)); ok {
-		return returnFunc(ctx, world, key, t)
+		return returnFunc(ctx, worldName, key, t)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, time.Time) *experience.Snapshot); ok {
-		r0 = returnFunc(ctx, world, key, t)
+		r0 = returnFunc(ctx, worldName, key, t)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*experience.Snapshot)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, time.Time) error); ok {
-		r1 = returnFunc(ctx, world, key, t)
+		r1 = returnFunc(ctx, worldName, key, t)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -717,14 +717,14 @@ type MockExperienceRepository_SnapshotAtOrBefore_Call struct {
 
 // SnapshotAtOrBefore is a helper method to define mock.On call
 //   - ctx context.Context
-//   - world string
+//   - worldName string
 //   - key string
 //   - t time.Time
-func (_e *MockExperienceRepository_Expecter) SnapshotAtOrBefore(ctx any, world any, key any, t any) *MockExperienceRepository_SnapshotAtOrBefore_Call {
-	return &MockExperienceRepository_SnapshotAtOrBefore_Call{Call: _e.mock.On("SnapshotAtOrBefore", ctx, world, key, t)}
+func (_e *MockExperienceRepository_Expecter) SnapshotAtOrBefore(ctx any, worldName any, key any, t any) *MockExperienceRepository_SnapshotAtOrBefore_Call {
+	return &MockExperienceRepository_SnapshotAtOrBefore_Call{Call: _e.mock.On("SnapshotAtOrBefore", ctx, worldName, key, t)}
 }
 
-func (_c *MockExperienceRepository_SnapshotAtOrBefore_Call) Run(run func(ctx context.Context, world string, key string, t time.Time)) *MockExperienceRepository_SnapshotAtOrBefore_Call {
+func (_c *MockExperienceRepository_SnapshotAtOrBefore_Call) Run(run func(ctx context.Context, worldName string, key string, t time.Time)) *MockExperienceRepository_SnapshotAtOrBefore_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -757,14 +757,14 @@ func (_c *MockExperienceRepository_SnapshotAtOrBefore_Call) Return(snapshot *exp
 	return _c
 }
 
-func (_c *MockExperienceRepository_SnapshotAtOrBefore_Call) RunAndReturn(run func(ctx context.Context, world string, key string, t time.Time) (*experience.Snapshot, error)) *MockExperienceRepository_SnapshotAtOrBefore_Call {
+func (_c *MockExperienceRepository_SnapshotAtOrBefore_Call) RunAndReturn(run func(ctx context.Context, worldName string, key string, t time.Time) (*experience.Snapshot, error)) *MockExperienceRepository_SnapshotAtOrBefore_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SnapshotHistory provides a mock function for the type MockExperienceRepository
-func (_mock *MockExperienceRepository) SnapshotHistory(ctx context.Context, world string, key string, from time.Time, to time.Time) ([]experience.Snapshot, error) {
-	ret := _mock.Called(ctx, world, key, from, to)
+func (_mock *MockExperienceRepository) SnapshotHistory(ctx context.Context, worldName string, key string, from time.Time, to time.Time) ([]experience.Snapshot, error) {
+	ret := _mock.Called(ctx, worldName, key, from, to)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SnapshotHistory")
@@ -773,17 +773,17 @@ func (_mock *MockExperienceRepository) SnapshotHistory(ctx context.Context, worl
 	var r0 []experience.Snapshot
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, time.Time, time.Time) ([]experience.Snapshot, error)); ok {
-		return returnFunc(ctx, world, key, from, to)
+		return returnFunc(ctx, worldName, key, from, to)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, time.Time, time.Time) []experience.Snapshot); ok {
-		r0 = returnFunc(ctx, world, key, from, to)
+		r0 = returnFunc(ctx, worldName, key, from, to)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]experience.Snapshot)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, time.Time, time.Time) error); ok {
-		r1 = returnFunc(ctx, world, key, from, to)
+		r1 = returnFunc(ctx, worldName, key, from, to)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -797,15 +797,15 @@ type MockExperienceRepository_SnapshotHistory_Call struct {
 
 // SnapshotHistory is a helper method to define mock.On call
 //   - ctx context.Context
-//   - world string
+//   - worldName string
 //   - key string
 //   - from time.Time
 //   - to time.Time
-func (_e *MockExperienceRepository_Expecter) SnapshotHistory(ctx any, world any, key any, from any, to any) *MockExperienceRepository_SnapshotHistory_Call {
-	return &MockExperienceRepository_SnapshotHistory_Call{Call: _e.mock.On("SnapshotHistory", ctx, world, key, from, to)}
+func (_e *MockExperienceRepository_Expecter) SnapshotHistory(ctx any, worldName any, key any, from any, to any) *MockExperienceRepository_SnapshotHistory_Call {
+	return &MockExperienceRepository_SnapshotHistory_Call{Call: _e.mock.On("SnapshotHistory", ctx, worldName, key, from, to)}
 }
 
-func (_c *MockExperienceRepository_SnapshotHistory_Call) Run(run func(ctx context.Context, world string, key string, from time.Time, to time.Time)) *MockExperienceRepository_SnapshotHistory_Call {
+func (_c *MockExperienceRepository_SnapshotHistory_Call) Run(run func(ctx context.Context, worldName string, key string, from time.Time, to time.Time)) *MockExperienceRepository_SnapshotHistory_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -843,7 +843,7 @@ func (_c *MockExperienceRepository_SnapshotHistory_Call) Return(snapshots []expe
 	return _c
 }
 
-func (_c *MockExperienceRepository_SnapshotHistory_Call) RunAndReturn(run func(ctx context.Context, world string, key string, from time.Time, to time.Time) ([]experience.Snapshot, error)) *MockExperienceRepository_SnapshotHistory_Call {
+func (_c *MockExperienceRepository_SnapshotHistory_Call) RunAndReturn(run func(ctx context.Context, worldName string, key string, from time.Time, to time.Time) ([]experience.Snapshot, error)) *MockExperienceRepository_SnapshotHistory_Call {
 	_c.Call.Return(run)
 	return _c
 }

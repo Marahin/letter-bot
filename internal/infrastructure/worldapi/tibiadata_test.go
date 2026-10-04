@@ -16,7 +16,7 @@ import (
 	"spot-assistant/internal/ports"
 )
 
-func serveFixture(t *testing.T, wantPath, fixture string, status int) *HttpWorldService {
+func serveFixture(t *testing.T, wantPath, fixture string, status int) *HTTPWorldService {
 	t.Helper()
 	body := []byte{}
 	if fixture != "" {
@@ -30,7 +30,7 @@ func serveFixture(t *testing.T, wantPath, fixture string, status int) *HttpWorld
 		_, _ = w.Write(body)
 	}))
 	t.Cleanup(server.Close)
-	return NewHttpWorldService(server.URL + "/v4")
+	return NewHTTPWorldService(server.URL + "/v4")
 }
 
 func TestGetHighscoresPage_DecodesTibiaDataFixture(t *testing.T) {
@@ -112,7 +112,7 @@ func TestGetHighscoresPage_Errors(t *testing.T) {
 
 func TestGetHighscoresPage_TransportErrorIsUpstreamUnavailable(t *testing.T) {
 	// given
-	service := NewHttpWorldService("http://127.0.0.1:1/v4")
+	service := NewHTTPWorldService("http://127.0.0.1:1/v4")
 
 	// when
 	_, err := service.GetHighscoresPage(context.Background(), "Celesta", 1)
@@ -163,7 +163,7 @@ func TestGetCharacter_NotFound(t *testing.T) {
 				_, _ = w.Write([]byte(tt.body))
 			}))
 			t.Cleanup(server.Close)
-			service := NewHttpWorldService(server.URL)
+			service := NewHTTPWorldService(server.URL)
 
 			// when
 			c, err := service.GetCharacter(context.Background(), "Nobody Here")
@@ -182,7 +182,7 @@ func TestGetCharacter_UpstreamErrors(t *testing.T) {
 		w.WriteHeader(http.StatusBadGateway)
 	}))
 	t.Cleanup(server.Close)
-	service := NewHttpWorldService(server.URL)
+	service := NewHTTPWorldService(server.URL)
 	broken := serveFixture(t, "/v4/character/X", "", http.StatusOK)
 
 	// when

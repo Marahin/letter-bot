@@ -7,7 +7,6 @@ require (
 	github.com/alexedwards/scs/pgxstore v0.0.0-20251002162104-209de6e426de
 	github.com/alexedwards/scs/v2 v2.9.0
 	github.com/bwmarrin/discordgo v0.27.1
-	github.com/fzipp/gocyclo v0.6.0
 	github.com/gkampitakis/go-snaps v0.5.4
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/kelseyhightower/envconfig v1.4.0

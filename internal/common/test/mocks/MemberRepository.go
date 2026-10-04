@@ -47,47 +47,47 @@ func (_m *MockMemberRepository) EXPECT() *MockMemberRepository_Expecter {
 	return &MockMemberRepository_Expecter{mock: &_m.Mock}
 }
 
-// GetMemberByGuildAndId provides a mock function for the type MockMemberRepository
-func (_mock *MockMemberRepository) GetMemberByGuildAndId(g *guild.Guild, memberId string) (*member.Member, error) {
-	ret := _mock.Called(g, memberId)
+// GetMemberByGuildAndID provides a mock function for the type MockMemberRepository
+func (_mock *MockMemberRepository) GetMemberByGuildAndID(g *guild.Guild, memberID string) (*member.Member, error) {
+	ret := _mock.Called(g, memberID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetMemberByGuildAndId")
+		panic("no return value specified for GetMemberByGuildAndID")
 	}
 
 	var r0 *member.Member
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(*guild.Guild, string) (*member.Member, error)); ok {
-		return returnFunc(g, memberId)
+		return returnFunc(g, memberID)
 	}
 	if returnFunc, ok := ret.Get(0).(func(*guild.Guild, string) *member.Member); ok {
-		r0 = returnFunc(g, memberId)
+		r0 = returnFunc(g, memberID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*member.Member)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(*guild.Guild, string) error); ok {
-		r1 = returnFunc(g, memberId)
+		r1 = returnFunc(g, memberID)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// MockMemberRepository_GetMemberByGuildAndId_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetMemberByGuildAndId'
-type MockMemberRepository_GetMemberByGuildAndId_Call struct {
+// MockMemberRepository_GetMemberByGuildAndID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetMemberByGuildAndID'
+type MockMemberRepository_GetMemberByGuildAndID_Call struct {
 	*mock.Call
 }
 
-// GetMemberByGuildAndId is a helper method to define mock.On call
+// GetMemberByGuildAndID is a helper method to define mock.On call
 //   - g *guild.Guild
-//   - memberId string
-func (_e *MockMemberRepository_Expecter) GetMemberByGuildAndId(g any, memberId any) *MockMemberRepository_GetMemberByGuildAndId_Call {
-	return &MockMemberRepository_GetMemberByGuildAndId_Call{Call: _e.mock.On("GetMemberByGuildAndId", g, memberId)}
+//   - memberID string
+func (_e *MockMemberRepository_Expecter) GetMemberByGuildAndID(g any, memberID any) *MockMemberRepository_GetMemberByGuildAndID_Call {
+	return &MockMemberRepository_GetMemberByGuildAndID_Call{Call: _e.mock.On("GetMemberByGuildAndID", g, memberID)}
 }
 
-func (_c *MockMemberRepository_GetMemberByGuildAndId_Call) Run(run func(g *guild.Guild, memberId string)) *MockMemberRepository_GetMemberByGuildAndId_Call {
+func (_c *MockMemberRepository_GetMemberByGuildAndID_Call) Run(run func(g *guild.Guild, memberID string)) *MockMemberRepository_GetMemberByGuildAndID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 *guild.Guild
 		if args[0] != nil {
@@ -105,12 +105,12 @@ func (_c *MockMemberRepository_GetMemberByGuildAndId_Call) Run(run func(g *guild
 	return _c
 }
 
-func (_c *MockMemberRepository_GetMemberByGuildAndId_Call) Return(member1 *member.Member, err error) *MockMemberRepository_GetMemberByGuildAndId_Call {
+func (_c *MockMemberRepository_GetMemberByGuildAndID_Call) Return(member1 *member.Member, err error) *MockMemberRepository_GetMemberByGuildAndID_Call {
 	_c.Call.Return(member1, err)
 	return _c
 }
 
-func (_c *MockMemberRepository_GetMemberByGuildAndId_Call) RunAndReturn(run func(g *guild.Guild, memberId string) (*member.Member, error)) *MockMemberRepository_GetMemberByGuildAndId_Call {
+func (_c *MockMemberRepository_GetMemberByGuildAndID_Call) RunAndReturn(run func(g *guild.Guild, memberID string) (*member.Member, error)) *MockMemberRepository_GetMemberByGuildAndID_Call {
 	_c.Call.Return(run)
 	return _c
 }

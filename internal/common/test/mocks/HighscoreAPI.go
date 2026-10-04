@@ -48,8 +48,8 @@ func (_m *MockHighscoreAPI) EXPECT() *MockHighscoreAPI_Expecter {
 }
 
 // GetHighscoresPage provides a mock function for the type MockHighscoreAPI
-func (_mock *MockHighscoreAPI) GetHighscoresPage(ctx context.Context, world1 string, page int) (*world.HighscorePage, error) {
-	ret := _mock.Called(ctx, world1, page)
+func (_mock *MockHighscoreAPI) GetHighscoresPage(ctx context.Context, worldName string, page int) (*world.HighscorePage, error) {
+	ret := _mock.Called(ctx, worldName, page)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetHighscoresPage")
@@ -58,17 +58,17 @@ func (_mock *MockHighscoreAPI) GetHighscoresPage(ctx context.Context, world1 str
 	var r0 *world.HighscorePage
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int) (*world.HighscorePage, error)); ok {
-		return returnFunc(ctx, world1, page)
+		return returnFunc(ctx, worldName, page)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int) *world.HighscorePage); ok {
-		r0 = returnFunc(ctx, world1, page)
+		r0 = returnFunc(ctx, worldName, page)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*world.HighscorePage)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string, int) error); ok {
-		r1 = returnFunc(ctx, world1, page)
+		r1 = returnFunc(ctx, worldName, page)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -82,13 +82,13 @@ type MockHighscoreAPI_GetHighscoresPage_Call struct {
 
 // GetHighscoresPage is a helper method to define mock.On call
 //   - ctx context.Context
-//   - world1 string
+//   - worldName string
 //   - page int
-func (_e *MockHighscoreAPI_Expecter) GetHighscoresPage(ctx any, world1 any, page any) *MockHighscoreAPI_GetHighscoresPage_Call {
-	return &MockHighscoreAPI_GetHighscoresPage_Call{Call: _e.mock.On("GetHighscoresPage", ctx, world1, page)}
+func (_e *MockHighscoreAPI_Expecter) GetHighscoresPage(ctx any, worldName any, page any) *MockHighscoreAPI_GetHighscoresPage_Call {
+	return &MockHighscoreAPI_GetHighscoresPage_Call{Call: _e.mock.On("GetHighscoresPage", ctx, worldName, page)}
 }
 
-func (_c *MockHighscoreAPI_GetHighscoresPage_Call) Run(run func(ctx context.Context, world1 string, page int)) *MockHighscoreAPI_GetHighscoresPage_Call {
+func (_c *MockHighscoreAPI_GetHighscoresPage_Call) Run(run func(ctx context.Context, worldName string, page int)) *MockHighscoreAPI_GetHighscoresPage_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -116,7 +116,7 @@ func (_c *MockHighscoreAPI_GetHighscoresPage_Call) Return(highscorePage *world.H
 	return _c
 }
 
-func (_c *MockHighscoreAPI_GetHighscoresPage_Call) RunAndReturn(run func(ctx context.Context, world1 string, page int) (*world.HighscorePage, error)) *MockHighscoreAPI_GetHighscoresPage_Call {
+func (_c *MockHighscoreAPI_GetHighscoresPage_Call) RunAndReturn(run func(ctx context.Context, worldName string, page int) (*world.HighscorePage, error)) *MockHighscoreAPI_GetHighscoresPage_Call {
 	_c.Call.Return(run)
 	return _c
 }

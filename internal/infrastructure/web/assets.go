@@ -41,7 +41,7 @@ func AssetQuery() string { return asseturl.Query() }
 
 // AssetHandler serves FS() under /assets/.
 func AssetHandler() http.Handler {
-	return immutableFonts(assetHandler())
+	return immutableFonts(assetTreeHandler())
 }
 
 // immutableFonts marks existing font subsets cacheable forever: embed.FS has a zero

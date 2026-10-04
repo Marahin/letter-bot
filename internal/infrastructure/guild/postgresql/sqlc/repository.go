@@ -269,7 +269,7 @@ func inTx(ctx context.Context, db DBTXWrapper, fn func(qtx *Queries) error) erro
 	if err != nil {
 		return err
 	}
-	defer errors.ExecuteAndIgnoreErrorF(tx.Rollback, ctx)
+	defer errors.ExecuteAndIgnoreErrorF(ctx, tx.Rollback)
 
 	if err := fn(New(tx)); err != nil {
 		return postgresql.MapError(err)

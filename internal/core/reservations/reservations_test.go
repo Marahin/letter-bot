@@ -346,7 +346,7 @@ func TestCreate_ConflictKeepsBlockingReservations(t *testing.T) {
 }
 
 // expectEdit makes the booking mock authorize against existing, as booking.Edit does.
-func expectEdit(f fixture, ctx context.Context, existing *reservation.ReservationWithSpot, match func(book.EditRequest) bool) {
+func expectEdit(ctx context.Context, f fixture, existing *reservation.ReservationWithSpot, match func(book.EditRequest) bool) {
 	f.booker.EXPECT().Edit(ctx, mock.MatchedBy(match)).RunAndReturn(func(_ context.Context, r book.EditRequest) ([]*reservation.Reservation, error) {
 		return nil, r.Authorize(existing.Reservation)
 	}).Once()
@@ -358,7 +358,7 @@ func TestEdit_OwnerKeepsAuthor(t *testing.T) {
 	f := newFixture(t)
 	d := draft()
 	d.Author, d.AuthorDiscordID = "Hijack", "u9"
-	expectEdit(f, ctx, upcoming("u1"), func(r book.EditRequest) bool {
+	expectEdit(ctx, f, upcoming("u1"), func(r book.EditRequest) bool {
 		return r.GuildID == guildID && r.ReservationID == 7 && r.SpotID == 1 &&
 			r.StartAt.Equal(d.StartAt) && r.EndAt.Equal(d.EndAt) && r.Author == "" && r.AuthorDiscordID == ""
 	})
@@ -377,7 +377,7 @@ func TestEdit_ManagerChangesAuthor(t *testing.T) {
 	f := newFixture(t)
 	d := draft()
 	d.Author, d.AuthorDiscordID = "Storm Quiet", "2"
-	expectEdit(f, ctx, upcoming("u1"), func(r book.EditRequest) bool {
+	expectEdit(ctx, f, upcoming("u1"), func(r book.EditRequest) bool {
 		return r.Author == "Storm Quiet" && r.AuthorDiscordID == "2"
 	})
 	f.notifier.EXPECT().SummaryChanged(ctx, guildID).Return(nil)
@@ -394,7 +394,7 @@ func TestEdit_Refusals(t *testing.T) {
 	ctx := context.Background()
 	f := newFixture(t)
 	blocking := []*reservation.Reservation{{ID: 9}}
-	expectEdit(f, ctx, upcoming("u2"), func(book.EditRequest) bool { return true })
+	expectEdit(ctx, f, upcoming("u2"), func(book.EditRequest) bool { return true })
 	f.booker.EXPECT().Edit(ctx, mock.Anything).Return(nil, ports.ErrNotFound).Once()
 	f.booker.EXPECT().Edit(ctx, mock.Anything).Return(blocking, booking.ErrConflict).Once()
 

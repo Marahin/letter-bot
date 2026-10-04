@@ -21,7 +21,7 @@ import (
 	"spot-assistant/internal/infrastructure/i18n"
 )
 
-func render(t *testing.T, ctx context.Context, c templ.Component) string {
+func render(ctx context.Context, t *testing.T, c templ.Component) string {
 	t.Helper()
 	var b bytes.Buffer
 	require.NoError(t, c.Render(ctx, &b))
@@ -81,7 +81,7 @@ func TestFavicons_HaveTheirDeclaredSizes(t *testing.T) {
 
 func TestLayout_SignedOutShowsTheTopBar(t *testing.T) {
 	// when
-	out := render(t, context.Background(), Layout("T", "D", "http://x", "/p", Nav{}))
+	out := render(context.Background(), t, Layout("T", "D", "http://x", "/p", Nav{}))
 
 	// then
 	assert.Contains(t, out, `href="/login"`)
@@ -94,7 +94,7 @@ func TestLayout_SignedOutShowsTheTopBar(t *testing.T) {
 
 func TestLayout_SignedInShowsTheSidebar(t *testing.T) {
 	// when
-	out := render(t, context.Background(), Layout("T", "D", "http://x", "/p", signedInNav()))
+	out := render(context.Background(), t, Layout("T", "D", "http://x", "/p", signedInNav()))
 
 	// then
 	assert.Contains(t, out, "<aside")
@@ -116,7 +116,7 @@ func TestLayout_AdminLinks(t *testing.T) {
 	nav.SiteAdmin = true
 
 	// when
-	out := render(t, context.Background(), Layout("T", "D", "http://x", "/p", nav))
+	out := render(context.Background(), t, Layout("T", "D", "http://x", "/p", nav))
 
 	// then
 	assert.Contains(t, out, `href="/servers/1/settings"`)
@@ -129,7 +129,7 @@ func TestLayout_NoServerSelectedOffersTheDashboard(t *testing.T) {
 	nav := Nav{Authenticated: true, Username: "Knight"}
 
 	// when
-	out := render(t, context.Background(), Layout("T", "D", "http://x", "/p", nav))
+	out := render(context.Background(), t, Layout("T", "D", "http://x", "/p", nav))
 
 	// then
 	assert.Contains(t, out, "Choose a server")
@@ -142,7 +142,7 @@ func TestLayout_MarketingNavKeepsTheTopBarWhenSignedIn(t *testing.T) {
 	nav.Marketing = true
 
 	// when
-	out := render(t, context.Background(), Layout("T", "D", "http://x", "/", nav))
+	out := render(context.Background(), t, Layout("T", "D", "http://x", "/", nav))
 
 	// then
 	assert.NotContains(t, out, "<aside")
@@ -152,7 +152,7 @@ func TestLayout_MarketingNavKeepsTheTopBarWhenSignedIn(t *testing.T) {
 
 func TestErrorPage_SignedInLinksToTheDashboard(t *testing.T) {
 	// when
-	out := render(t, context.Background(), ErrorPage("http://x", 403, "Denied", "No.", signedInNav()))
+	out := render(context.Background(), t, ErrorPage("http://x", 403, "Denied", "No.", signedInNav()))
 
 	// then
 	assert.Contains(t, out, "Back to dashboard")
@@ -164,7 +164,7 @@ func TestLandingCopyIsTranslated(t *testing.T) {
 	ctx := i18n.WithLocale(context.Background(), i18n.Normalize("pl"))
 
 	// when
-	out := render(t, ctx, Landing("http://x", "https://invite", Nav{Marketing: true}, templ.NopComponent))
+	out := render(ctx, t, Landing("http://x", "https://invite", Nav{Marketing: true}, templ.NopComponent))
 
 	// then
 	assert.Contains(t, out, "Dodaj Letter do Discorda")
@@ -178,7 +178,7 @@ func TestLanding_EmbedsTheToolAboveTheBotFeatures(t *testing.T) {
 	tool := templ.Raw(`<div id="embedded-tool"></div>`)
 
 	// when
-	out := render(t, context.Background(), Landing("http://x", "https://invite", Nav{Marketing: true}, tool))
+	out := render(context.Background(), t, Landing("http://x", "https://invite", Nav{Marketing: true}, tool))
 
 	// then
 	assert.Contains(t, out, `<h1 id="landing-calculator-heading"`)
@@ -187,7 +187,7 @@ func TestLanding_EmbedsTheToolAboveTheBotFeatures(t *testing.T) {
 
 func TestLayout_FooterAndLockup(t *testing.T) {
 	// when
-	out := render(t, context.Background(), Layout("T", "D", "http://x", "/", Nav{}))
+	out := render(context.Background(), t, Layout("T", "D", "http://x", "/", Nav{}))
 
 	// then
 	assert.Contains(t, out, branding.Notice())
@@ -200,7 +200,7 @@ func TestWordmark_SpellsTheBrandName(t *testing.T) {
 	tag := regexp.MustCompile(`<[^>]*>`)
 
 	// when
-	out := render(t, context.Background(), wordmark("/", ""))
+	out := render(context.Background(), t, wordmark("/", ""))
 
 	// then
 	assert.Equal(t, branding.Name, tag.ReplaceAllString(out, ""))
@@ -308,9 +308,9 @@ func TestServerBadge_KeepsTheInitialUnderAnIconThatFailsToLoad(t *testing.T) {
 	ctx := context.Background()
 
 	// when
-	withIcon := render(t, ctx, serverBadge("https://cdn.discordapp.com/icons/1/abc.png", "celesta"))
-	option := render(t, ctx, serverOptionIcon("https://cdn.discordapp.com/icons/1/abc.png", "celesta"))
-	without := render(t, ctx, serverBadge("", "celesta"))
+	withIcon := render(ctx, t, serverBadge("https://cdn.discordapp.com/icons/1/abc.png", "celesta"))
+	option := render(ctx, t, serverOptionIcon("https://cdn.discordapp.com/icons/1/abc.png", "celesta"))
+	without := render(ctx, t, serverBadge("", "celesta"))
 
 	// then
 	for _, out := range []string{withIcon, option} {
@@ -325,7 +325,7 @@ func TestLayout_RendersTheHTMXErrorToastOnEveryShell(t *testing.T) {
 	for name, nav := range map[string]Nav{"signed out": {}, "signed in": signedInNav()} {
 		t.Run(name, func(t *testing.T) {
 			// when
-			out := render(t, context.Background(), Layout("T", "D", "http://x", "/", nav))
+			out := render(context.Background(), t, Layout("T", "D", "http://x", "/", nav))
 
 			// then
 			assert.Contains(t, out, `id="letter-toast"`)

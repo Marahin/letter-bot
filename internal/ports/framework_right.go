@@ -21,20 +21,20 @@ import (
 type ReservationRepository interface {
 	Find(ctx context.Context, id int64) (*reservation.Reservation, error)
 	FindReservationWithSpot(ctx context.Context, id int64, guildID, authorDiscordID string) (*reservation.ReservationWithSpot, error)
-	SelectUpcomingReservationsWithSpot(ctx context.Context, guildId string) ([]*reservation.ReservationWithSpot, error)
-	SelectUpcomingReservationsWithSpotForSpot(ctx context.Context, guildId, spotName string) ([]*reservation.ReservationWithSpot, error)
+	SelectUpcomingReservationsWithSpot(ctx context.Context, guildID string) ([]*reservation.ReservationWithSpot, error)
+	SelectUpcomingReservationsWithSpotForSpot(ctx context.Context, guildID, spotName string) ([]*reservation.ReservationWithSpot, error)
 	// SelectOverlappingReservations returns the upcoming reservations of the spot that overlap [startAt, endAt].
-	SelectOverlappingReservations(ctx context.Context, spotID int64, startAt time.Time, endAt time.Time, guildId string) ([]*reservation.Reservation, error)
+	SelectOverlappingReservations(ctx context.Context, spotID int64, startAt time.Time, endAt time.Time, guildID string) ([]*reservation.Reservation, error)
 	// SelectUpcomingMemberReservationsWithSpots leaves out excludeID (0 = none).
-	SelectUpcomingMemberReservationsWithSpots(ctx context.Context, guild *guild.Guild, member *member.Member, excludeID int64) ([]*reservation.ReservationWithSpot, error)
+	SelectUpcomingMemberReservationsWithSpots(ctx context.Context, g *guild.Guild, m *member.Member, excludeID int64) ([]*reservation.ReservationWithSpot, error)
 
 	// Creates a new reservation, and removes or shorten any existing conflicting reservations.
 	// Returns removed or shortened conflicting reservations.
-	CreateAndDeleteConflicting(ctx context.Context, member *member.Member, guild *guild.Guild, conflicts []*reservation.Reservation, spotId int64, startAt time.Time, endAt time.Time) ([]*reservation.ClippedOrRemovedReservation, error)
+	CreateAndDeleteConflicting(ctx context.Context, m *member.Member, g *guild.Guild, conflicts []*reservation.Reservation, spotID int64, startAt time.Time, endAt time.Time) ([]*reservation.ClippedOrRemovedReservation, error)
 
 	// Deletes one of the upcoming member reservations in a given guild. Returns error if operation
 	// did not succeed.
-	DeletePresentMemberReservation(ctx context.Context, g *guild.Guild, m *member.Member, reservationId int64) error
+	DeletePresentMemberReservation(ctx context.Context, g *guild.Guild, m *member.Member, reservationID int64) error
 
 	// SearchReservationsWithSpot returns one page of the guild reservations that match the filter.
 	SearchReservationsWithSpot(ctx context.Context, filter reservation.SearchFilter) ([]*reservation.ReservationWithSpot, error)
@@ -112,15 +112,15 @@ type BotPort interface {
 	// FindChannelByName finds a channel by name in a given guild.
 	FindChannelByName(g *guild.Guild, channelName string) (*discord.Channel, error)
 
-	// FindChannelById finds a channel by id in a given guild.
-	FindChannelById(g *guild.Guild, channelId string) (*discord.Channel, error)
+	// FindChannelByID finds a channel by id in a given guild.
+	FindChannelByID(g *guild.Guild, channelID string) (*discord.Channel, error)
 
 	// SendLetterMessage sends a message to a guild channel
 	// or a DM if guild is empty.
 	SendLetterMessage(g *guild.Guild, ch *discord.Channel, sum *summary.Summary) error
 
 	// SendDMOverbookedNotification sends a DM to a member about overbooking.
-	SendDMOverbookedNotification(member *member.Member, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) error
+	SendDMOverbookedNotification(m *member.Member, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) error
 
 	// OpenDM opens a DM channel with a member.
 	OpenDM(m *member.Member) (*discord.Channel, error)
@@ -190,11 +190,11 @@ type GuildRepository interface {
 }
 
 type MemberRepository interface {
-	// GetMemberByGuildAndId returns member by guild and id.
-	GetMemberByGuildAndId(g *guild.Guild, memberId string) (*member.Member, error)
+	// GetMemberByGuildAndID returns member by guild and id.
+	GetMemberByGuildAndID(g *guild.Guild, memberID string) (*member.Member, error)
 }
 
-type WorldApi interface {
+type WorldAPI interface {
 	GetOnlinePlayerNames(worldName string) ([]string, error)
 	GetBaseURL() string
 }
@@ -207,7 +207,7 @@ type TextFormatter interface {
 	FormatGenericError(err error) string
 	FormatBookResponse(response book.BookResponse) string
 	FormatBookError(response book.BookResponse, err error) string
-	FormatOverbookedMemberNotification(member *member.Member,
+	FormatOverbookedMemberNotification(m *member.Member,
 		request book.BookRequest,
 		res *reservation.ClippedOrRemovedReservation) string
 }

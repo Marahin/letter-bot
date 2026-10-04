@@ -80,16 +80,16 @@ func Handler(d *web.Deps, register func(*web.Router, *web.Deps)) http.Handler {
 // site admin, and the sidebar lists the given servers.
 func SignIn(t *testing.T, d *web.Deps, m Mocks, userID string, servers ...access.GuildAccess) *http.Cookie {
 	t.Helper()
-	return signIn(t, d, m, userID, false, servers)
+	return signInWith(t, d, m, userID, false, servers)
 }
 
 // SignInSiteAdmin is SignIn for a site admin.
 func SignInSiteAdmin(t *testing.T, d *web.Deps, m Mocks, userID string, servers ...access.GuildAccess) *http.Cookie {
 	t.Helper()
-	return signIn(t, d, m, userID, true, servers)
+	return signInWith(t, d, m, userID, true, servers)
 }
 
-func signIn(t *testing.T, d *web.Deps, m Mocks, userID string, siteAdmin bool, servers []access.GuildAccess) *http.Cookie {
+func signInWith(t *testing.T, d *web.Deps, m Mocks, userID string, siteAdmin bool, servers []access.GuildAccess) *http.Cookie {
 	t.Helper()
 	m.Auth.EXPECT().User(mock.Anything, userID).Return(&webuser.User{DiscordUserID: userID, Username: "user-" + userID}, nil).Maybe()
 	m.Auth.EXPECT().SetDefaultGuild(mock.Anything, userID, mock.Anything).Return(nil).Maybe()

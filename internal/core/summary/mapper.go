@@ -6,13 +6,13 @@ import (
 	"spot-assistant/internal/core/dto/summary"
 )
 
-func (a *Adapter) MapReservation(reservation *reservation.Reservation) *summary.Booking {
+func (a *Adapter) MapReservation(res *reservation.Reservation) *summary.Booking {
 	return &summary.Booking{
-		Author:          reservation.Author,
-		StartAt:         reservation.StartAt,
-		EndAt:           reservation.EndAt,
-		AuthorDiscordID: reservation.AuthorDiscordID,
-		Status:          a.onlineCheck.PlayerStatus(reservation.GuildID, reservation.Author),
+		Author:          res.Author,
+		StartAt:         res.StartAt,
+		EndAt:           res.EndAt,
+		AuthorDiscordID: res.AuthorDiscordID,
+		Status:          a.onlineCheck.PlayerStatus(res.GuildID, res.Author),
 	}
 }
 

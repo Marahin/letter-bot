@@ -3,7 +3,6 @@ package bot
 import (
 	"errors"
 	"fmt"
-	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -26,9 +25,7 @@ const (
 )
 
 // newShardManager is a seam so tests can stub shards.New.
-var newShardManager = func(token string) (*shards.Manager, error) {
-	return shards.New(token)
-}
+var newShardManager = shards.New
 
 func shardBackoff(attempt int) time.Duration {
 	delay := shardBackoffBase << attempt
@@ -139,11 +136,8 @@ func NewManager(mgr *shards.Manager, webBaseURL string, summarySrv ports.Summary
 	return bot
 }
 
-func (b *Bot) WithHttpClient(client *http.Client) {
-}
-
-func (b *Bot) WithFormatter(formatter *formatter.DiscordFormatter) *Bot {
-	b.formatter = formatter
+func (b *Bot) WithFormatter(f *formatter.DiscordFormatter) *Bot {
+	b.formatter = f
 
 	return b
 }
@@ -164,8 +158,8 @@ func (b *Bot) WithMetrics(m ports.MetricsPort) *Bot {
 	return b
 }
 
-// WithEVentHandler sets bot's event handler to the provided port
-func (b *Bot) WithEventHandler(port ports.APIPort) ports.BotPort {
+// WithEventHandler sets the bot's event handler.
+func (b *Bot) WithEventHandler(port ports.APIPort) *Bot {
 	b.eventHandler = port
 	return b
 }

@@ -25,7 +25,7 @@ type CommunicationService interface {
 	NotifyOverbookedMember(
 		request book.BookRequest,
 		res *reservation.ClippedOrRemovedReservation)
-	SendPrivateSummary(request summary.PrivateSummaryRequest, summary *summary.Summary) error
+	SendPrivateSummary(request summary.PrivateSummaryRequest, sum *summary.Summary) error
 }
 
 type SummaryService interface {
@@ -45,7 +45,7 @@ type BookingService interface {
 
 	UnbookAutocomplete(g *guild.Guild, m *member.Member, filter string) ([]*reservation.ReservationWithSpot, error)
 
-	Unbook(g *guild.Guild, m *member.Member, reservationId int64) (*reservation.ReservationWithSpot, error)
+	Unbook(g *guild.Guild, m *member.Member, reservationID int64) (*reservation.ReservationWithSpot, error)
 
 	// Edit changes a reservation under the booking rules, without overbooking.
 	// On booking.ErrConflict it returns the overlapping reservations.

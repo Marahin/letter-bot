@@ -44,7 +44,7 @@ func (a *Adapter) GetSuggestedHours(baseTime time.Time, filter string) []string 
 	roundedHour := baseTime.Hour()
 	if roundedMinutes >= 30 {
 		roundedMinutes = 0
-		roundedHour += 1
+		roundedHour++
 	} else {
 		roundedMinutes = 30
 	}
@@ -60,7 +60,7 @@ func (a *Adapter) GetSuggestedHours(baseTime time.Time, filter string) []string 
 		return hour.Format(stringsHelper.DcTimeFormat)
 	})
 
-	if len(validatedFilter) > 0 {
+	if validatedFilter != "" {
 		suggestedOptions = collections.PoorMansFilter(suggestedOptions, func(t string) bool {
 			return strings.Contains(strings.ToLower(t), strings.ToLower(validatedFilter))
 		})
@@ -76,46 +76,46 @@ func (a *Adapter) GetSuggestedHours(baseTime time.Time, filter string) []string 
 
 func (a *Adapter) Book(request book.BookRequest) ([]*reservation.ClippedOrRemovedReservation, error) {
 	spotName := request.Spot
-	member := request.Member
+	m := request.Member
 	startAt := request.StartAt
 	endAt := request.EndAt
 	overbook := request.Overbook
 	hasPermissions := request.HasPermissions
-	guild := request.Guild
+	g := request.Guild
 	a.log.With(
 		"spot", spotName,
 		"spotID", request.SpotID,
-		"member.id", member.ID,
-		"member.name", member.Nick,
-		"member.username", member.Username,
+		"member.id", m.ID,
+		"member.name", m.Nick,
+		"member.username", m.Username,
 		"hasPermissions", hasPermissions,
 		"overbook", overbook,
 		"startAt", startAt,
 		"endAt", endAt,
 	).Info("booking request")
 
-	spot, err := a.bookedSpot(context.Background(), guild.ID, request)
+	sp, err := a.bookedSpot(context.Background(), g.ID, request)
 	if err != nil {
 		return nil, err
 	}
-	request.Spot = spot.Name
+	request.Spot = sp.Name
 
-	if err = validateHuntLength(endAt.Sub(startAt)); err != nil {
+	if err := validateHuntLength(endAt.Sub(startAt)); err != nil {
 		return nil, err
 	}
 
-	if err = a.validateAuthorQuota(context.Background(), guild, member, spot.Name, startAt, endAt, 0); err != nil {
+	if err := a.validateAuthorQuota(context.Background(), g, m, sp.Name, startAt, endAt, 0); err != nil {
 		return nil, err
 	}
 
-	conflictingReservations, err := a.reservationRepo.SelectOverlappingReservations(context.Background(), spot.ID, startAt, endAt, guild.ID)
+	conflictingReservations, err := a.reservationRepo.SelectOverlappingReservations(context.Background(), sp.ID, startAt, endAt, g.ID)
 	if err != nil {
 		return nil, fmt.Errorf("could not select overlapping reservations: %w", err)
 	}
 
 	if len(conflictingReservations) > 0 {
 		if overbook {
-			err = validateNoSelfOverbook(member, conflictingReservations)
+			err = validateNoSelfOverbook(m, conflictingReservations)
 			if err != nil {
 				return nil, err
 			}
@@ -132,7 +132,7 @@ func (a *Adapter) Book(request book.BookRequest) ([]*reservation.ClippedOrRemove
 		}
 	}
 
-	res, err := a.reservationRepo.CreateAndDeleteConflicting(context.Background(), member, guild, conflictingReservations, spot.ID, startAt, endAt)
+	res, err := a.reservationRepo.CreateAndDeleteConflicting(context.Background(), m, g, conflictingReservations, sp.ID, startAt, endAt)
 	if err != nil {
 		return nil, fmt.Errorf("could not create the reservation: %w", err)
 	}
@@ -183,12 +183,11 @@ func (a *Adapter) UnbookAutocomplete(g *guild.Guild, m *member.Member, filter st
 	}
 
 	// If any input value is passed, try to match it with startAt, endAt and spot name
-	if len(filter) > 0 {
+	if filter != "" {
 		reservations = collections.PoorMansFilter(reservations, func(r *reservation.ReservationWithSpot) bool {
-			searchableString := strings.Join([]string{
-				r.StartAt.Format(stringsHelper.DcLongTimeFormat),
-				r.StartAt.Format(stringsHelper.DcLongTimeFormat),
-				r.Spot.Name}, "")
+			searchableString := r.StartAt.Format(stringsHelper.DcLongTimeFormat) +
+				r.EndAt.Format(stringsHelper.DcLongTimeFormat) +
+				r.Spot.Name
 			containsFilterWord := strings.Contains(strings.ToLower(searchableString), strings.ToLower(filter))
 			return containsFilterWord
 		})
@@ -197,12 +196,12 @@ func (a *Adapter) UnbookAutocomplete(g *guild.Guild, m *member.Member, filter st
 	return reservations, nil
 }
 
-func (a *Adapter) Unbook(g *guild.Guild, m *member.Member, reservationId int64) (*reservation.ReservationWithSpot, error) {
+func (a *Adapter) Unbook(g *guild.Guild, m *member.Member, reservationID int64) (*reservation.ReservationWithSpot, error) {
 
 	// Get non-expired reservation for guild + member + reservation
 	// Remove it
 	// Return removed reservation and an error
-	res, err := a.reservationRepo.FindReservationWithSpot(context.Background(), reservationId, g.ID, m.ID)
+	res, err := a.reservationRepo.FindReservationWithSpot(context.Background(), reservationID, g.ID, m.ID)
 	if err != nil {
 		return nil, err
 	}

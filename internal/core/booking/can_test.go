@@ -11,7 +11,7 @@ import (
 
 func Test_canOverbook_trueWhenHasPermissionsAndAttemptsToOverbook(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	attemptsToOverbook := true
 	hasPermissions := true
 	conflictingReservations := []*reservation.Reservation{}
@@ -20,12 +20,12 @@ func Test_canOverbook_trueWhenHasPermissionsAndAttemptsToOverbook(t *testing.T) 
 	output := canOverbook(attemptsToOverbook, hasPermissions, conflictingReservations)
 
 	// assert
-	assert.True(output)
+	is.True(output)
 }
 
 func Test_canOverbook_falseWhenHasPermissionsAndDoesntAttemptToOverbook(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	attemptsToOverbook := false
 	hasPermissions := false
 	conflictingReservations := []*reservation.Reservation{}
@@ -34,12 +34,12 @@ func Test_canOverbook_falseWhenHasPermissionsAndDoesntAttemptToOverbook(t *testi
 	output := canOverbook(attemptsToOverbook, hasPermissions, conflictingReservations)
 
 	// assert
-	assert.False(output)
+	is.False(output)
 }
 
 func Test_canOverbook_falseWhenReservationStartedLessThan10MinutesAgo(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	attemptsToOverbook := true
 	hasPermissions := false
 	now := time.Now()
@@ -54,12 +54,12 @@ func Test_canOverbook_falseWhenReservationStartedLessThan10MinutesAgo(t *testing
 	output := canOverbook(attemptsToOverbook, hasPermissions, conflictingReservations)
 
 	// assert
-	assert.False(output)
+	is.False(output)
 }
 
 func Test_canOverbook_trueWhenReservationStartedMoreThan10MinutesAgo(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	attemptsToOverbook := true
 	hasPermissions := false
 	now := time.Now()
@@ -74,12 +74,12 @@ func Test_canOverbook_trueWhenReservationStartedMoreThan10MinutesAgo(t *testing.
 	output := canOverbook(attemptsToOverbook, hasPermissions, conflictingReservations)
 
 	// assert
-	assert.True(output)
+	is.True(output)
 }
 
 func Test_canOverbook_falseWhenMultipleConflictingReservations(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	attemptsToOverbook := true
 	hasPermissions := false
 	now := time.Now()
@@ -98,12 +98,12 @@ func Test_canOverbook_falseWhenMultipleConflictingReservations(t *testing.T) {
 	output := canOverbook(attemptsToOverbook, hasPermissions, conflictingReservations)
 
 	// assert
-	assert.False(output)
+	is.False(output)
 }
 
 func Test_canOverbook_falseWhenReservationHasNotStartedYet(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	attemptsToOverbook := true
 	hasPermissions := false
 	now := time.Now()
@@ -118,12 +118,12 @@ func Test_canOverbook_falseWhenReservationHasNotStartedYet(t *testing.T) {
 	output := canOverbook(attemptsToOverbook, hasPermissions, conflictingReservations)
 
 	// assert
-	assert.False(output)
+	is.False(output)
 }
 
 func Test_canOverbook_falseWhenReservationAlreadyEnded(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	attemptsToOverbook := true
 	hasPermissions := false
 	now := time.Now()
@@ -138,12 +138,12 @@ func Test_canOverbook_falseWhenReservationAlreadyEnded(t *testing.T) {
 	output := canOverbook(attemptsToOverbook, hasPermissions, conflictingReservations)
 
 	// assert
-	assert.False(output)
+	is.False(output)
 }
 
 func Test_canOverbook_trueWhenPrivilegedUserOverbooksEarly(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	attemptsToOverbook := true
 	hasPermissions := true
 	now := time.Now()
@@ -158,5 +158,5 @@ func Test_canOverbook_trueWhenPrivilegedUserOverbooksEarly(t *testing.T) {
 	output := canOverbook(attemptsToOverbook, hasPermissions, conflictingReservations)
 
 	// assert
-	assert.True(output)
+	is.True(output)
 }

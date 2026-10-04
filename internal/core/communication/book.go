@@ -11,7 +11,7 @@ func (a *Adapter) NotifyOverbookedMember(
 	request book.BookRequest,
 	res *reservation.ClippedOrRemovedReservation,
 ) {
-	member, err := a.memberRepo.GetMemberByGuildAndId(request.Guild, res.Original.AuthorDiscordID)
+	member, err := a.memberRepo.GetMemberByGuildAndID(request.Guild, res.Original.AuthorDiscordID)
 	if err != nil {
 		a.log.Error("something went wrong when fetching member to notify about overbooking: ", err)
 		return

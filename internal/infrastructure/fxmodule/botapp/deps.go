@@ -32,7 +32,7 @@ func newShards(cfg bot.Config) (*shards.Manager, error) {
 	return bot.ConnectShards(cfg.Token)
 }
 
-func newOnlineChecker(api *worldapi.HttpWorldService, worlds *worldnamesqlc.WorldNameRepository, log *zap.SugaredLogger) *onlinecheck.Adapter {
+func newOnlineChecker(api *worldapi.HTTPWorldService, worlds *worldnamesqlc.WorldNameRepository, log *zap.SugaredLogger) *onlinecheck.Adapter {
 	checker := onlinecheck.NewAdapter(api, worlds).WithLogger(log)
 	if !checker.IsConfigured() {
 		log.Warn("Online checker is disabled: TIBIA_WORLD_API_BASE_URL not set")

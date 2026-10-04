@@ -74,30 +74,34 @@ func (t Totals) Add(o Totals) Totals {
 }
 
 type SpotRow struct {
+	Totals
+
 	SpotID   int64
 	Name     string
 	Archived bool
-	Totals
 }
 
 // PlayerRow is one Discord user. Name is the author text of their latest reservation.
 type PlayerRow struct {
+	Totals
+
 	UserID string
 	Name   string
-	Totals
 }
 
 // CharacterRow is one character of the reservation authors. Name is its latest spelling.
 type CharacterRow struct {
+	Totals
+
 	Key  string
 	Name string
-	Totals
 }
 
 // Day is the totals of the reservations that start on one local day (midnight).
 type Day struct {
-	Day time.Time
 	Totals
+
+	Day time.Time
 }
 
 // CharacterReservation is one reservation of a character with the character's own experience.
@@ -136,6 +140,7 @@ type Sort struct {
 // or by id when the sort is not by name.
 type Query struct {
 	Filter
+
 	Sort  Sort
 	Limit int
 }

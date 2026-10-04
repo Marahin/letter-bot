@@ -39,7 +39,7 @@ func newAuthFixture(t *testing.T) *authFixture {
 		access:  mocks.NewMockGuildAccessService(t),
 		premium: mocks.NewMockPremiumService(t),
 	}
-	f.srv = newServer(cfg, zap.NewNop().Sugar(), NewSessionManager(cfg, nil)).
+	f.srv = newServerWithSessions(cfg, zap.NewNop().Sugar(), NewSessionManager(cfg, nil)).
 		WithLandingTool(templ.NopComponent).
 		WithServices(Services{Auth: f.auth, Access: f.access, Premium: f.premium})
 	f.srv.Mount(func(r *Router, d *Deps) {

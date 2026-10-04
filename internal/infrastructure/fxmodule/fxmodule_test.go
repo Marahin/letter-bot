@@ -159,7 +159,7 @@ func TestRepositories_BuildOverAPool(t *testing.T) {
 		fx.Invoke(func(
 			*guildsqlc.GuildConfigRepository, *guildsqlc.GuildChannelRepository, *guildsqlc.GuildRoleRepository,
 			*worldnamesqlc.WorldNameRepository, *spotsqlc.SpotRepository, *webusersqlc.WebUserRepository,
-			*experiencesqlc.ExperienceRepository, *worldapi.HttpWorldService,
+			*experiencesqlc.ExperienceRepository, *worldapi.HTTPWorldService,
 		) {
 		}),
 	)
@@ -178,7 +178,7 @@ func TestSharedModules_ValidateTogether(t *testing.T) {
 		Repositories,
 		WorldAPI,
 		Registry,
-		fx.Invoke(func(*pgxpool.Pool, *worldapi.HttpWorldService, *prometheus.Registry) {}),
+		fx.Invoke(func(*pgxpool.Pool, *worldapi.HTTPWorldService, *prometheus.Registry) {}),
 	)
 
 	require.NoError(t, err)

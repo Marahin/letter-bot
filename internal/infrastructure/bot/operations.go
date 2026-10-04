@@ -3,6 +3,7 @@ package bot
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -48,8 +49,8 @@ func (b *Bot) ticker() {
 	}
 }
 
-func (b *Bot) SendDMOverbookedNotification(member *member.Member, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) error {
-	return b.SendDM(member, b.formatter.FormatOverbookedMemberNotification(member, request, res))
+func (b *Bot) SendDMOverbookedNotification(m *member.Member, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) error {
+	return b.SendDM(m, b.formatter.FormatOverbookedMemberNotification(m, request, res))
 }
 
 func (b *Bot) ChannelMessages(g *guild.Guild, ch *discord.Channel, limit int) ([]*discord.Message, error) {
@@ -77,11 +78,11 @@ func (b *Bot) CleanChannel(g *guild.Guild, channel *discord.Channel) error {
 		return err
 	}
 
-	messageIds := collections.PoorMansMap(messages, func(msg *discord.Message) string {
+	messageIDs := collections.PoorMansMap(messages, func(msg *discord.Message) string {
 		return msg.ID
 	})
 
-	err = b.mgr.SessionForGuild(gID).ChannelMessagesBulkDelete(channel.ID, messageIds)
+	err = b.mgr.SessionForGuild(gID).ChannelMessagesBulkDelete(channel.ID, messageIDs)
 	if err != nil {
 		return err
 	}
@@ -92,14 +93,14 @@ func (b *Bot) CleanChannel(g *guild.Guild, channel *discord.Channel) error {
 }
 
 // EnsureChannel creates the legacy channels that the guild settings leave empty and that do not exist.
-func (b *Bot) EnsureChannel(guild *guild.Guild, cfg *guildconfig.Config) error {
-	channels, err := b.mgr.Gateway.GuildChannels(guild.ID)
+func (b *Bot) EnsureChannel(g *guild.Guild, cfg *guildconfig.Config) error {
+	channels, err := b.mgr.Gateway.GuildChannels(g.ID)
 	if err != nil {
 		return err
 	}
 
 	for _, name := range legacyChannelsToCreate(cfg, channels) {
-		if _, err := b.mgr.Gateway.GuildChannelCreate(guild.ID, name, discordgo.ChannelTypeGuildText); err != nil {
+		if _, err := b.mgr.Gateway.GuildChannelCreate(g.ID, name, discordgo.ChannelTypeGuildText); err != nil {
 			return err
 		}
 	}
@@ -107,27 +108,27 @@ func (b *Bot) EnsureChannel(guild *guild.Guild, cfg *guildconfig.Config) error {
 	return nil
 }
 
-func (b *Bot) FindChannelById(g *guild.Guild, channelId string) (*discord.Channel, error) {
+func (b *Bot) FindChannelByID(g *guild.Guild, channelID string) (*discord.Channel, error) {
 	channels, err := b.mgr.Gateway.GuildChannels(g.ID)
 	if err != nil {
-		return nil, fmt.Errorf("error when fetching guild channels: %s", err)
+		return nil, fmt.Errorf("error when fetching guild channels: %w", err)
 	}
 
 	channel, _ := collections.PoorMansFind(channels, func(channel *discordgo.Channel) bool {
-		return channel.ID == channelId
+		return channel.ID == channelID
 	})
 
 	if channel != nil {
 		return MapChannel(channel), nil
 	}
 
-	return nil, fmt.Errorf("channel with id '%s' not found in guild '%s'", channelId, g.Name)
+	return nil, fmt.Errorf("channel with id '%s' not found in guild '%s'", channelID, g.Name)
 }
 
 func (b *Bot) FindChannelByName(g *guild.Guild, channelName string) (*discord.Channel, error) {
 	channels, err := b.mgr.Gateway.GuildChannels(g.ID)
 	if err != nil {
-		return nil, fmt.Errorf("error when fetching guild channels: %s", err)
+		return nil, fmt.Errorf("error when fetching guild channels: %w", err)
 	}
 
 	for _, channel := range channels {
@@ -140,24 +141,24 @@ func (b *Bot) FindChannelByName(g *guild.Guild, channelName string) (*discord.Ch
 }
 
 func (b *Bot) EnsureRoles(g *guild.Guild) error {
-	guild, err := b.mgr.Gateway.Guild(g.ID)
+	gld, err := b.mgr.Gateway.Guild(g.ID)
 	if err != nil {
-		return fmt.Errorf("error when fetching guild: %s", err)
+		return fmt.Errorf("error when fetching guild: %w", err)
 	}
 
 	roles, err := b.GetRoles(g)
 	if err != nil {
 		return err
 	}
-	for _, role := range roles {
-		if role.Name == discord.PrivilegedRole {
+	for _, r := range roles {
+		if r.Name == discord.PrivilegedRole {
 			return nil
 		}
 	}
 
-	_, err = b.mgr.Gateway.GuildRoleCreate(guild.ID, &discordgo.RoleParams{Name: discord.PrivilegedRole})
+	_, err = b.mgr.Gateway.GuildRoleCreate(gld.ID, &discordgo.RoleParams{Name: discord.PrivilegedRole})
 	if err != nil {
-		return fmt.Errorf("error when creating a postman role: %s", err)
+		return fmt.Errorf("error when creating a postman role: %w", err)
 	}
 
 	return nil
@@ -170,14 +171,14 @@ func (b *Bot) GetGuilds() []*guild.Guild {
 	guilds := make([]*discordgo.Guild, 0)
 	for _, shard := range b.mgr.Shards {
 		for _, poorGuild := range shard.Session.State.Guilds {
-			guild, err := shard.Session.Guild(poorGuild.ID)
+			g, err := shard.Session.Guild(poorGuild.ID)
 			if err != nil {
 				b.log.With("guild.ID", poorGuild.ID).Errorf("could not download guild data: %s", err)
 
 				continue
 			}
 
-			guilds = append(guilds, guild)
+			guilds = append(guilds, g)
 		}
 	}
 
@@ -185,48 +186,48 @@ func (b *Bot) GetGuilds() []*guild.Guild {
 }
 
 func (b *Bot) GetGuild(id int64) (*guild.Guild, error) {
-	guild, err := b.mgr.SessionForGuild(id).Guild(strconv.FormatInt(id, 10))
+	g, err := b.mgr.SessionForGuild(id).Guild(strconv.FormatInt(id, 10))
 	if err != nil {
 		return nil, err
 	}
 
-	return MapGuild(guild), nil
+	return MapGuild(g), nil
 }
 
-func (b *Bot) TryUpdateGuildLetter(guild *guild.Guild) {
-	err := b.UpdateGuildLetter(guild)
+func (b *Bot) TryUpdateGuildLetter(g *guild.Guild) {
+	err := b.UpdateGuildLetter(g)
 	if err != nil {
 		b.log.Errorf("could not update guild letter: %s", err)
 	}
 }
 
-func (b *Bot) UpdateGuildLetter(guild *guild.Guild) error {
-	cfg, err := b.guildConfig(context.Background(), guild.ID)
+func (b *Bot) UpdateGuildLetter(g *guild.Guild) error {
+	cfg, err := b.guildConfig(context.Background(), g.ID)
 	if err != nil {
 		return err
 	}
 
-	return b.updateGuildLetter(guild, cfg)
+	return b.updateGuildLetterWithConfig(g, cfg)
 }
 
-func (b *Bot) updateGuildLetter(guild *guild.Guild, cfg *guildconfig.Config) error {
+func (b *Bot) updateGuildLetterWithConfig(g *guild.Guild, cfg *guildconfig.Config) error {
 	if !cfg.IsPremium() {
 		return nil
 	}
 
-	summaryChannel, err := b.summaryChannel(guild, cfg)
+	summaryChannel, err := b.summaryChannel(g, cfg)
 	if err != nil {
 		return err
 	}
 
-	reservationsWithSpots, err := b.reservationRepo.SelectUpcomingReservationsWithSpot(context.Background(), guild.ID)
+	reservationsWithSpots, err := b.reservationRepo.SelectUpcomingReservationsWithSpot(context.Background(), g.ID)
 	if err != nil {
 		return err
 	}
 
 	// metrics: update gauge of upcoming reservations
 	if b.metrics != nil {
-		b.metrics.SetUpcomingReservations(guild.ID, guild.Name, len(reservationsWithSpots))
+		b.metrics.SetUpcomingReservations(g.ID, g.Name, len(reservationsWithSpots))
 	}
 
 	sum, err := b.summarySrv.PrepareSummary(reservationsWithSpots)
@@ -234,14 +235,14 @@ func (b *Bot) updateGuildLetter(guild *guild.Guild, cfg *guildconfig.Config) err
 		return err
 	}
 
-	return b.SendLetterMessage(guild, summaryChannel, sum)
+	return b.SendLetterMessage(g, summaryChannel, sum)
 }
 
 // SendLetterMessage sends a message to a guild channel,
 // or in a DM if guild is nil.
-func (b *Bot) SendLetterMessage(guild *guild.Guild, channel *discord.Channel, sum *summary.Summary) error {
+func (b *Bot) SendLetterMessage(g *guild.Guild, channel *discord.Channel, sum *summary.Summary) error {
 	if len(sum.Ledger) == 0 {
-		return fmt.Errorf("SendLetterMessage requires at least 1 ledger entry to be present")
+		return errors.New("SendLetterMessage requires at least 1 ledger entry to be present")
 	}
 
 	// Do not allow for asynchronous modification
@@ -254,13 +255,12 @@ func (b *Bot) SendLetterMessage(guild *guild.Guild, channel *discord.Channel, su
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	// dcSession := b.mgr.SessionForGuild(gId)
 	var dcSession *discordgo.Session
 	if channel.Type == discord.ChannelTypeDM {
 		dcSession = b.mgr.SessionForDM()
 	} else {
 		// Grab a session for this guild
-		gID, err := stringsHelper.StrToInt64(guild.ID)
+		gID, err := stringsHelper.StrToInt64(g.ID)
 		if err != nil {
 			return fmt.Errorf("could not parse guild ID: %w", err)
 		}
@@ -268,20 +268,18 @@ func (b *Bot) SendLetterMessage(guild *guild.Guild, channel *discord.Channel, su
 		dcSession = b.mgr.SessionForGuild(gID)
 	}
 
-	// Transfrom into lines of text describing reservation
+	// Transform into lines of text describing reservation
 	fields := collections.PoorMansMap(sum.Ledger, func(el summary.LedgerEntry) *discordgo.MessageEmbedField {
 		writtenReservations := strings.Builder{}
 
 		for _, booking := range el.Bookings {
 			statusStr := MapOnlineStatus(booking.Status)
-			writtenReservations.WriteString(
-				fmt.Sprintf(
-					"%s**%s** - **%s** %s\n",
-					statusStr,
-					booking.StartAt.Format("15:04"),
-					booking.EndAt.Format("15:04"),
-					booking.Author,
-				),
+			fmt.Fprintf(&writtenReservations,
+				"%s**%s** - **%s** %s\n",
+				statusStr,
+				booking.StartAt.Format("15:04"),
+				booking.EndAt.Format("15:04"),
+				booking.Author,
 			)
 		}
 
@@ -306,7 +304,7 @@ func (b *Bot) SendLetterMessage(guild *guild.Guild, channel *discord.Channel, su
 	})
 
 	if channel.Type != discord.ChannelTypeDM {
-		err := b.CleanChannel(guild, channel)
+		err := b.CleanChannel(g, channel)
 		if err != nil {
 			return err
 		}
@@ -317,7 +315,7 @@ func (b *Bot) SendLetterMessage(guild *guild.Guild, channel *discord.Channel, su
 		if err != nil {
 			return err
 		}
-		defer b.metrics.IncMessagesSent(channel.ID, channel.Name)
+		b.metrics.IncMessagesSent(channel.ID, channel.Name)
 	}
 
 	_, err := dcSession.ChannelFileSend(channel.ID, "spots.png", bytes.NewReader(sum.Chart))
@@ -338,14 +336,14 @@ func (b *Bot) SendLetterMessage(guild *guild.Guild, channel *discord.Channel, su
 			b.log.Errorf("something went wrong when sending embed: %s", err)
 		}
 
-		defer b.metrics.IncMessagesSent(channel.ID, channel.Name)
+		b.metrics.IncMessagesSent(channel.ID, channel.Name)
 	}
 
 	return err
 }
 
-func (b *Bot) SendDM(member *member.Member, message string) error {
-	channel, err := b.OpenDM(member)
+func (b *Bot) SendDM(m *member.Member, message string) error {
+	channel, err := b.OpenDM(m)
 	if err != nil {
 		return err
 	}
@@ -357,27 +355,27 @@ func (b *Bot) SendDM(member *member.Member, message string) error {
 	if err != nil {
 		return err
 	}
-	defer b.metrics.IncMessagesSent(channel.ID, member.Username)
+	defer b.metrics.IncMessagesSent(channel.ID, m.Username)
 
 	return nil
 }
 
-func (b *Bot) GetMemberByGuildAndId(guild *guild.Guild, memberID string) (*member.Member, error) {
-	gID, err := stringsHelper.StrToInt64(guild.ID)
+func (b *Bot) GetMemberByGuildAndID(g *guild.Guild, memberID string) (*member.Member, error) {
+	gID, err := stringsHelper.StrToInt64(g.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	member, err := b.mgr.SessionForGuild(gID).GuildMember(guild.ID, memberID)
+	m, err := b.mgr.SessionForGuild(gID).GuildMember(g.ID, memberID)
 	if err != nil {
 		return nil, err
 	}
 
-	return MapMember(member), nil
+	return MapMember(m), nil
 }
 
-func (b *Bot) RegisterCommands(guild *guild.Guild) error {
-	gID, err := stringsHelper.StrToInt64(guild.ID)
+func (b *Bot) RegisterCommands(g *guild.Guild) error {
+	gID, err := stringsHelper.StrToInt64(g.ID)
 	if err != nil {
 		return err
 	}
@@ -391,7 +389,7 @@ func (b *Bot) RegisterCommands(guild *guild.Guild) error {
 		return err
 	}
 	for _, cmd := range globalCmds {
-		b.log.With("guild_name", guild.Name, "cmd.ID", cmd.ID, "cmd.Name", cmd.Name).Warn("removing command")
+		b.log.With("guild_name", g.Name, "cmd.ID", cmd.ID, "cmd.Name", cmd.Name).Warn("removing command")
 		err = session.ApplicationCommandDelete(session.State.User.ID, "", cmd.ID)
 		if err != nil {
 			b.log.Error("could not delete command: %s", err)
@@ -399,26 +397,26 @@ func (b *Bot) RegisterCommands(guild *guild.Guild) error {
 	}
 
 	// This is the way to register and unregister commands now.
-	guildCmds, err := session.ApplicationCommands(session.State.User.ID, guild.ID)
+	guildCmds, err := session.ApplicationCommands(session.State.User.ID, g.ID)
 	if err != nil {
 		return err
 	}
 	for _, cmd := range guildCmds {
-		b.log.With("guild_name", guild.Name, "cmd.ID", cmd.ID, "cmd.Name", cmd.Name).Warn("removing command")
-		err = session.ApplicationCommandDelete(session.State.User.ID, guild.ID, cmd.ID)
+		b.log.With("guild_name", g.Name, "cmd.ID", cmd.ID, "cmd.Name", cmd.Name).Warn("removing command")
+		err = session.ApplicationCommandDelete(session.State.User.ID, g.ID, cmd.ID)
 		if err != nil {
 			b.log.Error("could not delete command: %s", err)
 		}
 	}
 
-	_, err = session.ApplicationCommandBulkOverwrite(session.State.User.ID, guild.ID, b.getCommands())
+	_, err = session.ApplicationCommandBulkOverwrite(session.State.User.ID, g.ID, b.getCommands())
 	return err
 }
 
 func (b *Bot) GetRoles(g *guild.Guild) ([]*role.Role, error) {
 	roles, err := b.mgr.Gateway.GuildRoles(g.ID)
 	if err != nil {
-		return []*role.Role{}, fmt.Errorf("error when fetching guild roles: %s", err)
+		return []*role.Role{}, fmt.Errorf("error when fetching guild roles: %w", err)
 	}
 
 	return MapRoles(roles), nil

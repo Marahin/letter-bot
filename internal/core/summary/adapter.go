@@ -7,7 +7,6 @@ import (
 type Adapter struct {
 	service     ports.ChartAdapter
 	onlineCheck ports.OnlineCheckService
-	//log     *zap.SugaredLogger
 }
 
 func NewAdapter(srv ports.ChartAdapter, onlineCheck ports.OnlineCheckService) *Adapter {
@@ -16,8 +15,3 @@ func NewAdapter(srv ports.ChartAdapter, onlineCheck ports.OnlineCheckService) *A
 		onlineCheck: onlineCheck,
 	}
 }
-
-//func (a *Adapter) WithLogger(log *zap.SugaredLogger) *Adapter {
-//	a.log = log.With("layer", "infrastructure", "name", "summaryService")
-//	return a
-//}

@@ -89,7 +89,7 @@ func legacyChannelsToCreate(cfg *guildconfig.Config, existing []*discordgo.Chann
 // summaryChannel returns the configured summary channel, or the legacy #letter-summary channel when none is set.
 func (b *Bot) summaryChannel(g *guild.Guild, cfg *guildconfig.Config) (*discord.Channel, error) {
 	if cfg.SummaryChannelID != "" {
-		return b.FindChannelById(g, cfg.SummaryChannelID)
+		return b.FindChannelByID(g, cfg.SummaryChannelID)
 	}
 	return b.FindChannelByName(g, discord.SummaryChannel)
 }

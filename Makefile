@@ -11,6 +11,9 @@ WEB_BIN ?= letter-web
 TEMPL_VERSION ?= v0.3.1020
 TAILWIND_VERSION ?= v3.4.17
 TAILWIND ?= ./bin/tailwindcss
+# golangci-lint is pinned: it is the blocking quality gate, so an upgrade must not
+# turn CI red on unrelated changes. `go run` builds it once into the module cache.
+GOLANGCI_VERSION ?= v2.13.2
 CSS_OUT := internal/infrastructure/web/dist/app.css
 LDFLAGS := -X spot-assistant/internal/common/version.Version=${TAG}
 
@@ -20,9 +23,7 @@ LDFLAGS := -X spot-assistant/internal/common/version.Version=${TAG}
 help: ## List the targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2}'
 
-install-bins: ## Install pinned dev tools (gocyclo, staticcheck, sqlc, mockery, templ)
-	@go install github.com/fzipp/gocyclo/cmd/gocyclo@v0.6.0
-	@go install honnef.co/go/tools/cmd/staticcheck@latest
+install-bins: ## Install pinned dev tools (sqlc, mockery, templ)
 	@go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.26.0
 	@go install github.com/vektra/mockery/v3@v3.8.0
 	@go install github.com/a-h/templ/cmd/templ@$(TEMPL_VERSION)
@@ -128,34 +129,10 @@ go-vet: ## Run go vet
 	@echo "INFO: Running go vet"
 	@go vet ./...
 
-# Check formatting
-fmt-check: ## Check gofmt formatting
-	@echo "INFO: Checking formatting"
-	@if [ -n "$$(gofmt -l .)" ]; then \
-		echo "ERROR: The following files are not formatted:"; \
-		gofmt -l .; \
-		exit 1; \
-	fi
-
-# Check for high cyclomatic complexity
-gocyclo: ## Fail on cyclomatic complexity over 15
-	@echo "INFO: Running gocyclo"
-	@output=$$(gocyclo -over 15 -ignore '_templ\.go$$' .) ; \
-	if [ "$$output" != "" ]; then \
-		echo "Gocyclo complexity complaints:"; \
-		echo "$$output"; \
-		exit 1; \
-	fi
-
-staticcheck: ## Run staticcheck
-	@echo "INFO: Running staticcheck"
-	@staticcheck ./...
-
-# Run golint across the codebase
-lint: install-dependencies ## Run the linters
+lint: install-dependencies css ## Run golangci-lint (pinned, see .golangci.yml) and the templ check
 	@echo "INFO: Running lint"
-
-	@make -s templ-diff fmt-check go-vet gocyclo staticcheck
+	@$(MAKE) -s templ-diff
+	@go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_VERSION) run ./...
 
 sqlc-generate: ## Generate sqlc code
 	@echo "INFO: Generating sqlc"
@@ -193,13 +170,13 @@ build-only: ## Build both binaries without tests
 	@CGO_ENABLED=0 go build -o ./bin/${BOT_BIN} -ldflags="${LDFLAGS}" ./cmd/bot
 	@CGO_ENABLED=0 go build -o ./bin/${WEB_BIN} -ldflags="${LDFLAGS}" ./cmd/web
 
-bench: install-dependencies go-vet gocyclo ## Run the benchmarks
+bench: install-dependencies go-vet ## Run the benchmarks
 	@echo "INFO: Running benchmarks"
 	@go test -bench='.' -benchmem ./...> _bench.out
 	benchstat _bench.out
 	@rm _bench.out
 
-bench-long: install-dependencies go-vet gocyclo ## Run the long benchmarks
+bench-long: install-dependencies go-vet ## Run the long benchmarks
 	@echo "INFO: Running long benchmarks. Go make a coffee!"
 	@go test -bench='.' -count=6 -timeout=5m -benchmem ./...> _bench.out
 	benchstat _bench.out

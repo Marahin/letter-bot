@@ -53,13 +53,15 @@ func NewOverbookedPayload(request book.BookRequest, res *reservation.ClippedOrRe
 	return p
 }
 
+// reservation.Reservation has no json tags. Its Go field names are the wire
+// format, so a bot and a web of different versions still read each other.
 func (p OverbookedPayload) Encode() ([]byte, error) {
-	return json.Marshal(p)
+	return json.Marshal(p) //nolint:musttag // see above
 }
 
 func DecodeOverbookedPayload(data []byte) (OverbookedPayload, error) {
 	var p OverbookedPayload
-	if err := json.Unmarshal(data, &p); err != nil {
+	if err := json.Unmarshal(data, &p); err != nil { //nolint:musttag // see Encode
 		return p, err
 	}
 	if p.GuildID == "" || p.Original == nil {

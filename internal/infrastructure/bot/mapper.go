@@ -44,8 +44,8 @@ func mapRole(input *discordgo.Role) *role.Role {
 func MapRoles(input []*discordgo.Role) []*role.Role {
 	roles := make([]*role.Role, len(input))
 
-	for i, role := range input {
-		roles[i] = mapRole(role)
+	for i, r := range input {
+		roles[i] = mapRole(r)
 	}
 
 	return roles
@@ -63,8 +63,8 @@ func MapGuild(input *discordgo.Guild) *guild.Guild {
 
 func MapGuilds(input []*discordgo.Guild) []*guild.Guild {
 	guilds := make([]*guild.Guild, len(input))
-	for i, guild := range input {
-		guilds[i] = MapGuild(guild)
+	for i, g := range input {
+		guilds[i] = MapGuild(g)
 	}
 
 	return guilds
@@ -107,9 +107,7 @@ func MapMessage(input *discordgo.Message) *discord.Message {
 }
 
 func MapMessages(input []*discordgo.Message) []*discord.Message {
-	return collections.PoorMansMap(input, func(el *discordgo.Message) *discord.Message {
-		return MapMessage(el)
-	})
+	return collections.PoorMansMap(input, MapMessage)
 }
 
 func MapFooter(text string) *discordgo.MessageEmbedFooter {
@@ -126,9 +124,7 @@ func MapStringToChoice(text string) *discordgo.ApplicationCommandOptionChoice {
 }
 
 func MapStringArrToChoice(texts []string) []*discordgo.ApplicationCommandOptionChoice {
-	return collections.PoorMansMap(texts, func(t string) *discordgo.ApplicationCommandOptionChoice {
-		return MapStringToChoice(t)
-	})
+	return collections.PoorMansMap(texts, MapStringToChoice)
 }
 
 func MapReservationWithSpotArrToChoice(input []*reservation.ReservationWithSpot) []*discordgo.ApplicationCommandOptionChoice {

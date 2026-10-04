@@ -57,7 +57,7 @@ type experienceJobParams struct {
 
 	Cfg       web.Config
 	WorldAPI  worldapi.Config
-	API       *worldapi.HttpWorldService
+	API       *worldapi.HTTPWorldService
 	Repo      *experiencesqlc.ExperienceRepository
 	Pool      *pgxpool.Pool
 	Lifecycle fx.Lifecycle

@@ -8,36 +8,36 @@ import (
 
 func Test_sanitizeTimeFormatDots(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	input := "19.00"
 
 	// when
 	output := sanitizeTimeFormat(input)
 
 	// output
-	assert.Equal(output, "19:00")
+	is.Equal(output, "19:00")
 }
 
 func Test_sanitizeTimeFormatSemicolons(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	input := "19;00"
 
 	// when
 	output := sanitizeTimeFormat(input)
 
 	// output
-	assert.Equal(output, "19:00")
+	is.Equal(output, "19:00")
 }
 
 func Test_sanitizeTimeFormatMidnight(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	input := "24:00"
 
 	// when
 	output := sanitizeTimeFormat(input)
 
 	// output
-	assert.Equal(output, "00:00")
+	is.Equal(output, "00:00")
 }

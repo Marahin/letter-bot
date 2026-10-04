@@ -86,7 +86,7 @@ func experienceParams(t *testing.T, lc fx.Lifecycle, cfg web.Config, worldCfg wo
 	return experienceJobParams{
 		Cfg:       cfg,
 		WorldAPI:  worldCfg,
-		API:       worldapi.NewHttpWorldService(worldCfg.BaseURL),
+		API:       worldapi.NewHTTPWorldService(worldCfg.BaseURL),
 		Pool:      lazyPool(t),
 		Lifecycle: lc,
 		Log:       zap.NewNop().Sugar(),

@@ -126,7 +126,7 @@ func TestExperienceJob_EndToEnd(t *testing.T) {
 	server := httptest.NewServer(fake)
 	t.Cleanup(server.Close)
 	repo := sqlc.NewExperienceRepository(pool)
-	job := coreexperience.New(worldapi.NewHttpWorldService(server.URL+"/v4"), repo, 15*time.Minute, nil)
+	job := coreexperience.New(worldapi.NewHTTPWorldService(server.URL+"/v4"), repo, 15*time.Minute, nil)
 	cycle := func(now time.Time) {
 		t.Helper()
 		require.NoError(t, job.Collect(ctx, "Itworld", now))

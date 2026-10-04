@@ -15,22 +15,22 @@ import (
 
 func TestAdapter_SendPrivateSummary(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	var nilptrGuild *guild.Guild
 	dmChannel := &discord.Channel{}
 	request := summary.PrivateSummaryRequest{
 		UserID: 123,
 	}
-	summary := &summary.Summary{}
+	sum := &summary.Summary{}
 	botOperations := mocks.NewMockBotPort(t)
 	botOperations.On("OpenDM", &member.Member{ID: strconv.FormatInt(request.UserID, 10)}).Return(dmChannel, nil).Once()
-	botOperations.On("SendLetterMessage", nilptrGuild, dmChannel, summary).Return(nil).Once()
+	botOperations.On("SendLetterMessage", nilptrGuild, dmChannel, sum).Return(nil).Once()
 	adapter := NewAdapter(botOperations, nil)
 
 	// when
-	err := adapter.SendPrivateSummary(request, summary)
+	err := adapter.SendPrivateSummary(request, sum)
 
 	// assert
-	assert.Nil(err)
+	is.Nil(err)
 	botOperations.AssertExpectations(t)
 }

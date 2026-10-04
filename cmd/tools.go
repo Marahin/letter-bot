@@ -12,6 +12,5 @@ package main
 
 import (
 	_ "github.com/a-h/templ/cmd/templ"
-	_ "github.com/fzipp/gocyclo"
 	_ "github.com/sqlc-dev/sqlc"
 )

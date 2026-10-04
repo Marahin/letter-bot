@@ -77,7 +77,7 @@ func TestGuildSyncer_Sync(t *testing.T) {
 	m.roles.On("Replace", mocks.ContextMock, "g1", []*role.Role{{ID: "r1", Name: "Postman"}}).Return(nil).Once()
 	var startedAt time.Time
 	m.configs.On("MarkSynced", mocks.ContextMock, "g1", mock.AnythingOfType("time.Time")).Return(nil).Once().
-		Run(func(args mock.Arguments) { startedAt = args.Get(2).(time.Time) })
+		Run(func(args mock.Arguments) { startedAt, _ = args.Get(2).(time.Time) })
 	before := time.Now()
 
 	// when

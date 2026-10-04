@@ -158,13 +158,13 @@ func TestDiscordFormatter_FormatBookResponse(t *testing.T) {
 func TestDiscordFormatter_FormatOverbookedMemberNotification(t *testing.T) {
 	// given
 	formatter := NewFormatter()
-	member := &member.Member{
+	m := &member.Member{
 		ID:       "test-id",
 		Nick:     "test-nick",
 		Username: "test-username",
 	}
 	request := book.BookRequest{
-		Member: member,
+		Member: m,
 	}
 	res := &reservation.ClippedOrRemovedReservation{
 		Original: &reservation.Reservation{
@@ -187,7 +187,7 @@ func TestDiscordFormatter_FormatOverbookedMemberNotification(t *testing.T) {
 	}
 
 	// when
-	output := formatter.FormatOverbookedMemberNotification(member, request, res)
+	output := formatter.FormatOverbookedMemberNotification(m, request, res)
 
 	// assert
 	snaps.MatchSnapshot(t, output)

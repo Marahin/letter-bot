@@ -26,13 +26,13 @@ func validateHuntLength(t time.Duration) error {
 	return nil
 }
 
-func validateNoSelfOverbook(member *member.Member, conflictingReservations []*reservation.Reservation) error {
+func validateNoSelfOverbook(m *member.Member, conflictingReservations []*reservation.Reservation) error {
 	// A free-text author booked in the web has no Discord id to compare.
-	if member.ID == "" {
+	if m.ID == "" {
 		return nil
 	}
 	authorsConflictingReservations, _ := collections.PoorMansFind(conflictingReservations, func(r *reservation.Reservation) bool {
-		return r.AuthorDiscordID == member.ID
+		return r.AuthorDiscordID == m.ID
 	})
 
 	if authorsConflictingReservations != nil {

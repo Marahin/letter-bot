@@ -95,8 +95,8 @@ func (_c *MockCommunicationService_NotifyOverbookedMember_Call) RunAndReturn(run
 }
 
 // SendPrivateSummary provides a mock function for the type MockCommunicationService
-func (_mock *MockCommunicationService) SendPrivateSummary(request summary.PrivateSummaryRequest, summary1 *summary.Summary) error {
-	ret := _mock.Called(request, summary1)
+func (_mock *MockCommunicationService) SendPrivateSummary(request summary.PrivateSummaryRequest, sum *summary.Summary) error {
+	ret := _mock.Called(request, sum)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SendPrivateSummary")
@@ -104,7 +104,7 @@ func (_mock *MockCommunicationService) SendPrivateSummary(request summary.Privat
 
 	var r0 error
 	if returnFunc, ok := ret.Get(0).(func(summary.PrivateSummaryRequest, *summary.Summary) error); ok {
-		r0 = returnFunc(request, summary1)
+		r0 = returnFunc(request, sum)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -118,12 +118,12 @@ type MockCommunicationService_SendPrivateSummary_Call struct {
 
 // SendPrivateSummary is a helper method to define mock.On call
 //   - request summary.PrivateSummaryRequest
-//   - summary1 *summary.Summary
-func (_e *MockCommunicationService_Expecter) SendPrivateSummary(request any, summary1 any) *MockCommunicationService_SendPrivateSummary_Call {
-	return &MockCommunicationService_SendPrivateSummary_Call{Call: _e.mock.On("SendPrivateSummary", request, summary1)}
+//   - sum *summary.Summary
+func (_e *MockCommunicationService_Expecter) SendPrivateSummary(request any, sum any) *MockCommunicationService_SendPrivateSummary_Call {
+	return &MockCommunicationService_SendPrivateSummary_Call{Call: _e.mock.On("SendPrivateSummary", request, sum)}
 }
 
-func (_c *MockCommunicationService_SendPrivateSummary_Call) Run(run func(request summary.PrivateSummaryRequest, summary1 *summary.Summary)) *MockCommunicationService_SendPrivateSummary_Call {
+func (_c *MockCommunicationService_SendPrivateSummary_Call) Run(run func(request summary.PrivateSummaryRequest, sum *summary.Summary)) *MockCommunicationService_SendPrivateSummary_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 summary.PrivateSummaryRequest
 		if args[0] != nil {
@@ -146,7 +146,7 @@ func (_c *MockCommunicationService_SendPrivateSummary_Call) Return(err error) *M
 	return _c
 }
 
-func (_c *MockCommunicationService_SendPrivateSummary_Call) RunAndReturn(run func(request summary.PrivateSummaryRequest, summary1 *summary.Summary) error) *MockCommunicationService_SendPrivateSummary_Call {
+func (_c *MockCommunicationService_SendPrivateSummary_Call) RunAndReturn(run func(request summary.PrivateSummaryRequest, sum *summary.Summary) error) *MockCommunicationService_SendPrivateSummary_Call {
 	_c.Call.Return(run)
 	return _c
 }

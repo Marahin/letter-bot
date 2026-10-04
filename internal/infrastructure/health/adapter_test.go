@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	mocks "spot-assistant/internal/common/test/mocks"
+	"spot-assistant/internal/common/test/mocks"
 )
 
 func TestLive_ReflectsRuntimeStatus(t *testing.T) {

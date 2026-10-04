@@ -39,19 +39,22 @@ type pageView struct {
 
 type overviewView struct {
 	pageView
+
 	O *stats.Overview
 }
 
 // tableRow is one row of any stats table: a respawn, a player or a character.
 type tableRow struct {
+	stats.Totals
+
 	Name     string
 	Href     string
 	Archived bool
-	stats.Totals
 }
 
 type tableView struct {
 	pageView
+
 	Kind  tableKind
 	Sort  stats.Sort
 	Rows  []tableRow
@@ -66,6 +69,7 @@ type breakdownView struct {
 
 type spotView struct {
 	pageView
+
 	D          *stats.SpotDetail
 	Players    breakdownView
 	Characters breakdownView
@@ -73,6 +77,7 @@ type spotView struct {
 
 type playerView struct {
 	pageView
+
 	D          *stats.PlayerDetail
 	Spots      breakdownView
 	Characters breakdownView
@@ -80,6 +85,7 @@ type playerView struct {
 
 type characterView struct {
 	pageView
+
 	P     *stats.CharacterProfile
 	Spots breakdownView
 	Now   time.Time

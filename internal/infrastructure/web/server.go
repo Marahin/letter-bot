@@ -46,7 +46,7 @@ type Server struct {
 // NewServer constructs the web server with a Postgres-backed session store.
 func NewServer(cfg Config, log *zap.SugaredLogger, pool *pgxpool.Pool) *Server {
 	store := pgxstore.NewWithConfig(pool, pgxstore.Config{TableName: sessionTableName, CleanUpInterval: 5 * time.Minute})
-	return newServer(cfg, log, NewSessionManager(cfg, store))
+	return newServerWithSessions(cfg, log, NewSessionManager(cfg, store))
 }
 
 // Services are the core services the shell and the feature packages call.
@@ -67,7 +67,7 @@ func (s *Server) WithServices(svc Services) *Server {
 	return s
 }
 
-func newServer(cfg Config, log *zap.SugaredLogger, sessions *scs.SessionManager) *Server {
+func newServerWithSessions(cfg Config, log *zap.SugaredLogger, sessions *scs.SessionManager) *Server {
 	return &Server{cfg: cfg, log: log, sessions: sessions}
 }
 

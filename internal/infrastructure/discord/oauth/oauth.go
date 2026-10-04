@@ -140,19 +140,23 @@ func (a *Adapter) UserGuilds(ctx context.Context, userID string) ([]access.UserG
 	return out, nil
 }
 
+type guildMemberResponse struct {
+	Nick  string          `json:"nick"`
+	Roles []string        `json:"roles"`
+	User  guildMemberUser `json:"user"`
+}
+
+type guildMemberUser struct {
+	Username   string `json:"username"`
+	GlobalName string `json:"global_name"`
+}
+
 func (a *Adapter) UserGuildMember(ctx context.Context, userID, guildID string) (*access.GuildMember, error) {
 	accessToken, err := a.accessToken(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	var m struct {
-		Nick  string   `json:"nick"`
-		Roles []string `json:"roles"`
-		User  struct {
-			Username   string `json:"username"`
-			GlobalName string `json:"global_name"`
-		} `json:"user"`
-	}
+	var m guildMemberResponse
 	if err := a.get(ctx, accessToken, "/users/@me/guilds/"+url.PathEscape(guildID)+"/member", &m); err != nil {
 		return nil, fmt.Errorf("fetch guild member: %w", err)
 	}
@@ -175,7 +179,8 @@ func (a *Adapter) accessToken(ctx context.Context, userID string) (string, error
 	if err != nil {
 		return "", err
 	}
-	return fresh.(string), nil
+	token, _ := fresh.(string)
+	return token, nil
 }
 
 func (a *Adapter) storedToken(ctx context.Context, userID string) (*webuser.Token, error) {

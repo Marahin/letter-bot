@@ -14,53 +14,71 @@ import (
 )
 
 type characterResponse struct {
-	Character struct {
-		Character struct {
-			Name              string `json:"name"`
-			Sex               string `json:"sex"`
-			Vocation          string `json:"vocation"`
-			Level             int    `json:"level"`
-			AchievementPoints int    `json:"achievement_points"`
-			World             string `json:"world"`
-			Residence         string `json:"residence"`
-			Guild             struct {
-				Name string `json:"name"`
-				Rank string `json:"rank"`
-			} `json:"guild"`
-			LastLogin     *time.Time `json:"last_login"`
-			AccountStatus string     `json:"account_status"`
-		} `json:"character"`
-	} `json:"character"`
-	Information struct {
-		Status struct {
-			HTTPCode int `json:"http_code"`
-		} `json:"status"`
-	} `json:"information"`
+	Character   characterEnvelope  `json:"character"`
+	Information characterStatusBox `json:"information"`
+}
+
+type characterEnvelope struct {
+	Character characterData `json:"character"`
+}
+
+type characterData struct {
+	Name              string         `json:"name"`
+	Sex               string         `json:"sex"`
+	Vocation          string         `json:"vocation"`
+	Level             int            `json:"level"`
+	AchievementPoints int            `json:"achievement_points"`
+	World             string         `json:"world"`
+	Residence         string         `json:"residence"`
+	Guild             characterGuild `json:"guild"`
+	LastLogin         *time.Time     `json:"last_login"`
+	AccountStatus     string         `json:"account_status"`
+}
+
+type characterGuild struct {
+	Name string `json:"name"`
+	Rank string `json:"rank"`
+}
+
+type characterStatusBox struct {
+	Status responseStatus `json:"status"`
+}
+
+type responseStatus struct {
+	HTTPCode int `json:"http_code"`
 }
 
 // highscoresResponse is one page of /v4/highscores/{world}/{category}/{vocation}/{page}.
 type highscoresResponse struct {
-	Highscores struct {
-		// HighscoreAge is how old the tibia.com highscore data is, in minutes.
-		HighscoreAge  int `json:"highscore_age"`
-		HighscoreList []struct {
-			Name     string `json:"name"`
-			Vocation string `json:"vocation"`
-			Level    int    `json:"level"`
-			Value    int64  `json:"value"`
-		} `json:"highscore_list"`
-		HighscorePage struct {
-			TotalPages int `json:"total_pages"`
-		} `json:"highscore_page"`
-	} `json:"highscores"`
-	Information struct {
-		// Timestamp is when TibiaData scraped tibia.com; a cached response can be older than the request.
-		Timestamp time.Time `json:"timestamp"`
-	} `json:"information"`
+	Highscores  highscores           `json:"highscores"`
+	Information highscoresScrapeInfo `json:"information"`
+}
+
+type highscores struct {
+	// HighscoreAge is how old the tibia.com highscore data is, in minutes.
+	HighscoreAge  int             `json:"highscore_age"`
+	HighscoreList []highscoreRow  `json:"highscore_list"`
+	HighscorePage highscoresPager `json:"highscore_page"`
+}
+
+type highscoreRow struct {
+	Name     string `json:"name"`
+	Vocation string `json:"vocation"`
+	Level    int    `json:"level"`
+	Value    int64  `json:"value"`
+}
+
+type highscoresPager struct {
+	TotalPages int `json:"total_pages"`
+}
+
+type highscoresScrapeInfo struct {
+	// Timestamp is when TibiaData scraped tibia.com; a cached response can be older than the request.
+	Timestamp time.Time `json:"timestamp"`
 }
 
 // GetHighscoresPage reads /highscores/{world}/experience/all/{page}.
-func (h *HttpWorldService) GetHighscoresPage(ctx context.Context, worldName string, page int) (*world.HighscorePage, error) {
+func (h *HTTPWorldService) GetHighscoresPage(ctx context.Context, worldName string, page int) (*world.HighscorePage, error) {
 	var data highscoresResponse
 	path := fmt.Sprintf("/highscores/%s/experience/all/%d", url.PathEscape(worldName), page)
 	requested := h.clock()
@@ -92,7 +110,7 @@ func observedAt(scraped time.Time, ageMinutes int, requested time.Time) time.Tim
 }
 
 // GetCharacter reads /character/{name}.
-func (h *HttpWorldService) GetCharacter(ctx context.Context, name string) (*character.Character, error) {
+func (h *HTTPWorldService) GetCharacter(ctx context.Context, name string) (*character.Character, error) {
 	var data characterResponse
 	status, err := h.getJSON(ctx, "/character/"+url.PathEscape(name), &data)
 	if err != nil && status != http.StatusNotFound {
@@ -123,7 +141,7 @@ func (h *HttpWorldService) GetCharacter(ctx context.Context, name string) (*char
 }
 
 // getJSON decodes a 200 or 404 body into out and returns the HTTP status.
-func (h *HttpWorldService) getJSON(ctx context.Context, path string, out any) (int, error) {
+func (h *HTTPWorldService) getJSON(ctx context.Context, path string, out any) (int, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, h.BaseURL+path, nil)
 	if err != nil {
 		return 0, fmt.Errorf("build request: %w", err)

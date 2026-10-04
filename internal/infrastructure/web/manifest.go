@@ -17,11 +17,11 @@ const (
 	manifestPath = assetsPrefix + manifestFile
 )
 
-// assetHandler serves the shell's asset tree. Everything in it is a plain file except
+// assetTreeHandler serves the shell's asset tree. Everything in it is a plain file except
 // the manifest, which is rendered: see handleManifest. The path is cleaned before the
 // comparison, or a doubled slash before the filename (reachable as %2F, which no mux
 // cleans) misses the renderer and the file server hands out the raw JSON.
-func assetHandler() http.Handler {
+func assetTreeHandler() http.Handler {
 	files := http.StripPrefix(assetsPrefix, http.FileServerFS(FS()))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if path.Clean(r.URL.Path) == manifestPath {

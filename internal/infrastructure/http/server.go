@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	promhttp "github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 
 	"spot-assistant/internal/ports"
@@ -34,6 +34,13 @@ func NewServer(addr string, log *zap.SugaredLogger) *Server {
 		mux:  stdhttp.NewServeMux(),
 		log:  log.With("layer", "infrastructure", "name", "http"),
 	}
+}
+
+// NewServerWithMetrics constructs a Server that serves reg on /metrics.
+func NewServerWithMetrics(addr string, reg *prometheus.Registry, log *zap.SugaredLogger) *Server {
+	srv := NewServer(addr, log)
+	srv.Mux().Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
+	return srv
 }
 
 // Mux returns the server's mux so callers can attach handlers.
@@ -65,13 +72,6 @@ func (s *Server) Shutdown(ctx context.Context) error {
 		return nil
 	}
 	return s.srv.Shutdown(ctx)
-}
-
-// NewServerWithMetrics constructs a Server that serves reg on /metrics.
-func NewServerWithMetrics(addr string, reg *prometheus.Registry, log *zap.SugaredLogger) *Server {
-	srv := NewServer(addr, log)
-	srv.Mux().Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
-	return srv
 }
 
 // CheckFunc is a function that returns nil if the check passes.

@@ -24,6 +24,7 @@ type ReservationCounts struct {
 // Listed is a spot on the respawn list, with its reservation counts.
 type Listed struct {
 	Spot
+
 	Reservations ReservationCounts
 }
 

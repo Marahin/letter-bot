@@ -127,7 +127,7 @@ func (t *ReservationRepository) CreateAndDeleteConflicting(ctx context.Context, 
 	if err != nil {
 		return modifiedConflicts, err
 	}
-	defer errors.ExecuteAndIgnoreErrorF(tx.Rollback, ctx)
+	defer errors.ExecuteAndIgnoreErrorF(ctx, tx.Rollback)
 	qtx := t.q.WithTx(tx)
 
 	for index, conflictingReservation := range conflicts {

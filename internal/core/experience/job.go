@@ -322,7 +322,7 @@ func (j *Job) startSnapshot(ctx context.Context, worldName, key string, startAt 
 
 func optional(s *experience.Snapshot, err error) (*experience.Snapshot, error) {
 	if errors.Is(err, ports.ErrNotFound) {
-		return nil, nil
+		return nil, nil //nolint:nilnil // a missing snapshot is absence, which the callers read as nil
 	}
 	return s, err
 }

@@ -200,7 +200,7 @@ func (d *Deps) Nav(r *http.Request, currentGuildID string) Nav {
 	}
 	n := d.NavFromAccess(user, list, currentGuildID)
 	if current, ok := CurrentAccessFrom(ctx); ok && current.Config.GuildID == currentGuildID {
-		n.applyAccess(current)
+		n = n.withAccess(current)
 	}
 	n.ReturnTo = signedOut.ReturnTo
 	return n
@@ -217,7 +217,7 @@ func (d *Deps) NavFromAccess(user *webuser.User, list []access.GuildAccess, curr
 	for _, a := range list {
 		n.Servers = append(n.Servers, NavServer{ID: a.Config.GuildID, Name: a.Config.Name, Icon: a.Config.Icon})
 		if a.Config.GuildID == currentGuildID {
-			n.applyAccess(a)
+			n = n.withAccess(a)
 		}
 	}
 	return n

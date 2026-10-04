@@ -11,7 +11,7 @@ on:
 
 jobs:
   lint:
-    name: Run lint
+    name: Run golangci-lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

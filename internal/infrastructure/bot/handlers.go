@@ -29,24 +29,24 @@ System events that are initialized by Discord.
 func (b *Bot) GuildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
 	log := b.log.With("event", "GuildCreate", "guild_name", g.Name, "g.ID", g.ID)
 	log.Info("guild created")
-	guild := MapGuild(g.Guild)
+	gld := MapGuild(g.Guild)
 	ctx := context.Background()
 
-	cfg := b.storePresence(ctx, guild)
+	cfg := b.storePresence(ctx, gld)
 
-	err := b.RegisterCommands(guild)
+	err := b.RegisterCommands(gld)
 	if err != nil {
 		log.Errorf("could not overwrite commands: %s", err)
 
 		return
 	}
 
-	if err := b.syncer.Sync(ctx, guild.ID); err != nil {
+	if err := b.syncer.Sync(ctx, gld.ID); err != nil {
 		log.Errorf("could not sync guild channels and roles: %s", err)
 	}
 
-	if err := b.onlineCheckService.ConfigureWorldNameForGuild(guild.ID); err != nil {
-		log.Errorf("ConfigureWorldNameForGuild failed for guild %s: %v", guild.ID, err)
+	if err := b.onlineCheckService.ConfigureWorldNameForGuild(gld.ID); err != nil {
+		log.Errorf("ConfigureWorldNameForGuild failed for guild %s: %v", gld.ID, err)
 	}
 
 	if cfg == nil || !cfg.IsPremium() {
@@ -55,15 +55,15 @@ func (b *Bot) GuildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
 		return
 	}
 
-	if err := b.setupPremiumGuild(guild, cfg); err != nil {
+	if err := b.setupPremiumGuild(gld, cfg); err != nil {
 		log.Error(err)
 
 		return
 	}
 
-	go b.onlineCheckService.TryRefresh(guild.ID)
-	go b.TryUpdateGuildLetter(guild)
-	defer b.eventHandler.OnGuildCreate(MapGuild(g.Guild))
+	go b.onlineCheckService.TryRefresh(gld.ID)
+	go b.TryUpdateGuildLetter(gld)
+	b.eventHandler.OnGuildCreate(MapGuild(g.Guild))
 }
 
 // storePresence stores the guild and returns its configuration. When the write
@@ -141,7 +141,7 @@ func (b *Bot) Ready(s *discordgo.Session, r *discordgo.Ready) {
 	}
 	b.StartTicking()
 
-	defer b.eventHandler.OnReady()
+	b.eventHandler.OnReady()
 }
 
 // markAbsentGuilds clears bot_present for the guilds that removed the bot while it
@@ -182,14 +182,14 @@ func (b *Bot) Tick() {
 	if err != nil {
 		b.log.Errorf("could not load guild configs, skipping summaries: %s", err)
 	}
-	for _, guild := range guilds {
-		cfg, ok := cfgs[guild.ID]
+	for _, g := range guilds {
+		cfg, ok := cfgs[g.ID]
 		if !ok || !cfg.IsPremium() {
 			continue
 		}
-		go b.onlineCheckService.TryRefresh(guild.ID)
+		go b.onlineCheckService.TryRefresh(g.ID)
 		go func() {
-			if err := b.updateGuildLetter(guild, cfg); err != nil {
+			if err := b.updateGuildLetterWithConfig(g, cfg); err != nil {
 				b.log.Errorf("could not update guild letter: %s", err)
 			}
 		}()
@@ -227,7 +227,6 @@ func (b *Bot) Book(i *discordgo.InteractionCreate, cfg *guildconfig.Config) erro
 	case 4:
 		overbook = i.ApplicationCommandData().Options[3].StringValue() == "true"
 	case 3:
-		break
 	default:
 		return errors.New("book command requires 3 arguments")
 	}
@@ -266,19 +265,19 @@ func (b *Bot) Book(i *discordgo.InteractionCreate, cfg *guildconfig.Config) erro
 		endAt = endAt.Add(24 * time.Hour)
 	}
 
-	guild, err := b.GetGuild(gID)
+	g, err := b.GetGuild(gID)
 	if err != nil {
 		return err
 	}
 
 	member := MapMember(i.Member)
-	caps := permission.Resolve(*cfg, memberSubject(guild, member))
+	caps := permission.Resolve(*cfg, memberSubject(g, member))
 	if !caps.Reserve {
 		return booking.ErrReserveNotAllowed
 	}
 	request := book.BookRequest{
 		Member:         member,
-		Guild:          guild,
+		Guild:          g,
 		Spot:           i.ApplicationCommandData().Options[0].StringValue(),
 		StartAt:        startAt,
 		EndAt:          endAt,
@@ -293,7 +292,7 @@ func (b *Bot) Book(i *discordgo.InteractionCreate, cfg *guildconfig.Config) erro
 	if err != nil {
 		message = b.formatter.FormatBookError(response, err)
 	} else {
-		go b.TryUpdateGuildLetter(guild)
+		go b.TryUpdateGuildLetter(g)
 		message = b.formatter.FormatBookResponse(response)
 	}
 
@@ -336,9 +335,9 @@ func (b *Bot) Unbook(i *discordgo.InteractionCreate) error {
 		return errors.New("you must select a reservation to unbook")
 	}
 
-	reservationId, err := stringsHelper.StrToInt64(i.ApplicationCommandData().Options[0].StringValue())
+	reservationID, err := stringsHelper.StrToInt64(i.ApplicationCommandData().Options[0].StringValue())
 	if err != nil {
-		return fmt.Errorf("could not parse reservation id: %v", reservationId)
+		return fmt.Errorf("could not parse reservation id: %v", reservationID)
 	}
 
 	gID, err := stringsHelper.StrToInt64(i.GuildID)
@@ -346,21 +345,21 @@ func (b *Bot) Unbook(i *discordgo.InteractionCreate) error {
 		return fmt.Errorf("could not parse guild id: %v", i.GuildID)
 	}
 
-	guild, err := b.GetGuild(gID)
+	g, err := b.GetGuild(gID)
 	if err != nil {
 		return err
 	}
 
 	res, err := b.eventHandler.OnUnbook(book.UnbookRequest{
 		Member:        MapMember(i.Member),
-		Guild:         guild,
-		ReservationID: reservationId,
+		Guild:         g,
+		ReservationID: reservationID,
 	})
 	if err != nil {
 		return err
 	}
 
-	go b.TryUpdateGuildLetter(guild)
+	go b.TryUpdateGuildLetter(g)
 
 	_, err = b.mgr.SessionForGuild(gID).FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
 		Content: b.formatter.FormatUnbookResponse(res),
@@ -374,7 +373,7 @@ func (b *Bot) UnbookAutocomplete(i *discordgo.InteractionCreate) error {
 			return o.Focused
 		})
 	if index == -1 {
-		return fmt.Errorf("none of the options were selected for autocompletion")
+		return errors.New("none of the options were selected for autocompletion")
 	}
 
 	gID, err := stringsHelper.StrToInt64(i.GuildID)
@@ -382,13 +381,13 @@ func (b *Bot) UnbookAutocomplete(i *discordgo.InteractionCreate) error {
 		return err
 	}
 
-	guild, err := b.GetGuild(gID)
+	g, err := b.GetGuild(gID)
 	if err != nil {
 		return err
 	}
 
 	request := book.UnbookAutocompleteRequest{
-		Guild:  guild,
+		Guild:  g,
 		Member: MapMember(i.Member),
 		Value:  selectedOption.StringValue(),
 	}
@@ -466,13 +465,13 @@ func (b *Bot) SetWorld(i *discordgo.InteractionCreate) error {
 	guildID := i.GuildID
 	userID := i.Member.User.ID
 
-	// Fetch guild to check owner
-	guild, err := b.mgr.Gateway.Guild(guildID)
+	// Fetch g to check owner
+	g, err := b.mgr.Gateway.Guild(guildID)
 	if err != nil {
 		return fmt.Errorf("could not fetch guild: %w", err)
 	}
-	if guild.OwnerID != userID {
-		return fmt.Errorf("only the server owner can use this command")
+	if g.OwnerID != userID {
+		return errors.New("only the server owner can use this command")
 	}
 
 	world := ""
@@ -483,7 +482,7 @@ func (b *Bot) SetWorld(i *discordgo.InteractionCreate) error {
 		}
 	}
 	if world == "" {
-		return fmt.Errorf("world name is required")
+		return errors.New("world name is required")
 	}
 
 	// Validate world against the allowed list

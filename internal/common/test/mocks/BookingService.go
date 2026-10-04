@@ -372,8 +372,8 @@ func (_c *MockBookingService_GetSuggestedHours_Call) RunAndReturn(run func(time1
 }
 
 // Unbook provides a mock function for the type MockBookingService
-func (_mock *MockBookingService) Unbook(g *guild.Guild, m *member.Member, reservationId int64) (*reservation.ReservationWithSpot, error) {
-	ret := _mock.Called(g, m, reservationId)
+func (_mock *MockBookingService) Unbook(g *guild.Guild, m *member.Member, reservationID int64) (*reservation.ReservationWithSpot, error) {
+	ret := _mock.Called(g, m, reservationID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Unbook")
@@ -382,17 +382,17 @@ func (_mock *MockBookingService) Unbook(g *guild.Guild, m *member.Member, reserv
 	var r0 *reservation.ReservationWithSpot
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(*guild.Guild, *member.Member, int64) (*reservation.ReservationWithSpot, error)); ok {
-		return returnFunc(g, m, reservationId)
+		return returnFunc(g, m, reservationID)
 	}
 	if returnFunc, ok := ret.Get(0).(func(*guild.Guild, *member.Member, int64) *reservation.ReservationWithSpot); ok {
-		r0 = returnFunc(g, m, reservationId)
+		r0 = returnFunc(g, m, reservationID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*reservation.ReservationWithSpot)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(*guild.Guild, *member.Member, int64) error); ok {
-		r1 = returnFunc(g, m, reservationId)
+		r1 = returnFunc(g, m, reservationID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -407,12 +407,12 @@ type MockBookingService_Unbook_Call struct {
 // Unbook is a helper method to define mock.On call
 //   - g *guild.Guild
 //   - m *member.Member
-//   - reservationId int64
-func (_e *MockBookingService_Expecter) Unbook(g any, m any, reservationId any) *MockBookingService_Unbook_Call {
-	return &MockBookingService_Unbook_Call{Call: _e.mock.On("Unbook", g, m, reservationId)}
+//   - reservationID int64
+func (_e *MockBookingService_Expecter) Unbook(g any, m any, reservationID any) *MockBookingService_Unbook_Call {
+	return &MockBookingService_Unbook_Call{Call: _e.mock.On("Unbook", g, m, reservationID)}
 }
 
-func (_c *MockBookingService_Unbook_Call) Run(run func(g *guild.Guild, m *member.Member, reservationId int64)) *MockBookingService_Unbook_Call {
+func (_c *MockBookingService_Unbook_Call) Run(run func(g *guild.Guild, m *member.Member, reservationID int64)) *MockBookingService_Unbook_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 *guild.Guild
 		if args[0] != nil {
@@ -440,7 +440,7 @@ func (_c *MockBookingService_Unbook_Call) Return(reservationWithSpot *reservatio
 	return _c
 }
 
-func (_c *MockBookingService_Unbook_Call) RunAndReturn(run func(g *guild.Guild, m *member.Member, reservationId int64) (*reservation.ReservationWithSpot, error)) *MockBookingService_Unbook_Call {
+func (_c *MockBookingService_Unbook_Call) RunAndReturn(run func(g *guild.Guild, m *member.Member, reservationID int64) (*reservation.ReservationWithSpot, error)) *MockBookingService_Unbook_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -23,6 +23,7 @@ import (
 // fakeDiscord serves the token endpoint at /oauth2/token and the API under /api.
 type fakeDiscord struct {
 	*httptest.Server
+
 	tokenCalls atomic.Int32
 	lastGrant  atomic.Value
 	token      func(w http.ResponseWriter, form url.Values)
@@ -513,7 +514,7 @@ func TestAccessToken_ConcurrentCallersShareOneRefresh(t *testing.T) {
 	f.api = func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(`[]`)) }
 	f.token = func(w http.ResponseWriter, form url.Values) {
 		assert.Equal(t, "rt-old", form.Get("refresh_token"))
-		assert.Eventually(t, func() bool { return store.readCount() >= callers+1 }, time.Second, time.Millisecond)
+		assert.Eventually(t, func() bool { return store.readCount() > callers }, time.Second, time.Millisecond)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"access_token":"at-new","refresh_token":"rt-new","token_type":"Bearer","expires_in":3600}`))
 	}
@@ -524,11 +525,9 @@ func TestAccessToken_ConcurrentCallersShareOneRefresh(t *testing.T) {
 	errs := make([]error, callers)
 	var wg sync.WaitGroup
 	for i := range callers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			tokens[i], errs[i] = a.accessToken(context.Background(), "u1")
-		}()
+		})
 	}
 	wg.Wait()
 

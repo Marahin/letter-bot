@@ -35,11 +35,11 @@ func (f *DiscordFormatter) FormatBookError(response book.BookResponse, err error
 		message.WriteString("\nFollowing reservations are conflicting:\n\n")
 
 		for _, res := range response.ConflictingReservations {
-			message.WriteString(fmt.Sprintf(
+			fmt.Fprintf(&message,
 				"* **%s** %s - %s\n",
 				res.Original.Author,
 				res.Original.StartAt.Format(stringsHelper.DcLongTimeFormat),
-				res.Original.EndAt.Format(stringsHelper.DcLongTimeFormat)),
+				res.Original.EndAt.Format(stringsHelper.DcLongTimeFormat),
 			)
 		}
 	}
@@ -51,21 +51,21 @@ func (f *DiscordFormatter) FormatBookError(response book.BookResponse, err error
 func (f *DiscordFormatter) FormatBookResponse(response book.BookResponse) string {
 	var message strings.Builder
 
-	message.WriteString(fmt.Sprintf(
+	fmt.Fprintf(&message,
 		"<@!%s> booked **%s** between %s and %s.\n\n",
 		response.Request.Member.ID,
 		response.Request.Spot,
 		response.Request.StartAt.Format("2006-01-02 15:04"),
 		response.Request.EndAt.Format("2006-01-02 15:04"),
-	))
+	)
 
 	if len(response.ConflictingReservations) > 0 { // We have overbooked
 		message.WriteString("Following reservations are conflicting **and have been shortened or removed**:\n\n")
 
 		for _, res := range response.ConflictingReservations {
-			message.WriteString(fmt.Sprintf(
+			fmt.Fprintf(&message,
 				"* %s ", fmt.Sprintf("<@!%s>", res.Original.AuthorDiscordID),
-			))
+			)
 
 			if len(res.New) > 0 {
 				message.WriteString("had their reservation clipped to: ")
@@ -77,11 +77,11 @@ func (f *DiscordFormatter) FormatBookResponse(response book.BookResponse) string
 				message.WriteString("had their reservation removed ")
 			}
 
-			message.WriteString(fmt.Sprintf(
+			fmt.Fprintf(&message,
 				" (originally: %s - %s)\n",
 				res.Original.StartAt.Format(stringsHelper.DcLongTimeFormat),
 				res.Original.EndAt.Format(stringsHelper.DcLongTimeFormat),
-			))
+			)
 			continue // Stop here
 		}
 	}
@@ -90,14 +90,14 @@ func (f *DiscordFormatter) FormatBookResponse(response book.BookResponse) string
 }
 
 func (f *DiscordFormatter) FormatOverbookedMemberNotification(
-	member *member.Member,
+	m *member.Member,
 	request book.BookRequest,
 	res *reservation.ClippedOrRemovedReservation,
 ) string {
 	var msgBody strings.Builder
 
-	msgBody.WriteString(fmt.Sprintf("Your reservation was overbooked by %s (<@!%s>)\n", request.Member.Nick, request.Member.ID))
-	msgBody.WriteString(fmt.Sprintf("* %s %s ", fmt.Sprintf("<@!%s>", member.ID), request.Spot))
+	fmt.Fprintf(&msgBody, "Your reservation was overbooked by %s (<@!%s>)\n", request.Member.Nick, request.Member.ID)
+	fmt.Fprintf(&msgBody, "* %s %s ", fmt.Sprintf("<@!%s>", m.ID), request.Spot)
 	if len(res.New) > 0 { // The reservation has been modified, but not entirely removed - lets notify the user!
 		msgBody.WriteString("has been clipped to: ")
 		newClippedRanges := collections.PoorMansMap(res.New, func(r *reservation.Reservation) string {
@@ -105,7 +105,7 @@ func (f *DiscordFormatter) FormatOverbookedMemberNotification(
 		})
 		msgBody.WriteString(strings.Join(newClippedRanges, ", "))
 	} else {
-		msgBody.WriteString(fmt.Sprintf("has been entirely removed (originally: **%s - %s**)", res.Original.StartAt.Format(stringsHelper.DcLongTimeFormat), res.Original.EndAt.Format(stringsHelper.DcLongTimeFormat)))
+		fmt.Fprintf(&msgBody, "has been entirely removed (originally: **%s - %s**)", res.Original.StartAt.Format(stringsHelper.DcLongTimeFormat), res.Original.EndAt.Format(stringsHelper.DcLongTimeFormat))
 	}
 
 	return msgBody.String()

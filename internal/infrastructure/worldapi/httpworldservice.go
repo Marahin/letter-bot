@@ -10,20 +10,20 @@ import (
 	"spot-assistant/internal/core/dto/world"
 )
 
-type HttpWorldService struct {
+type HTTPWorldService struct {
 	BaseURL string
 	Client  *http.Client
 	now     func() time.Time
 }
 
-func NewHttpWorldService(baseURL string) *HttpWorldService {
-	return &HttpWorldService{
+func NewHTTPWorldService(baseURL string) *HTTPWorldService {
+	return &HTTPWorldService{
 		BaseURL: baseURL,
 		Client:  &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
-func (h *HttpWorldService) GetOnlinePlayerNames(worldName string) ([]string, error) {
+func (h *HTTPWorldService) GetOnlinePlayerNames(worldName string) ([]string, error) {
 	url := fmt.Sprintf("%s/world/%s", h.BaseURL, worldName)
 
 	resp, err := h.Client.Get(url)
@@ -48,13 +48,13 @@ func (h *HttpWorldService) GetOnlinePlayerNames(worldName string) ([]string, err
 	return names, nil
 }
 
-func (h *HttpWorldService) clock() time.Time {
+func (h *HTTPWorldService) clock() time.Time {
 	if h.now == nil {
 		return time.Now()
 	}
 	return h.now()
 }
 
-func (h *HttpWorldService) GetBaseURL() string {
+func (h *HTTPWorldService) GetBaseURL() string {
 	return h.BaseURL
 }

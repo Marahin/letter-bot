@@ -70,10 +70,11 @@ type Nav struct {
 	ReturnTo string
 }
 
-func (n *Nav) applyAccess(a access.GuildAccess) {
+func (n Nav) withAccess(a access.GuildAccess) Nav {
 	n.CurrentGuildName = a.Config.Name
 	n.CurrentGuildIcon = a.Config.Icon
 	n.IsAdmin = a.Caps.Admin
+	return n
 }
 
 // GuildPath is a server-scoped URL: "/servers/{id}" plus suffix ("/reservations").

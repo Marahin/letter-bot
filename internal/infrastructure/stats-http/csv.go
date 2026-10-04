@@ -19,11 +19,14 @@ func (h *Handlers) csv(w http.ResponseWriter, r *http.Request, kind tableKind, p
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
 	w.Header().Set("Content-Disposition", `attachment; filename="`+name+`.csv"`)
 	out := csv.NewWriter(w)
-	header := []string{nameHeader(ctx, kind)}
-	for _, c := range figureColumns(ctx) {
+	columns := figureColumns(ctx)
+	header := make([]string, 0, 1+len(columns))
+	header = append(header, nameHeader(ctx, kind))
+	for _, c := range columns {
 		header = append(header, c.Label)
 	}
-	records := [][]string{header}
+	records := make([][]string, 0, 1+len(rows))
+	records = append(records, header)
 	for _, row := range rows {
 		exp, expPerHour := "", ""
 		if v := row.ExpTotal(); v != nil {
