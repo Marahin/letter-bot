@@ -18,7 +18,9 @@ func TestDsn(t *testing.T) {
 	t.Setenv("DATABASE_NAME", "name")
 
 	// when
-	output := Dsn()
+	s, err := LoadConfig()
+	require.NoError(t, err)
+	output := s.DSN()
 
 	// Then
 	snaps.MatchSnapshot(t, output)

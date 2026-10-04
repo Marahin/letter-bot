@@ -30,10 +30,3 @@ func (s Specification) DSN() string {
 	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		s.Host, s.Port, s.User, s.Password, s.Name, s.SSL)
 }
-
-// Dsn reads DATABASE_* and panics when the environment is invalid.
-func Dsn() string {
-	var s Specification
-	envconfig.MustProcess("database", &s)
-	return s.DSN()
-}
