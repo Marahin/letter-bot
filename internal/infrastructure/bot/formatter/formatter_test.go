@@ -2,15 +2,22 @@ package formatter
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/gkampitakis/go-snaps/snaps"
+	"github.com/stretchr/testify/assert"
 
+	"spot-assistant/internal/core/booking"
 	"spot-assistant/internal/core/dto/book"
 	"spot-assistant/internal/core/dto/guild"
 	"spot-assistant/internal/core/dto/member"
 	"spot-assistant/internal/core/dto/reservation"
+	"spot-assistant/internal/core/reservationforms"
+	"spot-assistant/internal/core/reservations"
+	"spot-assistant/internal/ports"
 )
 
 func TestDiscordFormatter_FormatGenericError(t *testing.T) {
@@ -191,4 +198,63 @@ func TestDiscordFormatter_FormatOverbookedMemberNotification(t *testing.T) {
 
 	// assert
 	snaps.MatchSnapshot(t, output)
+}
+
+func TestDiscordFormatter_FormatFormError(t *testing.T) {
+	// given
+	f := NewFormatter()
+	errs := []error{
+		&reservationforms.AmbiguousSpotError{Query: "Lib"},
+		reservationforms.ErrTimeFormat,
+		booking.ErrSpotNotFound,
+		booking.ErrSpotArchived,
+		booking.ErrReserveNotAllowed,
+		reservations.ErrForbidden,
+		fmt.Errorf("select reservation: %w", ports.ErrNotFound),
+		booking.ErrReservationEnded,
+		booking.ErrReservationTooLong,
+		booking.ErrQuotaExceeded,
+		booking.ErrStartInPast,
+		booking.ErrInvalidRange,
+		booking.ErrSpotLocked,
+		booking.ErrSelfOverbook,
+		booking.ErrConflict,
+		booking.ErrInsufficientPermissions,
+		errors.New("db down"),
+	}
+	lines := make([]string, 0, len(errs))
+
+	// when
+	for _, err := range errs {
+		lines = append(lines, f.FormatFormError(err))
+	}
+
+	// then
+	snaps.MatchSnapshot(t, strings.Join(lines, "\n---\n"))
+	assert.NotContains(t, lines[len(lines)-2], "overbook' parameter", "the form copy does not mention the slash command option")
+}
+
+func TestDiscordFormatter_FormTexts(t *testing.T) {
+	// given
+	f := NewFormatter()
+	start := time.Date(2026, 10, 5, 18, 30, 0, 0, time.UTC)
+	r := &reservation.ReservationWithSpot{
+		Reservation: reservation.Reservation{StartAt: start, EndAt: start.Add(2 * time.Hour)},
+		Spot:        reservation.Spot{Name: "Library -1"},
+	}
+	outcome := &reservation.FormOutcome{Draft: reservation.Draft{StartAt: start, EndAt: start.Add(2 * time.Hour)}, SpotName: "Library -1"}
+
+	// when
+	texts := []string{
+		f.FormatReservationLine(1, r, start.Add(-time.Minute)),
+		f.FormatReservationLine(2, r, start),
+		f.FormatFormEdited(outcome),
+		f.FormatCancelConfirm(r),
+		f.FormatCancelled(r),
+		f.FormatFormOutdated(),
+		f.FormatFormNoGuild(),
+	}
+
+	// then
+	snaps.MatchSnapshot(t, strings.Join(texts, "\n"))
 }

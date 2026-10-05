@@ -10,6 +10,8 @@ import (
 	"spot-assistant/internal/core/booking"
 	"spot-assistant/internal/core/communication"
 	"spot-assistant/internal/core/onlinecheck"
+	"spot-assistant/internal/core/reservationforms"
+	"spot-assistant/internal/core/reservations"
 	"spot-assistant/internal/core/summary"
 	"spot-assistant/internal/infrastructure/bot"
 	"spot-assistant/internal/infrastructure/bot/formatter"
@@ -70,12 +72,26 @@ func newCommunication(b *bot.Bot, log *zap.SugaredLogger) *communication.Adapter
 	return communication.NewAdapter(b, b).WithLogger(log)
 }
 
-func newBooking(spots *spotsqlc.SpotRepository, reservations *reservationsqlc.ReservationRepository, comm *communication.Adapter, log *zap.SugaredLogger) *booking.Adapter {
-	return booking.NewAdapter(spots, reservations, comm).WithLogger(log)
+func newBooking(spots *spotsqlc.SpotRepository, reservationRepo *reservationsqlc.ReservationRepository, comm *communication.Adapter, log *zap.SugaredLogger) *booking.Adapter {
+	return booking.NewAdapter(spots, reservationRepo, comm).WithLogger(log)
 }
 
-func newEventHandler(booker *booking.Adapter, reservations *reservationsqlc.ReservationRepository, comm *communication.Adapter, summaries *summary.Adapter) *eventhandler.Handler {
-	return eventhandler.NewHandler(booker, reservations, comm, summaries)
+func newEventHandler(booker *booking.Adapter, reservationRepo *reservationsqlc.ReservationRepository, comm *communication.Adapter, summaries *summary.Adapter) *eventhandler.Handler {
+	return eventhandler.NewHandler(booker, reservationRepo, comm, summaries)
+}
+
+// newLocalNotifier lets the shared reservations service refresh the summary in
+// this process instead of through NOTIFY.
+func newLocalNotifier(b *bot.Bot, comm *communication.Adapter) *bot.LocalNotifier {
+	return bot.NewLocalNotifier(b, comm)
+}
+
+func newReservationService(booker *booking.Adapter, reservationRepo *reservationsqlc.ReservationRepository, spotRepo *spotsqlc.SpotRepository, notifier *bot.LocalNotifier, log *zap.SugaredLogger) *reservations.Service {
+	return reservations.New(booker, reservationRepo, spotRepo, notifier, log)
+}
+
+func newReservationForms(service *reservations.Service, spotRepo *spotsqlc.SpotRepository) *reservationforms.Service {
+	return reservationforms.New(service, spotRepo)
 }
 
 func newMetrics(reg *prometheus.Registry) (*prommetrics.PromMetrics, error) {

@@ -6,6 +6,7 @@ import (
 	"spot-assistant/internal/core/dto/guild"
 	"spot-assistant/internal/core/dto/member"
 	"spot-assistant/internal/core/dto/reservation"
+	"spot-assistant/internal/core/dto/spot"
 	"spot-assistant/internal/core/dto/summary"
 	"time"
 )
@@ -73,4 +74,32 @@ type NotifyHandler interface {
 	OnGuildResync(ctx context.Context, guildID string)
 	OnGuildConfig(ctx context.Context, guildID string)
 	OnOverbooked(ctx context.Context, request book.BookRequest, res *reservation.ClippedOrRemovedReservation)
+}
+
+// ReservationFormService backs the bot's buttons and forms. It applies the same
+// rules as the web (ReservationService) to the member who clicked.
+type ReservationFormService interface {
+	// BookForm reads the form and books. It returns a *reservationforms.AmbiguousSpotError
+	// when more than one respawn matches, reservationforms.ErrTimeFormat, and
+	// booking.ErrInsufficientPermissions with the conflicts in the outcome.
+	BookForm(ctx context.Context, guildID string, actor reservation.Actor, form reservation.Form) (*reservation.FormOutcome, error)
+	// Book books a draft whose respawn and times are known. Errors as BookForm.
+	Book(ctx context.Context, guildID string, actor reservation.Actor, draft reservation.Draft) (*reservation.FormOutcome, error)
+	// EditForm reads the form and changes the reservation, without overbooking.
+	// It returns booking.ErrConflict with the conflicts in the outcome.
+	EditForm(ctx context.Context, guildID string, actor reservation.Actor, id int64, form reservation.Form) (*reservation.FormOutcome, error)
+	// Edit changes the reservation to a draft whose respawn and times are known.
+	Edit(ctx context.Context, guildID string, actor reservation.Actor, id int64, draft reservation.Draft) (*reservation.FormOutcome, error)
+	// Editable returns the reservation when the actor may edit it, else
+	// reservations.ErrForbidden, booking.ErrReservationEnded or ErrNotFound.
+	Editable(ctx context.Context, guildID string, actor reservation.Actor, id int64) (*reservation.ReservationWithSpot, error)
+	// Cancellable returns the reservation when the actor may cancel it, else
+	// reservations.ErrForbidden or ErrNotFound.
+	Cancellable(ctx context.Context, guildID string, actor reservation.Actor, id int64) (*reservation.ReservationWithSpot, error)
+	// Cancel deletes the reservation and returns it. Errors as Cancellable.
+	Cancel(ctx context.Context, guildID string, actor reservation.Actor, id int64) (*reservation.ReservationWithSpot, error)
+	// Mine returns the actor's upcoming reservations, the ongoing one first.
+	Mine(ctx context.Context, guildID string, actor reservation.Actor, limit int) (*reservation.Page, error)
+	// Spot returns an active or archived respawn of the guild, or ErrNotFound.
+	Spot(ctx context.Context, guildID string, id int64) (*spot.Spot, error)
 }

@@ -243,6 +243,49 @@ These items of the request were unclear or had a cost. Each has a decision.
 49. **The selected server is stored per user** (`web_users.default_guild_id`), as
     in scxmanager, not in the session: it survives sign-out and a new browser.
     Without one, the first premium server is selected, else the first server.
+50. **Bot forms: buttons, Discord forms (modals) and `/reservations`.** The
+    guild summary gets the buttons "Book a respawn", "My reservations" and
+    "Open panel" (only when `WEB_BASE_URL` is set). A DM summary has no buttons.
+    A guild without upcoming hunts gets a "No upcoming hunts" message with the
+    same buttons, so the channel never shows an old summary. Rules:
+    - discordgo stays at v0.27.1 (see "Parity with scxmanager"). It has no Label
+      component, so a form holds only text fields: Respawn, Start, End. The
+      respawn is free text. An exact name (not case-sensitive) wins, else the
+      only name that contains the text. When more names match, an ephemeral
+      select lists them (up to 15).
+    - Times are typed and shown as HH:MM in the bot time zone (Europe/Berlin).
+      The parser (`internal/core/reservationforms`) accepts H, HH, H:MM,
+      HHMM and ".", ";", "," or "h" as separator; 24:MM is 00:MM. `/book`
+      uses the same parser. Change for `/book`: the current minute is today,
+      not tomorrow, and the same start and end means 24 hours (refused).
+    - A form has no overbook field. A booking that overlaps shows the
+      conflicts. "Overbook them" shows only when the overbook would pass
+      (`booking.OverbookAllowed`: the overbook right, or one abandoned
+      reservation, never an own one).
+    - Create, edit and cancel go through `reservations.Service`, the service of
+      the web: the same rights, the same booking rules, the same atomic edit.
+      An edit never overbooks. There is no author field; managers choose an
+      author in the web.
+    - "My reservations" lists only the member's own upcoming reservations, at
+      most 4 (Discord allows 5 rows of buttons). Each has "Edit n" and
+      "Cancel n"; a cancel asks to confirm. More reservations: use the web
+      panel or `/unbook`.
+    - An edit with an unchanged start keeps the date of the start, so an
+      ongoing reservation keeps its start. A changed start is the occurrence
+      nearest to the old start that is not in the past.
+    - Every reply is ephemeral. The public summary refresh (3 s debounce, in
+      the bot process through `bot.LocalNotifier`) shows the change to others.
+    - Buttons and forms need premium and resolve the member's rights fresh on
+      each click. The book form needs the reserve right. The command channel
+      rule of `/book` and `/unbook` does not apply, as the replies are
+      ephemeral.
+    - The state of a button is in its versioned custom id (`lf1:...`, times as
+      Unix seconds, at most 100 characters). The bot stores nothing between
+      clicks. Every id is checked again on the server.
+    - The bot answers every click at once with a deferred reply, except the
+      clicks that open a form (a form must be the first reply).
+    - The copy is English, in the bot formatter (decision 33). Only the
+      overbook button adds a metric (`IncOverbook`). No migration.
 
 ## Parity with scxmanager
 

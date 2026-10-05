@@ -105,6 +105,8 @@ The web uses the rules of `/book`:
 - **Delete**: the author before the reservation ends, managers at any time.
 - Every change sends `letter_summary_refresh`.
 - Times are read and shown in the server time zone (`TZ`, Europe/Berlin).
+- The bot's buttons and forms (decision 50) use the same service and rules,
+  for the member's own reservations.
 
 ## Experience job
 

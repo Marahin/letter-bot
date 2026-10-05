@@ -25,3 +25,9 @@ func (b *Bot) newEmbed(
 
 	return embed
 }
+
+func (b *Bot) emptyEmbed() *discordgo.MessageEmbed {
+	embed := b.baseEmbed()
+	embed.Description = "No upcoming hunts. Book a respawn with the button below or with /book."
+	return embed
+}

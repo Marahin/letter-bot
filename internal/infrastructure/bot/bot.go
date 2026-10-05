@@ -86,6 +86,14 @@ func connectShardsWith(token string, delay func(attempt int) time.Duration) (*sh
 	return mgr, nil
 }
 
+// InteractionGateway is the part of the Discord REST client that answers
+// interactions. *discordgo.Session implements it.
+type InteractionGateway interface {
+	InteractionRespond(interaction *discordgo.Interaction, resp *discordgo.InteractionResponse, options ...discordgo.RequestOption) error
+	InteractionResponseEdit(interaction *discordgo.Interaction, newresp *discordgo.WebhookEdit, options ...discordgo.RequestOption) (*discordgo.Message, error)
+	Guild(guildID string, options ...discordgo.RequestOption) (*discordgo.Guild, error)
+}
+
 type Bot struct {
 	summarySrv         ports.SummaryService
 	reservationRepo    ports.ReservationRepository
@@ -94,8 +102,10 @@ type Bot struct {
 	syncer             *GuildSyncer
 	summaryRefresh     *debouncer
 	eventHandler       ports.APIPort
+	forms              ports.ReservationFormService
 	metrics            ports.MetricsPort
 	mgr                *shards.Manager
+	gateway            InteractionGateway
 	webBaseURL         string
 	log                *zap.SugaredLogger
 	quit               chan struct{}
@@ -112,6 +122,7 @@ func NewManager(mgr *shards.Manager, webBaseURL string, summarySrv ports.Summary
 	mgr.Intent = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages | discordgo.IntentsGuildVoiceStates
 	bot := &Bot{
 		mgr:                mgr,
+		gateway:            mgr.Gateway,
 		webBaseURL:         webBaseURL,
 		quit:               make(chan struct{}),
 		channelLocks:       cmap.New[*sync.RWMutex](),
@@ -164,6 +175,12 @@ func (b *Bot) WithEventHandler(port ports.APIPort) *Bot {
 	return b
 }
 
+// WithReservationForms sets the service behind the buttons and forms.
+func (b *Bot) WithReservationForms(forms ports.ReservationFormService) *Bot {
+	b.forms = forms
+	return b
+}
+
 func (b *Bot) WithLogger(log *zap.SugaredLogger) *Bot {
 	b.log = log.With("layer", "infrastructure", "name", "bot")
 	if b.syncer != nil {
@@ -200,7 +217,7 @@ func (b *Bot) IsRunning() bool {
 }
 
 func (b *Bot) interactionRespond(i *discordgo.InteractionCreate, responseData *discordgo.InteractionResponseData, responseType discordgo.InteractionResponseType) error {
-	return b.mgr.Gateway.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+	return b.gateway.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: responseType,
 		Data: responseData,
 	})

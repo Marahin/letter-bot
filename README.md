@@ -27,6 +27,7 @@ If you like the bot and want to support its development, you can buy me a coffee
   * [Feedback](#Feedback)
   * [Pie chart showing distribution of reservations](#Pie-chart-showing-distribution-of-reservations)
   * [List of upcoming reservations](#List-of-upcoming-reservations)
+* [**Buttons and forms**](#Buttons-and-forms)
 * [**Web panel**](#Web-panel)
 * [**Development**](#Development)
 
@@ -63,6 +64,22 @@ Letter bot originated within [Refugees](https://www.tibia.com/community/?subtopi
 ## List of upcoming reservations
 
 ![summary list](docs/sample_summary_list.png)
+
+## Buttons and forms
+
+The summary channel has the buttons **Book a respawn**, **My reservations** and
+**Open panel** (when `WEB_BASE_URL` is set). Every reply is visible only to the
+member who clicked.
+
+- **Book a respawn** opens a form: respawn (the name or a part of it), start and
+  end (HH:MM, Europe/Berlin). When more respawns match, the bot asks which one.
+  When other reservations overlap, the bot lists them, and shows **Overbook
+  them** to members who may overbook.
+- **My reservations** (or `/reservations`) lists your upcoming reservations
+  with **Edit** and **Cancel** buttons. Edit opens the same form, filled in. An
+  edit never overbooks.
+
+The slash commands `/book`, `/unbook` and `/summary` work as before.
 
 ## Web panel
 
