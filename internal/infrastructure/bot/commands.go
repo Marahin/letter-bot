@@ -11,6 +11,8 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+const commandReservations = "reservations"
+
 func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 	name := i.ApplicationCommandData().Name
 	isAutocomplete := i.Type == discordgo.InteractionApplicationCommandAutocomplete
@@ -42,8 +44,11 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 		b.metrics.IncSlashCommand(i.GuildID, b.guildName(i.GuildID), name)
 	}
 
-	// Send deferred response for slash commands
-	if err := b.interactionRespond(i, &discordgo.InteractionResponseData{}, discordgo.InteractionResponseDeferredChannelMessageWithSource); err != nil {
+	deferData := &discordgo.InteractionResponseData{}
+	if name == commandReservations {
+		deferData.Flags = discordgo.MessageFlagsEphemeral
+	}
+	if err := b.interactionRespond(i, deferData, discordgo.InteractionResponseDeferredChannelMessageWithSource); err != nil {
 		b.log.Error(fmt.Errorf("could not send a deferred response: %w", err))
 		return
 	}
@@ -55,7 +60,7 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 		if b.metrics != nil {
 			b.metrics.IncCommandError(i.GuildID, b.guildName(i.GuildID), name)
 		}
-		webhookParams := &discordgo.WebhookParams{Content: b.formatter.FormatGenericError(err)}
+		webhookParams := &discordgo.WebhookParams{Content: b.formatter.FormatGenericError(err), Flags: deferData.Flags}
 		gID, convErr := strings.StrToInt64(i.GuildID)
 		if convErr != nil {
 			b.log.Errorf("could not translate guildID: %s", convErr)
@@ -109,6 +114,8 @@ func (b *Bot) handleSlash(i *discordgo.InteractionCreate, cfg *guildconfig.Confi
 		return b.PrivateSummary(i)
 	case "world-set":
 		return b.SetWorld(i)
+	case commandReservations:
+		return b.MyReservations(i)
 	default:
 		return fmt.Errorf("missing handler for command: %s", i.ApplicationCommandData().Name)
 	}
@@ -179,6 +186,11 @@ func (b *Bot) getCommands() []*discordgo.ApplicationCommand {
 					Autocomplete: true,
 				},
 			},
+		},
+		{
+			Name:        commandReservations,
+			Description: "Show, edit and cancel your upcoming reservations",
+			Type:        discordgo.ChatApplicationCommand,
 		},
 		{
 			Name:        "summary",

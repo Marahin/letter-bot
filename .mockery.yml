@@ -23,6 +23,7 @@ packages:
     interfaces:
       DiscordGuildReader: {}
       GuildActions: {}
+      InteractionGateway: {}
   spot-assistant/internal/infrastructure/notify/postgresql:
     interfaces:
       NotifyExecutor: {}

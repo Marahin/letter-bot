@@ -40,3 +40,52 @@ Following reservations are conflicting **and have been shortened or removed**:
 Your reservation was overbooked by test-nick (<@!test-id>)
 * <@!test-id>  has been clipped to: 2021-01-01 00:00 - 2021-01-01 01:10, 2021-01-01 01:30 - 2021-01-01 02:00
 ---
+[TestDiscordFormatter_FormatFormError - 1]
+More than one respawn matches **Lib**. Which one do you mean?
+/-/-/-/
+Write the times as HH:MM, e.g. 18:30.
+/-/-/-/
+No respawn has this name. Write the name or a part of it, e.g. Library.
+/-/-/-/
+This respawn is archived. Choose another respawn.
+/-/-/-/
+You do not have a rank that can book respawns on this server.
+/-/-/-/
+You can only change your own upcoming reservations.
+/-/-/-/
+This reservation does not exist any more.
+/-/-/-/
+This reservation has already ended.
+/-/-/-/
+A reservation can be at most 3 hours long.
+/-/-/-/
+You can book at most 3 hours within 24 hours.
+/-/-/-/
+The reservation cannot start in the past.
+/-/-/-/
+The reservation must end after it starts.
+/-/-/-/
+A started reservation cannot move to another respawn.
+/-/-/-/
+You cannot overbook your own reservation.
+/-/-/-/
+Other reservations overlap these times. Choose other times or another respawn.
+/-/-/-/
+Other reservations overlap these times. Choose other times or another respawn.
+/-/-/-/
+Sorry, but something went wrong. If you require support, join TibiaLoot.com Discord: https://discord.gg/F4YKgsnzmc 
+Error message:
+```
+db down
+```
+---
+
+[TestDiscordFormatter_FormTexts - 1]
+1. **Library -1** · Mon 05 Oct 18:30 – 20:30
+2. **Library -1** · Mon 05 Oct 18:30 – 20:30 (ongoing)
+Updated **Library -1**, Mon 05 Oct 18:30 – 20:30.
+Cancel **Library -1**, Mon 05 Oct 18:30 – 20:30? You cannot undo this.
+Cancelled **Library -1**, Mon 05 Oct 18:30 – 20:30.
+This button is out of date. Use the buttons in the summary channel or /reservations.
+Use this in a server.
+---

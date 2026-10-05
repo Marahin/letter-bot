@@ -1,0 +1,1002 @@
+
+[TestSummaryComponents - 1]
+[
+  {
+    "components": [
+      {
+        "label": "Book a respawn",
+        "style": 1,
+        "custom_id": "lf1:book",
+        "type": 2
+      },
+      {
+        "label": "My reservations",
+        "style": 2,
+        "custom_id": "lf1:mine",
+        "type": 2
+      },
+      {
+        "label": "Open panel",
+        "style": 5,
+        "url": "https://tibialoot.test",
+        "type": 2
+      }
+    ],
+    "type": 1
+  }
+]
+---
+
+[TestListView/empty - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "label": "Book a respawn",
+          "style": 1,
+          "custom_id": "lf1:book",
+          "type": 2
+        },
+        {
+          "label": "Refresh",
+          "style": 2,
+          "custom_id": "lf1:list",
+          "type": 2
+        },
+        {
+          "label": "Open panel",
+          "style": 5,
+          "url": "https://tibialoot.test",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "You have no upcoming reservations."
+}
+---
+
+[TestListView/one - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "label": "Edit 1",
+          "style": 2,
+          "custom_id": "lf1:edit:1",
+          "type": 2
+        },
+        {
+          "label": "Cancel 1",
+          "style": 4,
+          "custom_id": "lf1:cancel:1",
+          "type": 2
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Book a respawn",
+          "style": 1,
+          "custom_id": "lf1:book",
+          "type": 2
+        },
+        {
+          "label": "Refresh",
+          "style": 2,
+          "custom_id": "lf1:list",
+          "type": 2
+        },
+        {
+          "label": "Open panel",
+          "style": 5,
+          "url": "https://tibialoot.test",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "**Your upcoming reservations** (times in UTC)\n1. **Respawn 1** · Mon 05 Oct 15:00 – 17:00 (ongoing)\n"
+}
+---
+
+[TestListView/four - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "label": "Edit 1",
+          "style": 2,
+          "custom_id": "lf1:edit:1",
+          "type": 2
+        },
+        {
+          "label": "Cancel 1",
+          "style": 4,
+          "custom_id": "lf1:cancel:1",
+          "type": 2
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Edit 2",
+          "style": 2,
+          "custom_id": "lf1:edit:2",
+          "type": 2
+        },
+        {
+          "label": "Cancel 2",
+          "style": 4,
+          "custom_id": "lf1:cancel:2",
+          "type": 2
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Edit 3",
+          "style": 2,
+          "custom_id": "lf1:edit:3",
+          "type": 2
+        },
+        {
+          "label": "Cancel 3",
+          "style": 4,
+          "custom_id": "lf1:cancel:3",
+          "type": 2
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Edit 4",
+          "style": 2,
+          "custom_id": "lf1:edit:4",
+          "type": 2
+        },
+        {
+          "label": "Cancel 4",
+          "style": 4,
+          "custom_id": "lf1:cancel:4",
+          "type": 2
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Book a respawn",
+          "style": 1,
+          "custom_id": "lf1:book",
+          "type": 2
+        },
+        {
+          "label": "Refresh",
+          "style": 2,
+          "custom_id": "lf1:list",
+          "type": 2
+        },
+        {
+          "label": "Open panel",
+          "style": 5,
+          "url": "https://tibialoot.test",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "**Your upcoming reservations** (times in UTC)\n1. **Respawn 1** · Mon 05 Oct 15:00 – 17:00 (ongoing)\n2. **Respawn 2** · Mon 05 Oct 18:00 – 20:00 (ongoing)\n3. **Respawn 3** · Mon 05 Oct 21:00 – 23:00\n4. **Respawn 4** · Tue 06 Oct 00:00 – 02:00\n"
+}
+---
+
+[TestListView/six - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "label": "Edit 1",
+          "style": 2,
+          "custom_id": "lf1:edit:1",
+          "type": 2
+        },
+        {
+          "label": "Cancel 1",
+          "style": 4,
+          "custom_id": "lf1:cancel:1",
+          "type": 2
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Edit 2",
+          "style": 2,
+          "custom_id": "lf1:edit:2",
+          "type": 2
+        },
+        {
+          "label": "Cancel 2",
+          "style": 4,
+          "custom_id": "lf1:cancel:2",
+          "type": 2
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Edit 3",
+          "style": 2,
+          "custom_id": "lf1:edit:3",
+          "type": 2
+        },
+        {
+          "label": "Cancel 3",
+          "style": 4,
+          "custom_id": "lf1:cancel:3",
+          "type": 2
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Edit 4",
+          "style": 2,
+          "custom_id": "lf1:edit:4",
+          "type": 2
+        },
+        {
+          "label": "Cancel 4",
+          "style": 4,
+          "custom_id": "lf1:cancel:4",
+          "type": 2
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Book a respawn",
+          "style": 1,
+          "custom_id": "lf1:book",
+          "type": 2
+        },
+        {
+          "label": "Refresh",
+          "style": 2,
+          "custom_id": "lf1:list",
+          "type": 2
+        },
+        {
+          "label": "Open panel",
+          "style": 5,
+          "url": "https://tibialoot.test",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "**Your upcoming reservations** (times in UTC)\n1. **Respawn 1** · Mon 05 Oct 15:00 – 17:00 (ongoing)\n2. **Respawn 2** · Mon 05 Oct 18:00 – 20:00 (ongoing)\n3. **Respawn 3** · Mon 05 Oct 21:00 – 23:00\n4. **Respawn 4** · Tue 06 Oct 00:00 – 02:00\n\nShowing 4 of 6. Manage the others in the web panel or with /unbook."
+}
+---
+
+[TestListView_StatusAndExtraButtons - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "label": "Edit 1",
+          "style": 2,
+          "custom_id": "lf1:edit:1",
+          "type": 2
+        },
+        {
+          "label": "Cancel 1",
+          "style": 4,
+          "custom_id": "lf1:cancel:1",
+          "type": 2
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Edit 2",
+          "style": 2,
+          "custom_id": "lf1:edit:2",
+          "type": 2
+        },
+        {
+          "label": "Cancel 2",
+          "style": 4,
+          "custom_id": "lf1:cancel:2",
+          "type": 2
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Edit 3",
+          "style": 2,
+          "custom_id": "lf1:edit:3",
+          "type": 2
+        },
+        {
+          "label": "Cancel 3",
+          "style": 4,
+          "custom_id": "lf1:cancel:3",
+          "type": 2
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Edit 4",
+          "style": 2,
+          "custom_id": "lf1:edit:4",
+          "type": 2
+        },
+        {
+          "label": "Cancel 4",
+          "style": 4,
+          "custom_id": "lf1:cancel:4",
+          "type": 2
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Try again",
+          "style": 2,
+          "custom_id": "lf1:eretry:1:::",
+          "type": 2
+        },
+        {
+          "label": "Book a respawn",
+          "style": 1,
+          "custom_id": "lf1:book",
+          "type": 2
+        },
+        {
+          "label": "Refresh",
+          "style": 2,
+          "custom_id": "lf1:list",
+          "type": 2
+        },
+        {
+          "label": "Open panel",
+          "style": 5,
+          "url": "https://tibialoot.test",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "Not changed.\n\n**Your upcoming reservations** (times in UTC)\n1. **Respawn 1** · Mon 05 Oct 15:00 – 17:00 (ongoing)\n2. **Respawn 2** · Mon 05 Oct 18:00 – 20:00 (ongoing)\n3. **Respawn 3** · Mon 05 Oct 21:00 – 23:00\n4. **Respawn 4** · Tue 06 Oct 00:00 – 02:00\n"
+}
+---
+
+[TestConfirmCancelView - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "label": "Yes, cancel it",
+          "style": 4,
+          "custom_id": "lf1:cancelok:3",
+          "type": 2
+        },
+        {
+          "label": "No, keep it",
+          "style": 2,
+          "custom_id": "lf1:list",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "Cancel **Library -1**, Mon 05 Oct 19:00 – 21:00? You cannot undo this."
+}
+---
+
+[TestModals/book - 1]
+{
+  "tts": false,
+  "content": "",
+  "components": [
+    {
+      "components": [
+        {
+          "custom_id": "spot",
+          "label": "Respawn",
+          "style": 1,
+          "placeholder": "Name or a part of it, e.g. Library -1",
+          "required": true,
+          "min_length": 2,
+          "max_length": 100,
+          "type": 4
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "custom_id": "start",
+          "label": "Start",
+          "style": 1,
+          "placeholder": "HH:MM, e.g. 18:30",
+          "required": true,
+          "min_length": 1,
+          "max_length": 5,
+          "type": 4
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "custom_id": "end",
+          "label": "End",
+          "style": 1,
+          "placeholder": "HH:MM, at most 3 hours after the start",
+          "required": true,
+          "min_length": 1,
+          "max_length": 5,
+          "type": 4
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "embeds": null,
+  "custom_id": "lf1:mbook",
+  "title": "Book a respawn"
+}
+---
+
+[TestModals/retry - 1]
+{
+  "tts": false,
+  "content": "",
+  "components": [
+    {
+      "components": [
+        {
+          "custom_id": "spot",
+          "label": "Respawn",
+          "style": 1,
+          "placeholder": "Name or a part of it, e.g. Library -1",
+          "value": "Library",
+          "required": true,
+          "min_length": 2,
+          "max_length": 100,
+          "type": 4
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "custom_id": "start",
+          "label": "Start",
+          "style": 1,
+          "placeholder": "HH:MM, e.g. 18:30",
+          "value": "18:30",
+          "required": true,
+          "min_length": 1,
+          "max_length": 5,
+          "type": 4
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "custom_id": "end",
+          "label": "End",
+          "style": 1,
+          "placeholder": "HH:MM, at most 3 hours after the start",
+          "required": true,
+          "min_length": 1,
+          "max_length": 5,
+          "type": 4
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "embeds": null,
+  "custom_id": "lf1:mbook",
+  "title": "Book a respawn"
+}
+---
+
+[TestModals/edit - 1]
+{
+  "tts": false,
+  "content": "",
+  "components": [
+    {
+      "components": [
+        {
+          "custom_id": "spot",
+          "label": "Respawn",
+          "style": 1,
+          "placeholder": "Name or a part of it, e.g. Library -1",
+          "value": "Library -1",
+          "required": true,
+          "min_length": 2,
+          "max_length": 100,
+          "type": 4
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "custom_id": "start",
+          "label": "Start",
+          "style": 1,
+          "placeholder": "HH:MM, e.g. 18:30",
+          "value": "19:00",
+          "required": true,
+          "min_length": 1,
+          "max_length": 5,
+          "type": 4
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "custom_id": "end",
+          "label": "End",
+          "style": 1,
+          "placeholder": "HH:MM, at most 3 hours after the start",
+          "value": "21:00",
+          "required": true,
+          "min_length": 1,
+          "max_length": 5,
+          "type": 4
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "embeds": null,
+  "custom_id": "lf1:medit:3",
+  "title": "Edit reservation"
+}
+---
+
+[TestBookOutcomeView_Success - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "label": "My reservations",
+          "style": 2,
+          "custom_id": "lf1:mine",
+          "type": 2
+        },
+        {
+          "label": "Book another",
+          "style": 1,
+          "custom_id": "lf1:book",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "Booked **Library -1**, Mon 05 Oct 19:00 – 21:00.\n\nThese reservations were shortened or removed:\n* **Druid** Mon 05 Oct 18:00 – 20:00: now 18:00 – 19:00\n* **Paladin** Mon 05 Oct 19:00 – 20:00: removed\n"
+}
+---
+
+[TestBookOutcomeView_Conflicts/can_overbook - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "label": "Overbook them",
+          "style": 4,
+          "custom_id": "lf1:ob:7:1791226800:1791234000",
+          "type": 2
+        },
+        {
+          "label": "Try again",
+          "style": 2,
+          "custom_id": "lf1:retry:1900:2100:Library",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "**Library -1**, Mon 05 Oct 19:00 – 21:00 overlaps these reservations:\n* **Druid** Mon 05 Oct 18:00 – 20:00\n\nYou can overbook them. They will be shortened or removed, and their authors get a DM."
+}
+---
+
+[TestBookOutcomeView_Conflicts/cannot_overbook - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "label": "Try again",
+          "style": 2,
+          "custom_id": "lf1:retry:1900:2100:Library",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "**Library -1**, Mon 05 Oct 19:00 – 21:00 overlaps these reservations:\n* **Druid** Mon 05 Oct 18:00 – 20:00\n\nChoose other times or another respawn."
+}
+---
+
+[TestBookOutcomeView_Ambiguous - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "custom_id": "lf1:pick:1791226800:1791234000",
+          "placeholder": "Choose a respawn",
+          "options": [
+            {
+              "label": "Library -1",
+              "value": "1",
+              "description": "Mon 05 Oct 19:00 – 21:00"
+            },
+            {
+              "label": "Library -2",
+              "value": "2",
+              "description": "Mon 05 Oct 19:00 – 21:00"
+            },
+            {
+              "label": "Library -3",
+              "value": "3",
+              "description": "Mon 05 Oct 19:00 – 21:00"
+            },
+            {
+              "label": "Library -4",
+              "value": "4",
+              "description": "Mon 05 Oct 19:00 – 21:00"
+            },
+            {
+              "label": "Library -5",
+              "value": "5",
+              "description": "Mon 05 Oct 19:00 – 21:00"
+            },
+            {
+              "label": "Library -6",
+              "value": "6",
+              "description": "Mon 05 Oct 19:00 – 21:00"
+            },
+            {
+              "label": "Library -7",
+              "value": "7",
+              "description": "Mon 05 Oct 19:00 – 21:00"
+            },
+            {
+              "label": "Library -8",
+              "value": "8",
+              "description": "Mon 05 Oct 19:00 – 21:00"
+            },
+            {
+              "label": "Library -9",
+              "value": "9",
+              "description": "Mon 05 Oct 19:00 – 21:00"
+            },
+            {
+              "label": "Library -10",
+              "value": "10",
+              "description": "Mon 05 Oct 19:00 – 21:00"
+            },
+            {
+              "label": "Library -11",
+              "value": "11",
+              "description": "Mon 05 Oct 19:00 – 21:00"
+            },
+            {
+              "label": "Library -12",
+              "value": "12",
+              "description": "Mon 05 Oct 19:00 – 21:00"
+            },
+            {
+              "label": "Library -13",
+              "value": "13",
+              "description": "Mon 05 Oct 19:00 – 21:00"
+            },
+            {
+              "label": "Library -14",
+              "value": "14",
+              "description": "Mon 05 Oct 19:00 – 21:00"
+            },
+            {
+              "label": "Library -15",
+              "value": "15",
+              "description": "Mon 05 Oct 19:00 – 21:00"
+            }
+          ],
+          "type": 3
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Try again",
+          "style": 2,
+          "custom_id": "lf1:retry:1900:2100:Library",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "More than one respawn matches **Library**. Which one do you mean?"
+}
+---
+
+[TestBookOutcomeView_Error - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "label": "Try again",
+          "style": 2,
+          "custom_id": "lf1:retry::2100:Library",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "Write the times as HH:MM, e.g. 18:30."
+}
+---
+
+[TestEditOutcomeView/error - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "label": "Edit 1",
+          "style": 2,
+          "custom_id": "lf1:edit:1",
+          "type": 2
+        },
+        {
+          "label": "Cancel 1",
+          "style": 4,
+          "custom_id": "lf1:cancel:1",
+          "type": 2
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Try again",
+          "style": 2,
+          "custom_id": "lf1:eretry:1:1900:2100:Library -1",
+          "type": 2
+        },
+        {
+          "label": "Book a respawn",
+          "style": 1,
+          "custom_id": "lf1:book",
+          "type": 2
+        },
+        {
+          "label": "Refresh",
+          "style": 2,
+          "custom_id": "lf1:list",
+          "type": 2
+        },
+        {
+          "label": "Open panel",
+          "style": 5,
+          "url": "https://tibialoot.test",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "Not changed. Sorry, but something went wrong. If you require support, join TibiaLoot.com Discord: https://discord.gg/F4YKgsnzmc \nError message:\n```\nboom\n```\n\n**Your upcoming reservations** (times in UTC)\n1. **Respawn 1** · Mon 05 Oct 15:00 – 17:00 (ongoing)\n"
+}
+---
+
+[TestEditOutcomeView/ambiguous - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "custom_id": "lf1:epick:1:1791226800:1791234000",
+          "placeholder": "Choose a respawn",
+          "options": [
+            {
+              "label": "Library -1",
+              "value": "1",
+              "description": "Mon 05 Oct 19:00 – 21:00"
+            },
+            {
+              "label": "Library -2",
+              "value": "2",
+              "description": "Mon 05 Oct 19:00 – 21:00"
+            }
+          ],
+          "type": 3
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Back to the list",
+          "style": 2,
+          "custom_id": "lf1:list",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "More than one respawn matches **Lib**. Which one do you mean?"
+}
+---
+
+[TestEditOutcomeView/success - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "label": "Edit 1",
+          "style": 2,
+          "custom_id": "lf1:edit:1",
+          "type": 2
+        },
+        {
+          "label": "Cancel 1",
+          "style": 4,
+          "custom_id": "lf1:cancel:1",
+          "type": 2
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Book a respawn",
+          "style": 1,
+          "custom_id": "lf1:book",
+          "type": 2
+        },
+        {
+          "label": "Refresh",
+          "style": 2,
+          "custom_id": "lf1:list",
+          "type": 2
+        },
+        {
+          "label": "Open panel",
+          "style": 5,
+          "url": "https://tibialoot.test",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "Updated **Library -1**, Mon 05 Oct 19:00 – 21:00.\n\n**Your upcoming reservations** (times in UTC)\n1. **Respawn 1** · Mon 05 Oct 15:00 – 17:00 (ongoing)\n"
+}
+---
+
+[TestEditOutcomeView/conflict - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "label": "Edit 1",
+          "style": 2,
+          "custom_id": "lf1:edit:1",
+          "type": 2
+        },
+        {
+          "label": "Cancel 1",
+          "style": 4,
+          "custom_id": "lf1:cancel:1",
+          "type": 2
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Try again",
+          "style": 2,
+          "custom_id": "lf1:eretry:1:1900:2100:Library -1",
+          "type": 2
+        },
+        {
+          "label": "Book a respawn",
+          "style": 1,
+          "custom_id": "lf1:book",
+          "type": 2
+        },
+        {
+          "label": "Refresh",
+          "style": 2,
+          "custom_id": "lf1:list",
+          "type": 2
+        },
+        {
+          "label": "Open panel",
+          "style": 5,
+          "url": "https://tibialoot.test",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "Not changed. **Library -1**, Mon 05 Oct 19:00 – 21:00 overlaps these reservations:\n* **Druid** Mon 05 Oct 18:00 – 20:00\n\nChoose other times or another respawn.\n\n**Your upcoming reservations** (times in UTC)\n1. **Respawn 1** · Mon 05 Oct 15:00 – 17:00 (ongoing)\n"
+}
+---

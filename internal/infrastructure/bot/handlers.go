@@ -17,6 +17,7 @@ import (
 	"spot-assistant/internal/core/dto/guildconfig"
 	"spot-assistant/internal/core/dto/summary"
 	"spot-assistant/internal/core/permission"
+	"spot-assistant/internal/core/reservationforms"
 	"spot-assistant/internal/core/worlds"
 	"spot-assistant/internal/ports"
 )
@@ -161,15 +162,6 @@ func (b *Bot) markAbsentGuilds(r *discordgo.Ready, readyAt time.Time) {
 	}
 }
 
-// InteractionCreate this is the entry point when a slash command is invoked.
-func (b *Bot) InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	tStart := time.Now()
-
-	b.handleCommand(i)
-
-	b.log.With("duration", time.Since(tStart)).Debug("interaction handled")
-}
-
 func (b *Bot) Tick() {
 	defer b.metrics.IncTicks()
 	defer b.eventHandler.OnTick()
@@ -214,7 +206,6 @@ func (b *Bot) processResyncRequests(ctx context.Context) {
 func (b *Bot) Book(i *discordgo.InteractionCreate, cfg *guildconfig.Config) error {
 	b.log.Info("Book")
 	interaction := i.Interaction
-	tNow := time.Now()
 	gID, err := stringsHelper.StrToInt64(i.GuildID)
 	if err != nil {
 		return err
@@ -240,29 +231,13 @@ func (b *Bot) Book(i *discordgo.InteractionCreate, cfg *guildconfig.Config) erro
 		b.metrics.IncOverbook(i.GuildID, guildName)
 	}
 
-	startAtStr := sanitizeTimeFormat(i.ApplicationCommandData().Options[1].StringValue())
-	startAt, err := time.Parse(stringsHelper.DcTimeFormat, startAtStr)
+	startAt, endAt, err := reservationforms.NextWindow(
+		i.ApplicationCommandData().Options[1].StringValue(),
+		i.ApplicationCommandData().Options[2].StringValue(),
+		time.Now(),
+	)
 	if err != nil {
 		return err
-	}
-	startAt = time.Date(
-		tNow.Year(), tNow.Month(), tNow.Day(), startAt.Hour(), startAt.Minute(), 0, 0, tNow.Location())
-
-	endAtStr := sanitizeTimeFormat(i.ApplicationCommandData().Options[2].StringValue())
-	endAt, err := time.Parse(stringsHelper.DcTimeFormat, endAtStr)
-	if err != nil {
-		return err
-	}
-	endAt = time.Date(
-		tNow.Year(), tNow.Month(), tNow.Day(), endAt.Hour(), endAt.Minute(), 0, 0, tNow.Location())
-
-	if startAt.Before(tNow) {
-		startAt = startAt.Add(24 * time.Hour)
-		endAt = endAt.Add(24 * time.Hour)
-	}
-
-	if startAt.After(endAt) {
-		endAt = endAt.Add(24 * time.Hour)
 	}
 
 	g, err := b.GetGuild(gID)

@@ -3,6 +3,7 @@ package bot
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -86,6 +87,35 @@ func connectShardsWith(token string, delay func(attempt int) time.Duration) (*sh
 	return mgr, nil
 }
 
+// InteractionGateway is the part of the Discord client that answers
+// interactions. shardGateway implements it.
+type InteractionGateway interface {
+	InteractionRespond(interaction *discordgo.Interaction, resp *discordgo.InteractionResponse, options ...discordgo.RequestOption) error
+	InteractionResponseEdit(interaction *discordgo.Interaction, newresp *discordgo.WebhookEdit, options ...discordgo.RequestOption) (*discordgo.Message, error)
+	// Guild asks the REST API.
+	Guild(guildID string, options ...discordgo.RequestOption) (*discordgo.Guild, error)
+	// StateGuild reads the guild from the gateway cache of its shard.
+	StateGuild(guildID string) (*discordgo.Guild, error)
+}
+
+type shardGateway struct {
+	*discordgo.Session
+
+	mgr *shards.Manager
+}
+
+func (g shardGateway) StateGuild(guildID string) (*discordgo.Guild, error) {
+	id, err := strconv.ParseInt(guildID, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("parse guild id: %w", err)
+	}
+	session := g.mgr.SessionForGuild(id)
+	if session == nil || session.State == nil {
+		return nil, discordgo.ErrStateNotFound
+	}
+	return session.State.Guild(guildID)
+}
+
 type Bot struct {
 	summarySrv         ports.SummaryService
 	reservationRepo    ports.ReservationRepository
@@ -94,8 +124,10 @@ type Bot struct {
 	syncer             *GuildSyncer
 	summaryRefresh     *debouncer
 	eventHandler       ports.APIPort
+	forms              ports.ReservationFormService
 	metrics            ports.MetricsPort
 	mgr                *shards.Manager
+	gateway            InteractionGateway
 	webBaseURL         string
 	log                *zap.SugaredLogger
 	quit               chan struct{}
@@ -112,6 +144,7 @@ func NewManager(mgr *shards.Manager, webBaseURL string, summarySrv ports.Summary
 	mgr.Intent = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages | discordgo.IntentsGuildVoiceStates
 	bot := &Bot{
 		mgr:                mgr,
+		gateway:            shardGateway{Session: mgr.Gateway, mgr: mgr},
 		webBaseURL:         webBaseURL,
 		quit:               make(chan struct{}),
 		channelLocks:       cmap.New[*sync.RWMutex](),
@@ -164,6 +197,11 @@ func (b *Bot) WithEventHandler(port ports.APIPort) *Bot {
 	return b
 }
 
+func (b *Bot) WithReservationForms(forms ports.ReservationFormService) *Bot {
+	b.forms = forms
+	return b
+}
+
 func (b *Bot) WithLogger(log *zap.SugaredLogger) *Bot {
 	b.log = log.With("layer", "infrastructure", "name", "bot")
 	if b.syncer != nil {
@@ -200,7 +238,7 @@ func (b *Bot) IsRunning() bool {
 }
 
 func (b *Bot) interactionRespond(i *discordgo.InteractionCreate, responseData *discordgo.InteractionResponseData, responseType discordgo.InteractionResponseType) error {
-	return b.mgr.Gateway.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+	return b.gateway.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: responseType,
 		Data: responseData,
 	})

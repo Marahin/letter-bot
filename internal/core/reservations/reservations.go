@@ -1,5 +1,5 @@
-// Package reservations is the web side of a guild's reservations: search, and
-// create, edit and delete under the bot's booking rules and the actor's rights.
+// Package reservations is the web and bot-form side of a guild's reservations:
+// search, and create, edit and delete under the booking rules and the actor's rights.
 package reservations
 
 import (

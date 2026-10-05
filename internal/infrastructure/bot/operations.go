@@ -230,6 +230,10 @@ func (b *Bot) updateGuildLetterWithConfig(g *guild.Guild, cfg *guildconfig.Confi
 		b.metrics.SetUpcomingReservations(g.ID, g.Name, len(reservationsWithSpots))
 	}
 
+	if len(reservationsWithSpots) == 0 {
+		return b.sendEmptyLetter(g, summaryChannel)
+	}
+
 	sum, err := b.summarySrv.PrepareSummary(reservationsWithSpots)
 	if err != nil {
 		return err
@@ -245,15 +249,8 @@ func (b *Bot) SendLetterMessage(g *guild.Guild, channel *discord.Channel, sum *s
 		return errors.New("SendLetterMessage requires at least 1 ledger entry to be present")
 	}
 
-	// Do not allow for asynchronous modification
-	// of the same channel - this leads to doubled summaries
-	mutex, ok := b.channelLocks.Get(channel.ID)
-	if !ok {
-		mutex = &sync.RWMutex{}
-		b.channelLocks.Set(channel.ID, mutex)
-	}
-	mutex.Lock()
-	defer mutex.Unlock()
+	unlock := b.lockChannel(channel.ID)
+	defer unlock()
 
 	var dcSession *discordgo.Session
 	if channel.Type == discord.ChannelTypeDM {
@@ -330,8 +327,15 @@ func (b *Bot) SendLetterMessage(g *guild.Guild, channel *discord.Channel, sum *s
 	// if err != nil {
 	// 	return err
 	// }
-	for _, embed := range embeds {
-		_, err = dcSession.ChannelMessageSendEmbed(channel.ID, embed)
+	for idx, embed := range embeds {
+		if channel.Type != discord.ChannelTypeDM && idx == len(embeds)-1 {
+			_, err = dcSession.ChannelMessageSendComplex(channel.ID, &discordgo.MessageSend{
+				Embeds:     []*discordgo.MessageEmbed{embed},
+				Components: summaryComponents(b.webBaseURL),
+			})
+		} else {
+			_, err = dcSession.ChannelMessageSendEmbed(channel.ID, embed)
+		}
 		if err != nil {
 			b.log.Errorf("something went wrong when sending embed: %s", err)
 		}
@@ -340,6 +344,42 @@ func (b *Bot) SendLetterMessage(g *guild.Guild, channel *discord.Channel, sum *s
 	}
 
 	return err
+}
+
+// lockChannel serializes the summaries of one channel; two at once double the summary.
+func (b *Bot) lockChannel(channelID string) func() {
+	mutex := b.channelLocks.Upsert(channelID, nil, func(exists bool, current, _ *sync.RWMutex) *sync.RWMutex {
+		if exists {
+			return current
+		}
+		return &sync.RWMutex{}
+	})
+	mutex.Lock()
+	return mutex.Unlock
+}
+
+// sendEmptyLetter replaces the summary of a guild with no upcoming hunts, so the
+// channel keeps the buttons.
+func (b *Bot) sendEmptyLetter(g *guild.Guild, channel *discord.Channel) error {
+	unlock := b.lockChannel(channel.ID)
+	defer unlock()
+
+	gID, err := stringsHelper.StrToInt64(g.ID)
+	if err != nil {
+		return fmt.Errorf("could not parse guild ID: %w", err)
+	}
+	if err := b.CleanChannel(g, channel); err != nil {
+		return err
+	}
+	_, err = b.mgr.SessionForGuild(gID).ChannelMessageSendComplex(channel.ID, &discordgo.MessageSend{
+		Embeds:     []*discordgo.MessageEmbed{b.emptyEmbed()},
+		Components: summaryComponents(b.webBaseURL),
+	})
+	if err != nil {
+		return err
+	}
+	b.metrics.IncMessagesSent(channel.ID, channel.Name)
+	return nil
 }
 
 func (b *Bot) SendDM(m *member.Member, message string) error {
