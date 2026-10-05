@@ -83,11 +83,19 @@ func TestDatabase_FailsFastOnAnUnreachableDatabase(t *testing.T) {
 	lc := &hooks{}
 
 	// when
-	_, err := connect(lc, unreachable)
+	_, err := connect(lc, unreachable, Migrated{})
 
 	// then
 	assert.ErrorContains(t, err, "db connect failed")
 	assert.Empty(t, lc.appended, "a failed pool leaves no close hook")
+}
+
+func TestMigrate_FailsFastOnAnUnreachableDatabase(t *testing.T) {
+	// when
+	_, err := migrate(unreachable, zap.NewNop().Sugar())
+
+	// then
+	assert.ErrorContains(t, err, "migrations failed")
 }
 
 func TestDatabase_RejectsABadDSN(t *testing.T) {
@@ -98,7 +106,7 @@ func TestDatabase_RejectsABadDSN(t *testing.T) {
 	bad.SSL = "nonsense"
 
 	// when
-	_, err := connect(lc, bad)
+	_, err := connect(lc, bad, Migrated{})
 
 	// then
 	assert.ErrorContains(t, err, "db config")

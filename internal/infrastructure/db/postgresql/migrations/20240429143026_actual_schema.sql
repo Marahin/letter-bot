@@ -1,3 +1,4 @@
+-- +goose Up
 -- Add btree_gist extension
 CREATE EXTENSION IF NOT EXISTS btree_gist WITH SCHEMA public;
 

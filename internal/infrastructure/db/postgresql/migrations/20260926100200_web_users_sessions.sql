@@ -1,3 +1,4 @@
+-- +goose Up
 CREATE TABLE web_users (
   discord_user_id text PRIMARY KEY,
   username text NOT NULL,

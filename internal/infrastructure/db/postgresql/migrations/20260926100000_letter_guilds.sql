@@ -1,3 +1,4 @@
+-- +goose Up
 CREATE TABLE guilds (
   guild_id text PRIMARY KEY,
   name text NOT NULL DEFAULT '',

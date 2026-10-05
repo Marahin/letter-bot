@@ -1,3 +1,4 @@
+-- +goose Up
 ALTER TABLE web_spot ADD COLUMN guild_id varchar(255), ADD COLUMN archived_at timestamptz;
 
 -- Every existing spot belongs to Celesta Community (DECISIONS #3).

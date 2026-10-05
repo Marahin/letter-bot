@@ -1,3 +1,4 @@
+-- +goose Up
 CREATE TABLE highscore_runs (
   id bigserial PRIMARY KEY,
   world varchar(100) NOT NULL,

@@ -16,9 +16,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 
 	"spot-assistant/internal/core/dto/world"
 	coreexperience "spot-assistant/internal/core/experience"
+	"spot-assistant/internal/infrastructure/db/postgresql"
 	"spot-assistant/internal/infrastructure/experience/postgresql/sqlc"
 	"spot-assistant/internal/infrastructure/scheduler"
 	"spot-assistant/internal/infrastructure/worldapi"
@@ -77,7 +79,7 @@ func hs(name string, exp int64) world.HighscoreEntry {
 }
 
 // TestExperienceJob_EndToEnd runs the job against a real database. Set LETTER_TEST_DATABASE_URL to run it, e.g.
-// postgres://postgres:postgres@127.0.0.1:55432/postgres?sslmode=disable with all migrations applied.
+// postgres://postgres:postgres@127.0.0.1:55432/postgres?sslmode=disable.
 func TestExperienceJob_EndToEnd(t *testing.T) {
 	dsn := os.Getenv("LETTER_TEST_DATABASE_URL")
 	if dsn == "" {
@@ -86,6 +88,8 @@ func TestExperienceJob_EndToEnd(t *testing.T) {
 
 	// given
 	ctx := context.Background()
+	_, err := postgresql.Migrate(ctx, dsn, zap.NewNop().Sugar())
+	require.NoError(t, err)
 	pool, err := pgxpool.New(ctx, dsn)
 	require.NoError(t, err)
 	t.Cleanup(pool.Close)

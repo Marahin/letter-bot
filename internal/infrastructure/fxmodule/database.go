@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/fx"
+	"go.uber.org/zap"
 
 	"spot-assistant/internal/infrastructure/db/postgresql"
 )
@@ -14,10 +15,21 @@ import (
 // pingTimeout bounds the first ping, so an unreachable database fails the start.
 const pingTimeout = 30 * time.Second
 
-// Database provides the pool. The migrations are applied by atlas, not here.
-var Database = fx.Provide(connect)
+// Database runs the migrations, then provides the pool.
+var Database = fx.Provide(migrate, connect)
 
-func connect(lc fx.Lifecycle, cfg postgresql.Specification) (*pgxpool.Pool, error) {
+// Migrated marks a database whose migrations ran. Take it to order a provider
+// after the migrations.
+type Migrated struct{}
+
+func migrate(cfg postgresql.Specification, log *zap.SugaredLogger) (Migrated, error) {
+	if _, err := postgresql.Migrate(context.Background(), cfg.DSN(), log); err != nil {
+		return Migrated{}, fmt.Errorf("migrations failed: %w", err)
+	}
+	return Migrated{}, nil
+}
+
+func connect(lc fx.Lifecycle, cfg postgresql.Specification, _ Migrated) (*pgxpool.Pool, error) {
 	poolCfg, err := pgxpool.ParseConfig(cfg.DSN())
 	if err != nil {
 		return nil, fmt.Errorf("db config: %w", err)

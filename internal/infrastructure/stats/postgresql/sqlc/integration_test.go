@@ -10,9 +10,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 
 	"spot-assistant/internal/core/dto/experience"
 	"spot-assistant/internal/core/dto/stats"
+	"spot-assistant/internal/infrastructure/db/postgresql"
 	"spot-assistant/internal/infrastructure/stats/postgresql/sqlc"
 	"spot-assistant/internal/ports"
 )
@@ -20,7 +22,7 @@ import (
 const itGuild = "it-stats-guild"
 
 // TestStatsRepository_Queries runs every stats query against a real database. Set LETTER_TEST_DATABASE_URL to
-// run it, e.g. postgres://postgres:postgres@127.0.0.1:55432/postgres?sslmode=disable with all migrations applied.
+// run it, e.g. postgres://postgres:postgres@127.0.0.1:55432/postgres?sslmode=disable.
 func TestStatsRepository_Queries(t *testing.T) {
 	dsn := os.Getenv("LETTER_TEST_DATABASE_URL")
 	if dsn == "" {
@@ -29,6 +31,8 @@ func TestStatsRepository_Queries(t *testing.T) {
 
 	// given
 	ctx := context.Background()
+	_, err := postgresql.Migrate(ctx, dsn, zap.NewNop().Sugar())
+	require.NoError(t, err)
 	pool, err := pgxpool.New(ctx, dsn)
 	require.NoError(t, err)
 	t.Cleanup(pool.Close)
