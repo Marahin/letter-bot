@@ -72,7 +72,7 @@ templ Layout(title, description, baseURL, path string, nav Nav) {
 					<main class={ "mx-auto w-full flex-1", templ.KV("max-w-[1600px] px-6 py-12 md:px-10 md:py-14", !nav.Wide), templ.KV("max-w-none", nav.Wide) }>
 						{ children... }
 					</main>
-					@attributionFooter()
+					@attributionFooter(nav)
 				</div>
 				@errorToast()
 			</body>
@@ -87,7 +87,7 @@ templ Layout(title, description, baseURL, path string, nav Nav) {
 				<main class={ "w-full flex-1", templ.KV("mx-auto max-w-6xl px-6 py-10", !nav.Wide), templ.KV("max-w-none", nav.Wide) }>
 					{ children... }
 				</main>
-				@attributionFooter()
+				@attributionFooter(nav)
 				@errorToast()
 			</body>
 		}
@@ -104,14 +104,28 @@ templ errorToast() {
 	})
 }
 
-// attributionFooter is the shell footer: branding.Notice()'s attribution wording
-// and the CipSoft disclaimer.
-templ attributionFooter() {
+// attributionFooter is the shell footer: branding.Notice()'s attribution wording,
+// the CipSoft disclaimer, and the community support link when one is configured.
+templ attributionFooter(nav Nav) {
 	<footer class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 border-t border-zone-800 px-6 py-6 text-center font-mono text-xs text-zone-600">
 		<span>{ branding.Notice() }</span>
 		<span aria-hidden="true" class="hidden text-zone-700 sm:inline">·</span>
 		<span data-not-affiliated>{ i18n.T(ctx, "shell.footer.not_affiliated") }</span>
+		if nav.SupportURL != "" {
+			<span aria-hidden="true" class="hidden text-zone-700 sm:inline">·</span>
+			@SupportLink(nav.SupportURL, i18n.T(ctx, "shell.footer.support"), "inline-flex items-center gap-1.5 text-zone-400 transition hover:text-signal")
+		}
 	</footer>
+}
+
+// SupportLink is the shared "get help" affordance: a Discord-marked link to the
+// community server (DISCORD_INVITE_LINK). class carries the caller's placement
+// styling, so each place looks native.
+templ SupportLink(url, label, class string) {
+	<a href={ templ.SafeURL(url) } target="_blank" rel="noopener noreferrer" data-support-link class={ class }>
+		@discordGlyph()
+		{ label }
+	</a>
 }
 
 // dropdown is the shared menu shell: a native <details> with a clickable summary
@@ -252,7 +266,11 @@ templ languagePickerLabelled(nav Nav, path, summaryClass, dropClass, labelClass 
 		// Unreviewed copy says so, once and quietly (see i18n/locales/README.md).
 		if !cur.Reviewed() {
 			<div class="my-1 border-t border-white/10"></div>
-			<p class="px-3 py-2 text-xs leading-snug text-zone-500">{ i18n.T(ctx, "shell.language.improve") }</p>
+			if nav.SupportURL != "" {
+				@SupportLink(nav.SupportURL, i18n.T(ctx, "shell.language.improve"), "flex items-start gap-2 rounded-md px-3 py-2 text-xs leading-snug text-zone-400 transition hover:bg-white/5 hover:text-signal")
+			} else {
+				<p class="px-3 py-2 text-xs leading-snug text-zone-500">{ i18n.T(ctx, "shell.language.improve") }</p>
+			}
 		}
 	}
 }
@@ -333,6 +351,9 @@ templ sidebar(nav Nav, path string) {
 			</div>
 		}
 		<div class="mt-auto flex flex-col gap-1 text-sm">
+			if nav.SupportURL != "" {
+				@SupportLink(nav.SupportURL, i18n.T(ctx, "shell.account.get_help"), "flex items-center gap-2.5 rounded-md px-3 py-2 text-zone-300 transition hover:bg-white/10 hover:text-signal")
+			}
 			@languagePicker(nav, path, "px-3 py-2 text-zone-300", "left-0 bottom-full mb-2")
 			<div class="mt-2 flex items-center justify-between gap-2 border-t border-white/10 px-3 pt-3">
 				<span class="truncate text-xs text-zone-400">{ nav.Username }</span>
@@ -510,7 +531,7 @@ templ serverSwitcher(nav Nav) {
 									templ.KV("text-signal", s.ID == nav.CurrentGuildID),
 									templ.KV("text-zone-200", s.ID != nav.CurrentGuildID) }
 						>
-							@serverOptionIcon(guildIconURL(s.ID, s.Icon), s.Name)
+							@serverOptionIcon(GuildIconURL(s.ID, s.Icon), s.Name)
 							<span class="min-w-0 flex-1 truncate">{ s.Name }</span>
 						</a>
 					}
@@ -527,15 +548,15 @@ templ serverSwitcher(nav Nav) {
 // serverSummary is the switcher summary: the selected server's framed icon, its
 // name and a caret.
 templ serverSummary(nav Nav) {
-	@serverBadge(nav.CurrentGuildIconURL(), nav.CurrentGuildName)
+	@ServerBadge(nav.CurrentGuildIconURL(), nav.CurrentGuildName)
 	<span class="min-w-0 flex-1 truncate text-left font-display font-semibold">{ nav.CurrentGuildName }</span>
 	<span class="text-xs text-zone-400" aria-hidden="true">▾</span>
 }
 
-// serverBadge frames the selected server's icon, falling back to its first letter.
+// ServerBadge frames a server's icon, falling back to its first letter.
 // The letter sits under the image, so it shows when the icon fails to load.
 // alt is empty: the name sits beside it, so the frame is decorative.
-templ serverBadge(iconURL, name string) {
+templ ServerBadge(iconURL, name string) {
 	<span aria-hidden="true" class="relative flex h-9 w-9 flex-none items-center justify-center overflow-hidden rounded-lg border border-zone-700 bg-zone-800 font-display text-sm font-bold text-zone-400">
 		{ guildInitial(name) }
 		if iconURL != "" {

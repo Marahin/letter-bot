@@ -34,8 +34,13 @@ out and sends them to the login page.
   (listed after the others). They also see **Admin > Servers**
   (`/admin/guilds`), where they turn premium on and off. The admin routes answer
   404 to everyone else.
-- On a server without premium, the feature pages show "Premium required".
-  Settings and Channels work without premium, so an admin can prepare the server.
+- On a server without premium, every server page (`/servers/{id}` and
+  everything under it, Settings and Channels too) shows the premium lock: "Unlock
+  the feature with Premium. Join the Discord and get on board!", with a link to the
+  community Discord. The lock comes before the rank check, and it answers 403
+  (plain text to htmx). Site admins pass it. The dashboard card of such a server
+  says "Unlock with Premium" and opens the lock page.
+- The Stats pages are public (see Stats). Every other server page needs sign-in.
 - The server a user opens last is their default (`web_users.default_guild_id`),
   so the sidebar keeps it selected on every page and after the next sign-in. It
   is written only when it changes. Without a default (or when the user lost
@@ -43,7 +48,8 @@ out and sends them to the login page.
 
 ## Settings and Channels
 
-Only the server owner and administrators open these pages.
+Only the server owner and administrators open these pages, and only on a
+premium server.
 
 - **Settings** (`/servers/{id}/settings`):
   - Re-invite the bot, to apply missing permissions.
@@ -148,10 +154,21 @@ The test uses the guild ids `it-exp-*` and the worlds `Itworld*`, and deletes th
 
 ## Stats
 
-Every Stats page needs the view rank and a premium server. Pages:
-`/servers/{id}/stats` (overview), `/stats/spots`, `/stats/players`,
-`/stats/characters` (tables), `/stats/spots/{spot}`, `/stats/players/{user}`
-and `/servers/{id}/characters/{name}` (the character page).
+Every Stats page is public on a premium server: anyone can read it without
+sign-in, as members see it. Pages: `/servers/{id}/stats` (overview),
+`/stats/spots`, `/stats/players`, `/stats/characters` (tables, with the CSV
+export), `/stats/spots/{spot}`, `/stats/players/{user}` and
+`/servers/{id}/characters/{name}` (the character page).
+
+- **Who sees what.** A member (view rank) gets the sidebar of the server. Anyone
+  else gets the "Public stats" bar above the page: the server, the four Stats
+  views and, when signed out, "Log in with Discord", which comes back to the page
+  (`/login?to=`). A signed-in visitor who is not a member keeps their own sidebar.
+  When Discord does not answer the member lookup, the visitor gets the public view.
+- Only a stored server with the bot present is visible; any other id answers 404.
+  A server without premium shows the premium lock here too.
+- The link from a respawn page to its reservations shows only to members: the
+  reservations need sign-in.
 
 - **Day range.** The shared range picker (`web.RangePicker`) sets the days. The
   page uses the span from the first to the last picked day (picked single days
@@ -243,6 +260,8 @@ The web reads these environment variables (`.env.sample` has examples):
 | `WEB_ADDR` | no | `:8080` | The address of the web server. |
 | `WEB_METRICS_ADDR` | no | `:3005` | `/metrics`, `/livez`, `/readyz` (`/readyz` pings the database). |
 | `WEB_ADMIN_DISCORD_IDS` | no | | Comma-separated Discord user ids of the site admins. |
+| `DISCORD_INVITE_LINK` | no | `https://discord.gg/b7Qq8V2XFR` | The community Discord invite behind every support link: the footers, the sidebar "Get help", the translation note, the landing page, the 404 and 5xx pages and the premium lock. Only an `http(s)` URL is used; empty hides the links. |
+| `WEB_DEV_AUTH` | no | `false` | Turns on `/dev/login` (development only). It works only in a binary built with the `devauth` tag and with a `localhost` base URL. |
 | `TIBIA_WORLD_API_BASE_URL` | no | | TibiaData v4, for example `http://ext-tibiadata-api:8080/v4`. Without it, the experience job does not run and the character page shows "TibiaData does not answer". |
 | `WEB_EXPERIENCE_JOB_ENABLED` | no | `true` | Set `false` to stop the experience job in this process. |
 | `WEB_EXPERIENCE_JOB_INTERVAL` | no | `15m` | The time between two job runs. Must be more than 0. |
@@ -503,3 +522,23 @@ A server that added the bot before keeps its old permissions. Settings has a
 - `make lint` runs the templ check and golangci-lint. `make help` lists the
   targets.
 - The wiring is in `internal/infrastructure/fxmodule` (fx); see its `AGENTS.md`.
+
+### `/dev/login`, the seed and the e2e suite
+
+- The `devauth` build tag adds `/dev/login`: a list of mock users that sign in
+  without Discord (`internal/infrastructure/devauth`). The binary must also run
+  with `WEB_DEV_AUTH=true` and a `localhost` or `127.0.0.1` base URL; otherwise
+  the routes answer 404. A build without the tag has no such code.
+- `make run-web-dev` runs the web with the tag and the flag. `make seed`
+  (`cmd/seed`, also tagged) writes two servers: `700000000000000900` "Letter E2E"
+  (premium, five respawns, 30 days of reservations with experience) and
+  `700000000000000901` "Letter E2E Locked" (no premium). It is idempotent.
+- Mock users: dev-manager (manage rank), dev-member (view and reserve),
+  dev-outsider (no server), dev-siteadmin (site admin when
+  `WEB_ADMIN_DISCORD_IDS=700000000000000004`) and dev-owner (Discord admin).
+- `docker compose up` runs the dev stack with the tag, the flag and the `seed`
+  service. A database that also served the real bot can lose `bot_present` on the
+  fake servers; run the seed again.
+- `make e2e-stack` runs the browser e2e suite (go-rod, a system Chrome) in its
+  own compose project; `make e2e` runs it against a stack that is up. See
+  `internal/infrastructure/e2e-tests/README.md`.

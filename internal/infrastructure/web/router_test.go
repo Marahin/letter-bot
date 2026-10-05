@@ -65,3 +65,20 @@ func TestRouterHandle_RegistersNonHandlerFuncAndMethodless(t *testing.T) {
 	assert.Equal(t, sentinel, webhook.Body.String(), "a method-less route accepts any method")
 	assert.Equal(t, sentinel, form.Body.String())
 }
+
+func TestRouterRoutes_ListsEveryRouteWithItsMethod(t *testing.T) {
+	// given
+	rt := NewRouter(http.NewServeMux())
+	get := rt.Get("/servers/{id}/spots", okHandler)
+	post := rt.Post("/servers/{id}/spots", okHandler)
+	anyMethod := rt.Handle("", "/assets/", http.HandlerFunc(okHandler))
+
+	// when
+	routes := rt.Routes()
+
+	// then
+	assert.ElementsMatch(t, []*Route{get, post, anyMethod}, routes)
+	assert.Equal(t, http.MethodGet, get.Method())
+	assert.Equal(t, http.MethodPost, post.Method())
+	assert.Empty(t, anyMethod.Method())
+}

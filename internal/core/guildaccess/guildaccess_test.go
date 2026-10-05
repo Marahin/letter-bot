@@ -340,6 +340,64 @@ func TestService_Access_Errors(t *testing.T) {
 	}
 }
 
+func TestService_Public(t *testing.T) {
+	// given
+	ctx := context.Background()
+	f := newFixture(t)
+	f.configs.EXPECT().Get(ctx, "g").Return(cfg("g", "G", func(c *guildconfig.Config) { c.Premium = true }), nil)
+
+	// when
+	a, err := f.svc.Public(ctx, "g")
+
+	// then
+	require.NoError(t, err)
+	assert.Equal(t, "G", a.Config.Name)
+	assert.True(t, a.Config.IsPremium())
+	assert.Equal(t, permission.Capabilities{}, a.Caps)
+	f.oauth.AssertNotCalled(t, "UserGuilds", mock.Anything, mock.Anything)
+}
+
+func TestService_Public_NotFound(t *testing.T) {
+	cases := map[string]func(ctx context.Context, f fixture){
+		"guild not stored": func(ctx context.Context, f fixture) {
+			f.configs.EXPECT().Get(ctx, "g").Return(nil, ports.ErrNotFound)
+		},
+		"bot absent": func(ctx context.Context, f fixture) {
+			f.configs.EXPECT().Get(ctx, "g").Return(cfg("g", "G", func(c *guildconfig.Config) { c.BotPresent = false }), nil)
+		},
+	}
+	for name, setup := range cases {
+		t.Run(name, func(t *testing.T) {
+			// given
+			ctx := context.Background()
+			f := newFixture(t)
+			setup(ctx, f)
+
+			// when
+			a, err := f.svc.Public(ctx, "g")
+
+			// then
+			assert.Nil(t, a)
+			assert.ErrorIs(t, err, ports.ErrNotFound)
+		})
+	}
+}
+
+func TestService_Public_RepositoryError(t *testing.T) {
+	// given
+	ctx := context.Background()
+	f := newFixture(t)
+	f.configs.EXPECT().Get(ctx, "g").Return(nil, errors.New("db down"))
+
+	// when
+	a, err := f.svc.Public(ctx, "g")
+
+	// then
+	assert.Nil(t, a)
+	assert.Error(t, err)
+	assert.NotErrorIs(t, err, ports.ErrNotFound)
+}
+
 func TestService_Member(t *testing.T) {
 	// given
 	ctx := context.Background()

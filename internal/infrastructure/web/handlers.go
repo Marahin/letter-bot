@@ -142,16 +142,11 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	d.Render(w, r, Dashboard(s.cfg.BaseURL, user, list, d.InviteURLGeneric(), nav))
 }
 
-// handleGuildRoot sends /servers/{id} to the server's first useful page: an admin
-// of a server without premium goes to Settings, which works without premium.
+// handleGuildRoot sends /servers/{id} to Reservations. The guard shows the lock
+// page here for a server without premium.
 func (s *Server) handleGuildRoot(w http.ResponseWriter, r *http.Request) {
-	d := s.deps()
 	current, _ := CurrentAccessFrom(r.Context())
-	suffix := "/reservations"
-	if current.Caps.Admin && !current.Config.IsPremium() && !d.Access.IsSiteAdmin(d.SessionUserID(r.Context())) {
-		suffix = "/settings"
-	}
-	http.Redirect(w, r, GuildPath(current.Config.GuildID, suffix), http.StatusSeeOther)
+	http.Redirect(w, r, GuildPath(current.Config.GuildID, "/reservations"), http.StatusSeeOther)
 }
 
 // RandomState mints the CSRF state of an OAuth round trip.

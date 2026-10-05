@@ -19,9 +19,6 @@ templ Settings(baseURL string, guild guildconfig.Config, roles []*role.Role, wor
 				<h1 class="font-display text-4xl font-bold -tracking-[0.02em] text-zone-50">{ i18n.T(ctx, "settings.page.heading") }</h1>
 				<p class="mt-2 max-w-2xl text-sm leading-relaxed text-zone-400">{ i18n.T(ctx, "settings.page.lede", guild.Name) }</p>
 			</div>
-			if !guild.IsPremium() {
-				@PremiumNotice()
-			}
 			@ReinviteBot(inviteURL)
 			@RefreshData(guild)
 			@WorldSettings(guild, world)
@@ -31,17 +28,6 @@ templ Settings(baseURL string, guild guildconfig.Config, roles []*role.Role, wor
 		</div>
 		<script src={ web.AssetURL("/assets/alpine.js") } defer></script>
 	}
-}
-
-// PremiumNotice tells the admin of a server without premium that the bot is
-// inactive, and that these settings take effect once premium is on.
-templ PremiumNotice() {
-	<section class="mt-8">
-		<div class="rounded-lg border border-amber-500/40 bg-zone-900 shadow-glass p-4">
-			<h2 class="font-display text-lg font-bold text-amber-300">{ i18n.T(ctx, "settings.premium.heading") }</h2>
-			<p class="mt-1 max-w-2xl text-sm leading-relaxed text-amber-300/90">{ i18n.T(ctx, "settings.premium.body") }</p>
-		</div>
-	</section>
 }
 
 // ReinviteBot links to the Discord bot invite for this server, pre-selected and

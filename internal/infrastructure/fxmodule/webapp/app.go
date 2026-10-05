@@ -28,6 +28,7 @@ func wiring() fx.Option {
 		fxmodule.Registry,
 		fx.Provide(
 			newDiscordOAuth,
+			newOAuthPort,
 			newNotifier,
 			newStatsRepository,
 			newBooking,

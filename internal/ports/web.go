@@ -48,6 +48,9 @@ type GuildAccessService interface {
 	Access(ctx context.Context, userID, guildID string) (*access.GuildAccess, error)
 	// Member returns the user's member record in the guild (nick and roles).
 	Member(ctx context.Context, userID, guildID string) (*access.GuildMember, error)
+	// Public is the guild as a visitor sees it, with no capabilities. It returns
+	// ErrNotFound when the guild is not stored or the bot is absent.
+	Public(ctx context.Context, guildID string) (*access.GuildAccess, error)
 	IsSiteAdmin(userID string) bool
 }
 

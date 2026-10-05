@@ -11,11 +11,11 @@ import (
 
 // Register wires the Reservations routes. Viewers see the lists; booking needs
 // the reserve tier and the handlers check each change against the owner or
-// manage right. Everything needs premium.
+// manage right.
 func Register(r *web.Router, d *web.Deps) {
 	h := New(d)
 	guard := func(tier func(http.HandlerFunc) http.HandlerFunc, next http.HandlerFunc) http.HandlerFunc {
-		return d.RequireAuth(tier(d.RequirePremium(next)))
+		return d.RequireAuth(tier(next))
 	}
 	r.Get("/servers/{id}/reservations", guard(d.RequireView, h.HandleList))
 	r.Get("/servers/{id}/spots/{spot}", guard(d.RequireView, h.HandleSpot))

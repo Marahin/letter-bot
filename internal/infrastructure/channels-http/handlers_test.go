@@ -50,7 +50,7 @@ func htmxPost(target string, form url.Values, cookie *http.Cookie) *http.Request
 
 func TestHandleChannels(t *testing.T) {
 	// given
-	h, m, cookie := signedIn(t, guildconfig.Config{CommandChannelID: "c1"}, admin())
+	h, m, cookie := signedIn(t, guildconfig.Config{Premium: true, CommandChannelID: "c1"}, admin())
 	m.Settings.EXPECT().Channels(mock.Anything, guildID).Return(synced(), nil)
 
 	// when
@@ -74,7 +74,7 @@ func TestHandleChannels(t *testing.T) {
 
 func TestHandleChannels_WarnsAboutDeletedChannel(t *testing.T) {
 	// given
-	h, m, cookie := signedIn(t, guildconfig.Config{SummaryChannelID: "gone"}, admin())
+	h, m, cookie := signedIn(t, guildconfig.Config{Premium: true, SummaryChannelID: "gone"}, admin())
 	m.Settings.EXPECT().Channels(mock.Anything, guildID).Return(nil, nil)
 
 	// when
@@ -89,7 +89,7 @@ func TestHandleChannels_WarnsAboutDeletedChannel(t *testing.T) {
 
 func TestHandleChannels_Error(t *testing.T) {
 	// given
-	h, m, cookie := signedIn(t, guildconfig.Config{}, admin())
+	h, m, cookie := signedIn(t, guildconfig.Config{Premium: true}, admin())
 	m.Settings.EXPECT().Channels(mock.Anything, guildID).Return(nil, errors.New("db down"))
 
 	// when
@@ -110,7 +110,7 @@ func TestRoutes_ManagerIsForbidden(t *testing.T) {
 			h := webtest.Handler(d, Register)
 			r.AddCookie(webtest.SignIn(t, d, m, "u1"))
 			m.Access.EXPECT().Access(mock.Anything, "u1", guildID).Return(&access.GuildAccess{
-				Config: guildconfig.Config{GuildID: guildID},
+				Config: guildconfig.Config{GuildID: guildID, Premium: true},
 				Caps:   permission.Capabilities{Manage: true, View: true, Reserve: true},
 			}, nil)
 
@@ -119,6 +119,31 @@ func TestRoutes_ManagerIsForbidden(t *testing.T) {
 
 			// then
 			assert.Equal(t, http.StatusForbidden, rec.Code)
+		})
+	}
+}
+
+func TestRoutes_NonPremiumIsLocked(t *testing.T) {
+	for name, r := range map[string]*http.Request{
+		"page": webtest.Get("/servers/g1/channels", nil),
+		"save": webtest.Post("/servers/g1/channels", url.Values{"command_channel_id": {"c1"}}, nil),
+	} {
+		t.Run(name, func(t *testing.T) {
+			// given an admin of a server without premium
+			d, m := webtest.NewDeps(t)
+			h := webtest.Handler(d, Register)
+			r.AddCookie(webtest.SignIn(t, d, m, "u1"))
+			m.Access.EXPECT().Access(mock.Anything, "u1", guildID).Return(&access.GuildAccess{
+				Config: guildconfig.Config{GuildID: guildID, Name: "Celesta Community"},
+				Caps:   admin(),
+			}, nil)
+
+			// when
+			rec := webtest.Serve(h, r)
+
+			// then
+			assert.Equal(t, http.StatusForbidden, rec.Code)
+			assert.Contains(t, rec.Body.String(), "Unlock the feature with Premium. Join the Discord and get on board!")
 		})
 	}
 }
@@ -136,7 +161,7 @@ func TestHandleSetChannels(t *testing.T) {
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			// given
-			h, m, cookie := signedIn(t, guildconfig.Config{}, admin())
+			h, m, cookie := signedIn(t, guildconfig.Config{Premium: true}, admin())
 			m.Settings.EXPECT().SetChannels(mock.Anything, guildID, "c1", "").Return(tc.err)
 			form := url.Values{"command_channel_id": {" c1 "}, "summary_channel_id": {""}}
 

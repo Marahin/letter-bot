@@ -7,7 +7,7 @@ templ Landing(baseURL, inviteURL string, nav Nav, tool templ.Component) {
 	@Layout(i18n.T(ctx, "landing.meta.title"), i18n.T(ctx, "landing.meta.description"), baseURL, "/", nav) {
 		@landingCalculator(tool)
 		@landingFeaturesSection(inviteURL, landingFeatures(ctx))
-		@landingBottomCTA(inviteURL)
+		@landingBottomCTA(inviteURL, nav.SupportURL)
 	}
 }
 
@@ -80,8 +80,9 @@ templ featureGlyph(icon string) {
 	}
 }
 
-// landingBottomCTA is the gradient closing call to action.
-templ landingBottomCTA(inviteURL string) {
+// landingBottomCTA is the gradient closing call to action, with the community
+// invite as the closing sub-line when one is configured.
+templ landingBottomCTA(inviteURL, supportURL string) {
 	<section class="mx-auto max-w-[1440px] px-6 pb-20 pt-16 sm:px-8">
 		<div class="rounded-2xl border border-signal/30 bg-[linear-gradient(135deg,rgba(249,115,22,0.12),rgba(249,115,22,0.03))] px-10 py-14 text-center">
 			<h2 class="font-display text-3xl font-bold -tracking-[0.02em] text-zone-50 sm:text-4xl">{ i18n.T(ctx, "landing.bottom.heading") }</h2>
@@ -96,6 +97,12 @@ templ landingBottomCTA(inviteURL string) {
 				</a>
 			</div>
 			<p class="mx-auto mt-7 max-w-lg text-sm text-zone-400">{ i18n.T(ctx, "landing.bottom.premium_note") }</p>
+			if supportURL != "" {
+				<p class="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm text-zone-400">
+					{ i18n.T(ctx, "landing.bottom.support_prompt") }
+					@SupportLink(supportURL, i18n.T(ctx, "landing.bottom.support_cta"), "inline-flex items-center gap-1.5 font-semibold text-signal-bright transition hover:text-signal")
+				</p>
+			}
 		</div>
 	</section>
 }

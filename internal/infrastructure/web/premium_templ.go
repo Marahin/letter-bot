@@ -9,14 +9,14 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
-	"spot-assistant/internal/core/dto/access"
 	"spot-assistant/internal/infrastructure/branding"
 	"spot-assistant/internal/infrastructure/i18n"
 )
 
-// PremiumRequired is the page a server without premium shows in place of a
-// premium feature. Its admins get a link to Settings, which works without premium.
-func PremiumRequired(baseURL string, a access.GuildAccess, nav Nav) templ.Component {
+// PremiumRequired is the lock page every page of a server without premium shows,
+// to members and visitors alike. It names no server and no feature on purpose:
+// the same page stands in for all of them.
+func PremiumRequired(baseURL string, nav Nav) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -49,7 +49,7 @@ func PremiumRequired(baseURL string, a access.GuildAccess, nav Nav) templ.Compon
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center gap-6 py-16 text-center\"><span class=\"flex h-16 w-16 items-center justify-center rounded-2xl border border-signal/40 bg-signal/[0.08] text-signal-bright\"><svg class=\"h-7 w-7\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"4\" y=\"11\" width=\"16\" height=\"10\" rx=\"2\"></rect><path d=\"M8 11V7a4 4 0 0 1 8 0v4\"></path></svg></span><h1 class=\"font-display text-3xl font-bold -tracking-[0.02em] text-zone-50\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div data-premium-lock class=\"mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center gap-6 py-16 text-center\"><span class=\"flex h-16 w-16 items-center justify-center rounded-2xl border border-signal/40 bg-signal/[0.08] text-signal-bright\"><svg class=\"h-7 w-7\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"4\" y=\"11\" width=\"16\" height=\"10\" rx=\"2\"></rect><path d=\"M8 11V7a4 4 0 0 1 8 0v4\"></path></svg></span><h1 class=\"font-display text-3xl font-bold -tracking-[0.02em] text-zone-50\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -67,9 +67,9 @@ func PremiumRequired(baseURL string, a access.GuildAccess, nav Nav) templ.Compon
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var4 string
-			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "premium.required.message", a.Config.Name))
+			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "premium.required.message"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/premium.templ`, Line: 18, Col: 93}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/premium.templ`, Line: 18, Col: 78}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -79,58 +79,56 @@ func PremiumRequired(baseURL string, a access.GuildAccess, nav Nav) templ.Compon
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			if a.Caps.Admin {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<a href=\"")
+			if nav.SupportURL != "" {
+				templ_7745c5c3_Err = SupportLink(nav.SupportURL, i18n.T(ctx, "premium.required.cta"), "flex min-h-11 items-center gap-2 rounded-md bg-signal px-5 py-2.5 text-sm font-semibold text-zone-950 shadow-accent transition hover:bg-signal-bright").Render(ctx, templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var5 templ.SafeURL
-				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(GuildPath(a.Config.GuildID, "/settings")))
+			}
+			if nav.Authenticated {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<a href=\"/dashboard\" class=\"flex min-h-11 items-center rounded-md border border-zone-700 px-5 py-2.5 text-sm font-semibold text-zone-300 transition hover:border-signal hover:text-signal\">")
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/premium.templ`, Line: 21, Col: 70}
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var5 string
+				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "error.back_to_dashboard"))
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/premium.templ`, Line: 25, Col: 46}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\" class=\"rounded-md bg-signal px-5 py-2.5 text-sm font-semibold text-zone-950 shadow-accent transition hover:bg-signal-bright\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</a>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			} else {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<a href=\"/\" class=\"flex min-h-11 items-center rounded-md border border-zone-700 px-5 py-2.5 text-sm font-semibold text-zone-300 transition hover:border-signal hover:text-signal\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var6 string
-				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "dashboard.open_settings"))
+				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "error.back_to_home"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/premium.templ`, Line: 22, Col: 46}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/premium.templ`, Line: 29, Col: 41}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</a> ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</a>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<a href=\"/dashboard\" class=\"rounded-md border border-zone-700 px-5 py-2.5 text-sm font-semibold text-zone-300 transition hover:border-signal hover:text-signal\">")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var7 string
-			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "error.back_to_dashboard"))
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/premium.templ`, Line: 26, Col: 45}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</a></div></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</div></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout(i18n.T(ctx, "premium.required.title")+" - "+branding.Name, i18n.T(ctx, "premium.required.message", a.Config.Name), baseURL, "", nav).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout(i18n.T(ctx, "premium.required.title")+" - "+branding.Name, i18n.T(ctx, "premium.required.message"), baseURL, "", nav).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

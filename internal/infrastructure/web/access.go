@@ -89,8 +89,8 @@ func (d *Deps) RequireAdmin(next http.HandlerFunc) http.HandlerFunc {
 }
 
 // requireGuildAccess resolves the {id} server once. A server the user may not
-// view answers 404 (not 403), so nobody can probe which servers exist; a tier the
-// user does not reach answers 403. It assumes RequireAuth ran first.
+// view answers 404 (not 403), so nobody can probe which servers exist. It assumes
+// RequireAuth ran first.
 func (d *Deps) requireGuildAccess(tier access.Tier, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := d.SessionUserID(r.Context())
@@ -104,13 +104,83 @@ func (d *Deps) requireGuildAccess(tier access.Tier, next http.HandlerFunc) http.
 			d.accessError(w, r, err)
 			return
 		}
-		if !current.Allows(tier) {
-			d.Forbidden(w, r)
+		d.enterGuild(w, r, *current, tier, next)
+	}
+}
+
+// PublicView guards a page anyone may read, signed in or not. A member gets their
+// own access; anyone else gets the public one, with no capabilities. A failed
+// member lookup (Discord down, a refused token) falls back to the public view
+// rather than failing a page that needs no sign-in. The premium lock applies.
+func (d *Deps) PublicView(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		r = d.withOptionalUser(r)
+		guildID := r.PathValue(guildIDPathValue)
+		if user, ok := r.Context().Value(ctxUser).(*webuser.User); ok {
+			current, err := d.Access.Access(r.Context(), user.DiscordUserID, guildID)
+			switch {
+			case err == nil && current.Allows(access.TierView):
+				d.enterGuild(w, r, *current, access.TierView, next)
+				return
+			case err != nil && !errors.Is(err, ports.ErrNotFound):
+				d.Log.Warnw("public view: resolve member access", "path", r.URL.Path, "error", err)
+			}
+		}
+		current, err := d.Access.Public(r.Context(), guildID)
+		if errors.Is(err, ports.ErrNotFound) {
+			d.NotFound(w, r)
 			return
 		}
-		d.rememberGuild(r.Context(), guildID)
-		next(w, r.WithContext(context.WithValue(r.Context(), ctxCurrentAccess, *current)))
+		if err != nil {
+			d.ServerError(w, r, "resolve public access", err)
+			return
+		}
+		d.enterGuild(w, r, *current, tierPublic, next)
 	}
+}
+
+// withOptionalUser loads the signed-in user into the context, if there is one. A
+// session whose user row is gone is destroyed, and the visitor goes on signed out.
+func (d *Deps) withOptionalUser(r *http.Request) *http.Request {
+	userID := d.SessionUserID(r.Context())
+	if userID == "" {
+		return r
+	}
+	user, err := d.Auth.User(r.Context(), userID)
+	switch {
+	case errors.Is(err, ports.ErrNotFound):
+		if err := d.Sessions.Destroy(r.Context()); err != nil {
+			d.Log.Errorw("destroy session", "error", err)
+		}
+		return r
+	case err != nil:
+		d.Log.Warnw("public view: load current user", "error", err)
+		return r
+	}
+	return r.WithContext(context.WithValue(r.Context(), ctxUser, user))
+}
+
+// tierPublic asks for no rank: the public pages admit anyone who reached them.
+const tierPublic access.Tier = 0
+
+// enterGuild is the one gate every server page passes. The premium lock comes
+// before the rank on purpose: a server without premium shows the same page to
+// everyone, so its members are not told which pages their rank would open.
+// Site admins pass the lock.
+func (d *Deps) enterGuild(w http.ResponseWriter, r *http.Request, current access.GuildAccess, tier access.Tier, next http.HandlerFunc) {
+	if !current.Config.IsPremium() && !d.isSiteAdmin(r.Context()) {
+		d.premiumRequired(w, r, current)
+		return
+	}
+	if tier != tierPublic && !current.Allows(tier) {
+		d.Forbidden(w, r)
+		return
+	}
+	// A visitor of a public page is not a member: the server must not become their default.
+	if current.Caps.View {
+		d.rememberGuild(r.Context(), current.Config.GuildID)
+	}
+	next(w, r.WithContext(context.WithValue(r.Context(), ctxCurrentAccess, current)))
 }
 
 // rememberGuild makes the routed server the user's default, so the next visit opens
@@ -126,22 +196,12 @@ func (d *Deps) rememberGuild(ctx context.Context, guildID string) {
 	}
 }
 
-// RequirePremium shows the "premium required" page on a server that is not
-// premium. Site admins pass. It must run inside one of the guild guards.
-func (d *Deps) RequirePremium(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		current, ok := d.MustAccess(w, r)
-		if !ok {
-			return
-		}
-		if current.Config.IsPremium() || d.Access.IsSiteAdmin(d.SessionUserID(r.Context())) {
-			next(w, r)
-			return
-		}
-		d.premiumRequired(w, r, current)
-	}
+func (d *Deps) isSiteAdmin(ctx context.Context) bool {
+	userID := d.SessionUserID(ctx)
+	return userID != "" && d.Access.IsSiteAdmin(userID)
 }
 
+// premiumRequired is the lock page of a server without premium.
 func (d *Deps) premiumRequired(w http.ResponseWriter, r *http.Request, current access.GuildAccess) {
 	if !wantsHTMLErrorPage(r) {
 		http.Error(w, i18n.T(r.Context(), "premium.required.plain"), http.StatusForbidden)
@@ -149,9 +209,18 @@ func (d *Deps) premiumRequired(w http.ResponseWriter, r *http.Request, current a
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusForbidden)
-	if err := PremiumRequired(d.Cfg.BaseURL, current, d.Nav(r, current.Config.GuildID)).Render(r.Context(), w); err != nil {
+	if err := PremiumRequired(d.Cfg.BaseURL, d.Nav(r, navGuild(current))).Render(r.Context(), w); err != nil {
 		d.Log.Errorw("render premium required", "path", r.URL.Path, "error", err)
 	}
+}
+
+// navGuild is the server the shell selects for a resolved access: none for a
+// visitor of a public page, who is not a member.
+func navGuild(current access.GuildAccess) string {
+	if !current.Caps.View {
+		return ""
+	}
+	return current.Config.GuildID
 }
 
 // accessError maps a failed access resolution: a refused Discord token signs the

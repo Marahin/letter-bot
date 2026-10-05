@@ -187,6 +187,9 @@ func (h *Handlers) page(w http.ResponseWriter, r *http.Request, hidden ...web.Ra
 	return pageView{
 		GuildID:   guildID,
 		GuildName: current.Config.Name,
+		GuildIcon: current.Config.Icon,
+		Public:    !current.Caps.View,
+		LoginHref: "/login?to=" + url.QueryEscape(r.URL.RequestURI()),
 		Range:     rng,
 		Picker:    h.picker(ctx, r, current, rng, hidden),
 		Today:     corestats.Midnight(h.now()),
@@ -210,7 +213,12 @@ func (h *Handlers) picker(ctx context.Context, r *http.Request, current access.G
 	})
 }
 
+// nav selects the server and the section for a member. A visitor's sidebar keeps
+// their own server and marks no section: the page's server is not one of theirs.
 func (h *Handlers) nav(r *http.Request, p pageView, active string) web.Nav {
+	if p.Public {
+		return h.D.Nav(r, "")
+	}
 	nav := h.D.Nav(r, p.GuildID)
 	nav.Active = active
 	return nav

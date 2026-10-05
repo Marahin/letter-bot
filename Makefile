@@ -8,6 +8,8 @@ endif
 REGISTRY ?= registry.marahin.pl
 BOT_BIN ?= spot-assistant-bot
 WEB_BIN ?= letter-web
+# Build tags of the web binary: the dev stacks set devauth for /dev/login.
+WEB_BUILD_TAGS ?=
 TEMPL_VERSION ?= v0.3.1020
 TAILWIND_VERSION ?= v3.4.17
 TAILWIND ?= ./bin/tailwindcss
@@ -24,7 +26,7 @@ LDFLAGS := -X spot-assistant/internal/common/version.Version=${TAG}
 
 .PHONY: help
 help: ## List the targets
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2}'
 
 install-bins: ## Install pinned dev tools (sqlc, mockery, templ)
 	@go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.26.0
@@ -137,10 +139,27 @@ test-db: ## Run the database tests (needs LETTER_TEST_DATABASE_URL)
 		./internal/infrastructure/db/postgresql/... \
 		./internal/infrastructure/experience/... \
 		./internal/infrastructure/stats/...
+	@go test -race -count=1 -tags devauth ./internal/infrastructure/devauth/...
 
 test: install-dependencies sqlc-diff lint css ## Run lint, sqlc diff and the test suite
 	@echo "INFO: Running tests"
 	@go test -cover -race -coverprofile=coverage.out ./...
+	@$(MAKE) -s test-devauth
+
+test-devauth: ## Run the tests of the devauth build (/dev/login, the mock OAuth, the seed)
+	@echo "INFO: Running the devauth tests"
+	@go test -race -tags devauth \
+		./internal/infrastructure/devauth/... \
+		./internal/infrastructure/web/... \
+		./internal/infrastructure/fxmodule/...
+
+.PHONY: e2e
+e2e: ## Run the browser e2e suite against a running devauth stack (see internal/infrastructure/e2e-tests/README.md)
+	@go test -tags e2e -count=1 -timeout 10m ./internal/infrastructure/e2e-tests/...
+
+.PHONY: e2e-stack
+e2e-stack: ## Start the e2e stack in Docker, run the browser e2e suite, remove the stack
+	@./scripts/e2e.sh
 
 test-coverage: test ## Open the HTML coverage report
 	@echo "INFO: Generating test coverage report"
@@ -155,6 +174,9 @@ lint: install-dependencies css ## Run golangci-lint (pinned, see .golangci.yml) 
 	@echo "INFO: Running lint"
 	@$(MAKE) -s templ-diff
 	@go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_VERSION) run ./...
+	@# The tag-gated code (devauth, cmd/seed, the e2e suite) needs its own pass. The tags
+	@# go on the flag, not in the config, where they would hide the !devauth files.
+	@go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_VERSION) run --build-tags devauth,e2e ./...
 
 sqlc-generate: ## Generate sqlc code
 	@echo "INFO: Generating sqlc"
@@ -183,6 +205,14 @@ build: install-dependencies sqlc-generate test ## Generate, test and build both 
 run-web: generate css ## Run the web panel locally (reads the environment, see docs/web/README.md)
 	@go run -ldflags="${LDFLAGS}" ./cmd/web
 
+.PHONY: run-web-dev
+run-web-dev: generate css ## Run the web panel with /dev/login (devauth build, WEB_DEV_AUTH=true)
+	@WEB_DEV_AUTH=true go run -tags devauth -ldflags="${LDFLAGS}" ./cmd/web
+
+.PHONY: seed
+seed: ## Write the dev data: two servers, respawns and reservations (devauth build, idempotent)
+	@go run -tags devauth ./cmd/seed
+
 .PHONY: run-bot
 run-bot: ## Run the Discord bot locally (reads the environment)
 	@go run -ldflags="${LDFLAGS}" ./cmd/bot
@@ -190,7 +220,7 @@ run-bot: ## Run the Discord bot locally (reads the environment)
 build-only: ## Build both binaries without tests
 	@echo "INFO: Building version: ${TAG}"
 	@CGO_ENABLED=0 go build -o ./bin/${BOT_BIN} -ldflags="${LDFLAGS}" ./cmd/bot
-	@CGO_ENABLED=0 go build -o ./bin/${WEB_BIN} -ldflags="${LDFLAGS}" ./cmd/web
+	@CGO_ENABLED=0 go build -tags "$(WEB_BUILD_TAGS)" -o ./bin/${WEB_BIN} -ldflags="${LDFLAGS}" ./cmd/web
 
 bench: install-dependencies go-vet ## Run the benchmarks
 	@echo "INFO: Running benchmarks"

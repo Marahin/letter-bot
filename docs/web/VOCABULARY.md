@@ -33,3 +33,6 @@ Polish column is the settled wording of `pl.json` (see
 | Booked hours | Zarezerwowane godziny | `stats.Totals.Seconds` | The length of the reservations, not measured play time. |
 | Loot Calculator | Kalkulator lootu | `lootcalc` | Splits a Tibia party hunt session into bank transfers. |
 | Party Hunt Analyser | Party Hunt Analyser (not translated; `z okna Party Hunt Analyser`) | `lootcalc.Parse` input | Tibia's in-game window whose copied text the Loot Calculator reads. |
+| Public stats | Statystyki publiczne | `web.PublicView`, `pageView.Public` | The Stats pages as anyone sees them without being a member. |
+| Premium lock | Blokada Premium | `web.PremiumRequired` | The page every server page shows on a server without premium. |
+| Community Discord | Discord społeczności | `DISCORD_INVITE_LINK`, `web.SupportLink` | The TibiaLoot.com Discord server where users get help and premium. |

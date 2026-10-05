@@ -180,7 +180,7 @@ func (d *Deps) CurrentUser(ctx context.Context) (*webuser.User, error) {
 // without servers rather than failing the page.
 func (d *Deps) Nav(r *http.Request, currentGuildID string) Nav {
 	ctx := r.Context()
-	signedOut := Nav{CurrentGuildID: currentGuildID, ReturnTo: r.URL.RequestURI()}
+	signedOut := Nav{CurrentGuildID: currentGuildID, ReturnTo: r.URL.RequestURI(), SupportURL: d.Cfg.Discord.SupportURL()}
 	user, err := d.CurrentUser(ctx)
 	if err != nil {
 		if !errors.Is(err, ports.ErrNotFound) {
@@ -213,6 +213,7 @@ func (d *Deps) NavFromAccess(user *webuser.User, list []access.GuildAccess, curr
 		Username:       user.DisplayName(),
 		SiteAdmin:      d.Access != nil && d.Access.IsSiteAdmin(user.DiscordUserID),
 		CurrentGuildID: currentGuildID,
+		SupportURL:     d.Cfg.Discord.SupportURL(),
 	}
 	for _, a := range list {
 		n.Servers = append(n.Servers, NavServer{ID: a.Config.GuildID, Name: a.Config.Name, Icon: a.Config.Icon})

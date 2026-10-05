@@ -22,6 +22,7 @@ import (
 	"spot-assistant/internal/core/permission"
 	corestats "spot-assistant/internal/core/stats"
 	"spot-assistant/internal/infrastructure/i18n"
+	"spot-assistant/internal/infrastructure/web"
 	"spot-assistant/internal/infrastructure/web/webtest"
 	"spot-assistant/internal/ports"
 )
@@ -529,4 +530,201 @@ func TestCSVText_DefusesFormulas(t *testing.T) {
 	} {
 		assert.Equal(t, want, csvText(in), in)
 	}
+}
+
+func publicGuild(premium bool) access.GuildAccess {
+	return access.GuildAccess{Config: guildconfig.Config{GuildID: guildID, Name: "Celesta Community", BotPresent: true, Premium: premium}}
+}
+
+// anonymous serves the Stats routes to a signed-out visitor of g1.
+func anonymous(t *testing.T, premium bool) (http.Handler, *web.Deps, webtest.Mocks) {
+	t.Helper()
+	d, m := webtest.NewDeps(t)
+	h := webtest.Handler(d, Register)
+	webtest.PublicGuild(m, publicGuild(premium))
+	m.Stats.EXPECT().DataDays(mock.Anything, guildID, mock.Anything).Return(nil, nil).Maybe()
+	return h, d, m
+}
+
+func emptyOverview(m webtest.Mocks) {
+	m.Stats.EXPECT().Overview(mock.Anything, guildID, mock.Anything).Return(&stats.Overview{}, nil)
+}
+
+func TestPublicStats_AnonymousSeesThePublicBar(t *testing.T) {
+	// given
+	h, _, m := anonymous(t, true)
+	emptyOverview(m)
+
+	// when
+	rec := webtest.Serve(h, webtest.Get("/servers/g1/stats", nil))
+
+	// then
+	require.Equal(t, http.StatusOK, rec.Code)
+	body := rec.Body.String()
+	assert.Contains(t, body, "data-public-stats")
+	assert.Contains(t, body, "Public stats")
+	assert.Contains(t, body, `href="/servers/g1/stats/players"`)
+	assert.Regexp(t, `<a href="/servers/g1/stats" aria-current="page"`, body)
+	assert.Contains(t, body, `data-login-cta`)
+	assert.Contains(t, body, `href="/login?to=%2Fservers%2Fg1%2Fstats"`)
+	assert.Contains(t, body, "A member of Celesta Community? Sign in")
+	assert.NotContains(t, body, "<aside")
+	assert.Contains(t, body, "data-topbar-menu")
+}
+
+func TestPublicStats_LockedServerShowsTheLock(t *testing.T) {
+	// given
+	h, _, _ := anonymous(t, false)
+
+	// when
+	rec := webtest.Serve(h, webtest.Get("/servers/g1/stats", nil))
+
+	// then
+	assert.Equal(t, http.StatusForbidden, rec.Code)
+	assert.Contains(t, rec.Body.String(), "Unlock the feature with Premium. Join the Discord and get on board!")
+	assert.Contains(t, rec.Body.String(), "Back to home")
+}
+
+func TestPublicStats_UnknownServerIs404(t *testing.T) {
+	// given
+	d, m := webtest.NewDeps(t)
+	h := webtest.Handler(d, Register)
+	m.Access.EXPECT().Public(mock.Anything, "nope").Return(nil, ports.ErrNotFound)
+
+	// when
+	rec := webtest.Serve(h, webtest.Get("/servers/nope/stats", nil))
+
+	// then
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+}
+
+func TestPublicStats_PublicLookupErrorIs500(t *testing.T) {
+	// given
+	d, m := webtest.NewDeps(t)
+	h := webtest.Handler(d, Register)
+	m.Access.EXPECT().Public(mock.Anything, guildID).Return(nil, errBoom)
+
+	// when
+	rec := webtest.Serve(h, webtest.Get("/servers/g1/stats", nil))
+
+	// then
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+}
+
+func TestPublicStats_SignedInVisitorWhoIsNotAMember(t *testing.T) {
+	for name, accessErr := range map[string]error{
+		"not a member":    ports.ErrNotFound,
+		"discord is down": ports.ErrUpstreamUnavailable,
+		"token refused":   ports.ErrUnauthorized,
+	} {
+		t.Run(name, func(t *testing.T) {
+			// given a user whose own server is g2
+			h, d, m := anonymous(t, true)
+			d2 := access.GuildAccess{Config: guildconfig.Config{GuildID: "g2", Name: "Home Guild", Premium: true}, Caps: permission.Capabilities{View: true}}
+			cookie := webtest.SignIn(t, d, m, "u1", d2)
+			m.Access.EXPECT().Access(mock.Anything, "u1", guildID).Return(nil, accessErr)
+			emptyOverview(m)
+
+			// when
+			rec := webtest.Serve(h, webtest.Get("/servers/g1/stats", cookie))
+
+			// then
+			require.Equal(t, http.StatusOK, rec.Code)
+			body := rec.Body.String()
+			assert.Contains(t, body, "data-public-stats")
+			assert.NotContains(t, body, "data-login-cta", "a signed-in visitor needs no sign-in")
+			assert.Contains(t, body, "<aside")
+			assert.Contains(t, body, `href="/servers/g2/reservations"`)
+			assert.NotContains(t, body, `href="/servers/g1/reservations"`)
+		})
+	}
+}
+
+func TestPublicStats_MemberGetsTheSidebarNotThePublicBar(t *testing.T) {
+	// given
+	h, m, cookie := signedIn(t, true)
+	emptyOverview(m)
+
+	// when
+	rec := webtest.Serve(h, webtest.Get("/servers/g1/stats", cookie))
+
+	// then
+	require.Equal(t, http.StatusOK, rec.Code)
+	body := rec.Body.String()
+	assert.NotContains(t, body, "data-public-stats")
+	assert.Contains(t, body, `href="/servers/g1/reservations"`)
+}
+
+func TestPublicStats_StaleSessionGoesOnSignedOut(t *testing.T) {
+	// given a session whose user row is gone
+	d, m := webtest.NewDeps(t)
+	h := webtest.Handler(d, Register)
+	cookie := webtest.SignIn(t, d, m, "u1")
+	m.Auth.ExpectedCalls = nil
+	m.Auth.EXPECT().User(mock.Anything, "u1").Return(nil, ports.ErrNotFound)
+	webtest.PublicGuild(m, publicGuild(true))
+	m.Stats.EXPECT().DataDays(mock.Anything, guildID, mock.Anything).Return(nil, nil).Maybe()
+	emptyOverview(m)
+
+	// when
+	rec := webtest.Serve(h, webtest.Get("/servers/g1/stats", cookie))
+
+	// then
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Contains(t, rec.Body.String(), "data-login-cta")
+}
+
+func TestPublicStats_RespawnAndPlayerPages(t *testing.T) {
+	// given
+	h, _, m := anonymous(t, true)
+	m.Stats.EXPECT().Spot(mock.Anything, guildID, int64(4), mock.Anything).RunAndReturn(func(_ context.Context, _ string, _ int64, rng stats.Range) (*stats.SpotDetail, error) {
+		return &stats.SpotDetail{Spot: &spot.Spot{ID: 4, Name: "Hero Cave"}, Range: rng, Totals: tot(1, 3600, 0, 0, 0), Daily: days(rng, tot(0, 0, 0, 0, 0))}, nil
+	})
+	m.Stats.EXPECT().Player(mock.Anything, guildID, "u2", mock.Anything).RunAndReturn(func(_ context.Context, _, _ string, rng stats.Range) (*stats.PlayerDetail, error) {
+		return &stats.PlayerDetail{UserID: "u2", Name: "Quiet Nyx", Range: rng}, nil
+	})
+
+	// when
+	spotRec := webtest.Serve(h, webtest.Get("/servers/g1/stats/spots/4", nil))
+	playerRec := webtest.Serve(h, webtest.Get("/servers/g1/stats/players/u2", nil))
+
+	// then
+	require.Equal(t, http.StatusOK, spotRec.Code)
+	assert.Contains(t, spotRec.Body.String(), "data-public-stats")
+	assert.Regexp(t, `<a href="/servers/g1/stats/spots" aria-current="page"`, spotRec.Body.String())
+	assert.NotContains(t, spotRec.Body.String(), `href="/servers/g1/spots/4"`, "the reservations need sign-in")
+	assert.Contains(t, spotRec.Body.String(), `href="/login?to=%2Fservers%2Fg1%2Fstats%2Fspots%2F4"`)
+	require.Equal(t, http.StatusOK, playerRec.Code)
+	assert.Contains(t, playerRec.Body.String(), "Quiet Nyx")
+	assert.Contains(t, playerRec.Body.String(), "data-public-stats")
+}
+
+func TestPublicStats_CSVExport(t *testing.T) {
+	// given
+	h, _, m := anonymous(t, true)
+	m.Stats.EXPECT().Spots(mock.Anything, guildID, mock.Anything, mock.Anything, 0).Return(spotRowsFixture(), nil)
+
+	// when
+	rec := webtest.Serve(h, webtest.Get("/servers/g1/stats/spots?format=csv", nil))
+
+	// then
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, "text/csv; charset=utf-8", rec.Header().Get("Content-Type"))
+	assert.Contains(t, rec.Body.String(), "Hero Cave")
+}
+
+func TestPublicStats_InPolish(t *testing.T) {
+	// given
+	h, _, m := anonymous(t, true)
+	emptyOverview(m)
+
+	// when
+	rec := webtest.Serve(h, webtest.Get("/servers/g1/stats?lang=pl", nil))
+
+	// then
+	require.Equal(t, http.StatusOK, rec.Code)
+	body := rec.Body.String()
+	assert.Contains(t, body, "Statystyki publiczne")
+	assert.Contains(t, body, "Należysz do Celesta Community? Zaloguj się")
+	assert.Contains(t, body, "Zaloguj się przez Discorda")
 }

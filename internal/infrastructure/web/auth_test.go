@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -20,6 +21,7 @@ import (
 	"spot-assistant/internal/core/dto/guildconfig"
 	"spot-assistant/internal/core/dto/webuser"
 	"spot-assistant/internal/core/permission"
+	"spot-assistant/internal/infrastructure/i18n"
 	"spot-assistant/internal/ports"
 )
 
@@ -33,7 +35,7 @@ type authFixture struct {
 
 func newAuthFixture(t *testing.T) *authFixture {
 	t.Helper()
-	cfg := Config{BaseURL: "http://localhost:8080", Discord: DiscordConfig{ClientID: "4242"}}
+	cfg := Config{BaseURL: "http://localhost:8080", Discord: DiscordConfig{ClientID: "4242", InviteLink: testInvite}}
 	f := &authFixture{
 		auth:    mocks.NewMockAuthService(t),
 		access:  mocks.NewMockGuildAccessService(t),
@@ -47,9 +49,12 @@ func newAuthFixture(t *testing.T) *authFixture {
 		r.Get("/servers/{id}/manage-only", d.RequireAuth(d.RequireManage(ok)))
 		r.Get("/servers/{id}/reserve-only", d.RequireAuth(d.RequireReserve(ok)))
 		r.Get("/servers/{id}/admin-only", d.RequireAuth(d.RequireAdmin(ok)))
-		r.Get("/servers/{id}/premium-only", d.RequireAuth(d.RequireView(d.RequirePremium(ok))))
 		r.Get("/servers/{id}/reservations", d.RequireAuth(d.RequireView(ok)))
 		r.Get("/site-admin-only", d.RequireAuth(d.RequireSiteAdmin(ok)))
+		r.Get("/servers/{id}/public", d.PublicView(func(w http.ResponseWriter, r *http.Request) {
+			current, _ := CurrentAccessFrom(r.Context())
+			_, _ = w.Write([]byte("public ok, view=" + strconv.FormatBool(current.Caps.View)))
+		}))
 	})
 	f.h = f.srv.Handler()
 	return f
@@ -382,7 +387,8 @@ func TestDashboard_ListsServers(t *testing.T) {
 	assert.Contains(t, body, "Premium")
 	assert.Contains(t, body, "Inactive: premium required")
 	assert.Contains(t, body, "Open reservations")
-	assert.Contains(t, body, "Open settings")
+	assert.Contains(t, body, "Unlock with Premium")
+	assert.NotContains(t, body, "Open settings")
 	assert.Contains(t, body, `href="/servers/g1"`)
 	assert.Contains(t, body, "client_id=4242")
 }
@@ -429,14 +435,11 @@ func TestDashboard_AccessErrors(t *testing.T) {
 
 func TestGuildRoot(t *testing.T) {
 	cases := map[string]struct {
-		userID   string
-		access   access.GuildAccess
-		location string
+		userID string
+		access access.GuildAccess
 	}{
-		"premium server":              {"u1", guild("g1", "G", true, reserveCaps), "/servers/g1/reservations"},
-		"admin of a non-premium one":  {"u1", guild("g1", "G", false, adminCaps), "/servers/g1/settings"},
-		"member of a non-premium one": {"u1", guild("g1", "G", false, reserveCaps), "/servers/g1/reservations"},
-		"site admin":                  {"site-admin", guild("g1", "G", false, adminCaps), "/servers/g1/reservations"},
+		"premium server":             {"u1", guild("g1", "G", true, reserveCaps)},
+		"site admin on a locked one": {"site-admin", guild("g1", "G", false, adminCaps)},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -451,9 +454,24 @@ func TestGuildRoot(t *testing.T) {
 
 			// then
 			assert.Equal(t, http.StatusSeeOther, rec.Code)
-			assert.Equal(t, tc.location, rec.Header().Get("Location"))
+			assert.Equal(t, "/servers/g1/reservations", rec.Header().Get("Location"))
 		})
 	}
+}
+
+func TestGuildRoot_LockedServerShowsTheLock(t *testing.T) {
+	// given an admin of a server without premium
+	f := newAuthFixture(t)
+	a := guild("g1", "G", false, adminCaps)
+	cookie := f.signIn(t, "u1", a)
+	f.access.EXPECT().Access(mock.Anything, "u1", "g1").Return(&a, nil)
+
+	// when
+	rec := f.do(htmlGet("/servers/g1"), cookie)
+
+	// then
+	assert.Equal(t, http.StatusForbidden, rec.Code)
+	assert.Contains(t, rec.Body.String(), "data-premium-lock")
 }
 
 func TestGuildGuards(t *testing.T) {
@@ -524,18 +542,20 @@ func TestGuildGuards_AccessErrors(t *testing.T) {
 	}
 }
 
-func TestRequirePremium(t *testing.T) {
+func TestPremiumGate(t *testing.T) {
 	cases := map[string]struct {
 		userID  string
 		premium bool
 		caps    permission.Capabilities
+		path    string
 		status  int
-		body    string
 	}{
-		"premium server":          {"u1", true, viewerCaps, http.StatusOK, "feature ok"},
-		"non-premium, member":     {"u1", false, viewerCaps, http.StatusForbidden, "Premium required"},
-		"non-premium, admin":      {"u1", false, adminCaps, http.StatusForbidden, `href="/servers/g1/settings"`},
-		"non-premium, site admin": {"site-admin", false, adminCaps, http.StatusOK, "feature ok"},
+		"premium server, viewer":          {"u1", true, viewerCaps, "/servers/g1/reservations", http.StatusOK},
+		"locked, viewer":                  {"u1", false, viewerCaps, "/servers/g1/reservations", http.StatusForbidden},
+		"locked, reserver":                {"u1", false, reserveCaps, "/servers/g1/reserve-only", http.StatusForbidden},
+		"locked, viewer on a manage page": {"u1", false, viewerCaps, "/servers/g1/manage-only", http.StatusForbidden},
+		"locked, admin":                   {"u1", false, adminCaps, "/servers/g1/admin-only", http.StatusForbidden},
+		"locked, site admin":              {"site-admin", false, adminCaps, "/servers/g1/admin-only", http.StatusOK},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -546,22 +566,46 @@ func TestRequirePremium(t *testing.T) {
 			f.access.EXPECT().Access(mock.Anything, tc.userID, "g1").Return(&a, nil)
 
 			// when
-			rec := f.do(htmlGet("/servers/g1/premium-only"), cookie)
+			rec := f.do(htmlGet(tc.path), cookie)
 
 			// then
 			assert.Equal(t, tc.status, rec.Code)
-			assert.Contains(t, rec.Body.String(), tc.body)
+			body := rec.Body.String()
+			if tc.status == http.StatusOK {
+				assert.Equal(t, "feature ok", body)
+				return
+			}
+			assert.Contains(t, body, "data-premium-lock")
+			assert.Contains(t, body, "Unlock the feature with Premium. Join the Discord and get on board!")
+			assert.Contains(t, body, `href="`+testInvite+`"`)
+			assert.Contains(t, body, "Back to dashboard")
 		})
 	}
 }
 
-func TestRequirePremium_PlainForHTMX(t *testing.T) {
+func TestPremiumGate_LockComesBeforeTheRank(t *testing.T) {
+	// given a viewer on a manage page of a locked server
+	f := newAuthFixture(t)
+	a := guild("g1", "Celesta", false, viewerCaps)
+	cookie := f.signIn(t, "u1", a)
+	f.access.EXPECT().Access(mock.Anything, "u1", "g1").Return(&a, nil)
+
+	// when
+	rec := f.do(htmlGet("/servers/g1/manage-only"), cookie)
+
+	// then the lock shows, not the rank refusal
+	assert.Equal(t, http.StatusForbidden, rec.Code)
+	assert.Contains(t, rec.Body.String(), "data-premium-lock")
+	assert.NotContains(t, rec.Body.String(), "You don't have access")
+}
+
+func TestPremiumGate_PlainForHTMX(t *testing.T) {
 	// given
 	f := newAuthFixture(t)
 	a := guild("g1", "Celesta", false, viewerCaps)
 	cookie := f.signIn(t, "u1")
 	f.access.EXPECT().Access(mock.Anything, "u1", "g1").Return(&a, nil)
-	r := htmlGet("/servers/g1/premium-only")
+	r := htmlGet("/servers/g1/reservations")
 	r.Header.Set("HX-Request", "true")
 
 	// when
@@ -570,6 +614,126 @@ func TestRequirePremium_PlainForHTMX(t *testing.T) {
 	// then
 	assert.Equal(t, http.StatusForbidden, rec.Code)
 	assert.Equal(t, "premium required\n", rec.Body.String())
+}
+
+func TestPremiumRequired_WithoutAnInviteHasNoSupportLink(t *testing.T) {
+	// when
+	out := render(context.Background(), t, PremiumRequired("http://x", Nav{Authenticated: true, Username: "Knight"}))
+
+	// then
+	assert.Contains(t, out, "Unlock the feature with Premium.")
+	assert.NotContains(t, out, "data-support-link")
+	assert.Contains(t, out, "Back to dashboard")
+}
+
+func TestPremiumRequired_AnonymousGoesBackHome(t *testing.T) {
+	// when
+	out := render(context.Background(), t, PremiumRequired("http://x", Nav{SupportURL: testInvite}))
+
+	// then
+	assert.Contains(t, out, "Back to home")
+	assert.Contains(t, out, "Join the Discord")
+	assert.NotContains(t, out, "Back to dashboard")
+}
+
+func TestPremiumRequired_InPolish(t *testing.T) {
+	// given
+	ctx := i18n.WithLocale(context.Background(), i18n.Normalize("pl"))
+
+	// when
+	out := render(ctx, t, PremiumRequired("http://x", Nav{SupportURL: testInvite}))
+
+	// then
+	assert.Contains(t, out, "Odblokuj tę funkcję w Premium. Dołącz do Discorda i wskakuj na pokład!")
+	assert.Contains(t, out, "Dołącz do Discorda</a>")
+}
+
+func TestPublicView(t *testing.T) {
+	cases := map[string]struct {
+		userID    string
+		premium   bool
+		member    bool
+		accessErr error
+		status    int
+		body      string
+	}{
+		"anonymous":                  {premium: true, status: http.StatusOK, body: "view=false"},
+		"anonymous on a locked one":  {status: http.StatusForbidden, body: "data-premium-lock"},
+		"member":                     {userID: "u1", premium: true, member: true, status: http.StatusOK, body: "view=true"},
+		"member on a locked one":     {userID: "u1", member: true, status: http.StatusForbidden, body: "data-premium-lock"},
+		"site admin on a locked one": {userID: "site-admin", member: true, status: http.StatusOK, body: "view=true"},
+		"not a member":               {userID: "u1", premium: true, accessErr: ports.ErrNotFound, status: http.StatusOK, body: "view=false"},
+		"discord is down":            {userID: "u1", premium: true, accessErr: ports.ErrUpstreamUnavailable, status: http.StatusOK, body: "view=false"},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			// given
+			f := newAuthFixture(t)
+			var cookie *http.Cookie
+			public := guild("g1", "Celesta", tc.premium, permission.Capabilities{})
+			f.access.EXPECT().Public(mock.Anything, "g1").Return(&public, nil).Maybe()
+			if tc.userID != "" {
+				cookie = f.signIn(t, tc.userID)
+				member := guild("g1", "Celesta", tc.premium, adminCaps)
+				if tc.member {
+					f.access.EXPECT().Access(mock.Anything, tc.userID, "g1").Return(&member, nil)
+				} else {
+					f.access.EXPECT().Access(mock.Anything, tc.userID, "g1").Return(nil, tc.accessErr)
+				}
+			}
+
+			// when
+			rec := f.do(htmlGet("/servers/g1/public"), cookie)
+
+			// then
+			assert.Equal(t, tc.status, rec.Code)
+			assert.Contains(t, rec.Body.String(), tc.body)
+		})
+	}
+}
+
+func TestPublicView_StaleSessionIsDestroyedAndTheVisitorGoesOn(t *testing.T) {
+	// given a session whose user row is gone
+	f := newAuthFixture(t)
+	f.auth.EXPECT().User(mock.Anything, "gone").Return(nil, ports.ErrNotFound)
+	cookie := f.signInUser(t, &webuser.User{DiscordUserID: "ignored"})
+	ctx, err := f.srv.sessions.Load(context.Background(), cookie.Value)
+	require.NoError(t, err)
+	f.srv.sessions.Put(ctx, SessionUserKey, "gone")
+	_, _, err = f.srv.sessions.Commit(ctx)
+	require.NoError(t, err)
+	public := guild("g1", "Celesta", true, permission.Capabilities{})
+	f.access.EXPECT().Public(mock.Anything, "g1").Return(&public, nil)
+
+	// when
+	rec := f.do(htmlGet("/servers/g1/public"), cookie)
+
+	// then
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, "public ok, view=false", rec.Body.String())
+	assert.Equal(t, -1, sessionCookie(rec).MaxAge, "the stale session is destroyed")
+}
+
+func TestPublicView_Errors(t *testing.T) {
+	for name, tc := range map[string]struct {
+		err    error
+		status int
+	}{
+		"unknown server": {ports.ErrNotFound, http.StatusNotFound},
+		"database error": {assert.AnError, http.StatusInternalServerError},
+	} {
+		t.Run(name, func(t *testing.T) {
+			// given
+			f := newAuthFixture(t)
+			f.access.EXPECT().Public(mock.Anything, "g1").Return(nil, tc.err)
+
+			// when
+			rec := f.do(htmlGet("/servers/g1/public"), nil)
+
+			// then
+			assert.Equal(t, tc.status, rec.Code)
+		})
+	}
 }
 
 func TestRequireSiteAdmin(t *testing.T) {

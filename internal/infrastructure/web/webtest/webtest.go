@@ -21,8 +21,12 @@ import (
 	"spot-assistant/internal/infrastructure/web"
 )
 
-// BaseURL is the origin of the test Deps; same-origin POSTs send it as Origin.
-const BaseURL = "http://localhost:8080"
+const (
+	// BaseURL is the origin of the test Deps; same-origin POSTs send it as Origin.
+	BaseURL = "http://localhost:8080"
+	// InviteLink is the community Discord invite of the test Deps.
+	InviteLink = "https://discord.gg/b7Qq8V2XFR"
+)
 
 // Mocks are the service mocks inside the Deps NewDeps returns.
 type Mocks struct {
@@ -39,7 +43,7 @@ type Mocks struct {
 // NewDeps returns Deps over an scs memstore and fresh mocks.
 func NewDeps(t *testing.T) (*web.Deps, Mocks) {
 	t.Helper()
-	cfg := web.Config{BaseURL: BaseURL, Discord: web.DiscordConfig{ClientID: "4242"}}
+	cfg := web.Config{BaseURL: BaseURL, Discord: web.DiscordConfig{ClientID: "4242", InviteLink: InviteLink}}
 	m := Mocks{
 		Auth:         mocks.NewMockAuthService(t),
 		Access:       mocks.NewMockGuildAccessService(t),
@@ -131,4 +135,9 @@ func Serve(h http.Handler, r *http.Request) *httptest.ResponseRecorder {
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, r)
 	return rec
+}
+
+// PublicGuild makes a the guild a visitor sees on a public page.
+func PublicGuild(m Mocks, a access.GuildAccess) {
+	m.Access.EXPECT().Public(mock.Anything, a.Config.GuildID).Return(&a, nil).Maybe()
 }

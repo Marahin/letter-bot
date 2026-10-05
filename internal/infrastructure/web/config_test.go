@@ -30,6 +30,46 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	assert.True(t, cfg.ExperienceJobEnabled)
 	assert.Equal(t, 15*time.Minute, cfg.ExperienceJobInterval)
 	assert.Equal(t, "client", cfg.Discord.ClientID)
+	assert.Equal(t, "https://discord.gg/b7Qq8V2XFR", cfg.Discord.InviteLink)
+}
+
+func TestLoadConfig_EmptyInviteLinkHidesTheSupportLinks(t *testing.T) {
+	// given
+	t.Setenv("WEB_BASE_URL", "http://localhost:8080")
+	t.Setenv("DISCORD_INVITE_LINK", "")
+	setDiscord(t)
+
+	// when
+	cfg, err := LoadConfig()
+
+	// then
+	require.NoError(t, err)
+	assert.Empty(t, cfg.Discord.SupportURL())
+}
+
+func TestDiscordConfig_SupportURL(t *testing.T) {
+	for name, tc := range map[string]struct {
+		link string
+		want string
+	}{
+		"https invite":       {link: "https://discord.gg/b7Qq8V2XFR", want: "https://discord.gg/b7Qq8V2XFR"},
+		"trimmed":            {link: "  https://discord.gg/x \n", want: "https://discord.gg/x"},
+		"http":               {link: "http://discord.gg/x", want: "http://discord.gg/x"},
+		"no scheme":          {link: "discord.gg/x", want: ""},
+		"javascript is gone": {link: "javascript:alert(1)", want: ""},
+		"empty":              {link: "", want: ""},
+	} {
+		t.Run(name, func(t *testing.T) {
+			// given
+			c := DiscordConfig{InviteLink: tc.link}
+
+			// when
+			got := c.SupportURL()
+
+			// then
+			assert.Equal(t, tc.want, got)
+		})
+	}
 }
 
 func TestLoadConfig_FromEnvironment(t *testing.T) {
@@ -53,7 +93,7 @@ func TestLoadConfig_FromEnvironment(t *testing.T) {
 	assert.Equal(t, []string{"1", "2"}, cfg.AdminDiscordIDs)
 	assert.False(t, cfg.ExperienceJobEnabled)
 	assert.Equal(t, 5*time.Minute, cfg.ExperienceJobInterval)
-	assert.Equal(t, DiscordConfig{ClientID: "client", ClientSecret: "secret"}, cfg.Discord)
+	assert.Equal(t, DiscordConfig{ClientID: "client", ClientSecret: "secret", InviteLink: "https://discord.gg/b7Qq8V2XFR"}, cfg.Discord)
 }
 
 func TestLoadConfig_RequiresBaseURL(t *testing.T) {

@@ -11,7 +11,8 @@ RUN apt-get update \
 RUN curl -fsSL -o /usr/local/bin/tailwindcss \
         https://github.com/tailwindlabs/tailwindcss/releases/download/${TAILWIND_VERSION}/tailwindcss-linux-x64 \
     && chmod +x /usr/local/bin/tailwindcss
-RUN git config --global --add safe.directory /app
+# From /: in a git worktree /app/.git points outside the image, and git refuses to start there.
+RUN cd / && git config --global --add safe.directory /app
 RUN go install github.com/githubnemo/CompileDaemon@latest \
     && go install github.com/a-h/templ/cmd/templ@${TEMPL_VERSION} \
     && go mod download

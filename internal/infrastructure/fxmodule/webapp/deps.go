@@ -39,6 +39,7 @@ import (
 	webusersqlc "spot-assistant/internal/infrastructure/webuser/postgresql/sqlc"
 	"spot-assistant/internal/infrastructure/worldapi"
 	worldnamesqlc "spot-assistant/internal/infrastructure/worldname/postgresql/sqlc"
+	"spot-assistant/internal/ports"
 )
 
 const readyTimeout = 2 * time.Second
@@ -73,11 +74,11 @@ func newBooking(spotRepo *spotsqlc.SpotRepository, reservationRepo *reservations
 	return booking.NewAdapter(spotRepo, reservationRepo, webcomm.New(notifier, log)).WithLogger(log)
 }
 
-func newAuthService(discord *oauth.Caching, users *webusersqlc.WebUserRepository) *auth.Service {
+func newAuthService(discord ports.OAuthPort, users *webusersqlc.WebUserRepository) *auth.Service {
 	return auth.New(discord, users)
 }
 
-func newAccessService(discord *oauth.Caching, configs *guildsqlc.GuildConfigRepository, roles *guildsqlc.GuildRoleRepository, cfg web.Config, log *zap.SugaredLogger) *guildaccess.Service {
+func newAccessService(discord ports.OAuthPort, configs *guildsqlc.GuildConfigRepository, roles *guildsqlc.GuildRoleRepository, cfg web.Config, log *zap.SugaredLogger) *guildaccess.Service {
 	return guildaccess.New(discord, configs, roles, cfg.AdminDiscordIDs, log)
 }
 

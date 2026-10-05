@@ -8,12 +8,12 @@ import (
 	"spot-assistant/internal/infrastructure/web"
 )
 
-// Register wires the Stats routes. Every page is view tier, premium, and reads the shared
-// day range.
+// Register wires the Stats routes. Every page is public (a member gets the
+// sidebar, anyone else the public bar) and reads the shared day range.
 func Register(r *web.Router, d *web.Deps) {
 	h := New(d)
 	guard := func(next http.HandlerFunc) http.HandlerFunc {
-		return d.RequireAuth(d.RequireView(d.RequirePremium(d.WithRangeSelection(next))))
+		return d.PublicView(d.WithRangeSelection(next))
 	}
 	r.Get("/servers/{id}/stats", guard(h.HandleOverview))
 	r.Get("/servers/{id}/stats/spots", guard(h.HandleSpots))

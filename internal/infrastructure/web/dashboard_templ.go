@@ -175,8 +175,7 @@ func Dashboard(baseURL string, user *webuser.User, list []access.GuildAccess, ad
 	})
 }
 
-// guildCard is one server. A server without premium still opens: its admins
-// reach Settings, everyone else reads the "premium required" page.
+// guildCard is one server. A server without premium links to its lock page.
 func guildCard(a access.GuildAccess) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -205,7 +204,7 @@ func guildCard(a access.GuildAccess) templ.Component {
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.ResolveAttributeValue(a.Config.GuildID)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/dashboard.templ`, Line: 48, Col: 128}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/dashboard.templ`, Line: 47, Col: 128}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var11)
 		if templ_7745c5c3_Err != nil {
@@ -218,7 +217,7 @@ func guildCard(a access.GuildAccess) templ.Component {
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(a.Config.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/dashboard.templ`, Line: 50, Col: 74}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/dashboard.templ`, Line: 49, Col: 74}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {
@@ -236,7 +235,7 @@ func guildCard(a access.GuildAccess) templ.Component {
 			var templ_7745c5c3_Var13 string
 			templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "dashboard.premium"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/dashboard.templ`, Line: 52, Col: 123}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/dashboard.templ`, Line: 51, Col: 123}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 			if templ_7745c5c3_Err != nil {
@@ -254,7 +253,7 @@ func guildCard(a access.GuildAccess) templ.Component {
 			var templ_7745c5c3_Var14 string
 			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "dashboard.inactive"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/dashboard.templ`, Line: 54, Col: 122}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/dashboard.templ`, Line: 53, Col: 122}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 			if templ_7745c5c3_Err != nil {
@@ -272,7 +271,7 @@ func guildCard(a access.GuildAccess) templ.Component {
 		var templ_7745c5c3_Var15 templ.SafeURL
 		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(GuildPath(a.Config.GuildID, "")))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/dashboard.templ`, Line: 58, Col: 59}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/dashboard.templ`, Line: 57, Col: 59}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 		if templ_7745c5c3_Err != nil {
@@ -282,11 +281,11 @@ func guildCard(a access.GuildAccess) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if !a.Config.IsPremium() && a.Caps.Admin {
+		if !a.Config.IsPremium() {
 			var templ_7745c5c3_Var16 string
-			templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "dashboard.open_settings"))
+			templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "dashboard.unlock_premium"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/dashboard.templ`, Line: 60, Col: 45}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/dashboard.templ`, Line: 59, Col: 46}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 			if templ_7745c5c3_Err != nil {
@@ -296,7 +295,7 @@ func guildCard(a access.GuildAccess) templ.Component {
 			var templ_7745c5c3_Var17 string
 			templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "dashboard.open_reservations"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/dashboard.templ`, Line: 62, Col: 49}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/dashboard.templ`, Line: 61, Col: 49}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 			if templ_7745c5c3_Err != nil {

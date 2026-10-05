@@ -80,13 +80,27 @@ func TestHandleSettings_RendersEverySection(t *testing.T) {
 	} {
 		assert.Contains(t, body, want)
 	}
-	assert.NotContains(t, body, "The bot is inactive on this server")
 	assert.Equal(t, 1, strings.Count(body, `" checked`), "only r2 in the reserve list is checked")
 }
 
-func TestHandleSettings_NonPremiumShowsNotice(t *testing.T) {
+func TestHandleSettings_NonPremiumIsLocked(t *testing.T) {
+	// given an admin of a server without premium
+	h, _, cookie := signedInAdmin(t, guildconfig.Config{})
+
+	// when
+	rec := webtest.Serve(h, webtest.Get("/servers/g1/settings", cookie))
+
+	// then
+	assert.Equal(t, http.StatusForbidden, rec.Code)
+	body := rec.Body.String()
+	assert.Contains(t, body, "Unlock the feature with Premium. Join the Discord and get on board!")
+	assert.Contains(t, body, `href="`+webtest.InviteLink+`"`)
+	assert.NotContains(t, body, "Refresh server data")
+}
+
+func TestHandleSettings_EmptyRolesAndWorld(t *testing.T) {
 	// given
-	h, m, cookie := signedInAdmin(t, guildconfig.Config{})
+	h, m, cookie := signedInAdmin(t, guildconfig.Config{Premium: true})
 	m.Settings.EXPECT().Roles(mock.Anything, guildID).Return(nil, nil)
 	m.Settings.EXPECT().World(mock.Anything, guildID).Return("", nil)
 
@@ -96,7 +110,6 @@ func TestHandleSettings_NonPremiumShowsNotice(t *testing.T) {
 	// then
 	require.Equal(t, http.StatusOK, rec.Code)
 	body := rec.Body.String()
-	assert.Contains(t, body, "The bot is inactive on this server")
 	assert.Contains(t, body, "No roles copied yet.")
 	assert.Contains(t, body, "No world set")
 }
@@ -104,7 +117,7 @@ func TestHandleSettings_NonPremiumShowsNotice(t *testing.T) {
 func TestHandleSettings_Errors(t *testing.T) {
 	t.Run("roles", func(t *testing.T) {
 		// given
-		h, m, cookie := signedInAdmin(t, guildconfig.Config{})
+		h, m, cookie := signedInAdmin(t, guildconfig.Config{Premium: true})
 		m.Settings.EXPECT().Roles(mock.Anything, guildID).Return(nil, errors.New("db down"))
 
 		// when
@@ -115,7 +128,7 @@ func TestHandleSettings_Errors(t *testing.T) {
 	})
 	t.Run("world", func(t *testing.T) {
 		// given
-		h, m, cookie := signedInAdmin(t, guildconfig.Config{})
+		h, m, cookie := signedInAdmin(t, guildconfig.Config{Premium: true})
 		m.Settings.EXPECT().Roles(mock.Anything, guildID).Return(nil, nil)
 		m.Settings.EXPECT().World(mock.Anything, guildID).Return("", errors.New("db down"))
 
@@ -194,7 +207,7 @@ func TestHandleSetRanks(t *testing.T) {
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			// given
-			h, m, cookie := signedInAdmin(t, guildconfig.Config{})
+			h, m, cookie := signedInAdmin(t, guildconfig.Config{Premium: true})
 			m.Settings.EXPECT().SetRoleIDs(mock.Anything, guildID, tc.kind, tc.ids).Return(nil)
 
 			// when
@@ -209,7 +222,7 @@ func TestHandleSetRanks(t *testing.T) {
 
 func TestHandleSetRanks_UnknownKind(t *testing.T) {
 	// given
-	h, _, cookie := signedInAdmin(t, guildconfig.Config{})
+	h, _, cookie := signedInAdmin(t, guildconfig.Config{Premium: true})
 
 	// when
 	rec := webtest.Serve(h, htmx(webtest.Post("/servers/g1/settings/ranks/admin", url.Values{"role_ids": {"r1"}}, cookie)))
@@ -220,7 +233,7 @@ func TestHandleSetRanks_UnknownKind(t *testing.T) {
 
 func TestHandleSetRanks_StaleRole(t *testing.T) {
 	// given
-	h, m, cookie := signedInAdmin(t, guildconfig.Config{})
+	h, m, cookie := signedInAdmin(t, guildconfig.Config{Premium: true})
 	m.Settings.EXPECT().SetRoleIDs(mock.Anything, guildID, guildconfig.RoleKindManage, []string{"gone"}).Return(ports.ErrUnknownRole)
 
 	// when
@@ -233,7 +246,7 @@ func TestHandleSetRanks_StaleRole(t *testing.T) {
 
 func TestHandleSetRanks_Error(t *testing.T) {
 	// given
-	h, m, cookie := signedInAdmin(t, guildconfig.Config{})
+	h, m, cookie := signedInAdmin(t, guildconfig.Config{Premium: true})
 	m.Settings.EXPECT().SetRoleIDs(mock.Anything, guildID, guildconfig.RoleKindManage, []string{"r1"}).Return(errors.New("db down"))
 
 	// when
@@ -256,7 +269,7 @@ func TestHandleSetWorld(t *testing.T) {
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			// given
-			h, m, cookie := signedInAdmin(t, guildconfig.Config{})
+			h, m, cookie := signedInAdmin(t, guildconfig.Config{Premium: true})
 			m.Settings.EXPECT().SetWorld(mock.Anything, guildID, "Celesta").Return(tc.err)
 
 			// when
@@ -283,7 +296,7 @@ func TestHandleRefresh(t *testing.T) {
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			// given
-			h, m, cookie := signedInAdmin(t, guildconfig.Config{})
+			h, m, cookie := signedInAdmin(t, guildconfig.Config{Premium: true})
 			m.Settings.EXPECT().RequestResync(mock.Anything, guildID).Return(tc.retry, tc.err)
 
 			// when

@@ -27,6 +27,14 @@ templ ErrorPage(baseURL string, status int, title, message string, nav Nav) {
 					{ i18n.T(ctx, "error.back_to_home") }
 				</a>
 			}
+			// Only a missing page or a server fault is worth reporting; a 403 is a
+			// deliberate refusal, so it never invites one.
+			if nav.SupportURL != "" && (status == 404 || status >= 500) {
+				<div class="mt-2 flex flex-col items-center gap-3 border-t border-zone-800 pt-6">
+					<p class="text-sm text-zone-400">{ i18n.T(ctx, "error.report_prompt") }</p>
+					@SupportLink(nav.SupportURL, i18n.T(ctx, "error.report_cta"), "flex items-center gap-2 rounded-md border border-signal/40 px-4 py-2 text-sm font-semibold text-signal-bright transition hover:border-signal hover:bg-signal/[0.08]")
+				</div>
+			}
 		</div>
 	}
 }

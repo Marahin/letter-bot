@@ -128,6 +128,20 @@ func (s *Service) Access(ctx context.Context, userID, guildID string) (*access.G
 	return nil, ports.ErrNotFound
 }
 
+func (s *Service) Public(ctx context.Context, guildID string) (*access.GuildAccess, error) {
+	cfg, err := s.configs.Get(ctx, guildID)
+	if err != nil {
+		if errors.Is(err, ports.ErrNotFound) {
+			return nil, ports.ErrNotFound
+		}
+		return nil, fmt.Errorf("load guild config: %w", err)
+	}
+	if !cfg.BotPresent {
+		return nil, ports.ErrNotFound
+	}
+	return &access.GuildAccess{Config: *cfg}, nil
+}
+
 func (s *Service) Member(ctx context.Context, userID, guildID string) (*access.GuildMember, error) {
 	return s.oauth.UserGuildMember(ctx, userID, guildID)
 }

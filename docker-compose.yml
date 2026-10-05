@@ -15,7 +15,8 @@ services:
       POSTGRES_USER: ${DATABASE_USER}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
     env_file:
-      - .env
+      - path: .env
+        required: false
     ports:
       - "5432:5432"
     healthcheck:
@@ -32,10 +33,25 @@ services:
     volumes:
       - ./:/app
     env_file:
-      - .env
+      - path: .env
+        required: false
     depends_on:
       db:
         condition: service_healthy
+  # Writes the dev data (two servers, respawns, reservations) for /dev/login, then exits.
+  seed:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./:/app
+    env_file:
+      - path: .env
+        required: false
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint: ["sh", "-c", "go run -buildvcs=false -tags devauth ./cmd/seed"]
   web:
     build:
       context: .
@@ -46,16 +62,21 @@ services:
     volumes:
       - ./:/app
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
       WEB_ASSETS_DIR: /app/internal/infrastructure/web/dist
+      DISCORD_INVITE_LINK: "${DISCORD_INVITE_LINK:-https://discord.gg/b7Qq8V2XFR}"
+      # /dev/login (devauth build); dev-siteadmin is the site admin.
+      WEB_DEV_AUTH: "true"
+      WEB_ADMIN_DISCORD_IDS: "${WEB_ADMIN_DISCORD_IDS:-700000000000000004}"
     depends_on:
       db:
         condition: service_healthy
     entrypoint: >-
       sh -c "make css &&
       CompileDaemon -include=Makefile -include='*.templ' -include='*.css' -exclude-dir=.git -exclude='app.css' -exclude='*_templ.go'
-      -build='make generate css build-only' -command=./bin/letter-web"
+      -build='make generate css build-only WEB_BUILD_TAGS=devauth' -command=./bin/letter-web"
 # Uncomment the following lines to enable the tibiadata service
 # Credits to https://github.com/TibiaData
 #  tibiadata:

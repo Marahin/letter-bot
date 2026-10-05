@@ -1,6 +1,5 @@
 // Package channelshttp is the admin-only Channels page: which channel takes the
-// /book and /unbook commands, and which one holds the reservation summary. It
-// works on a server without premium, like Settings.
+// /book and /unbook commands, and which one holds the reservation summary.
 package channelshttp
 
 import (

@@ -31,6 +31,11 @@ const (
 type pageView struct {
 	GuildID   string
 	GuildName string
+	GuildIcon string
+	// Public is a visitor who is not a member: the page carries its own server bar.
+	Public bool
+	// LoginHref signs in and comes back to this page.
+	LoginHref string
 	Range     stats.Range
 	Picker    web.RangePickerProps
 	// Today is the current local midnight: the daily charts mark it as not over yet.
@@ -89,6 +94,10 @@ type characterView struct {
 	P     *stats.CharacterProfile
 	Spots breakdownView
 	Now   time.Time
+}
+
+func (p pageView) guildIconURL() string {
+	return web.GuildIconURL(p.GuildID, p.GuildIcon)
 }
 
 func spotHref(guildID string, id int64) string {

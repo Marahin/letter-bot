@@ -1,6 +1,5 @@
 // Package settingshttp is the admin-only Settings page: the bot re-invite, the
-// "Refresh server data" button, the Tibia world and the four rank lists. It works
-// on a server without premium, so an admin can prepare it before activation.
+// "Refresh server data" button, the Tibia world and the four rank lists.
 package settingshttp
 
 import (

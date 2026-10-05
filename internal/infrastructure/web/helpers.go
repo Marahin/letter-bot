@@ -64,6 +64,9 @@ type Nav struct {
 	// Marketing renders the marketing top bar (not the app sidebar) even for a
 	// signed-in visitor, and gives the top bar the landing's section width.
 	Marketing bool
+	// SupportURL is the community Discord invite (DISCORD_INVITE_LINK). Empty
+	// hides every support link.
+	SupportURL string
 	// ReturnTo is the original request URI, where the language picker's POST sends
 	// the visitor back to. Empty on a Nav built without a request; the shell then
 	// falls back to the path Layout was given.
@@ -82,9 +85,9 @@ func GuildPath(guildID, suffix string) string {
 	return "/servers/" + guildID + suffix
 }
 
-// guildIconURL builds the Discord CDN URL for a server icon, "" when it has none so
+// GuildIconURL builds the Discord CDN URL for a server icon, "" when it has none so
 // the switcher draws a lettered fallback instead.
-func guildIconURL(guildID, iconHash string) string {
+func GuildIconURL(guildID, iconHash string) string {
 	if guildID == "" || iconHash == "" {
 		return ""
 	}
@@ -93,7 +96,7 @@ func guildIconURL(guildID, iconHash string) string {
 
 // CurrentGuildIconURL is the framed selected-server icon for the switcher.
 func (n Nav) CurrentGuildIconURL() string {
-	return guildIconURL(n.CurrentGuildID, n.CurrentGuildIcon)
+	return GuildIconURL(n.CurrentGuildID, n.CurrentGuildIcon)
 }
 
 // guildInitial is the lettered fallback for a server without an icon.

@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"spot-assistant/internal/core/dto/webuser"
 	"spot-assistant/internal/infrastructure/branding"
 	"spot-assistant/internal/infrastructure/i18n"
 )
@@ -284,8 +285,8 @@ func TestDeps_InviteURLs(t *testing.T) {
 
 func TestHelpers(t *testing.T) {
 	assert.Equal(t, "/servers/1/stats", GuildPath("1", "/stats"))
-	assert.Equal(t, "", guildIconURL("1", ""))
-	assert.Equal(t, "", guildIconURL("", "abc"))
+	assert.Equal(t, "", GuildIconURL("1", ""))
+	assert.Equal(t, "", GuildIconURL("", "abc"))
 	assert.Equal(t, "Ł", guildInitial("  łódź"))
 	assert.Equal(t, "?", guildInitial(" "))
 	assert.Equal(t, "/p", Nav{}.returnTarget("/p"))
@@ -308,9 +309,9 @@ func TestServerBadge_KeepsTheInitialUnderAnIconThatFailsToLoad(t *testing.T) {
 	ctx := context.Background()
 
 	// when
-	withIcon := render(ctx, t, serverBadge("https://cdn.discordapp.com/icons/1/abc.png", "celesta"))
+	withIcon := render(ctx, t, ServerBadge("https://cdn.discordapp.com/icons/1/abc.png", "celesta"))
 	option := render(ctx, t, serverOptionIcon("https://cdn.discordapp.com/icons/1/abc.png", "celesta"))
-	without := render(ctx, t, serverBadge("", "celesta"))
+	without := render(ctx, t, ServerBadge("", "celesta"))
 
 	// then
 	for _, out := range []string{withIcon, option} {
@@ -335,4 +336,144 @@ func TestLayout_RendersTheHTMXErrorToastOnEveryShell(t *testing.T) {
 			assert.Contains(t, out, "/assets/htmx-errors.js")
 		})
 	}
+}
+
+const testInvite = "https://discord.gg/b7Qq8V2XFR"
+
+// topBarHeader is the marketing top bar's markup, so a test can tell it from the footer.
+func topBarHeader(t *testing.T, out string) string {
+	t.Helper()
+	start := strings.Index(out, "<header")
+	end := strings.Index(out, "</header>")
+	require.True(t, start >= 0 && end > start, "no top bar header")
+	return out[start:end]
+}
+
+func TestLayout_SupportLink_InBothShells(t *testing.T) {
+	t.Run("anonymous footer, not the top bar", func(t *testing.T) {
+		// when
+		out := render(context.Background(), t, Layout("T", "D", "http://x", "/", Nav{SupportURL: testInvite}))
+
+		// then
+		assert.Equal(t, 1, strings.Count(out, `href="`+testInvite+`"`))
+		assert.Contains(t, out, "Questions or a bug? Join our Discord")
+		assert.Contains(t, out, `target="_blank" rel="noopener noreferrer" data-support-link`)
+		assert.NotContains(t, topBarHeader(t, out), testInvite)
+	})
+
+	t.Run("signed-in sidebar and footer", func(t *testing.T) {
+		// given
+		nav := signedInNav()
+		nav.SupportURL = testInvite
+
+		// when
+		out := render(context.Background(), t, Layout("T", "D", "http://x", "/", nav))
+
+		// then
+		assert.Equal(t, 2, strings.Count(out, `href="`+testInvite+`"`))
+		assert.Contains(t, out, "Get help")
+		assert.Contains(t, out, "Questions or a bug? Join our Discord")
+	})
+}
+
+func TestLayout_SupportLink_OmittedWhenUnconfigured(t *testing.T) {
+	for _, nav := range []Nav{{}, signedInNav()} {
+		// when
+		out := render(context.Background(), t, Layout("T", "D", "http://x", "/", nav))
+
+		// then
+		assert.NotContains(t, out, "data-support-link")
+		assert.NotContains(t, out, "Questions or a bug?")
+		assert.NotContains(t, out, "Get help")
+	}
+}
+
+func TestLayout_UnreviewedTranslationNoteLinksToDiscord(t *testing.T) {
+	// given a Polish context
+	ctx := i18n.WithLocale(context.Background(), i18n.Normalize("pl"))
+
+	// when
+	linked := render(ctx, t, Layout("T", "D", "http://x", "/", Nav{SupportURL: testInvite}))
+	plain := render(ctx, t, Layout("T", "D", "http://x", "/", Nav{}))
+
+	// then
+	assert.Regexp(t, `<a href="`+regexp.QuoteMeta(testInvite)+`"[^>]*data-support-link[^>]*>(?s:.*?)Pomóż nam ulepszyć to tłumaczenie</a>`, linked)
+	assert.Contains(t, linked, "Pytanie lub błąd? Wpadnij na nasz Discord")
+	assert.Contains(t, plain, "Pomóż nam ulepszyć to tłumaczenie</p>")
+}
+
+func TestLanding_BottomCTA_CarriesSupportLink(t *testing.T) {
+	// given
+	nav := Nav{Marketing: true, Wide: true, SupportURL: testInvite}
+
+	// when
+	out := render(context.Background(), t, Landing("http://x", "https://invite", nav, templ.NopComponent))
+
+	// then
+	assert.Contains(t, out, "Questions, feedback or a bug?")
+	assert.Contains(t, out, "Join our Discord")
+	assert.Contains(t, out, `href="`+testInvite+`"`)
+}
+
+func TestErrorPage_InvitesAReportOn404And5xxOnly(t *testing.T) {
+	for name, tc := range map[string]struct {
+		status  int
+		invite  string
+		wantCTA bool
+	}{
+		"404 invites a report": {status: http.StatusNotFound, invite: testInvite, wantCTA: true},
+		"500 invites a report": {status: http.StatusInternalServerError, invite: testInvite, wantCTA: true},
+		"503 invites a report": {status: http.StatusServiceUnavailable, invite: testInvite, wantCTA: true},
+		"403 does not":         {status: http.StatusForbidden, invite: testInvite},
+		"400 does not":         {status: http.StatusBadRequest, invite: testInvite},
+		"no invite configured": {status: http.StatusNotFound},
+	} {
+		t.Run(name, func(t *testing.T) {
+			// when
+			out := render(context.Background(), t, ErrorPage("http://x", tc.status, "T", "M", Nav{SupportURL: tc.invite}))
+
+			// then
+			if tc.wantCTA {
+				assert.Contains(t, out, "Think this is a bug?")
+				assert.Contains(t, out, "Report on Discord")
+			} else {
+				assert.NotContains(t, out, "Report on Discord")
+			}
+		})
+	}
+}
+
+func TestNav_PropagatesSupportURL(t *testing.T) {
+	t.Run("anonymous", func(t *testing.T) {
+		// given
+		d := newTestDeps(t)
+		d.Cfg.Discord.InviteLink = testInvite
+
+		// when
+		n := d.Nav(loadedReq(t, d.Sessions, "/"), "")
+
+		// then
+		assert.Equal(t, testInvite, n.SupportURL)
+	})
+
+	t.Run("signed in", func(t *testing.T) {
+		// given
+		d := newTestDeps(t)
+		d.Cfg.Discord.InviteLink = testInvite
+
+		// when
+		n := d.NavFromAccess(&webuser.User{DiscordUserID: "1"}, nil, "")
+
+		// then
+		assert.Equal(t, testInvite, n.SupportURL)
+	})
+
+	t.Run("unconfigured", func(t *testing.T) {
+		// given
+		d := newTestDeps(t)
+
+		// then
+		assert.Empty(t, d.Nav(loadedReq(t, d.Sessions, "/"), "").SupportURL)
+		assert.Empty(t, d.NavFromAccess(&webuser.User{DiscordUserID: "1"}, nil, "").SupportURL)
+	})
 }

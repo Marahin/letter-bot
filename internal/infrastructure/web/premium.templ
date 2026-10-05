@@ -1,30 +1,34 @@
 package web
 
 import (
-	"spot-assistant/internal/core/dto/access"
 	"spot-assistant/internal/infrastructure/branding"
 	"spot-assistant/internal/infrastructure/i18n"
 )
 
-// PremiumRequired is the page a server without premium shows in place of a
-// premium feature. Its admins get a link to Settings, which works without premium.
-templ PremiumRequired(baseURL string, a access.GuildAccess, nav Nav) {
-	@Layout(i18n.T(ctx, "premium.required.title")+" - "+branding.Name, i18n.T(ctx, "premium.required.message", a.Config.Name), baseURL, "", nav) {
-		<div class="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center gap-6 py-16 text-center">
+// PremiumRequired is the lock page every page of a server without premium shows,
+// to members and visitors alike. It names no server and no feature on purpose:
+// the same page stands in for all of them.
+templ PremiumRequired(baseURL string, nav Nav) {
+	@Layout(i18n.T(ctx, "premium.required.title")+" - "+branding.Name, i18n.T(ctx, "premium.required.message"), baseURL, "", nav) {
+		<div data-premium-lock class="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center gap-6 py-16 text-center">
 			<span class="flex h-16 w-16 items-center justify-center rounded-2xl border border-signal/40 bg-signal/[0.08] text-signal-bright">
 				<svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
 			</span>
 			<h1 class="font-display text-3xl font-bold -tracking-[0.02em] text-zone-50">{ i18n.T(ctx, "premium.required.title") }</h1>
-			<p class="max-w-md text-zone-300">{ i18n.T(ctx, "premium.required.message", a.Config.Name) }</p>
+			<p class="max-w-md text-zone-300">{ i18n.T(ctx, "premium.required.message") }</p>
 			<div class="mt-2 flex flex-wrap items-center justify-center gap-3">
-				if a.Caps.Admin {
-					<a href={ templ.SafeURL(GuildPath(a.Config.GuildID, "/settings")) } class="rounded-md bg-signal px-5 py-2.5 text-sm font-semibold text-zone-950 shadow-accent transition hover:bg-signal-bright">
-						{ i18n.T(ctx, "dashboard.open_settings") }
+				if nav.SupportURL != "" {
+					@SupportLink(nav.SupportURL, i18n.T(ctx, "premium.required.cta"), "flex min-h-11 items-center gap-2 rounded-md bg-signal px-5 py-2.5 text-sm font-semibold text-zone-950 shadow-accent transition hover:bg-signal-bright")
+				}
+				if nav.Authenticated {
+					<a href="/dashboard" class="flex min-h-11 items-center rounded-md border border-zone-700 px-5 py-2.5 text-sm font-semibold text-zone-300 transition hover:border-signal hover:text-signal">
+						{ i18n.T(ctx, "error.back_to_dashboard") }
+					</a>
+				} else {
+					<a href="/" class="flex min-h-11 items-center rounded-md border border-zone-700 px-5 py-2.5 text-sm font-semibold text-zone-300 transition hover:border-signal hover:text-signal">
+						{ i18n.T(ctx, "error.back_to_home") }
 					</a>
 				}
-				<a href="/dashboard" class="rounded-md border border-zone-700 px-5 py-2.5 text-sm font-semibold text-zone-300 transition hover:border-signal hover:text-signal">
-					{ i18n.T(ctx, "error.back_to_dashboard") }
-				</a>
 			</div>
 		</div>
 	}

@@ -34,7 +34,7 @@ func (rt *Router) Handle(method, pattern string, h http.Handler) *Route {
 	}
 	// A duplicate registration panics inside ServeMux; let it.
 	rt.mux.Handle(full, h)
-	route := &Route{pattern: pattern}
+	route := &Route{method: method, pattern: pattern}
 	rt.routes[full] = route
 	return route
 }
@@ -50,10 +50,23 @@ func (rt *Router) Lookup(method, p string) *Route {
 	return rt.routes[pattern]
 }
 
+// Routes lists every route registered through the Router, in no set order.
+func (rt *Router) Routes() []*Route {
+	out := make([]*Route, 0, len(rt.routes))
+	for _, route := range rt.routes {
+		out = append(out, route)
+	}
+	return out
+}
+
 // Route is a route registered through the Router.
 type Route struct {
+	method  string
 	pattern string
 }
+
+// Method is the HTTP method the route answers, "" for any.
+func (rt *Route) Method() string { return rt.method }
 
 // Pattern is the path with its wildcards intact ("/servers/{id}/settings").
 func (rt *Route) Pattern() string { return rt.pattern }

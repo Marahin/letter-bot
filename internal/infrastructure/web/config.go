@@ -15,6 +15,9 @@ type Config struct {
 	AdminDiscordIDs       []string      `envconfig:"ADMIN_DISCORD_IDS"`
 	ExperienceJobEnabled  bool          `envconfig:"EXPERIENCE_JOB_ENABLED" default:"true"`
 	ExperienceJobInterval time.Duration `envconfig:"EXPERIENCE_JOB_INTERVAL" default:"15m"`
+	// DevAuth turns on the /dev/login mock users. It works only in a binary built
+	// with the devauth tag and a localhost base URL.
+	DevAuth bool `envconfig:"DEV_AUTH" default:"false"`
 
 	Discord DiscordConfig `ignored:"true"`
 }
@@ -22,6 +25,19 @@ type Config struct {
 type DiscordConfig struct {
 	ClientID     string `envconfig:"CLIENT_ID"`
 	ClientSecret string `envconfig:"CLIENT_SECRET"`
+	// InviteLink is the public invite to the community Discord server. An empty
+	// value hides every support link.
+	InviteLink string `envconfig:"INVITE_LINK" default:"https://discord.gg/b7Qq8V2XFR"`
+}
+
+// SupportURL returns the community invite only when it is an http(s) URL, so a
+// malformed value degrades to no link rather than a broken (or script-bearing) href.
+func (c DiscordConfig) SupportURL() string {
+	link := strings.TrimSpace(c.InviteLink)
+	if !strings.HasPrefix(link, "http://") && !strings.HasPrefix(link, "https://") {
+		return ""
+	}
+	return link
 }
 
 // CallbackURL is the OAuth redirect URL to register in the Discord developer portal.

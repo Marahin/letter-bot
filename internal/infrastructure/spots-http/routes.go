@@ -10,14 +10,14 @@ import (
 )
 
 // Register wires the Respawns routes onto the router. Viewers see the list;
-// every change needs the manage tier. Both need premium.
+// every change needs the manage tier.
 func Register(r *web.Router, d *web.Deps) {
 	h := New(d)
 	view := func(next http.HandlerFunc) http.HandlerFunc {
-		return d.RequireAuth(d.RequireView(d.RequirePremium(next)))
+		return d.RequireAuth(d.RequireView(next))
 	}
 	manage := func(next http.HandlerFunc) http.HandlerFunc {
-		return d.RequireAuth(d.RequireManage(d.RequirePremium(next)))
+		return d.RequireAuth(d.RequireManage(next))
 	}
 	r.Get("/servers/{id}/spots", view(h.HandleList))
 	r.Post("/servers/{id}/spots", manage(h.HandleCreate))

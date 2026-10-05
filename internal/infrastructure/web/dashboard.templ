@@ -42,8 +42,7 @@ templ Dashboard(baseURL string, user *webuser.User, list []access.GuildAccess, a
 	}
 }
 
-// guildCard is one server. A server without premium still opens: its admins
-// reach Settings, everyone else reads the "premium required" page.
+// guildCard is one server. A server without premium links to its lock page.
 templ guildCard(a access.GuildAccess) {
 	<div class="flex flex-col justify-between rounded-lg border border-zone-800 bg-zone-900 p-6" data-guild-card={ a.Config.GuildID }>
 		<div>
@@ -56,8 +55,8 @@ templ guildCard(a access.GuildAccess) {
 		</div>
 		<div class="mt-6">
 			<a href={ templ.SafeURL(GuildPath(a.Config.GuildID, "")) } class="block rounded-md bg-signal px-4 py-3 text-center text-sm font-semibold text-zone-950 shadow-accent transition hover:bg-signal-bright">
-				if !a.Config.IsPremium() && a.Caps.Admin {
-					{ i18n.T(ctx, "dashboard.open_settings") }
+				if !a.Config.IsPremium() {
+					{ i18n.T(ctx, "dashboard.unlock_premium") }
 				} else {
 					{ i18n.T(ctx, "dashboard.open_reservations") }
 				}
