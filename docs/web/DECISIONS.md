@@ -5,7 +5,7 @@ Each item is a decision taken without the owner. Review and reverse as needed.
 ## Scope and data
 
 1. **Same repository, new binary.** The web lives in this repository as `cmd/web`. It shares the PostgreSQL database with the bot. The bot and the web are separate processes.
-2. **The Django admin is superseded.** `spot-assistant-web` (Django, `spot-assistant-web.tibialoot.com`) is not changed. All schema changes are additive, so Django keeps working. Decommission it after the Letter web is live.
+2. **The Django admin is being retired.** `spot-assistant-web` (Django, `spot-assistant-web.tibialoot.com`) is not changed. Its tables stay until a later contract migration, after Django is removed. Until then, the rule "keep the previous release working" (decision 37) covers Django too: it keeps working on the new schema. Decommission it after the Letter web is live.
 3. **Spots become per guild.** `web_spot` gets a nullable `guild_id` and `archived_at`. A migration assigns every existing spot to Celesta Community (`806152499760201738`). A new guild starts with no spots. The web offers "Import the default spot list" (names from `seeds/spots.sql`).
 4. **Delete a spot = archive it.** A spot with reservations is archived, not deleted, so history and stats stay correct. A spot without reservations is deleted.
 5. **Celesta Community is premium forever.** A migration inserts guild `806152499760201738` with premium forever. Premium is only set in the database (no payments, no self-service). An instance admin (`WEB_ADMIN_DISCORD_IDS`) can toggle premium in the web.
@@ -196,10 +196,16 @@ These items of the request were unclear or had a cost. Each has a decision.
       table only.
     - Tables sort and export CSV on the server, and show at most 500 rows.
     - The daily charts mark today as not over yet (dashed last segment).
-37. **Migrations stay manual with atlas (`bin/migrate`).** Apply them and roll
-    out the new bot image in one step: migration `20260926100100` makes three
-    queries of the old bot fail (see `README.md`, "Rollout order"). Order:
-    migrate, bot at once, web.
+37. **Both binaries apply the goose migrations on start**, under the Postgres
+    advisory lock 7419000, as in scxmanager. They start in any order: the
+    second one waits for the lock (at most 10 minutes), then finds nothing
+    pending. A database that atlas migrated is adopted once: the atlas versions
+    that finished are written to `goose_db_version` and do not run again. A
+    partially applied atlas revision, or tables without a migration history,
+    stop the start. A migration must keep the previous release working (see
+    `AGENT.md`). Exception: `20260926100100` makes three queries of the bot
+    before PR #59 fail, so this release deploys the bot first (see `README.md`,
+    "Rollout order").
 38. **Web sessions live in the `web_sessions` table (scs pgxstore) with a 7-day
     lifetime.** Users and their OAuth tokens live in `web_users`. The prefixes
     keep them apart from the Django tables.
@@ -252,6 +258,10 @@ PR #59). This branch adopts:
   and staticcheck steps.
 - **A Prometheus registry for each binary**, with the Go and process collectors.
   Nothing registers on the global default registry.
+- **goose migrations at start** (decision 37), embedded in both binaries, with
+  sqlc reading the migrations directory (`schema.sql` is removed). Differences:
+  the goose `Provider` API instead of the package globals, and a one-time
+  adoption of the atlas history.
 - **`make help`, `make run-web`, `make run-bot`**; Go 1.27 in `.go-version` and
   `shell.nix`; pgx v5.10, zap v1.27.1, x/sync and x/text as in scxmanager.
 - **Config loaders return errors** instead of panicking (`postgresql.LoadConfig`,
@@ -276,8 +286,6 @@ Kept differences, on purpose:
 
 - `internal/infrastructure` keeps its name (scxmanager: `internal/infra`) and
   the ports stay in `internal/ports`.
-- atlas migrations applied by hand (scxmanager: goose at start), because the
-  Django admin shares the tables. The binaries do not migrate.
 - sqlc keeps one config for each repository package; mockery stays at v3.8.0.
 - GitHub Actions (scxmanager: GitLab CI); the Dockerfile targets stay.
 - Health paths stay `/livez` and `/readyz` (scxmanager: `/healthz`).

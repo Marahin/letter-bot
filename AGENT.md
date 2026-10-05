@@ -18,7 +18,7 @@ Avoid using `go` directly, instead use `make` commands to ensure consistency acr
 - Build the Tailwind CSS: `make css` (downloads the pinned Tailwind CLI to `bin/tailwindcss`)
 - Generate mocks: `make mocks`
 - Generate sqlc code: `make sqlc-generate`
-- Migrations: `make migrations-hash` after you add or change a migration, then `make migrations-validate`
+- New migration: `make migration name=<snake_case>` (both binaries apply the migrations on start)
 - Docker images: `make docker` (bot) and `make docker-web` (web)
 
 ## Code style
@@ -63,8 +63,11 @@ mockery makes a mock for every interface in the module, into one directory, name
 
 ### Database
 
-- Migrations are in `internal/infrastructure/db/postgresql/migrations` (atlas). They are additive: the old Django admin still uses the same tables.
-- After a migration, update `internal/infrastructure/db/postgresql/schema.sql` too (sqlc reads it) and run `make sqlc-generate`.
+- Migrations are [goose](https://pressly.github.io/goose/) SQL files in `internal/infrastructure/db/postgresql/migrations`, embedded in both binaries. A binary applies them on start, under a Postgres advisory lock, before it opens the pool. The first binary to start migrates; the other waits, then finds nothing pending.
+- sqlc reads the migrations directory. After a migration, run `make sqlc-generate`.
+- **Keep the previous release working (expand, then contract).** The bot and the web restart in any order, and during a rollout the previous release runs against the new schema. Add tables, and columns that are nullable or have a default. Rename, drop or tighten a column or a table only in a later release, when no running binary uses it. Qualify the columns in a join, so a new column with the same name does not make an old query ambiguous.
+- Each file runs in a transaction. `CREATE INDEX CONCURRENTLY` needs `-- +goose NO TRANSACTION` and one statement that can run again (`IF NOT EXISTS`).
+- Never edit a released migration: a database that has it does not run it again. A test keeps a checksum of each file. A new version must be newer than all existing versions; goose refuses an out-of-order migration.
 
 ### Tests
 

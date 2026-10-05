@@ -21,8 +21,9 @@ subpackage for each binary (`webapp`, `botapp`) that exports only `App()`.
 - Only `botapp` imports `internal/infrastructure/bot`. The root modules never load
   the bot config. A test in `webapp` fails when `cmd/web` depends on the bot adapter.
 - A provider makes one thing and returns it. Logic that is more than construction
-  goes to a package under `internal/`. Exceptions: the pool connect and the shard
-  manager, which ask the network at construction.
+  goes to a package under `internal/`. Exceptions: the migrations, the pool connect
+  and the shard manager, which ask the network at construction. Providers run in
+  `fx.New`, so `StartTimeout` does not bound them.
 - A side effect (serve, open the gateway, run a loop) is an `fx.Invoke` that appends
   `fx.Lifecycle` hooks. A long-running goroutine takes its own context, because a
   hook's context ends with the hook.
@@ -38,7 +39,8 @@ subpackage for each binary (`webapp`, `botapp`) that exports only `App()`.
   take the concrete type; the core constructor's port type accepts it at the call.
 - Each binary has its own `*prometheus.Registry` (`fxmodule.Registry`). Nothing
   registers on the global default registry.
-- Migrations are applied by atlas before a deploy, not by the binaries.
+- `fxmodule.Database` migrates, then connects: `connect` takes `Migrated`, so every
+  consumer of the pool runs after the migrations. Do not build a pool elsewhere.
 - fx makes a provider only when something asks for it. An unused loader or
   repository costs nothing.
 

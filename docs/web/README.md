@@ -142,7 +142,7 @@ one web process runs it at a time (Postgres advisory lock `7419001`). Set
 - Only reservations that start after the first run of the world, and that ended
   in the last 48 hours, get a gain. There is no backfill.
 
-To test the job against a real database, apply the migrations and run
+To test the job against a real database (the test applies the migrations), run
 `LETTER_TEST_DATABASE_URL=postgres://… go test -run 'EndToEnd|PgAdvisoryLock' ./internal/infrastructure/experience/postgresql/sqlc/`.
 The test uses the guild ids `it-exp-*` and the worlds `Itworld*`, and deletes them after.
 
@@ -279,29 +279,67 @@ CI builds two images from the one `Dockerfile` and pushes them on `main`:
 
 Locally: `make docker` and `make docker-web`.
 
+### Migrations
+
+Both binaries apply the embedded goose migrations on start, before they open the
+pool and serve. A Postgres advisory lock (key 7419000) lets one binary migrate
+while the other waits (at most 10 minutes) and then finds nothing pending, so the
+bot and the web can start in any order. The history is in `goose_db_version`.
+
+On the first start against the production database, the binary adopts the atlas
+history (`atlas_schema_revisions.atlas_schema_revisions`): the versions that
+atlas finished are written to `goose_db_version` and do not run again. The start
+stops when an atlas revision is partially applied, or when the database has
+tables but no history. The atlas schema stays; nothing reads it after the
+adoption.
+
+A binary does not serve `/livez` while it migrates. Give each Deployment (the
+bot too, on its metrics port) a `startupProbe`, so that the liveness probe does
+not kill a pod that migrates or waits for the lock:
+
+```yaml
+startupProbe:
+  httpGet: { path: /livez, port: metrics }
+  periodSeconds: 10
+  failureThreshold: 60
+```
+
+If a migration hangs, find the holder of the lock and end its session:
+
+```sql
+SELECT pg_terminate_backend(pid) FROM pg_locks WHERE locktype = 'advisory' AND objid = 7419000;
+```
+
+The interrupted migration rolls back (each file runs in a transaction), and the
+next start applies it again.
+
 ### Rollout order
 
-**Apply the migrations and roll out the new bot image together.** Migration
+**For this release, deploy the bot first.** Migration
 `20260926100100_spots_per_guild.sql` adds `web_spot.guild_id`. Three queries of
 the bot that runs in production today join `web_spot` and use an unqualified
 `guild_id`, which is then ambiguous: `SelectUpcomingMemberReservationsWithSpots`
 (the `/unbook` autocomplete), `SelectReservationsWithSpots` (the summary) and
 `SelectReservationsWithSpotsForSpot` (the private summary). They fail from the
-migration until the new bot runs. The new bot also needs the `guilds` tables, so
-it cannot go first.
+migration until the new bot runs. From the next release on, the order does not
+matter.
 
 1. Take a database backup (`pg_dump` of `spotassistant`).
-2. Apply the migrations: `bin/migrate` with the `DATABASE_*` values of the
-   production database (atlas, revisions in schema `atlas_schema_revisions`).
-   Four new files: `20260926100000` to `20260926100300`.
-   `20260926100100` builds three indexes on `web_reservation` (about 430k
-   rows) without `CONCURRENTLY` (atlas runs each file in a transaction). Each
-   build holds a lock that blocks writes to `web_reservation` (reads still
-   work) for a few seconds, so bookings from the old bot can fail or wait
-   during this step. Run it at a quiet hour.
-3. Immediately set the new `marahin/letter-bot:<sha>` image on
-   `spot-assistant-bot`. Expect a break of `/unbook` autocomplete and the
-   summaries of about one minute between step 2 and the new bot pod being ready.
+2. Check the atlas history:
+   `SELECT version, type, applied, total, error FROM atlas_schema_revisions.atlas_schema_revisions ORDER BY version;`
+   Every row must be finished (`applied = total` and no `error`, or a baseline),
+   and the last version must be `20251211123500` or a later file of this
+   release. Otherwise, fix the history by hand first; the binaries refuse to
+   start on it.
+3. Set the new `marahin/letter-bot:<sha>` image on `spot-assistant-bot` (with
+   the `startupProbe` above). It migrates on start: five new files,
+   `20260926100000` to `20260926100300` and `20261004100000`.
+   `20260926100100` builds three indexes on `web_reservation` (about 430k rows)
+   without `CONCURRENTLY` (each file runs in a transaction). Each build holds a
+   lock that blocks writes to `web_reservation` (reads still work) for a few
+   seconds, so bookings can fail or wait during this step. Do it at a quiet
+   hour. Expect a break of `/unbook` autocomplete and the summaries of about
+   one minute, until the new bot pod is ready.
 4. Deploy `letter-web` (below). The bot works without the web.
 
 On start the new bot upserts each guild into `guilds`, copies its channels and
@@ -363,6 +401,10 @@ spec:
           env:
             - { name: TIBIA_WORLD_API_BASE_URL, value: "http://ext-tibiadata-api:8080/v4" }
             - { name: TZ, value: "Europe/Berlin" }
+          startupProbe:
+            httpGet: { path: /livez, port: metrics }
+            periodSeconds: 10
+            failureThreshold: 60
           livenessProbe:
             httpGet: { path: /livez, port: metrics }
           readinessProbe:

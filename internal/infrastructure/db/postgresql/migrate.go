@@ -35,13 +35,8 @@ type MigrateResult struct {
 	Applied []int64
 }
 
-// Migrations returns the embedded migration files.
-func Migrations() fs.FS {
-	sub, err := fs.Sub(embedded, "migrations")
-	if err != nil {
-		panic(err) // the embed pattern guarantees the directory
-	}
-	return sub
+func migrations() (fs.FS, error) {
+	return fs.Sub(embedded, "migrations")
 }
 
 // Migrate applies the pending migrations. More than one process can call it at the same
@@ -108,7 +103,11 @@ func run(ctx context.Context, db *sql.DB, lockWait time.Duration, log *zap.Sugar
 }
 
 func newProvider(db *sql.DB) (*goose.Provider, error) {
-	provider, err := goose.NewProvider(goose.DialectPostgres, db, Migrations())
+	fsys, err := migrations()
+	if err != nil {
+		return nil, fmt.Errorf("load migrations: %w", err)
+	}
+	provider, err := goose.NewProvider(goose.DialectPostgres, db, fsys)
 	if err != nil {
 		return nil, fmt.Errorf("load migrations: %w", err)
 	}

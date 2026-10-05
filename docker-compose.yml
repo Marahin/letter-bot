@@ -18,6 +18,11 @@ services:
       - .env
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
   bot:
     build:
       context: ../letter-bot
@@ -29,7 +34,8 @@ services:
     env_file:
       - .env
     depends_on:
-      - db
+      db:
+        condition: service_healthy
   web:
     build:
       context: .
@@ -44,7 +50,8 @@ services:
     environment:
       WEB_ASSETS_DIR: /app/internal/infrastructure/web/dist
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     entrypoint: >-
       sh -c "make css &&
       CompileDaemon -include=Makefile -include='*.templ' -include='*.css' -exclude-dir=.git -exclude='app.css' -exclude='*_templ.go'

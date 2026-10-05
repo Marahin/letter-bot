@@ -78,7 +78,7 @@ func localVersions(t *testing.T, db *sql.DB) []int64 {
 	t.Helper()
 	provider, err := newProvider(db)
 	require.NoError(t, err)
-	var versions []int64
+	versions := make([]int64, 0, len(provider.ListSources()))
 	for _, s := range provider.ListSources() {
 		versions = append(versions, s.Version)
 	}

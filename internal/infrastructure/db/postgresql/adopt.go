@@ -144,7 +144,7 @@ func atlasRevisions(ctx context.Context, tx *sql.Tx) ([]atlasRevision, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read atlas history: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var revs []atlasRevision
 	for rows.Next() {
 		var r atlasRevision

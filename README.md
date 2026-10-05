@@ -106,7 +106,6 @@ Test coverage of the core packages added for the web panel (`make test`):
 * `docker` and `docker-compose` (unless you want to go bare-metal),
 * `make` (unless you want to run commands manually),
 * `go` (if you want to develop),
-* `atlas` to manage migrations https://atlasgo.io
 * `sqlc` to generate Go wrappers around SQL queries https://sqlc.dev/
 * `templ` and the Tailwind CLI for the web panel (`make install-bins` and `make css` install them)
 
@@ -115,10 +114,8 @@ Test coverage of the core packages added for the web panel (`make test`):
 #### Initial setup
 
 1. Copy `.env.example` to `.env` and fill in the values (or leave as-is).
-3. Run `docker-compose up -d` to start the stack.
-4. Run `docker-compose exec bot sh -c "bin/migrate"` to apply migrations.
-4. Run `docker-compose exec db bash -c "seed"` to fill any entry-level data.
-5. Run `docker-compose restart bot` (as it failed originally, when the database was not set up).
+2. Run `docker-compose up -d` to start the stack. The bot and the web apply the migrations on start.
+3. Run `docker-compose exec db bash -c "seed"` to fill any entry-level data.
 
 #### After initial setup
 
@@ -134,12 +131,11 @@ Test coverage of the core packages added for the web panel (`make test`):
 
 ### Database and migrations
 
-* make changes in schema, 
-* `bin/generate_migration <migration_title>`
+* `make migration name=<snake_case>` creates a goose migration; write the SQL in it (see `AGENT.md`, "Database"),
 * create new queries, if needed
 * `make sqlc-generate`
 
-To apply migrations, run `docker-compose exec bot sh -c "bin/migrate"`.
+The bot and the web apply the migrations on start.
 
 ### Contributing
 

@@ -24,7 +24,9 @@ var migrationName = regexp.MustCompile(`^(\d{14})_[a-z0-9_]+\.sql$`)
 
 func migrationFiles(t *testing.T) []string {
 	t.Helper()
-	names, err := fs.Glob(Migrations(), "*")
+	fsys, err := migrations()
+	require.NoError(t, err)
+	names, err := fs.Glob(fsys, "*")
 	require.NoError(t, err)
 	require.NotEmpty(t, names)
 	return names
@@ -32,7 +34,9 @@ func migrationFiles(t *testing.T) []string {
 
 func readMigration(t *testing.T, name string) string {
 	t.Helper()
-	body, err := fs.ReadFile(Migrations(), name)
+	fsys, err := migrations()
+	require.NoError(t, err)
+	body, err := fs.ReadFile(fsys, name)
 	require.NoError(t, err)
 	return string(body)
 }
@@ -64,8 +68,9 @@ func TestMigrations_AreGooseFiles(t *testing.T) {
 
 func TestMigrations_VersionsAreUniqueAndSorted(t *testing.T) {
 	// given
-	var versions []int64
-	for _, name := range migrationFiles(t) {
+	names := migrationFiles(t)
+	versions := make([]int64, 0, len(names))
+	for _, name := range names {
 		m := migrationName.FindStringSubmatch(name)
 		require.NotNil(t, m, name)
 		v, err := strconv.ParseInt(m[1], 10, 64)
