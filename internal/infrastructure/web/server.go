@@ -140,8 +140,7 @@ func (s *Server) Handler() http.Handler {
 	router.Get("/auth/callback", s.handleCallback)
 	router.Post("/logout", s.handleLogout)
 	router.Get("/dashboard", d.RequireAuth(s.handleDashboard))
-	router.Get("/servers/{id}", d.RequireAuth(d.RequireView(s.handleGuildRoot)))
-	// A no-op unless the binary was built with the devauth tag.
+	RegisterGuildRoot(router, d)
 	registerDevAuth(s, router)
 
 	for _, register := range s.features {

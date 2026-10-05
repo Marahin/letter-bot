@@ -3,21 +3,23 @@
 package e2e
 
 import (
-	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func requireLock(t *testing.T, path string, userID string) {
 	t.Helper()
+	// given
 	page := newPage(t)
 	loginAs(t, page, userID)
 
+	// when
 	open(t, page, path)
 
+	// then
 	requireHas(t, page, "[data-premium-lock]")
-	if got := text(page, "[data-premium-lock] p"); got != lockCopy {
-		t.Fatalf("lock copy on %s: got %q", path, got)
-	}
+	assert.Equal(t, lockCopy, text(page, "[data-premium-lock] p"), "lock copy on %s", path)
 	requireHas(t, page, "[data-premium-lock] "+supportLink())
 }
 
@@ -59,9 +61,7 @@ func TestPremiumLock_PremiumServerOpens(t *testing.T) {
 
 	// then
 	requireNotHas(t, page, "[data-premium-lock]")
-	if !strings.Contains(text(page, "main"), "Hero Cave") {
-		t.Fatalf("expected the seeded respawns")
-	}
+	assert.Contains(t, text(page, "main"), "Hero Cave", "the seeded respawns are listed")
 }
 
 func TestPremiumLock_DashboardCardOffersTheUnlock(t *testing.T) {
@@ -72,10 +72,7 @@ func TestPremiumLock_DashboardCardOffersTheUnlock(t *testing.T) {
 	loginAs(t, page, memberID)
 
 	// then
-	card := text(page, `[data-guild-card="`+lockedGuildID+`"]`)
-	if !strings.Contains(card, "Unlock with Premium") {
-		t.Fatalf("expected the locked server's card to offer the unlock, got %q", card)
-	}
+	assert.Contains(t, text(page, `[data-guild-card="`+lockedGuildID+`"]`), "Unlock with Premium")
 }
 
 func TestPremiumLock_InPolish(t *testing.T) {
@@ -89,7 +86,5 @@ func TestPremiumLock_InPolish(t *testing.T) {
 	clickAndWaitReload(t, page, page.MustElement(`aside [data-language-option="pl"]`))
 
 	// then
-	if got := text(page, "[data-premium-lock] p"); got != "Odblokuj tę funkcję w Premium. Dołącz do Discorda i wskakuj na pokład!" {
-		t.Fatalf("Polish lock copy: got %q", got)
-	}
+	assert.Equal(t, "Odblokuj tę funkcję w Premium. Dołącz do Discorda i wskakuj na pokład!", text(page, "[data-premium-lock] p"))
 }

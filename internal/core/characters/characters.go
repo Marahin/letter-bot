@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -33,7 +34,8 @@ func New(characters ports.CharacterAPI, worlds ports.WorldNameRepository, exp po
 	return &Service{characters: characters, worlds: worlds, experience: exp, stats: st, log: log}
 }
 
-// Profile returns ErrNotFound only when neither TibiaData nor the guild knows the character.
+// Profile returns ErrNotFound when the guild does not know the character, before asking TibiaData:
+// the page is public, and must not relay lookups of any name.
 func (s *Service) Profile(ctx context.Context, guildID, name string, rng stats.Range) (*stats.CharacterProfile, error) {
 	name = strings.TrimSpace(name)
 	key := experience.CharacterKey(name)
@@ -41,7 +43,6 @@ func (s *Service) Profile(ctx context.Context, guildID, name string, rng stats.R
 		return nil, ports.ErrNotFound
 	}
 	p := &stats.CharacterProfile{Key: key, Name: name, Range: rng}
-	s.loadCharacter(ctx, p)
 
 	gw, err := s.worlds.SelectGuildWorld(ctx, guildID)
 	switch {
@@ -71,10 +72,37 @@ func (s *Service) Profile(ctx context.Context, guildID, name string, rng stats.R
 	p.Totals = corestats.Sum(daily)
 	p.Daily = corestats.FillDaily(daily, rng.Days)
 
-	if p.Source == stats.ProfileNotFound && p.Totals.Reservations == 0 && len(p.History) == 0 {
+	known, err := s.knownInGuild(ctx, guildID, p)
+	if err != nil {
+		return nil, err
+	}
+	if !known {
 		return nil, ports.ErrNotFound
 	}
+	s.loadCharacter(ctx, p)
 	return p, nil
+}
+
+// knownInGuild also looks outside the range, so a member who picks an empty range still gets the page.
+func (s *Service) knownInGuild(ctx context.Context, guildID string, p *stats.CharacterProfile) (bool, error) {
+	if p.Totals.Reservations > 0 || len(p.History) > 0 {
+		return true, nil
+	}
+	found, err := s.stats.CharacterReservations(ctx, allTime(guildID, p.Key), 1)
+	if err != nil {
+		return false, err
+	}
+	return len(found) > 0, nil
+}
+
+// allTime filters every reservation of the character in the guild.
+func allTime(guildID, key string) stats.Filter {
+	return stats.Filter{
+		GuildID:      guildID,
+		From:         time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+		To:           time.Date(9999, 1, 1, 0, 0, 0, 0, time.UTC),
+		CharacterKey: key,
+	}
 }
 
 // loadCharacter degrades to no profile when TibiaData fails: the statistics still show.

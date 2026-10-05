@@ -15,6 +15,13 @@ func App() fx.Option {
 		fxmodule.Logger,
 		fxmodule.Config,
 		fxmodule.Database,
+		wiring(),
+	)
+}
+
+// wiring holds every provider and invoke that needs no environment.
+func wiring() fx.Option {
+	return fx.Options(
 		fxmodule.Repositories,
 		fx.Invoke(run),
 	)

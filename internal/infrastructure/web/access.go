@@ -89,8 +89,9 @@ func (d *Deps) RequireAdmin(next http.HandlerFunc) http.HandlerFunc {
 }
 
 // requireGuildAccess resolves the {id} server once. A server the user may not
-// view answers 404 (not 403), so nobody can probe which servers exist. It assumes
-// RequireAuth ran first.
+// view answers 404, not 403. That does not hide which servers exist: PublicView
+// answers a stored server (its page or the lock) apart from an unknown id (404).
+// It assumes RequireAuth ran first.
 func (d *Deps) requireGuildAccess(tier access.Tier, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := d.SessionUserID(r.Context())
@@ -104,7 +105,7 @@ func (d *Deps) requireGuildAccess(tier access.Tier, next http.HandlerFunc) http.
 			d.accessError(w, r, err)
 			return
 		}
-		d.enterGuild(w, r, *current, tier, next)
+		d.enterGuild(w, r, *current, d.member(*current, tier, next))
 	}
 }
 
@@ -120,7 +121,7 @@ func (d *Deps) PublicView(next http.HandlerFunc) http.HandlerFunc {
 			current, err := d.Access.Access(r.Context(), user.DiscordUserID, guildID)
 			switch {
 			case err == nil && current.Allows(access.TierView):
-				d.enterGuild(w, r, *current, access.TierView, next)
+				d.enterGuild(w, r, *current, d.member(*current, access.TierView, next))
 				return
 			case err != nil && !errors.Is(err, ports.ErrNotFound):
 				d.Log.Warnw("public view: resolve member access", "path", r.URL.Path, "error", err)
@@ -135,7 +136,7 @@ func (d *Deps) PublicView(next http.HandlerFunc) http.HandlerFunc {
 			d.ServerError(w, r, "resolve public access", err)
 			return
 		}
-		d.enterGuild(w, r, *current, tierPublic, next)
+		d.enterGuild(w, r, *current, next)
 	}
 }
 
@@ -160,27 +161,31 @@ func (d *Deps) withOptionalUser(r *http.Request) *http.Request {
 	return r.WithContext(context.WithValue(r.Context(), ctxUser, user))
 }
 
-// tierPublic asks for no rank: the public pages admit anyone who reached them.
-const tierPublic access.Tier = 0
-
 // enterGuild is the one gate every server page passes. The premium lock comes
-// before the rank on purpose: a server without premium shows the same page to
-// everyone, so its members are not told which pages their rank would open.
-// Site admins pass the lock.
-func (d *Deps) enterGuild(w http.ResponseWriter, r *http.Request, current access.GuildAccess, tier access.Tier, next http.HandlerFunc) {
+// before the rank (checked by member, inside next) on purpose: a server without
+// premium shows the same page to everyone, so its members are not told which
+// pages their rank would open. Site admins pass the lock.
+func (d *Deps) enterGuild(w http.ResponseWriter, r *http.Request, current access.GuildAccess, next http.HandlerFunc) {
 	if !current.Config.IsPremium() && !d.isSiteAdmin(r.Context()) {
 		d.premiumRequired(w, r, current)
 		return
 	}
-	if tier != tierPublic && !current.Allows(tier) {
-		d.Forbidden(w, r)
-		return
-	}
-	// A visitor of a public page is not a member: the server must not become their default.
-	if current.Caps.View {
-		d.rememberGuild(r.Context(), current.Config.GuildID)
-	}
 	next(w, r.WithContext(context.WithValue(r.Context(), ctxCurrentAccess, current)))
+}
+
+// member admits a member whose rank allows tier, and makes the server their
+// default. A visitor of a public page skips it: the server is not theirs.
+func (d *Deps) member(current access.GuildAccess, tier access.Tier, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !current.Allows(tier) {
+			d.Forbidden(w, r)
+			return
+		}
+		if current.Caps.View {
+			d.rememberGuild(r.Context(), current.Config.GuildID)
+		}
+		next(w, r)
+	}
 }
 
 // rememberGuild makes the routed server the user's default, so the next visit opens

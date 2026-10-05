@@ -5,7 +5,11 @@
 // compiles only under the devauth build tag; a production build has none of it.
 package devauth
 
-import "slices"
+import (
+	"net/url"
+	"slices"
+	"strings"
+)
 
 const (
 	// DevCodePrefix marks an OAuth code that /dev/login mints for a mock user.
@@ -51,4 +55,17 @@ func ByID(id string) (MockUser, bool) {
 
 func (u MockUser) memberOf(guildID string) bool {
 	return slices.Contains(u.Guilds, guildID)
+}
+
+// IsDevBaseURL reports whether the origin is a local development host.
+func IsDevBaseURL(baseURL string) bool {
+	u, err := url.Parse(strings.ToLower(baseURL))
+	if err != nil {
+		return false
+	}
+	switch u.Hostname() {
+	case "localhost", "127.0.0.1", "::1":
+		return true
+	}
+	return false
 }

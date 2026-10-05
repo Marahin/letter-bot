@@ -288,6 +288,85 @@ These items of the request were unclear or had a cost. Each has a decision.
     - The copy is English, in the bot formatter (decision 33). Only the
       overbook button adds a metric (`IncOverbook`). No migration.
 
+## Public stats, premium lock and e2e
+
+The owner asked for Discord links as in scxmanager, a premium lock on every
+server page, public stats, `/dev/login` and an e2e suite.
+
+51. **The community invite comes from `DISCORD_INVITE_LINK`**, default
+    `https://discord.gg/b7Qq8V2XFR`. Only an `http(s)` value is used; empty
+    hides every support link.
+52. **The support links are where scxmanager has them:** both footers, the
+    sidebar "Get help", the "Help us improve this translation" note, the landing
+    page CTA, the 404 and 5xx pages, and the premium lock. A 403 has none. The top
+    bar has none.
+53. **"Server-related view" means `/servers/{id}` and every route under it**,
+    Settings and Channels included. They are all locked on a server without
+    premium. This replaces decision 24's exception: one gate (`enterGuild`) for
+    every server page, and a test fails on a server route that is not locked.
+54. **Not locked:** the landing page, the Loot Calculator, the dashboard, sign-in,
+    the language switch and `/admin/*`. The dashboard card of a locked server says
+    "Unlock with Premium" and opens the lock page.
+55. **Site admins pass the lock**, as before.
+56. **The lock comes before the rank check.** Everyone on a locked server sees
+    the same page; it does not tell which pages a rank would open.
+57. **The lock page uses the exact copy** "Unlock the feature with Premium. Join
+    the Discord and get on board!". It names no server and no feature. Its button
+    opens the Discord; the second button goes back to the dashboard, or home when
+    signed out. The admin's Settings button and the Settings premium notice are
+    removed.
+58. **Public pages:** the Stats overview, the three tables with the CSV export,
+    the respawn and player pages, and the character page. The respawn's
+    reservations and all changes still need sign-in and a rank.
+59. **Public stats need premium.** A server without premium shows the lock to
+    visitors too.
+60. **The URLs do not change.** A member and a visitor share each Stats URL.
+61. **Visitors see what members see** on the Stats pages; the data was already
+    shown to every member. Only a stored server with the bot present is visible.
+62. **A failed member lookup gives the public view**, not an error: the page
+    needs no sign-in. A session whose user is gone is destroyed, and the visitor
+    goes on signed out.
+63. **A signed-in visitor who is not a member keeps their own sidebar** and gets
+    the server in a "Public stats" bar above the page, with the four Stats tabs.
+    A signed-out visitor gets the top bar and a "Log in with Discord" strip that
+    comes back to the page. The server does not become the visitor's default.
+64. **`/dev/login` needs three things:** the `devauth` build tag,
+    `WEB_DEV_AUTH=true` and a `localhost`/`127.0.0.1`/`::1` base URL. Otherwise
+    it answers 404. Production images are built without the tag.
+65. **A dev login goes through `Auth.Complete`** with a `dev-login:<id>` code. A
+    mock OAuth port (devauth build only) stores the mock user and answers its
+    servers and roles from the database; real users fall through to Discord.
+    The web wires the mock port only under the same conditions as decision 64,
+    so `/auth/callback` with a `dev-login:` code fails everywhere else.
+66. **The `/dev/login` page is plain English HTML**, as in scxmanager, not a
+    templ page with i18n keys.
+67. **The seed is an fx app (`seedapp`) behind the devauth tag**, so
+    `cmd/seed/main.go` stays one line. Without the tag `cmd/seed` has no files
+    to build. The seed is idempotent; it writes reservations only once.
+68. **The Docker e2e run uses its own compose project (`letter_bot_e2e`), its
+    own volume and other host ports (18080, 13005)**, so it runs beside the dev
+    stack and `down -v` removes only its own data. The web and the seed run the
+    code built into the image, not a source mount.
+69. **CI runs the e2e suite on GitHub Actions** (`scripts/e2e-ci.sh`) with a
+    Postgres service and the runner's Chrome, before the image build.
+70. **Chrome runs with `--headless=old`**, as in scxmanager: the new headless
+    mode hangs on page load in some sandboxes.
+71. **The public tab row wraps; it does not scroll.** A scroll container showed a
+    stray scrollbar under the underline of the active tab.
+72. **The new support links keep scxmanager's `zone-400` text**, as decision 43
+    allows for pages other than the Loot Calculator. They open in a new tab,
+    with no extra "new tab" text, as in scxmanager.
+73. **The character page reads TibiaData only for a character the server knows**:
+    one with reservations in the server (in any range) or experience snapshots
+    in the selected range. Any other name answers 404 before TibiaData is
+    asked, so the public page cannot be used to query TibiaData for any name.
+    Follow-up (open): rate limiting of the public pages.
+74. **The TibiaData character cache holds at most 1000 entries.** Expired entries
+    go first, then the entry that expires soonest.
+75. **The CSV export has at most 5000 rows, for everyone.** The HTML tables keep
+    500. A member does not need more for a spreadsheet, and one limit is simpler
+    than one for visitors and one for members.
+
 ## Parity with scxmanager
 
 The owner asked for the same stack and code style as scxmanager (review of
@@ -358,70 +437,3 @@ Follow-ups: the rename to `internal/infra`. (The go-rod e2e suite is done.)
    now overbook without `Postman` (decision 23). Confirm this is wanted.
 6. **Polish copy.** The Polish catalog needs a review by a native speaker.
 7. **Django admin.** When may `spot-assistant-web` (Django) be removed?
-
-## Public stats, premium lock and e2e
-
-The owner asked for Discord links as in scxmanager, a premium lock on every
-server page, public stats, `/dev/login` and an e2e suite.
-
-1. **The community invite comes from `DISCORD_INVITE_LINK`**, default
-   `https://discord.gg/b7Qq8V2XFR`. Only an `http(s)` value is used; empty
-   hides every support link.
-2. **The support links are where scxmanager has them:** both footers, the
-   sidebar "Get help", the "Help us improve this translation" note, the landing
-   page CTA, the 404 and 5xx pages, and the premium lock. A 403 has none. The top
-   bar has none.
-3. **"Server-related view" means `/servers/{id}` and every route under it**,
-   Settings and Channels included. They are all locked on a server without
-   premium. This replaces decision 24's exception: one gate (`enterGuild`) for
-   every server page, and a test fails on a server route that is not locked.
-4. **Not locked:** the landing page, the Loot Calculator, the dashboard, sign-in,
-   the language switch and `/admin/*`. The dashboard card of a locked server says
-   "Unlock with Premium" and opens the lock page.
-5. **Site admins pass the lock**, as before.
-6. **The lock comes before the rank check.** Everyone on a locked server sees
-   the same page; it does not tell which pages a rank would open.
-7. **The lock page uses the exact copy** "Unlock the feature with Premium. Join
-   the Discord and get on board!". It names no server and no feature. Its button
-   opens the Discord; the second button goes back to the dashboard, or home when
-   signed out. The admin's Settings button and the Settings premium notice are
-   removed.
-8. **Public pages:** the Stats overview, the three tables with the CSV export,
-   the respawn and player pages, and the character page. The respawn's
-   reservations and all changes still need sign-in and a rank.
-9. **Public stats need premium.** A server without premium shows the lock to
-   visitors too.
-10. **The URLs do not change.** A member and a visitor share each Stats URL.
-11. **Visitors see what members see** on the Stats pages; the data was already
-    shown to every member. Only a stored server with the bot present is visible.
-12. **A failed member lookup gives the public view**, not an error: the page
-    needs no sign-in. A session whose user is gone is destroyed, and the visitor
-    goes on signed out.
-13. **A signed-in visitor who is not a member keeps their own sidebar** and gets
-    the server in a "Public stats" bar above the page, with the four Stats tabs.
-    A signed-out visitor gets the top bar and a "Log in with Discord" strip that
-    comes back to the page. The server does not become the visitor's default.
-14. **`/dev/login` needs three things:** the `devauth` build tag,
-    `WEB_DEV_AUTH=true` and a `localhost`/`127.0.0.1`/`::1` base URL. Otherwise
-    it answers 404. Production images are built without the tag.
-15. **A dev login goes through `Auth.Complete`** with a `dev-login:<id>` code. A
-    mock OAuth port (devauth build only) stores the mock user and answers its
-    servers and roles from the database; real users fall through to Discord.
-16. **The `/dev/login` page is plain English HTML**, as in scxmanager, not a
-    templ page with i18n keys.
-17. **The seed is an fx app (`seedapp`) behind the devauth tag**, so
-    `cmd/seed/main.go` stays one line. A build without the tag refuses to run.
-    The seed is idempotent; it writes reservations only once.
-18. **The Docker e2e run uses its own compose project (`letter_bot_e2e`), its
-    own volume and other host ports (18080, 13005)**, so it runs beside the dev
-    stack and `down -v` removes only its own data. The web and the seed run the
-    code built into the image, not a source mount.
-19. **CI runs the e2e suite on GitHub Actions** (`scripts/e2e-ci.sh`) with a
-    Postgres service and the runner's Chrome, before the image build.
-20. **Chrome runs with `--headless=old`**, as in scxmanager: the new headless
-    mode hangs on page load in some sandboxes.
-21. **The public tab row wraps; it does not scroll.** A scroll container showed a
-    stray scrollbar under the underline of the active tab.
-22. **The new support links keep scxmanager's `zone-400` text**, as decision 43
-    allows for pages other than the Loot Calculator. They open in a new tab,
-    with no extra "new tab" text, as in scxmanager.

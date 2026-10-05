@@ -96,7 +96,7 @@ func TestProfile_TibiaDataFailureDegradesToStats(t *testing.T) {
 	f := newFixture(t)
 	f.chars.EXPECT().GetCharacter(mock.Anything, "Quiet Nyx").Return(nil, ports.ErrUpstreamUnavailable)
 	f.world.EXPECT().SelectGuildWorld(mock.Anything, "g").Return(nil, ports.ErrNotFound)
-	f.expectStats(nil, stats.Page[stats.SpotRow]{})
+	f.expectStats([]stats.Day{{Day: corestats.Midnight(now), Totals: stats.Totals{Reservations: 1}}}, stats.Page[stats.SpotRow]{})
 
 	// when
 	p, err := f.svc.Profile(context.Background(), "g", "Quiet Nyx", rng)
@@ -109,18 +109,66 @@ func TestProfile_TibiaDataFailureDegradesToStats(t *testing.T) {
 	assert.Empty(t, p.History)
 }
 
-func TestProfile_UnknownEverywhereIsNotFound(t *testing.T) {
-	// given
+func TestProfile_UnknownToTheGuildIsNotFoundWithoutAskingTibiaData(t *testing.T) {
+	// given no GetCharacter expectation: the mock fails the test on a call
 	f := newFixture(t)
-	f.chars.EXPECT().GetCharacter(mock.Anything, "Quiet Nyx").Return(nil, ports.ErrCharacterNotFound)
-	f.world.EXPECT().SelectGuildWorld(mock.Anything, "g").Return(nil, ports.ErrNotFound)
+	f.world.EXPECT().SelectGuildWorld(mock.Anything, "g").Return(&guildsworld.GuildsWorld{WorldName: "Celesta"}, nil)
+	f.exp.EXPECT().SnapshotHistory(mock.Anything, "Celesta", "quiet nyx", rng.From, rng.To).Return(nil, nil)
 	f.expectStats(nil, stats.Page[stats.SpotRow]{})
+	f.stats.EXPECT().CharacterReservations(mock.Anything, allTime("g", "quiet nyx"), 1).Return(nil, nil)
 
 	// when
 	_, err := f.svc.Profile(context.Background(), "g", "Quiet Nyx", rng)
 
 	// then
 	assert.ErrorIs(t, err, ports.ErrNotFound)
+}
+
+func TestProfile_KnownOnlyOutsideTheRangeStillShows(t *testing.T) {
+	// given
+	f := newFixture(t)
+	f.world.EXPECT().SelectGuildWorld(mock.Anything, "g").Return(nil, ports.ErrNotFound)
+	f.expectStats(nil, stats.Page[stats.SpotRow]{})
+	f.stats.EXPECT().CharacterReservations(mock.Anything, allTime("g", "quiet nyx"), 1).Return([]stats.CharacterReservation{{ID: 7}}, nil)
+	f.chars.EXPECT().GetCharacter(mock.Anything, "Quiet Nyx").Return(&character.Character{Name: "Quiet Nyx"}, nil)
+
+	// when
+	p, err := f.svc.Profile(context.Background(), "g", "Quiet Nyx", rng)
+
+	// then
+	require.NoError(t, err)
+	assert.Equal(t, stats.ProfileFound, p.Source)
+	assert.Zero(t, p.Totals.Reservations)
+}
+
+func TestProfile_KnownByExperienceAlone(t *testing.T) {
+	// given
+	f := newFixture(t)
+	f.world.EXPECT().SelectGuildWorld(mock.Anything, "g").Return(&guildsworld.GuildsWorld{WorldName: "Celesta"}, nil)
+	f.exp.EXPECT().SnapshotHistory(mock.Anything, "Celesta", "quiet nyx", rng.From, rng.To).Return([]experience.Snapshot{{Level: 1, ObservedAt: now}}, nil)
+	f.expectStats(nil, stats.Page[stats.SpotRow]{})
+	f.chars.EXPECT().GetCharacter(mock.Anything, "Quiet Nyx").Return(nil, ports.ErrCharacterNotFound)
+
+	// when
+	p, err := f.svc.Profile(context.Background(), "g", "Quiet Nyx", rng)
+
+	// then
+	require.NoError(t, err)
+	assert.Len(t, p.History, 1)
+}
+
+func TestProfile_GuildLookupErrorFails(t *testing.T) {
+	// given
+	f := newFixture(t)
+	f.world.EXPECT().SelectGuildWorld(mock.Anything, "g").Return(nil, ports.ErrNotFound)
+	f.expectStats(nil, stats.Page[stats.SpotRow]{})
+	f.stats.EXPECT().CharacterReservations(mock.Anything, allTime("g", "quiet nyx"), 1).Return(nil, errBoom)
+
+	// when
+	_, err := f.svc.Profile(context.Background(), "g", "Quiet Nyx", rng)
+
+	// then
+	assert.ErrorIs(t, err, errBoom)
 }
 
 func TestProfile_DeletedCharacterWithReservationsStillShows(t *testing.T) {
@@ -161,7 +209,6 @@ func TestProfile_RepositoryErrors(t *testing.T) {
 				}
 				return nil
 			}
-			f.chars.EXPECT().GetCharacter(mock.Anything, "Quiet Nyx").Return(&character.Character{}, nil)
 			if i == 0 {
 				f.world.EXPECT().SelectGuildWorld(mock.Anything, "g").Return(nil, errBoom)
 			} else {

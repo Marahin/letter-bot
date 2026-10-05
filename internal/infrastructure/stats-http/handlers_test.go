@@ -228,10 +228,10 @@ func TestHandleSpots_SortsOnTheServer(t *testing.T) {
 	assert.Contains(t, body, "format=csv")
 }
 
-func TestHandleSpots_CSVExportsEveryRowWithEmptyNoDataCells(t *testing.T) {
+func TestHandleSpots_CSVExportsUpToTheCapWithEmptyNoDataCells(t *testing.T) {
 	// given
 	h, m, cookie := signedIn(t, true)
-	m.Stats.EXPECT().Spots(mock.Anything, guildID, mock.Anything, mock.Anything, 0).Return(spotRowsFixture(), nil)
+	m.Stats.EXPECT().Spots(mock.Anything, guildID, mock.Anything, mock.Anything, maxCSVRows).Return(spotRowsFixture(), nil)
 
 	// when
 	rec := webtest.Serve(h, webtest.Get("/servers/g1/stats/spots?format=csv&days=2026-09-01,2026-09-02", cookie))
@@ -702,7 +702,7 @@ func TestPublicStats_RespawnAndPlayerPages(t *testing.T) {
 func TestPublicStats_CSVExport(t *testing.T) {
 	// given
 	h, _, m := anonymous(t, true)
-	m.Stats.EXPECT().Spots(mock.Anything, guildID, mock.Anything, mock.Anything, 0).Return(spotRowsFixture(), nil)
+	m.Stats.EXPECT().Spots(mock.Anything, guildID, mock.Anything, mock.Anything, maxCSVRows).Return(spotRowsFixture(), nil)
 
 	// when
 	rec := webtest.Serve(h, webtest.Get("/servers/g1/stats/spots?format=csv", nil))

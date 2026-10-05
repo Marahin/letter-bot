@@ -168,6 +168,9 @@ export), `/stats/spots/{spot}`, `/stats/players/{user}` and
   (`/login?to=`). A signed-in visitor who is not a member keeps their own sidebar.
   When Discord does not answer the member lookup, the visitor gets the public view.
 - Only a stored server with the bot present is visible; any other id answers 404.
+- The character page answers 404 for a character the server does not know (no
+  reservation in the server, no experience in the range), without asking
+  TibiaData.
   A server without premium shows the premium lock here too.
 - The link from a respawn page to its reservations shows only to members: the
   reservations need sign-in.
@@ -197,7 +200,7 @@ export), `/stats/spots/{spot}`, `/stats/players/{user}` and
 - **Tables** sort on the server (`?sort=name|reservations|hours|exp|exp_h&dir=asc|desc`);
   a row without experience data sorts last in both directions. Sorting and the
   row cap run in SQL: a table shows at most 500 rows (a detail page table 25);
-  `?format=csv` exports every row (an empty cell means no data; a name that
+  `?format=csv` exports up to 5000 rows (an empty cell means no data; a name that
   starts with `= + - @`, a tab or a carriage return gets a leading `'` so a
   spreadsheet does not run it as a formula).
 - **Leaderboards** on the overview: the 10 players with the most booked hours,
@@ -529,8 +532,8 @@ A server that added the bot before keeps its old permissions. Settings has a
 
 - The `devauth` build tag adds `/dev/login`: a list of mock users that sign in
   without Discord (`internal/infrastructure/devauth`). The binary must also run
-  with `WEB_DEV_AUTH=true` and a `localhost` or `127.0.0.1` base URL; otherwise
-  the routes answer 404. A build without the tag has no such code.
+  with `WEB_DEV_AUTH=true` and a `localhost`, `127.0.0.1` or `::1` base URL;
+  otherwise the routes answer 404. A build without the tag has no such code.
 - `make run-web-dev` runs the web with the tag and the flag. `make seed`
   (`cmd/seed`, also tagged) writes two servers: `700000000000000900` "Letter E2E"
   (premium, five respawns, 30 days of reservations with experience) and

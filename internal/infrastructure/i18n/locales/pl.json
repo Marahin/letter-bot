@@ -465,7 +465,7 @@
     "stats.table.player": "Gracz",
     "stats.table.reservations": "Rezerwacje",
     "stats.table.spot": "Resp",
-    "stats.table.truncated": "Pokazuje %s z %s wierszy. Wyeksportuj CSV, aby zobaczyć wszystkie.",
+    "stats.table.truncated": "Pokazuje %s z %s wierszy. Wyeksportuj CSV, aby zobaczyć do 5000 wierszy.",
     "time.relative.days_ago": {
       "one": "%d dzień temu",
       "few": "%d dni temu",

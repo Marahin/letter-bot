@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// csv writes every row of a stats table. Figures are plain (no grouping, dot decimals) so a
+// csv writes the loaded rows of a stats table. Figures are plain (no grouping, dot decimals) so a
 // spreadsheet reads them; a figure without experience data is an empty cell, not 0.
 func (h *Handlers) csv(w http.ResponseWriter, r *http.Request, kind tableKind, p pageView, rows []tableRow) {
 	ctx := r.Context()

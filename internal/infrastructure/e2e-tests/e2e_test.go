@@ -20,6 +20,7 @@ import (
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/launcher/flags"
 	"github.com/go-rod/rod/lib/proto"
+	"github.com/stretchr/testify/require"
 )
 
 // The mock users and servers of internal/infrastructure/devauth. Copied, not
@@ -104,12 +105,12 @@ func checkSeededGuild() error {
 		return err
 	}
 	client := &http.Client{Timeout: 10 * time.Second, Jar: jar}
-	resp, err := client.Get(url("/dev/login/" + memberID))
+	resp, err := client.Get(abs("/dev/login/" + memberID))
 	if err != nil {
 		return fmt.Errorf("dev login as the seeded member: %w", err)
 	}
 	_ = resp.Body.Close()
-	resp, err = client.Get(url("/servers/" + guildID + "/reservations"))
+	resp, err = client.Get(abs("/servers/" + guildID + "/reservations"))
 	if err != nil {
 		return fmt.Errorf("open the seeded server: %w", err)
 	}
@@ -121,7 +122,7 @@ func checkSeededGuild() error {
 	return nil
 }
 
-func url(path string) string {
+func abs(path string) string {
 	return baseURL + path
 }
 
@@ -129,50 +130,42 @@ func serverPath(id, suffix string) string {
 	return "/servers/" + id + suffix
 }
 
-// newPage is a fresh incognito page, closed at the end of the test.
+// newPage is a fresh incognito page; its browser context closes at the end of the test.
 func newPage(t *testing.T) *rod.Page {
 	t.Helper()
 	inc, err := browser.Incognito()
-	if err != nil {
-		t.Fatalf("incognito browser context: %v", err)
-	}
+	require.NoError(t, err, "incognito browser context")
+	t.Cleanup(func() { _ = inc.Close() })
 	page, err := inc.Page(proto.TargetCreateTarget{URL: "about:blank"})
-	if err != nil {
-		t.Fatalf("open page: %v", err)
-	}
+	require.NoError(t, err, "open page")
 	// /login redirects to Discord, which the sandbox cannot reach: block it, so the
 	// navigation stops at once and a test can assert on the blocked URL.
 	page.MustSetBlockedURLs("*discord.com*")
-	t.Cleanup(func() { _ = page.Close() })
 	return page
 }
 
 func waitReady(t *testing.T, page *rod.Page) {
 	t.Helper()
-	if err := rod.Try(func() {
+	err := rod.Try(func() {
 		page.Timeout(actionTimeout).MustWait(`() => document.readyState === 'complete'`)
-	}); err != nil {
-		t.Fatalf("page did not reach readyState=complete within %s: %v", actionTimeout, err)
-	}
+	})
+	require.NoError(t, err, "page did not reach readyState=complete within %s", actionTimeout)
 }
 
 // open navigates to path and waits for the page.
 func open(t *testing.T, page *rod.Page, path string) {
 	t.Helper()
-	if err := page.Navigate(url(path)); err != nil {
-		t.Fatalf("navigate to %s: %v", path, err)
-	}
+	require.NoError(t, page.Navigate(abs(path)), "navigate to %s", path)
 	waitReady(t, page)
 }
 
 // waitURLContains waits for the URL; substr must not match the URL being left.
 func waitURLContains(t *testing.T, page *rod.Page, substr string) {
 	t.Helper()
-	if err := rod.Try(func() {
+	err := rod.Try(func() {
 		page.Timeout(actionTimeout).MustWait(`(s) => location.href.includes(s)`, substr)
-	}); err != nil {
-		t.Fatalf("page URL did not contain %q within %s (was %q): %v", substr, actionTimeout, page.MustInfo().URL, err)
-	}
+	})
+	require.NoError(t, err, "page URL did not contain %q within %s (was %q)", substr, actionTimeout, page.MustInfo().URL)
 }
 
 // clickAndWaitReload clicks el and waits for a new document. A form that
@@ -182,11 +175,10 @@ func clickAndWaitReload(t *testing.T, page *rod.Page, el *rod.Element) {
 	t.Helper()
 	page.MustEval(`() => { window.__e2eDocStamp = true }`)
 	el.MustClick()
-	if err := rod.Try(func() {
+	err := rod.Try(func() {
 		page.Timeout(actionTimeout).MustWait(`() => window.__e2eDocStamp === undefined && document.readyState === 'complete'`)
-	}); err != nil {
-		t.Fatalf("the click did not load a new document within %s: %v", actionTimeout, err)
-	}
+	})
+	require.NoError(t, err, "the click did not load a new document within %s", actionTimeout)
 }
 
 func loginAs(t *testing.T, page *rod.Page, userID string) {
@@ -209,14 +201,10 @@ func text(page *rod.Page, selector string) string {
 
 func requireHas(t *testing.T, page *rod.Page, selector string) {
 	t.Helper()
-	if !has(page, selector) {
-		t.Fatalf("expected %s on %s", selector, currentPath(page))
-	}
+	require.True(t, has(page, selector), "expected %s on %s", selector, currentPath(page))
 }
 
 func requireNotHas(t *testing.T, page *rod.Page, selector string) {
 	t.Helper()
-	if has(page, selector) {
-		t.Fatalf("expected no %s on %s", selector, currentPath(page))
-	}
+	require.False(t, has(page, selector), "expected no %s on %s", selector, currentPath(page))
 }

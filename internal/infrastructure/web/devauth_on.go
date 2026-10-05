@@ -13,7 +13,8 @@ import (
 
 // registerDevAuth wires the dev-only mock-user sign-in, so a developer and the
 // e2e suite reach the signed-in pages without Discord. Besides the build tag,
-// each request needs WEB_DEV_AUTH and a localhost base URL.
+// each request needs WEB_DEV_AUTH and a localhost base URL; webapp wires the
+// mock OAuth port, which accepts the dev codes, only under the same conditions.
 func registerDevAuth(s *Server, router *Router) {
 	router.Get("/dev/login", s.handleDevLoginList)
 	router.Get("/dev/login/{userID}", s.handleDevLogin)
@@ -71,22 +72,9 @@ func (s *Server) handleDevLogin(w http.ResponseWriter, r *http.Request) {
 // devAuthAllowed answers 404 and false unless WEB_DEV_AUTH is on and the base URL
 // is local, so a tagged binary pointed at a real origin still refuses.
 func (s *Server) devAuthAllowed(w http.ResponseWriter) bool {
-	if !s.cfg.DevAuth || !isDevBaseURL(s.cfg.BaseURL) {
+	if !s.cfg.DevAuth || !devauth.IsDevBaseURL(s.cfg.BaseURL) {
 		http.Error(w, "not found", http.StatusNotFound)
 		return false
 	}
 	return true
-}
-
-// isDevBaseURL reports whether the origin is a local development host.
-func isDevBaseURL(baseURL string) bool {
-	u, err := url.Parse(strings.ToLower(baseURL))
-	if err != nil {
-		return false
-	}
-	switch u.Hostname() {
-	case "localhost", "127.0.0.1", "::1":
-		return true
-	}
-	return false
 }

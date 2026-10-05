@@ -17,8 +17,11 @@ import (
 	"spot-assistant/internal/ports"
 )
 
-// maxTableRows caps the HTML tables; the CSV export has every row.
-const maxTableRows = 500
+const (
+	maxTableRows = 500
+	// maxCSVRows bounds the cost of an export anyone may request, the public pages included.
+	maxCSVRows = 5000
+)
 
 type Handlers struct {
 	D   *web.Deps
@@ -73,7 +76,7 @@ func (h *Handlers) table(w http.ResponseWriter, r *http.Request, kind tableKind,
 	csv := q.Get("format") == "csv"
 	limit := maxTableRows
 	if csv {
-		limit = 0
+		limit = maxCSVRows
 	}
 	rows, total, err := load(r.Context(), p, sort, limit)
 	if err != nil {

@@ -455,7 +455,7 @@
     "stats.table.player": "Player",
     "stats.table.reservations": "Reservations",
     "stats.table.spot": "Respawn",
-    "stats.table.truncated": "Shows %s of %s rows. Export CSV to get all rows.",
+    "stats.table.truncated": "Shows %s of %s rows. Export CSV to get up to 5000 rows.",
     "time.relative.days_ago": {
       "one": "%d day ago",
       "other": "%d days ago"

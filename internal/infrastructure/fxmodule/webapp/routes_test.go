@@ -2,6 +2,7 @@ package webapp
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"regexp"
 	"strings"
@@ -22,14 +23,15 @@ const lockCopy = "Unlock the feature with Premium. Join the Discord and get on b
 
 var wildcard = regexp.MustCompile(`\{[^}]+\}`)
 
-func registerFeatures(r *web.Router, d *web.Deps) {
+func registerServerRoutes(r *web.Router, d *web.Deps) {
+	web.RegisterGuildRoot(r, d)
 	for _, register := range features {
 		register(r, d)
 	}
 }
 
-// serverRoutes are the registered feature routes under /servers/{id}, with their
-// paths filled in for server g1.
+// serverRoutes are the registered routes under /servers/{id}, the root included,
+// with their paths filled in for server g1.
 func serverRoutes(t *testing.T, d *web.Deps) map[*web.Route]string {
 	t.Helper()
 	out := map[*web.Route]string{}
@@ -40,7 +42,7 @@ func serverRoutes(t *testing.T, d *web.Deps) map[*web.Route]string {
 		p := strings.Replace(route.Pattern(), "{id}", "g1", 1)
 		out[route] = wildcard.ReplaceAllString(p, "1")
 	}
-	require.NotEmpty(t, out)
+	require.Contains(t, out, d.Routes.Lookup(http.MethodGet, "/servers/g1"), "the server root is covered")
 	return out
 }
 
@@ -54,16 +56,18 @@ func lockedServer() *access.GuildAccess {
 func TestFeatures_EveryServerRouteIsPremiumGated(t *testing.T) {
 	// given the owner of a server without premium
 	d, m := webtest.NewDeps(t)
-	h := webtest.Handler(d, registerFeatures)
+	h := webtest.Handler(d, registerServerRoutes)
 	cookie := webtest.SignIn(t, d, m, "owner", *lockedServer())
 	m.Access.EXPECT().Access(mock.Anything, "owner", "g1").Return(lockedServer(), nil)
 
 	for route, p := range serverRoutes(t, d) {
 		t.Run(route.Method()+" "+route.Pattern(), func(t *testing.T) {
 			// when
-			var rec = webtest.Serve(h, webtest.Get(p, cookie))
+			var rec *httptest.ResponseRecorder
 			if route.Method() == http.MethodPost {
 				rec = webtest.Serve(h, webtest.Post(p, url.Values{}, cookie))
+			} else {
+				rec = webtest.Serve(h, webtest.Get(p, cookie))
 			}
 
 			// then
@@ -76,7 +80,7 @@ func TestFeatures_EveryServerRouteIsPremiumGated(t *testing.T) {
 func TestFeatures_NoServerRouteOpensToAnonymousVisitorsOfALockedServer(t *testing.T) {
 	// given
 	d, m := webtest.NewDeps(t)
-	h := webtest.Handler(d, registerFeatures)
+	h := webtest.Handler(d, registerServerRoutes)
 	m.Access.EXPECT().Public(mock.Anything, "g1").Return(lockedServerForVisitors(), nil).Maybe()
 
 	for route, p := range serverRoutes(t, d) {

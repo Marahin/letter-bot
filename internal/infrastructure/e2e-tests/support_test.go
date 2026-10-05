@@ -2,7 +2,12 @@
 
 package e2e
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
 
 func supportLink() string {
 	return `a[data-support-link][href="` + supportInvite + `"]`
@@ -18,9 +23,9 @@ func TestSupportLink_InTheFooterForAnonymousVisitors(t *testing.T) {
 	// then
 	requireHas(t, page, "footer "+supportLink())
 	requireNotHas(t, page, "header "+supportLink())
-	if attr := page.MustElement("footer " + supportLink()).MustAttribute("target"); attr == nil || *attr != "_blank" {
-		t.Fatalf("the support link must open a new tab")
-	}
+	target := page.MustElement("footer " + supportLink()).MustAttribute("target")
+	require.NotNil(t, target, "the support link must open a new tab")
+	assert.Equal(t, "_blank", *target)
 }
 
 func TestSupportLink_InTheSidebarWhenSignedIn(t *testing.T) {

@@ -5,6 +5,8 @@ package e2e
 import (
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func loginCTA(path string) string {
@@ -36,9 +38,7 @@ func TestPublicStats_AnonymousRespawnAndPlayer(t *testing.T) {
 	clickAndWaitReload(t, page, page.MustElement("table tbody a"))
 
 	// then
-	if !strings.Contains(currentPath(page), "/stats/spots/") {
-		t.Fatalf("expected a respawn page, got %s", currentPath(page))
-	}
+	assert.Contains(t, currentPath(page), "/stats/spots/")
 	requireHas(t, page, "[data-public-stats]")
 	requireNotHas(t, page, "aside")
 	requireNotHas(t, page, `main a[href^="`+serverPath(guildID, "/spots/")+`"]`)
@@ -49,9 +49,7 @@ func TestPublicStats_AnonymousRespawnAndPlayer(t *testing.T) {
 	clickAndWaitReload(t, page, page.MustElement("table tbody a"))
 
 	// then
-	if !strings.Contains(currentPath(page), "/stats/players/") {
-		t.Fatalf("expected a player page, got %s", currentPath(page))
-	}
+	assert.Contains(t, currentPath(page), "/stats/players/")
 	requireHas(t, page, "[data-public-stats]")
 }
 
@@ -105,7 +103,28 @@ func TestPublicStats_UnknownServerIsNotFound(t *testing.T) {
 	open(t, page, serverPath("123", "/stats"))
 
 	// then
-	if !strings.Contains(text(page, "main"), "404") {
-		t.Fatalf("expected a 404 page")
-	}
+	assert.Contains(t, text(page, "main"), "404")
+}
+
+func TestPublicStats_CharacterPageOfAKnownCharacter(t *testing.T) {
+	// given
+	page := newPage(t)
+
+	// when
+	open(t, page, serverPath(guildID, "/characters/Paladin%20Gamma"))
+
+	// then
+	requireHas(t, page, "[data-public-stats]")
+	assert.Contains(t, text(page, "main"), "Paladin Gamma")
+}
+
+func TestPublicStats_CharacterPageOfAnUnknownCharacterIsNotFound(t *testing.T) {
+	// given
+	page := newPage(t)
+
+	// when
+	open(t, page, serverPath(guildID, "/characters/Nobody%20Here"))
+
+	// then
+	assert.Contains(t, text(page, "main"), "404")
 }

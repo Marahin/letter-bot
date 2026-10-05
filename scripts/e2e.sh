@@ -39,7 +39,7 @@ echo "==> ready after ${elapsed}s"
 
 echo "==> running the e2e suite"
 set +e
-go test -tags e2e -count=1 -timeout 10m ./internal/infrastructure/e2e-tests/...
+make e2e
 TEST_EXIT=$?
 set -e
 

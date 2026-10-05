@@ -3,6 +3,8 @@ package worldapi
 import (
 	"context"
 	"errors"
+	"maps"
+	"slices"
 	"testing"
 	"time"
 
@@ -115,4 +117,46 @@ func TestCachedCharacters_BoundsTheLookup(t *testing.T) {
 
 	// then
 	assert.NoError(t, err)
+}
+
+func TestCachedCharacters_DropsTheEntryThatExpiresFirstWhenFull(t *testing.T) {
+	// given a cache of two, filled a minute apart
+	c, inner, clock := newCached(t)
+	c.maxEntries = 2
+	for _, name := range []string{"Old", "Newer", "Newest"} {
+		inner.EXPECT().GetCharacter(mock.Anything, name).Return(&character.Character{Name: name}, nil).Once()
+	}
+	_, err := c.GetCharacter(context.Background(), "Old")
+	require.NoError(t, err)
+	*clock = clock.Add(time.Minute)
+	_, err = c.GetCharacter(context.Background(), "Newer")
+	require.NoError(t, err)
+
+	// when
+	_, err = c.GetCharacter(context.Background(), "Newest")
+
+	// then
+	require.NoError(t, err)
+	assert.Len(t, c.entries, 2)
+	assert.NotContains(t, c.entries, "old")
+	assert.Contains(t, c.entries, "newer")
+	assert.Contains(t, c.entries, "newest")
+}
+
+func TestCachedCharacters_DropsExpiredEntriesBeforeEvicting(t *testing.T) {
+	// given a full cache whose only entry has expired
+	c, inner, clock := newCached(t)
+	c.maxEntries = 1
+	inner.EXPECT().GetCharacter(mock.Anything, "Old").Return(&character.Character{Name: "Old"}, nil).Once()
+	inner.EXPECT().GetCharacter(mock.Anything, "New").Return(&character.Character{Name: "New"}, nil).Once()
+	_, err := c.GetCharacter(context.Background(), "Old")
+	require.NoError(t, err)
+	*clock = clock.Add(CharacterCacheTTL)
+
+	// when
+	_, err = c.GetCharacter(context.Background(), "New")
+
+	// then
+	require.NoError(t, err)
+	assert.Equal(t, []string{"new"}, slices.Collect(maps.Keys(c.entries)))
 }

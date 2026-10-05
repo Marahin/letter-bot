@@ -142,9 +142,15 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	d.Render(w, r, Dashboard(s.cfg.BaseURL, user, list, d.InviteURLGeneric(), nav))
 }
 
+// RegisterGuildRoot mounts /servers/{id}. It is exported for the route-gating
+// test of the composed app.
+func RegisterGuildRoot(router *Router, d *Deps) {
+	router.Get("/servers/{id}", d.RequireAuth(d.RequireView(handleGuildRoot)))
+}
+
 // handleGuildRoot sends /servers/{id} to Reservations. The guard shows the lock
 // page here for a server without premium.
-func (s *Server) handleGuildRoot(w http.ResponseWriter, r *http.Request) {
+func handleGuildRoot(w http.ResponseWriter, r *http.Request) {
 	current, _ := CurrentAccessFrom(r.Context())
 	http.Redirect(w, r, GuildPath(current.Config.GuildID, "/reservations"), http.StatusSeeOther)
 }

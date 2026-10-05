@@ -43,6 +43,7 @@ type StatsService interface {
 }
 
 type CharacterProfileService interface {
-	// Profile never fails because of TibiaData; it reports that in the profile Source.
+	// Profile never fails because of TibiaData; it reports that in the profile Source. A character
+	// the guild does not know is ErrNotFound, and TibiaData is not asked.
 	Profile(ctx context.Context, guildID, name string, rng stats.Range) (*stats.CharacterProfile, error)
 }

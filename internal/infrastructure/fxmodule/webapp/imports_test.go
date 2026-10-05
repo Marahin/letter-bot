@@ -21,3 +21,13 @@ func TestWebBinary_DoesNotImportTheBotAdapter(t *testing.T) {
 	assert.NotContains(t, deps, "spot-assistant/internal/infrastructure/bot/formatter")
 	assert.NotContains(t, deps, "spot-assistant/internal/infrastructure/fxmodule/botapp")
 }
+
+// /dev/login signs in without Discord, so a build without the devauth tag must not link it.
+func TestWebBinary_WithoutTagsDoesNotImportDevAuth(t *testing.T) {
+	// when
+	out, err := exec.Command("go", "list", "-e", "-deps", "spot-assistant/cmd/web").Output()
+
+	// then
+	require.NoError(t, err)
+	assert.NotContains(t, strings.Fields(string(out)), "spot-assistant/internal/infrastructure/devauth")
+}
