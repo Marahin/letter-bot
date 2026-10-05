@@ -389,15 +389,15 @@ func TestMine_SearchesTheActorsUpcomingReservations(t *testing.T) {
 	assert.Empty(t, anonymous.Items)
 }
 
-func TestSpot(t *testing.T) {
+func TestSpotByID(t *testing.T) {
 	// given
 	f := newFixture(t)
 	f.spots.On("SelectGuildSpotByID", ctx, guildID, int64(7)).Return(library(), nil)
 	f.spots.On("SelectGuildSpotByID", ctx, guildID, int64(8)).Return(nil, ports.ErrNotFound)
 
 	// when
-	sp, err := f.s.Spot(ctx, guildID, 7)
-	_, notFound := f.s.Spot(ctx, guildID, 8)
+	sp, err := f.s.spotByID(ctx, guildID, 7)
+	_, notFound := f.s.spotByID(ctx, guildID, 8)
 
 	// then
 	require.NoError(t, err)

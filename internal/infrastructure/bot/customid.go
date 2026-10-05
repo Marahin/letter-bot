@@ -15,7 +15,6 @@ const (
 	maxCustomIDLength = 100
 )
 
-// Text input ids of the book and edit forms.
 const (
 	inputSpot  = "spot"
 	inputStart = "start"
@@ -34,9 +33,9 @@ const (
 	actionCancel
 	actionCancelConfirm
 	actionOverbook
-	actionPick
+	actionBookPick
 	actionEditPick
-	actionRetry
+	actionBookRetry
 	actionEditRetry
 	actionBookSubmit
 	actionEditSubmit
@@ -65,12 +64,12 @@ var actionLayouts = map[formActionKind]actionLayout{
 	actionMine:          {"mine", nil},
 	actionList:          {"list", nil},
 	actionEditForm:      {"edit", []idField{fieldReservation}},
-	actionCancel:        {"del", []idField{fieldReservation}},
-	actionCancelConfirm: {"delok", []idField{fieldReservation}},
+	actionCancel:        {"cancel", []idField{fieldReservation}},
+	actionCancelConfirm: {"cancelok", []idField{fieldReservation}},
 	actionOverbook:      {"ob", []idField{fieldSpot, fieldStart, fieldEnd}},
-	actionPick:          {"pick", []idField{fieldStart, fieldEnd}},
+	actionBookPick:      {"pick", []idField{fieldStart, fieldEnd}},
 	actionEditPick:      {"epick", []idField{fieldReservation, fieldStart, fieldEnd}},
-	actionRetry:         {"retry", []idField{fieldStartText, fieldEndText, fieldSpotText}},
+	actionBookRetry:     {"retry", []idField{fieldStartText, fieldEndText, fieldSpotText}},
 	actionEditRetry:     {"eretry", []idField{fieldReservation, fieldStartText, fieldEndText, fieldSpotText}},
 	actionBookSubmit:    {"mbook", nil},
 	actionEditSubmit:    {"medit", []idField{fieldReservation}},

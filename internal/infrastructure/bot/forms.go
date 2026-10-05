@@ -14,7 +14,8 @@ import (
 	"spot-assistant/internal/core/permission"
 )
 
-// formRequest is the member and the guild of a button or a form.
+const interactionTimeout = 10 * time.Second
+
 type formRequest struct {
 	guild *guild.Guild
 	actor reservation.Actor
@@ -34,7 +35,7 @@ func (b *Bot) formContext(ctx context.Context, i *discordgo.InteractionCreate) (
 	if !cfg.IsPremium() {
 		return nil, notPremiumMessage(b.webBaseURL)
 	}
-	g, err := b.gateway.Guild(i.GuildID)
+	g, err := b.formGuild(i.GuildID)
 	if err != nil {
 		b.log.With("guild.ID", i.GuildID).Errorf("could not fetch guild: %s", err)
 		return nil, b.formatter.FormatGenericError(errors.New("could not load the server, please try again"))
@@ -51,6 +52,17 @@ func (b *Bot) formContext(ctx context.Context, i *discordgo.InteractionCreate) (
 	}, ""
 }
 
+// formGuild prefers the gateway cache: a REST call before a modal opens eats into
+// Discord's 3 second limit.
+func (b *Bot) formGuild(guildID string) (*discordgo.Guild, error) {
+	g, err := b.gateway.StateGuild(guildID)
+	if err == nil {
+		return g, nil
+	}
+	b.log.With("guild.ID", guildID).Debugf("guild not in the gateway state, asking the API: %s", err)
+	return b.gateway.Guild(guildID)
+}
+
 func (b *Bot) handleComponent(i *discordgo.InteractionCreate) {
 	data := i.MessageComponentData()
 	b.runFormAction(i, data.CustomID, data.Values, reservation.Form{})
@@ -62,7 +74,6 @@ func (b *Bot) handleModalSubmit(i *discordgo.InteractionCreate) {
 	b.runFormAction(i, data.CustomID, nil, reservation.Form{Spot: values[inputSpot], StartAt: values[inputStart], EndAt: values[inputEnd]})
 }
 
-// modalValues maps the text input ids of a submitted form to their values.
 func modalValues(data discordgo.ModalSubmitInteractionData) map[string]string {
 	values := map[string]string{}
 	for _, component := range data.Components {
@@ -80,7 +91,8 @@ func modalValues(data discordgo.ModalSubmitInteractionData) map[string]string {
 }
 
 func (b *Bot) runFormAction(i *discordgo.InteractionCreate, customID string, selected []string, form reservation.Form) {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), interactionTimeout)
+	defer cancel()
 	action, err := parseFormAction(customID)
 	if err != nil {
 		b.log.With("custom_id", customID).Debugf("unknown custom id: %s", err)
@@ -88,7 +100,7 @@ func (b *Bot) runFormAction(i *discordgo.InteractionCreate, customID string, sel
 		return
 	}
 	switch action.Kind {
-	case actionBookForm, actionRetry:
+	case actionBookForm, actionBookRetry:
 		b.openBookForm(ctx, i, action)
 	case actionEditForm, actionEditRetry:
 		b.openEditForm(ctx, i, action)
@@ -151,7 +163,7 @@ func (b *Bot) updateInPlace(ctx context.Context, req *formRequest, action formAc
 		}
 		draft := reservation.Draft{SpotID: action.SpotID, StartAt: action.StartAt, EndAt: action.EndAt, Overbook: true}
 		return b.bookDraft(ctx, req, draft)
-	case actionPick:
+	case actionBookPick:
 		spotID, ok := selectedID(selected)
 		if !ok {
 			return formView{content: b.formatter.FormatFormOutdated()}
@@ -165,7 +177,7 @@ func (b *Bot) updateInPlace(ctx context.Context, req *formRequest, action formAc
 		draft := reservation.Draft{SpotID: spotID, StartAt: action.StartAt, EndAt: action.EndAt}
 		outcome, err := b.forms.Edit(ctx, guildID, req.actor, action.ReservationID, draft)
 		b.logFormError("edit", err)
-		return b.editOutcome(ctx, req, action.ReservationID, outcome, err, formOf(outcome))
+		return b.editOutcome(ctx, req, action.ReservationID, outcome, err, outcomeForm(outcome))
 	case actionEditSubmit:
 		outcome, err := b.forms.EditForm(ctx, guildID, req.actor, action.ReservationID, form)
 		b.logFormError("edit", err)
@@ -227,21 +239,22 @@ func (b *Bot) bookDraft(ctx context.Context, req *formRequest, draft reservation
 	}
 	outcome, err := b.forms.Book(ctx, req.guild.ID, req.actor, draft)
 	b.logFormError("book", err)
-	return b.bookOutcomeView(outcome, err, formOf(outcome))
+	return b.bookOutcomeView(outcome, err, outcomeForm(outcome))
 }
 
 func (b *Bot) editOutcome(ctx context.Context, req *formRequest, id int64, outcome *reservation.FormOutcome, err error, form reservation.Form) formView {
 	page, listErr := b.forms.Mine(ctx, req.guild.ID, req.actor, listLimit)
 	if listErr != nil {
 		b.log.Errorf("could not list reservations: %s", listErr)
-		return formView{content: b.formatter.FormatGenericError(listErr)}
+		page = nil
 	}
 	return b.editOutcomeView(id, outcome, err, form, page, time.Now())
 }
 
 // MyReservations answers /reservations, after handleCommand deferred it.
 func (b *Bot) MyReservations(i *discordgo.InteractionCreate) error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), interactionTimeout)
+	defer cancel()
 	req, reply := b.formContext(ctx, i)
 	view := formView{content: reply}
 	if req != nil {
@@ -264,14 +277,6 @@ func (b *Bot) logFormError(what string, err error) {
 	if err != nil {
 		b.log.With("form", what).Debugf("form refused: %s", err)
 	}
-}
-
-// formOf is the form behind an outcome, for a retry after a button.
-func formOf(outcome *reservation.FormOutcome) reservation.Form {
-	if outcome == nil {
-		return reservation.Form{}
-	}
-	return outcomeForm(outcome)
 }
 
 func selectedID(selected []string) (int64, bool) {

@@ -276,3 +276,65 @@ func (_c *MockInteractionGateway_InteractionResponseEdit_Call) RunAndReturn(run 
 	_c.Call.Return(run)
 	return _c
 }
+
+// StateGuild provides a mock function for the type MockInteractionGateway
+func (_mock *MockInteractionGateway) StateGuild(guildID string) (*discordgo.Guild, error) {
+	ret := _mock.Called(guildID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for StateGuild")
+	}
+
+	var r0 *discordgo.Guild
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string) (*discordgo.Guild, error)); ok {
+		return returnFunc(guildID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string) *discordgo.Guild); ok {
+		r0 = returnFunc(guildID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*discordgo.Guild)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
+		r1 = returnFunc(guildID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockInteractionGateway_StateGuild_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'StateGuild'
+type MockInteractionGateway_StateGuild_Call struct {
+	*mock.Call
+}
+
+// StateGuild is a helper method to define mock.On call
+//   - guildID string
+func (_e *MockInteractionGateway_Expecter) StateGuild(guildID any) *MockInteractionGateway_StateGuild_Call {
+	return &MockInteractionGateway_StateGuild_Call{Call: _e.mock.On("StateGuild", guildID)}
+}
+
+func (_c *MockInteractionGateway_StateGuild_Call) Run(run func(guildID string)) *MockInteractionGateway_StateGuild_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockInteractionGateway_StateGuild_Call) Return(guild *discordgo.Guild, err error) *MockInteractionGateway_StateGuild_Call {
+	_c.Call.Return(guild, err)
+	return _c
+}
+
+func (_c *MockInteractionGateway_StateGuild_Call) RunAndReturn(run func(guildID string) (*discordgo.Guild, error)) *MockInteractionGateway_StateGuild_Call {
+	_c.Call.Return(run)
+	return _c
+}

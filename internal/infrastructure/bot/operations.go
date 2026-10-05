@@ -348,11 +348,12 @@ func (b *Bot) SendLetterMessage(g *guild.Guild, channel *discord.Channel, sum *s
 
 // lockChannel serializes the summaries of one channel; two at once double the summary.
 func (b *Bot) lockChannel(channelID string) func() {
-	mutex, ok := b.channelLocks.Get(channelID)
-	if !ok {
-		mutex = &sync.RWMutex{}
-		b.channelLocks.Set(channelID, mutex)
-	}
+	mutex := b.channelLocks.Upsert(channelID, nil, func(exists bool, current, _ *sync.RWMutex) *sync.RWMutex {
+		if exists {
+			return current
+		}
+		return &sync.RWMutex{}
+	})
 	mutex.Lock()
 	return mutex.Unlock
 }

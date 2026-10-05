@@ -136,11 +136,16 @@ func (f *DiscordFormatter) FormatReservationLine(n int, r *reservation.Reservati
 }
 
 // FormatMyReservations is the text of the member's reservation list. status,
-// when set, says what the last action did.
+// when set, says what the last action did. page is nil when the list could not
+// be read.
 func (f *DiscordFormatter) FormatMyReservations(page *reservation.Page, status string, now time.Time) string {
 	var msg strings.Builder
 	if status != "" {
 		msg.WriteString(status + "\n\n")
+	}
+	if page == nil {
+		msg.WriteString("Could not load your reservations. Press Refresh to try again.")
+		return msg.String()
 	}
 	if len(page.Items) == 0 {
 		msg.WriteString("You have no upcoming reservations.")
@@ -207,9 +212,14 @@ func (f *DiscordFormatter) FormatCancelled(r *reservation.ReservationWithSpot) s
 	return fmt.Sprintf("Cancelled **%s**, %s.", r.Spot.Name, f.FormatWindow(r.StartAt, r.EndAt))
 }
 
-// FormatSpotPick asks which of the matching respawns the member meant.
-func (f *DiscordFormatter) FormatSpotPick(query string) string {
-	return fmt.Sprintf("More than one respawn matches **%s**. Which one do you mean?", query)
+// FormatSpotPick asks which of the matching respawns the member meant. capped
+// means only some of them are listed.
+func (f *DiscordFormatter) FormatSpotPick(query string, capped bool) string {
+	msg := fmt.Sprintf("More than one respawn matches **%s**. Which one do you mean?", query)
+	if capped {
+		msg += "\nNot all of them fit in the list. If yours is missing, type more of its name."
+	}
+	return msg
 }
 
 // FormatFormOutdated is the reply to a button of an older bot version.
@@ -228,7 +238,7 @@ func (f *DiscordFormatter) FormatFormError(err error) string {
 	var ambiguous *reservationforms.AmbiguousSpotError
 	switch {
 	case errors.As(err, &ambiguous):
-		return f.FormatSpotPick(ambiguous.Query)
+		return f.FormatSpotPick(ambiguous.Query, false)
 	case errors.Is(err, reservationforms.ErrTimeFormat):
 		return "Write the times as HH:MM, e.g. 18:30."
 	case errors.Is(err, booking.ErrSpotNotFound):

@@ -6,7 +6,6 @@ import (
 	"spot-assistant/internal/core/dto/guild"
 	"spot-assistant/internal/core/dto/member"
 	"spot-assistant/internal/core/dto/reservation"
-	"spot-assistant/internal/core/dto/spot"
 	"spot-assistant/internal/core/dto/summary"
 	"time"
 )
@@ -100,6 +99,4 @@ type ReservationFormService interface {
 	Cancel(ctx context.Context, guildID string, actor reservation.Actor, id int64) (*reservation.ReservationWithSpot, error)
 	// Mine returns the actor's upcoming reservations, the ongoing one first.
 	Mine(ctx context.Context, guildID string, actor reservation.Actor, limit int) (*reservation.Page, error)
-	// Spot returns an active or archived respawn of the guild, or ErrNotFound.
-	Spot(ctx context.Context, guildID string, id int64) (*spot.Spot, error)
 }

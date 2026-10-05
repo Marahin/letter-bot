@@ -11,6 +11,8 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+const commandReservations = "reservations"
+
 func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 	name := i.ApplicationCommandData().Name
 	isAutocomplete := i.Type == discordgo.InteractionApplicationCommandAutocomplete
@@ -43,7 +45,7 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 	}
 
 	deferData := &discordgo.InteractionResponseData{}
-	if name == "reservations" {
+	if name == commandReservations {
 		deferData.Flags = discordgo.MessageFlagsEphemeral
 	}
 	if err := b.interactionRespond(i, deferData, discordgo.InteractionResponseDeferredChannelMessageWithSource); err != nil {
@@ -112,7 +114,7 @@ func (b *Bot) handleSlash(i *discordgo.InteractionCreate, cfg *guildconfig.Confi
 		return b.PrivateSummary(i)
 	case "world-set":
 		return b.SetWorld(i)
-	case "reservations":
+	case commandReservations:
 		return b.MyReservations(i)
 	default:
 		return fmt.Errorf("missing handler for command: %s", i.ApplicationCommandData().Name)
@@ -186,7 +188,7 @@ func (b *Bot) getCommands() []*discordgo.ApplicationCommand {
 			},
 		},
 		{
-			Name:        "reservations",
+			Name:        commandReservations,
 			Description: "Show, edit and cancel your upcoming reservations",
 			Type:        discordgo.ChatApplicationCommand,
 		},

@@ -44,7 +44,7 @@ func (s *Service) BookForm(ctx context.Context, guildID string, actor reservatio
 
 func (s *Service) Book(ctx context.Context, guildID string, actor reservation.Actor, draft reservation.Draft) (*reservation.FormOutcome, error) {
 	outcome := &reservation.FormOutcome{Draft: draft}
-	sp, err := s.Spot(ctx, guildID, draft.SpotID)
+	sp, err := s.spotByID(ctx, guildID, draft.SpotID)
 	if errors.Is(err, ports.ErrNotFound) {
 		return outcome, booking.ErrSpotNotFound
 	}
@@ -97,7 +97,7 @@ func (s *Service) EditForm(ctx context.Context, guildID string, actor reservatio
 
 func (s *Service) Edit(ctx context.Context, guildID string, actor reservation.Actor, id int64, draft reservation.Draft) (*reservation.FormOutcome, error) {
 	outcome := &reservation.FormOutcome{Draft: draft}
-	sp, err := s.Spot(ctx, guildID, draft.SpotID)
+	sp, err := s.spotByID(ctx, guildID, draft.SpotID)
 	if errors.Is(err, ports.ErrNotFound) {
 		return outcome, booking.ErrSpotNotFound
 	}
@@ -164,7 +164,7 @@ func (s *Service) Mine(ctx context.Context, guildID string, actor reservation.Ac
 	}, 1)
 }
 
-func (s *Service) Spot(ctx context.Context, guildID string, id int64) (*spot.Spot, error) {
+func (s *Service) spotByID(ctx context.Context, guildID string, id int64) (*spot.Spot, error) {
 	sp, err := s.spots.SelectGuildSpotByID(ctx, guildID, id)
 	if err != nil {
 		return nil, fmt.Errorf("select spot: %w", err)

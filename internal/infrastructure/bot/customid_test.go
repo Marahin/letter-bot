@@ -12,6 +12,7 @@ import (
 )
 
 func TestFormAction_RoundTrip(t *testing.T) {
+	// given
 	start := time.Unix(1790000000, 0)
 	end := start.Add(2 * time.Hour)
 	actions := []formAction{
@@ -22,9 +23,9 @@ func TestFormAction_RoundTrip(t *testing.T) {
 		{Kind: actionCancel, ReservationID: 5},
 		{Kind: actionCancelConfirm, ReservationID: 5},
 		{Kind: actionOverbook, SpotID: 7, StartAt: start, EndAt: end},
-		{Kind: actionPick, StartAt: start, EndAt: end},
+		{Kind: actionBookPick, StartAt: start, EndAt: end},
 		{Kind: actionEditPick, ReservationID: 5, StartAt: start, EndAt: end},
-		{Kind: actionRetry, StartText: "1830", EndText: "", SpotText: "Banuta: -1"},
+		{Kind: actionBookRetry, StartText: "1830", EndText: "", SpotText: "Banuta: -1"},
 		{Kind: actionEditRetry, ReservationID: 5, StartText: "0900", EndText: "1100", SpotText: ""},
 		{Kind: actionBookSubmit},
 		{Kind: actionEditSubmit, ReservationID: 5},
@@ -63,7 +64,7 @@ func TestFormAction_FitsDiscordsLimit(t *testing.T) {
 
 func TestFormAction_CutsALongSpotText(t *testing.T) {
 	// given
-	action := formAction{Kind: actionRetry, StartText: "1830", EndText: "2030", SpotText: strings.Repeat("a", 120)}
+	action := formAction{Kind: actionBookRetry, StartText: "1830", EndText: "2030", SpotText: strings.Repeat("a", 120)}
 
 	// when
 	parsed, err := parseFormAction(action.customID())
@@ -75,6 +76,7 @@ func TestFormAction_CutsALongSpotText(t *testing.T) {
 }
 
 func TestParseFormAction_RejectsMalformedIDs(t *testing.T) {
+	// given
 	for _, id := range []string{
 		"",
 		"book",
@@ -104,6 +106,11 @@ func TestParseFormAction_RejectsMalformedIDs(t *testing.T) {
 }
 
 func TestClockInput(t *testing.T) {
-	assert.Equal(t, "18:30", clockInput("1830"))
-	assert.Equal(t, "", clockInput(""))
+	// when
+	filled := clockInput("1830")
+	empty := clockInput("")
+
+	// then
+	assert.Equal(t, "18:30", filled)
+	assert.Equal(t, "", empty)
 }

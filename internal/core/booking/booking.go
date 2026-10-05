@@ -121,7 +121,7 @@ func (a *Adapter) Book(request book.BookRequest) ([]*reservation.ClippedOrRemove
 			}
 		}
 
-		if !canOverbook(overbook, hasPermissions, conflictingReservations) {
+		if !overbook || !OverbookAllowed(hasPermissions, m.ID, conflictingReservations, time.Now()) {
 			return collections.PoorMansMap(conflictingReservations, func(r *reservation.Reservation) *reservation.ClippedOrRemovedReservation {
 				return &reservation.ClippedOrRemovedReservation{
 					Original: r,

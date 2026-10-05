@@ -13,22 +13,28 @@ var ErrInsufficientPermissions = fmt.Errorf("there are conflicting reservations 
 
 var ErrReserveNotAllowed = errors.New("you do not hold a rank that is allowed to book respawns on this server")
 
-func canOverbook(attemptsToOverbook bool, hasPermissions bool, conflictingReservations []*reservation.Reservation) bool {
-	return (attemptsToOverbook && isPotentiallyAbandonedReservation(conflictingReservations, time.Now())) ||
-		(attemptsToOverbook && hasPermissions)
-
-}
-
 // OverbookAllowed reports whether a booking that asks to overbook the conflicts
 // would pass: never over the member's own reservation, else with the overbook
 // right or over one reservation that looks abandoned.
 func OverbookAllowed(hasPermissions bool, userID string, conflicts []*reservation.Reservation, now time.Time) bool {
-	for _, c := range conflicts {
-		if userID != "" && c.AuthorDiscordID == userID {
-			return false
-		}
+	if ownsAny(userID, conflicts) {
+		return false
 	}
 	return hasPermissions || isPotentiallyAbandonedReservation(conflicts, now)
+}
+
+// ownsAny is false for an empty userID: a free-text author booked in the web has
+// no Discord id to compare.
+func ownsAny(userID string, reservations []*reservation.Reservation) bool {
+	if userID == "" {
+		return false
+	}
+	for _, r := range reservations {
+		if r.AuthorDiscordID == userID {
+			return true
+		}
+	}
+	return false
 }
 
 // This is an edge case, where we check:

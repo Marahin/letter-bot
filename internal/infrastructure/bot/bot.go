@@ -3,6 +3,7 @@ package bot
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -86,12 +87,33 @@ func connectShardsWith(token string, delay func(attempt int) time.Duration) (*sh
 	return mgr, nil
 }
 
-// InteractionGateway is the part of the Discord REST client that answers
-// interactions. *discordgo.Session implements it.
+// InteractionGateway is the part of the Discord client that answers
+// interactions. shardGateway implements it.
 type InteractionGateway interface {
 	InteractionRespond(interaction *discordgo.Interaction, resp *discordgo.InteractionResponse, options ...discordgo.RequestOption) error
 	InteractionResponseEdit(interaction *discordgo.Interaction, newresp *discordgo.WebhookEdit, options ...discordgo.RequestOption) (*discordgo.Message, error)
+	// Guild asks the REST API.
 	Guild(guildID string, options ...discordgo.RequestOption) (*discordgo.Guild, error)
+	// StateGuild reads the guild from the gateway cache of its shard.
+	StateGuild(guildID string) (*discordgo.Guild, error)
+}
+
+type shardGateway struct {
+	*discordgo.Session
+
+	mgr *shards.Manager
+}
+
+func (g shardGateway) StateGuild(guildID string) (*discordgo.Guild, error) {
+	id, err := strconv.ParseInt(guildID, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("parse guild id: %w", err)
+	}
+	session := g.mgr.SessionForGuild(id)
+	if session == nil || session.State == nil {
+		return nil, discordgo.ErrStateNotFound
+	}
+	return session.State.Guild(guildID)
 }
 
 type Bot struct {
@@ -122,7 +144,7 @@ func NewManager(mgr *shards.Manager, webBaseURL string, summarySrv ports.Summary
 	mgr.Intent = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages | discordgo.IntentsGuildVoiceStates
 	bot := &Bot{
 		mgr:                mgr,
-		gateway:            mgr.Gateway,
+		gateway:            shardGateway{Session: mgr.Gateway, mgr: mgr},
 		webBaseURL:         webBaseURL,
 		quit:               make(chan struct{}),
 		channelLocks:       cmap.New[*sync.RWMutex](),
@@ -175,7 +197,6 @@ func (b *Bot) WithEventHandler(port ports.APIPort) *Bot {
 	return b
 }
 
-// WithReservationForms sets the service behind the buttons and forms.
 func (b *Bot) WithReservationForms(forms ports.ReservationFormService) *Bot {
 	b.forms = forms
 	return b

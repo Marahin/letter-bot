@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"strings"
@@ -49,7 +50,7 @@ func newFormFixture(t *testing.T) *formFixture {
 func (f *formFixture) premium(cfg guildconfig.Config) {
 	cfg.GuildID, cfg.Premium = "g1", true
 	f.configs.On("Get", mock.Anything, "g1").Return(&cfg, nil)
-	f.gateway.On("Guild", "g1").Return(&discordgo.Guild{ID: "g1", Name: "Celesta", OwnerID: "owner"}, nil)
+	f.gateway.On("StateGuild", "g1").Return(&discordgo.Guild{ID: "g1", Name: "Celesta", OwnerID: "owner"}, nil)
 }
 
 // expectRespond records the response type and data.
@@ -251,6 +252,7 @@ func TestButtons_ReportAConfigOrGuildFailure(t *testing.T) {
 	f := newFormFixture(t)
 	f.configs.On("Get", mock.Anything, "g1").Return(nil, errors.New("db down")).Once()
 	f.configs.On("Get", mock.Anything, "g1").Return(&guildconfig.Config{GuildID: "g1", Premium: true}, nil).Once()
+	f.gateway.On("StateGuild", "g1").Return(nil, discordgo.ErrStateNotFound).Once()
 	f.gateway.On("Guild", "g1").Return(nil, errors.New("discord down")).Once()
 	first, second := component("lf1:book"), component("lf1:book")
 	gotFirst := f.expectRespond(first)
@@ -263,6 +265,22 @@ func TestButtons_ReportAConfigOrGuildFailure(t *testing.T) {
 	// then
 	assert.Contains(t, gotFirst.Data.Content, "server settings")
 	assert.Contains(t, gotSecond.Data.Content, "could not load the server")
+}
+
+func TestButtons_AskTheAPIForAGuildMissingFromTheState(t *testing.T) {
+	// given
+	f := newFormFixture(t)
+	f.configs.On("Get", mock.Anything, "g1").Return(&guildconfig.Config{GuildID: "g1", Premium: true}, nil)
+	f.gateway.On("StateGuild", "g1").Return(nil, discordgo.ErrStateNotFound).Once()
+	f.gateway.On("Guild", "g1").Return(&discordgo.Guild{ID: "g1", OwnerID: "owner"}, nil).Once()
+	i := component("lf1:book")
+	got := f.expectRespond(i)
+
+	// when
+	f.b.InteractionCreate(nil, i)
+
+	// then
+	assert.Equal(t, discordgo.InteractionResponseModal, got.Type)
 }
 
 func TestOutdatedButton(t *testing.T) {
@@ -379,7 +397,7 @@ func TestDeferredButton_RefusalReplacesTheMessage(t *testing.T) {
 	// given
 	f := newFormFixture(t)
 	f.configs.On("Get", mock.Anything, "g1").Return(&guildconfig.Config{GuildID: "g1"}, nil)
-	i := component("lf1:del:5")
+	i := component("lf1:cancel:5")
 	f.expectRespond(i)
 	f.expectEdit(i)
 
@@ -393,7 +411,7 @@ func TestDeferredButton_RefusalReplacesTheMessage(t *testing.T) {
 func TestDeferredButton_StopsWhenTheDeferFails(t *testing.T) {
 	// given
 	f := newFormFixture(t)
-	i := component("lf1:del:5")
+	i := component("lf1:cancel:5")
 	f.gateway.On("InteractionRespond", i.Interaction, mock.Anything).Return(errors.New("unknown interaction"))
 
 	// when
@@ -407,7 +425,7 @@ func TestCancelButton_AsksToConfirm(t *testing.T) {
 	f := newFormFixture(t)
 	f.premium(guildconfig.Config{})
 	f.forms.On("Cancellable", mock.Anything, "g1", mock.Anything, int64(5)).Return(mine(5), nil)
-	i := component("lf1:del:5")
+	i := component("lf1:cancel:5")
 	got := f.expectRespond(i)
 	f.expectEdit(i)
 
@@ -417,7 +435,7 @@ func TestCancelButton_AsksToConfirm(t *testing.T) {
 	// then
 	assert.Equal(t, discordgo.InteractionResponseDeferredMessageUpdate, got.Type)
 	assert.Contains(t, f.editedContent(t), "Cancel **Library -1**")
-	assert.Equal(t, []string{"lf1:delok:5", "lf1:list"}, f.editedCustomIDs(t))
+	assert.Equal(t, []string{"lf1:cancelok:5", "lf1:list"}, f.editedCustomIDs(t))
 }
 
 func TestCancelButton_Refused(t *testing.T) {
@@ -426,7 +444,7 @@ func TestCancelButton_Refused(t *testing.T) {
 	f.premium(guildconfig.Config{})
 	f.forms.On("Cancellable", mock.Anything, "g1", mock.Anything, int64(5)).Return(nil, reservations.ErrForbidden)
 	f.forms.On("Mine", mock.Anything, "g1", mock.Anything, listLimit).Return(&reservation.Page{}, nil)
-	i := component("lf1:del:5")
+	i := component("lf1:cancel:5")
 	f.expectRespond(i)
 	f.expectEdit(i)
 
@@ -443,7 +461,7 @@ func TestConfirmCancel_CancelsAndShowsTheList(t *testing.T) {
 	f.premium(guildconfig.Config{})
 	f.forms.On("Cancel", mock.Anything, "g1", mock.Anything, int64(5)).Return(mine(5), nil).Once()
 	f.forms.On("Mine", mock.Anything, "g1", mock.Anything, listLimit).Return(&reservation.Page{}, nil)
-	i := component("lf1:delok:5")
+	i := component("lf1:cancelok:5")
 	f.expectRespond(i)
 	f.expectEdit(i)
 
@@ -462,7 +480,7 @@ func TestConfirmCancel_Failure(t *testing.T) {
 	f.premium(guildconfig.Config{})
 	f.forms.On("Cancel", mock.Anything, "g1", mock.Anything, int64(5)).Return(nil, errors.New("db down"))
 	f.forms.On("Mine", mock.Anything, "g1", mock.Anything, listLimit).Return(&reservation.Page{}, nil)
-	i := component("lf1:delok:5")
+	i := component("lf1:cancelok:5")
 	f.expectRespond(i)
 	f.expectEdit(i)
 
@@ -621,7 +639,8 @@ func TestEditSubmit_ListFailure(t *testing.T) {
 	// given
 	f := newFormFixture(t)
 	f.premium(guildconfig.Config{})
-	f.forms.On("EditForm", mock.Anything, "g1", mock.Anything, int64(5), mock.Anything).Return(nil, nil)
+	draft := reservation.Draft{SpotID: 8, StartAt: time.Unix(1791226800, 0), EndAt: time.Unix(1791234000, 0)}
+	f.forms.On("EditForm", mock.Anything, "g1", mock.Anything, int64(5), mock.Anything).Return(&reservation.FormOutcome{Draft: draft, SpotName: "Library -1"}, nil)
 	f.forms.On("Mine", mock.Anything, "g1", mock.Anything, listLimit).Return(nil, errors.New("db down"))
 	i := modalSubmit(t, "lf1:medit:5", "Library -1", "19:00", "21:00")
 	f.expectRespond(i)
@@ -631,14 +650,19 @@ func TestEditSubmit_ListFailure(t *testing.T) {
 	f.b.InteractionCreate(nil, i)
 
 	// then
-	assert.Contains(t, f.editedContent(t), "db down")
+	assert.Contains(t, f.editedContent(t), "Updated **Library -1**")
+	assert.Contains(t, f.editedContent(t), "Could not load your reservations")
 }
 
 func TestMyReservationsCommand(t *testing.T) {
 	// given
 	f := newFormFixture(t)
 	f.premium(guildconfig.Config{})
-	f.forms.On("Mine", mock.Anything, "g1", mock.Anything, listLimit).Return(&reservation.Page{}, nil)
+	withDeadline := mock.MatchedBy(func(ctx context.Context) bool {
+		_, ok := ctx.Deadline()
+		return ok
+	})
+	f.forms.On("Mine", withDeadline, "g1", mock.Anything, listLimit).Return(&reservation.Page{}, nil)
 	i := component("")
 	f.expectEdit(i)
 

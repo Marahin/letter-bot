@@ -7,7 +7,6 @@ package mocks
 import (
 	"context"
 	"spot-assistant/internal/core/dto/reservation"
-	"spot-assistant/internal/core/dto/spot"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -696,80 +695,6 @@ func (_c *MockReservationFormService_Mine_Call) Return(page *reservation.Page, e
 }
 
 func (_c *MockReservationFormService_Mine_Call) RunAndReturn(run func(ctx context.Context, guildID string, actor reservation.Actor, limit int) (*reservation.Page, error)) *MockReservationFormService_Mine_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Spot provides a mock function for the type MockReservationFormService
-func (_mock *MockReservationFormService) Spot(ctx context.Context, guildID string, id int64) (*spot.Spot, error) {
-	ret := _mock.Called(ctx, guildID, id)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Spot")
-	}
-
-	var r0 *spot.Spot
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int64) (*spot.Spot, error)); ok {
-		return returnFunc(ctx, guildID, id)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int64) *spot.Spot); ok {
-		r0 = returnFunc(ctx, guildID, id)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*spot.Spot)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, int64) error); ok {
-		r1 = returnFunc(ctx, guildID, id)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// MockReservationFormService_Spot_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Spot'
-type MockReservationFormService_Spot_Call struct {
-	*mock.Call
-}
-
-// Spot is a helper method to define mock.On call
-//   - ctx context.Context
-//   - guildID string
-//   - id int64
-func (_e *MockReservationFormService_Expecter) Spot(ctx any, guildID any, id any) *MockReservationFormService_Spot_Call {
-	return &MockReservationFormService_Spot_Call{Call: _e.mock.On("Spot", ctx, guildID, id)}
-}
-
-func (_c *MockReservationFormService_Spot_Call) Run(run func(ctx context.Context, guildID string, id int64)) *MockReservationFormService_Spot_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 int64
-		if args[2] != nil {
-			arg2 = args[2].(int64)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *MockReservationFormService_Spot_Call) Return(spot1 *spot.Spot, err error) *MockReservationFormService_Spot_Call {
-	_c.Call.Return(spot1, err)
-	return _c
-}
-
-func (_c *MockReservationFormService_Spot_Call) RunAndReturn(run func(ctx context.Context, guildID string, id int64) (*spot.Spot, error)) *MockReservationFormService_Spot_Call {
 	_c.Call.Return(run)
 	return _c
 }
