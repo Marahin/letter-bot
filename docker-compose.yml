@@ -28,6 +28,8 @@ services:
       - ./:/app
     env_file:
       - .env
+    depends_on:
+      - db
   web:
     build:
       context: .

@@ -14,6 +14,8 @@ TAILWIND ?= ./bin/tailwindcss
 # golangci-lint is pinned: it is the blocking quality gate, so an upgrade must not
 # turn CI red on unrelated changes. `go run` builds it once into the module cache.
 GOLANGCI_VERSION ?= v2.13.2
+GOOSE_VERSION ?= v3.27.1
+MIGRATIONS_DIR := internal/infrastructure/db/postgresql/migrations
 CSS_OUT := internal/infrastructure/web/dist/app.css
 LDFLAGS := -X spot-assistant/internal/common/version.Version=${TAG}
 
@@ -108,13 +110,9 @@ sqlc-diff: ## Verify sqlc generated code is up to date
 	@sqlc diff -f internal/infrastructure/experience/postgresql/sqlc.yaml
 	@sqlc diff -f internal/infrastructure/stats/postgresql/sqlc.yaml
 
-migrations-validate: ## Validate the atlas migrations
-	@echo "INFO: Validating migrations"
-	@atlas migrate validate --dir "file://internal/infrastructure/db/postgresql/migrations"
-
-migrations-hash: ## Rehash the atlas migrations after a change
-	@echo "INFO: Hashing migrations"
-	@atlas migrate hash --dir "file://internal/infrastructure/db/postgresql/migrations"
+migration: ## Create a goose migration: make migration name=add_x
+	@test -n "$(name)" || { echo "ERROR: set name, e.g. make migration name=add_x"; exit 1; }
+	@go run github.com/pressly/goose/v3/cmd/goose@$(GOOSE_VERSION) -dir $(MIGRATIONS_DIR) create $(name) sql
 
 test: install-dependencies sqlc-diff lint css ## Run lint, sqlc diff and the test suite
 	@echo "INFO: Running tests"

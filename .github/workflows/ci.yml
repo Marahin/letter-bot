@@ -27,18 +27,37 @@ jobs:
       - name: Run lint
         run: make lint
 
-  migration-check:
-    name: Validate Atlas migrations
+  migrations:
+    name: Run the migrations against Postgres
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:12-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      LETTER_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Atlas
-        uses: ariga/setup-atlas@v0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "^1.27"
 
-      - name: Validate migrations
-        run: make migrations-validate
+      - name: Run the database tests
+        run: >-
+          go test -race -count=1
+          ./internal/infrastructure/db/postgresql/...
+          ./internal/infrastructure/experience/...
+          ./internal/infrastructure/stats/...
 
   tests:
     name: Run tests
@@ -64,7 +83,7 @@ jobs:
   docker:
     name: Build and publish images
     runs-on: ubuntu-latest
-    needs: [lint, migration-check, tests]
+    needs: [lint, migrations, tests]
     env:
       APP: letter-bot
       WEB_APP: letter-web
