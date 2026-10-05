@@ -38,14 +38,18 @@ type atlasRevision struct {
 // adoptionVersions returns the local versions that the atlas history marks as applied.
 // A baseline revision stands for its own version and every version before it.
 func adoptionVersions(revs []atlasRevision, local []int64) ([]int64, error) {
-	var maxDone int64
+	var maxDone, maxBaseline int64
+	done := make(map[int64]bool)
 	for _, r := range revs {
 		if !atlasVersion.MatchString(r.Version) {
 			continue // atlas keeps internal rows in the same table
 		}
-		done := r.Type&atlasBaseline != 0 || r.Type&atlasResolved != 0 ||
+		if r.Type&(atlasBaseline|atlasExecute|atlasResolved) == 0 {
+			return nil, fmt.Errorf("atlas revision %s has unknown type %d", r.Version, r.Type)
+		}
+		finished := r.Type&atlasBaseline != 0 || r.Type&atlasResolved != 0 ||
 			(r.Type&atlasExecute != 0 && r.Error == "" && r.Applied == r.Total)
-		if !done {
+		if !finished {
 			return nil, fmt.Errorf("atlas revision %s is partially applied (%d/%d statements, error %q); fix it by hand before starting",
 				r.Version, r.Applied, r.Total, r.Error)
 		}
@@ -53,7 +57,11 @@ func adoptionVersions(revs []atlasRevision, local []int64) ([]int64, error) {
 		if err != nil {
 			return nil, fmt.Errorf("atlas revision %s: %w", r.Version, err)
 		}
+		done[v] = true
 		maxDone = max(maxDone, v)
+		if r.Type&atlasBaseline != 0 {
+			maxBaseline = max(maxBaseline, v)
+		}
 	}
 	if maxDone == 0 {
 		return nil, nil
@@ -63,9 +71,13 @@ func adoptionVersions(revs []atlasRevision, local []int64) ([]int64, error) {
 	}
 	var adopted []int64
 	for _, v := range local {
-		if v <= maxDone {
-			adopted = append(adopted, v)
+		if v > maxDone {
+			continue
 		}
+		if v > maxBaseline && !done[v] {
+			return nil, fmt.Errorf("atlas never applied %d; fix the history by hand before starting", v)
+		}
+		adopted = append(adopted, v)
 	}
 	return adopted, nil
 }

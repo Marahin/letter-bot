@@ -66,8 +66,8 @@ mockery makes a mock for every interface in the module, into one directory, name
 - Migrations are [goose](https://pressly.github.io/goose/) SQL files in `internal/infrastructure/db/postgresql/migrations`, embedded in both binaries. A binary applies them on start, under a Postgres advisory lock, before it opens the pool. The first binary to start migrates; the other waits, then finds nothing pending.
 - sqlc reads the migrations directory. After a migration, run `make sqlc-generate`.
 - **Keep the previous release working (expand, then contract).** The bot and the web restart in any order, and during a rollout the previous release runs against the new schema. Add tables, and columns that are nullable or have a default. Rename, drop or tighten a column or a table only in a later release, when no running binary uses it. Qualify the columns in a join, so a new column with the same name does not make an old query ambiguous.
-- Each file runs in a transaction. `CREATE INDEX CONCURRENTLY` needs `-- +goose NO TRANSACTION` and one statement that can run again (`IF NOT EXISTS`).
-- Never edit a released migration: a database that has it does not run it again. A test keeps a checksum of each file. A new version must be newer than all existing versions; goose refuses an out-of-order migration.
+- Each file runs in a transaction, so a crash in a migration rolls it back and the next start applies it again. A `-- +goose NO TRANSACTION` file does not roll back: it must be safe to run again. `CREATE INDEX CONCURRENTLY` needs `-- +goose NO TRANSACTION` and one statement that can run again (`IF NOT EXISTS`).
+- Never edit a released migration: a database that has it does not run it again. A test keeps a checksum of each file. A new version must be newer than all existing versions; goose refuses an out-of-order migration. `make migrations-order` (run in CI) fails when a file added on your branch is not newer than every migration of the base ref (`MIGRATIONS_BASE`, default `origin/main`); rebase and rename the file when it fails.
 
 ### Tests
 

@@ -16,6 +16,7 @@ TAILWIND ?= ./bin/tailwindcss
 GOLANGCI_VERSION ?= v2.13.2
 GOOSE_VERSION ?= v3.27.1
 MIGRATIONS_DIR := internal/infrastructure/db/postgresql/migrations
+MIGRATIONS_BASE ?= origin/main
 CSS_OUT := internal/infrastructure/web/dist/app.css
 LDFLAGS := -X spot-assistant/internal/common/version.Version=${TAG}
 
@@ -113,6 +114,29 @@ sqlc-diff: ## Verify sqlc generated code is up to date
 migration: ## Create a goose migration: make migration name=add_x
 	@test -n "$(name)" || { echo "ERROR: set name, e.g. make migration name=add_x"; exit 1; }
 	@go run github.com/pressly/goose/v3/cmd/goose@$(GOOSE_VERSION) -dir $(MIGRATIONS_DIR) create $(name) sql
+
+# goose refuses an out-of-order migration only at runtime, on a database that already
+# has a newer one; this catches it before the merge.
+migrations-order: ## Fail if a migration added since MIGRATIONS_BASE (default origin/main) is not newer than every base migration
+	@echo "INFO: Checking the migration order against $(MIGRATIONS_BASE)"
+	@git rev-parse --verify -q "$(MIGRATIONS_BASE)^{commit}" >/dev/null || { echo "ERROR: unknown ref $(MIGRATIONS_BASE), fetch it or set MIGRATIONS_BASE"; exit 1; }; \
+	base_max=$$(git ls-tree --name-only "$(MIGRATIONS_BASE)" -- $(MIGRATIONS_DIR)/ | xargs -r -n1 basename | grep -E '^[0-9]+_.*\.sql$$' | cut -d_ -f1 | sort -n | tail -1); \
+	if [ -z "$$base_max" ]; then echo "INFO: $(MIGRATIONS_BASE) has no migrations, skipping"; exit 0; fi; \
+	fork=$$(git merge-base "$(MIGRATIONS_BASE)" HEAD); \
+	bad=0; \
+	for f in $$(git diff --name-only --diff-filter=A "$$fork" HEAD -- $(MIGRATIONS_DIR)/ | xargs -r -n1 basename | grep -E '^[0-9]+_.*\.sql$$'); do \
+		v=$${f%%_*}; \
+		if [ "$$v" -le "$$base_max" ]; then echo "ERROR: $$f is not newer than $$base_max on $(MIGRATIONS_BASE); rename it to a newer version"; bad=1; fi; \
+	done; \
+	exit $$bad
+
+test-db: ## Run the database tests (needs LETTER_TEST_DATABASE_URL)
+	@test -n "$$LETTER_TEST_DATABASE_URL" || { echo "ERROR: set LETTER_TEST_DATABASE_URL, e.g. postgres://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable"; exit 1; }
+	@echo "INFO: Running the database tests"
+	@go test -race -count=1 \
+		./internal/infrastructure/db/postgresql/... \
+		./internal/infrastructure/experience/... \
+		./internal/infrastructure/stats/...
 
 test: install-dependencies sqlc-diff lint css ## Run lint, sqlc diff and the test suite
 	@echo "INFO: Running tests"

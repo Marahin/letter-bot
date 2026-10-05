@@ -295,23 +295,25 @@ adoption.
 
 A binary does not serve `/livez` while it migrates. Give each Deployment (the
 bot too, on its metrics port) a `startupProbe`, so that the liveness probe does
-not kill a pod that migrates or waits for the lock:
+not kill a pod that migrates or waits for the lock. The probe must outlast the
+lock wait (10 minutes) plus the migration, so 90 × 10 s = 900 s:
 
 ```yaml
 startupProbe:
   httpGet: { path: /livez, port: metrics }
   periodSeconds: 10
-  failureThreshold: 60
+  failureThreshold: 90
 ```
 
 If a migration hangs, find the holder of the lock and end its session:
 
 ```sql
-SELECT pg_terminate_backend(pid) FROM pg_locks WHERE locktype = 'advisory' AND objid = 7419000;
+SELECT pg_terminate_backend(pid) FROM pg_locks WHERE locktype = 'advisory' AND classid = 0 AND objid = 7419000 AND objsubid = 1 AND granted AND database = (SELECT oid FROM pg_database WHERE datname = current_database());
 ```
 
 The interrupted migration rolls back (each file runs in a transaction), and the
-next start applies it again.
+next start applies it again. A `-- +goose NO TRANSACTION` file does not roll
+back, so it must be safe to run again.
 
 ### Rollout order
 
@@ -327,7 +329,8 @@ matter.
 1. Take a database backup (`pg_dump` of `spotassistant`).
 2. Check the atlas history:
    `SELECT version, type, applied, total, error FROM atlas_schema_revisions.atlas_schema_revisions ORDER BY version;`
-   Every row must be finished (`applied = total` and no `error`, or a baseline),
+   Every row must be finished (`applied = total` and no `error`, or a baseline, or
+   resolved (`atlas migrate set`)),
    and the last version must be `20251211123500` or a later file of this
    release. Otherwise, fix the history by hand first; the binaries refuse to
    start on it.
@@ -404,7 +407,7 @@ spec:
           startupProbe:
             httpGet: { path: /livez, port: metrics }
             periodSeconds: 10
-            failureThreshold: 60
+            failureThreshold: 90
           livenessProbe:
             httpGet: { path: /livez, port: metrics }
           readinessProbe:

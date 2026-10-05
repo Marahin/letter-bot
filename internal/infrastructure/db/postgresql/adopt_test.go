@@ -55,6 +55,21 @@ func TestAdoptionVersions(t *testing.T) {
 			wantErr: "atlas revision 20990101000000 is not a migration of this binary",
 		},
 		{
+			name:    "a gap after the baseline",
+			revs:    []atlasRevision{{Version: "20240429143026", Type: atlasBaseline}, executed("20251211123500")},
+			wantErr: "atlas never applied 20250611195746",
+		},
+		{
+			name:    "a revision with no known type",
+			revs:    []atlasRevision{{Version: "20240429143025", Type: 0}},
+			wantErr: "atlas revision 20240429143025 has unknown type 0",
+		},
+		{
+			name:    "a revision with an unknown type bit",
+			revs:    []atlasRevision{{Version: "20240429143025", Type: 1 << 3}},
+			wantErr: "atlas revision 20240429143025 has unknown type 8",
+		},
+		{
 			name: "an empty history",
 			revs: nil,
 			want: nil,

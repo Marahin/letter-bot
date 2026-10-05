@@ -82,7 +82,7 @@ Documentation:
 * [docs/web/DECISIONS.md](docs/web/DECISIONS.md): decisions taken for the web panel, and open questions,
 * [docs/web/VOCABULARY.md](docs/web/VOCABULARY.md): the terms used in the UI, the bot and the code.
 
-To run it locally: `make build`, apply the migrations (`bin/migrate`), then start `bin/letter-web` with the `DATABASE_*` values, `WEB_BASE_URL` and `DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` (see [.env.sample](.env.sample)). With docker-compose, the `web` service does this with hot reload.
+To run it locally: `make build`, then start `bin/letter-web` with the `DATABASE_*` values, `WEB_BASE_URL` and `DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` (see [.env.sample](.env.sample)). Both binaries apply the migrations on start. With docker-compose, the `web` service does this with hot reload.
 
 Test coverage of the core packages added for the web panel (`make test`):
 

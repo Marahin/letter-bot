@@ -47,17 +47,20 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-go@v5
         with:
           go-version: "^1.27"
 
+      - name: Check the migration order
+        env:
+          MIGRATIONS_BASE: origin/${{ github.base_ref || 'main' }}
+        run: make migrations-order
+
       - name: Run the database tests
-        run: >-
-          go test -race -count=1
-          ./internal/infrastructure/db/postgresql/...
-          ./internal/infrastructure/experience/...
-          ./internal/infrastructure/stats/...
+        run: make test-db
 
   tests:
     name: Run tests

@@ -123,19 +123,30 @@ func TestMigrate_ConcurrentRunsApplyOnce(t *testing.T) {
 	// given
 	dsn := scratchDatabase(t)
 	db := openDB(t, dsn)
-	start := make(chan struct{})
+	holder, err := db.Conn(t.Context())
+	require.NoError(t, err)
+	defer holder.Close()
+	_, err = holder.ExecContext(t.Context(), "SELECT pg_advisory_lock($1)", migrationLockKey)
+	require.NoError(t, err)
 	var wg sync.WaitGroup
 	results := make([]MigrateResult, 2)
 	errs := make([]error, 2)
 	for i := range 2 {
 		wg.Go(func() {
-			<-start
 			results[i], errs[i] = Migrate(context.Background(), dsn, nopLog)
 		})
 	}
+	require.Eventually(t, func() bool {
+		var waiters int
+		err := db.QueryRowContext(t.Context(), `SELECT count(*) FROM pg_locks
+			WHERE locktype = 'advisory' AND classid = 0 AND objid = $1 AND objsubid = 1 AND NOT granted
+			AND database = (SELECT oid FROM pg_database WHERE datname = current_database())`, migrationLockKey).Scan(&waiters)
+		return err == nil && waiters == 2
+	}, 10*time.Second, 20*time.Millisecond, "both runs wait for the lock")
 
 	// when
-	close(start)
+	_, err = holder.ExecContext(t.Context(), "SELECT pg_advisory_unlock($1)", migrationLockKey)
+	require.NoError(t, err)
 	wg.Wait()
 
 	// then
