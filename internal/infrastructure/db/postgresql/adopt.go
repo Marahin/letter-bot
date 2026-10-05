@@ -14,8 +14,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// atlasTable is the history table that bin/migrate (atlas, --revisions-schema
-// atlas_schema_revisions) wrote before goose.
+// atlasTable is the history that atlas (--revisions-schema atlas_schema_revisions)
+// wrote before goose.
 const atlasTable = "atlas_schema_revisions.atlas_schema_revisions"
 
 // The bits of atlas_schema_revisions.type.
