@@ -2,7 +2,7 @@ version: "2"
 sql:
   - engine: "postgresql"
     queries: "query/webusers.sql"
-    schema: "../../db/postgresql/schema.sql"
+    schema: "../../db/postgresql/migrations"
     gen:
       go:
         package: "sqlc"

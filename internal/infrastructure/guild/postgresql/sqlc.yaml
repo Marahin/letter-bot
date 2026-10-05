@@ -2,7 +2,7 @@ version: "2"
 sql:
   - engine: "postgresql"
     queries: ["query/guilds.sql", "query/channels.sql", "query/roles.sql"]
-    schema: "../../db/postgresql/schema.sql"
+    schema: "../../db/postgresql/migrations"
     gen:
       go:
         package: "sqlc"

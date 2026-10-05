@@ -192,7 +192,7 @@ type WebUser struct {
 	AccessToken    string
 	RefreshToken   string
 	TokenExpiry    pgtype.Timestamptz
-	DefaultGuildID string
 	CreatedAt      pgtype.Timestamptz
 	UpdatedAt      pgtype.Timestamptz
+	DefaultGuildID string
 }
