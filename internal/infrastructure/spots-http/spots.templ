@@ -1,0 +1,288 @@
+package spotshttp
+
+import (
+	"strconv"
+
+	"spot-assistant/internal/core/dto/spot"
+	"spot-assistant/internal/core/spots"
+	"spot-assistant/internal/infrastructure/i18n"
+	"spot-assistant/internal/infrastructure/web"
+)
+
+// Page is the Respawns page. The search field sits outside the region, so a
+// swap never takes the reader's cursor out of it.
+templ Page(baseURL string, v pageView, nav web.Nav) {
+	@web.Layout(i18n.T(ctx, "spots.page.title", v.GuildName), i18n.T(ctx, "spots.page.description", v.GuildName), baseURL, web.GuildPath(v.GuildID, "/spots"), nav) {
+		<div class="flex flex-wrap items-end justify-between gap-4">
+			<div>
+				<h1 class="font-display text-4xl font-bold -tracking-[0.02em] text-zone-50">{ i18n.T(ctx, "spots.page.heading") }</h1>
+				<p class="mt-2 max-w-2xl text-sm leading-relaxed text-zone-400">{ i18n.T(ctx, "spots.page.lede", v.GuildName) }</p>
+			</div>
+			@searchForm(v)
+		</div>
+		@Region(v)
+	}
+}
+
+// searchForm filters the list as the reader types. It is a plain GET form too,
+// so Enter works without JavaScript.
+templ searchForm(v pageView) {
+	<form method="get" action={ templ.SafeURL(web.GuildPath(v.GuildID, "/spots")) } role="search" class="w-full sm:w-72">
+		if v.Filter.Archived {
+			<input type="hidden" name="tab" value={ tabArchived }/>
+		}
+		<label for="spots-search" class="sr-only">{ i18n.T(ctx, "spots.search.label") }</label>
+		<input
+			id="spots-search"
+			type="search"
+			name="q"
+			value={ v.Filter.Query }
+			placeholder={ i18n.T(ctx, "spots.search.placeholder") }
+			autocomplete="off"
+			hx-get={ web.GuildPath(v.GuildID, "/spots") }
+			hx-trigger="input changed delay:250ms, search"
+			hx-include="closest form"
+			hx-target={ "#" + regionID }
+			hx-swap="outerHTML"
+			hx-push-url="true"
+			class="min-h-11 w-full rounded-md border border-zone-700 bg-zone-850 px-3 py-1.5 text-sm text-zone-100 placeholder:text-zone-500 focus:border-signal focus:outline-none focus:ring-2 focus:ring-signal/30 sm:min-h-9"
+		/>
+	</form>
+}
+
+// Region is the part every change re-renders: the add form, the tabs with their
+// counts, the status line and the list.
+templ Region(v pageView) {
+	<div id={ regionID }>
+		if v.CanManage {
+			@createForm(v)
+		}
+		@tabs(v)
+		<p id="spots-status" role="status" aria-live="polite" class={ "mt-4 text-sm", templ.KV("text-emerald-400", !v.Flash.Warn), templ.KV("text-amber-400", v.Flash.Warn), templ.KV("hidden", v.Flash.Text == "") }>{ v.Flash.Text }</p>
+		if v.showImport() {
+			@importCard(v)
+		} else if len(v.List.Spots) == 0 {
+			<div class="mt-4 rounded-lg border border-zone-800 bg-zone-900 p-10 text-center text-zone-400 shadow-glass">{ v.emptyText(ctx) }</div>
+		} else {
+			@table(v)
+		}
+	</div>
+}
+
+// createForm adds a respawn. A refused name comes back under the field.
+templ createForm(v pageView) {
+	<form
+		method="post"
+		action={ templ.SafeURL(web.GuildPath(v.GuildID, "/spots")) }
+		hx-post={ web.GuildPath(v.GuildID, "/spots") }
+		hx-target={ "#" + regionID }
+		hx-swap="outerHTML"
+		class="mt-8 flex flex-wrap items-end gap-3 rounded-lg border border-zone-800 bg-zone-900 p-4 shadow-glass"
+	>
+		@keepFilter(v)
+		<div class="flex min-w-[14rem] flex-1 flex-col gap-1.5">
+			<label for="spot-new-name" class="text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-400">{ i18n.T(ctx, "spots.form.new") }</label>
+			<input
+				id="spot-new-name"
+				name="name"
+				required
+				maxlength={ strconv.Itoa(spots.MaxNameLength) }
+				value={ v.CreateName }
+				placeholder={ i18n.T(ctx, "spots.form.placeholder") }
+				autocomplete="off"
+				if v.CreateError != "" {
+					aria-invalid="true"
+					aria-describedby="spot-new-name-error"
+				}
+				if v.CreateError != "" || v.FocusCreate {
+					autofocus
+				}
+				class={ "min-h-11 rounded-md border bg-zone-850 px-3 py-1.5 text-sm text-zone-100 placeholder:text-zone-500 focus:outline-none focus:ring-2 sm:min-h-9",
+					templ.KV("border-rose-500 focus:border-rose-500 focus:ring-rose-500/30", v.CreateError != ""),
+					templ.KV("border-zone-700 focus:border-signal focus:ring-signal/30", v.CreateError == "") }
+			/>
+		</div>
+		<button class="min-h-11 rounded-md bg-signal px-4 py-1.5 text-sm font-semibold text-zone-950 transition hover:bg-signal-bright sm:min-h-9">{ i18n.T(ctx, "spots.form.add") }</button>
+		if v.CreateError != "" {
+			<p id="spot-new-name-error" role="alert" class="w-full text-xs text-rose-400">{ v.CreateError }</p>
+		}
+	</form>
+}
+
+// keepFilter carries the tab and search of the page into a change, so the
+// refreshed list shows the same slice.
+templ keepFilter(v pageView) {
+	<input type="hidden" name="tab" value={ tabValue(v.Filter) }/>
+	<input type="hidden" name="q" value={ v.Filter.Query }/>
+}
+
+templ tabs(v pageView) {
+	<nav aria-label={ i18n.T(ctx, "spots.tabs.label") } class="mt-8 flex gap-1 border-b border-zone-800">
+		@tab(tabURL(v.GuildID, false, v.Filter.Query), i18n.T(ctx, "spots.tabs.active"), v.List.ActiveCount, !v.Filter.Archived)
+		@tab(tabURL(v.GuildID, true, v.Filter.Query), i18n.T(ctx, "spots.tabs.archived"), v.List.ArchivedCount, v.Filter.Archived)
+	</nav>
+}
+
+templ tab(href, label string, count int, active bool) {
+	<a
+		href={ templ.SafeURL(href) }
+		if active {
+			aria-current="page"
+		}
+		class={ "-mb-px inline-flex min-h-11 items-center gap-2 border-b-2 px-3 text-sm font-semibold transition",
+			templ.KV("border-signal text-signal-bright", active),
+			templ.KV("border-transparent text-zone-400 hover:text-zone-100", !active) }
+	>
+		{ label }
+		<span class="rounded-full border border-zone-700 px-1.5 py-px font-mono text-[11px] text-zone-300">{ strconv.Itoa(count) }</span>
+	</a>
+}
+
+// importCard is the empty state of a guild without a single respawn. A manager
+// may start from the default list; everyone else is told who can add them.
+templ importCard(v pageView) {
+	<div class="mt-4 rounded-lg border border-zone-800 bg-zone-900 p-8 text-center shadow-glass">
+		<h2 class="font-display text-lg font-bold text-zone-100">{ i18n.T(ctx, "spots.import.heading") }</h2>
+		<p class="mx-auto mt-1 max-w-xl text-sm leading-relaxed text-zone-400">{ i18n.N(ctx, "spots.import.body", len(spots.DefaultNames)) }</p>
+		<form
+			method="post"
+			action={ templ.SafeURL(web.GuildPath(v.GuildID, "/spots/import")) }
+			hx-post={ web.GuildPath(v.GuildID, "/spots/import") }
+			hx-target={ "#" + regionID }
+			hx-swap="outerHTML"
+			class="mt-4"
+		>
+			@keepFilter(v)
+			<button class="min-h-11 rounded-md bg-signal px-4 py-1.5 text-sm font-semibold text-zone-950 transition hover:bg-signal-bright">{ i18n.T(ctx, "spots.import.action") }</button>
+		</form>
+	</div>
+}
+
+templ table(v pageView) {
+	<div class="relative mt-4 overflow-x-auto rounded-lg border border-zone-800 bg-zone-900 shadow-glass">
+		<table class="w-full text-left text-sm">
+			<thead>
+				<tr class="border-b border-zone-800 text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-400">
+					<th class="px-4 py-3">{ i18n.T(ctx, "spots.list.th_name") }</th>
+					<th class="px-4 py-3 text-right">{ i18n.T(ctx, "spots.list.th_upcoming") }</th>
+					<th class="hidden px-4 py-3 text-right sm:table-cell">{ i18n.T(ctx, "spots.list.th_total") }</th>
+					<th class="hidden px-4 py-3 md:table-cell">
+						if v.Filter.Archived {
+							{ i18n.T(ctx, "spots.list.th_archived") }
+						} else {
+							{ i18n.T(ctx, "spots.list.th_added") }
+						}
+					</th>
+					if v.CanManage {
+						<th class="px-4 py-3 text-right"><span class="sr-only">{ i18n.T(ctx, "spots.list.th_actions") }</span></th>
+					}
+				</tr>
+			</thead>
+			<tbody>
+				for _, s := range v.List.Spots {
+					@row(v, s)
+				}
+			</tbody>
+		</table>
+	</div>
+}
+
+templ row(v pageView, s spot.Listed) {
+	<tr id={ spotDOMID(s.ID) } class="border-b border-zone-800/60 align-top last:border-b-0">
+		<td class="px-4 py-3">
+			if v.CanManage && !s.IsArchived() {
+				@renameEditor(v, s)
+			} else {
+				<a href={ templ.SafeURL(web.GuildPath(v.GuildID, "/spots/"+strconv.FormatInt(s.ID, 10))) } class="font-medium text-zone-100 transition hover:text-signal-bright">{ s.Name }</a>
+			}
+		</td>
+		<td class="px-4 py-3 text-right font-mono tabular-nums text-zone-300">
+			<a href={ templ.SafeURL(web.GuildPath(v.GuildID, "/spots/"+strconv.FormatInt(s.ID, 10))) } class="inline-flex min-h-11 items-center justify-end underline decoration-zone-700 underline-offset-4 transition hover:text-signal-bright hover:decoration-signal sm:min-h-0" aria-label={ i18n.T(ctx, "spots.list.reservations_link", s.Name) }>{ formatCount(s.Reservations.Upcoming) }</a>
+		</td>
+		<td class="hidden px-4 py-3 text-right font-mono tabular-nums text-zone-400 sm:table-cell">{ formatCount(s.Reservations.Total) }</td>
+		<td class="hidden whitespace-nowrap px-4 py-3 font-mono text-xs text-zone-400 md:table-cell">
+			if s.ArchivedAt != nil {
+				{ i18n.Date(ctx, i18n.DayMonthYear, *s.ArchivedAt) }
+			} else {
+				{ i18n.Date(ctx, i18n.DayMonthYear, s.CreatedAt) }
+			}
+		</td>
+		if v.CanManage {
+			<td class="px-4 py-3">
+				<div class="flex flex-wrap justify-end gap-2">
+					if s.IsArchived() {
+						@actionButton(v, s, "restore", "letter-btn-quiet", i18n.T(ctx, "spots.restore.action"), "")
+						if s.Reservations.Total == 0 {
+							@actionButton(v, s, "remove", "letter-btn-danger", i18n.T(ctx, "spots.remove.delete"), removeConfirm(ctx, s))
+						}
+					} else if s.Reservations.Total == 0 {
+						@actionButton(v, s, "remove", "letter-btn-danger", i18n.T(ctx, "spots.remove.delete"), removeConfirm(ctx, s))
+					} else {
+						@actionButton(v, s, "remove", "letter-btn-quiet", i18n.T(ctx, "spots.remove.archive"), removeConfirm(ctx, s))
+					}
+				</div>
+			</td>
+		}
+	</tr>
+}
+
+// renameEditor is the name cell of a manager: the name opens an inline rename
+// form. A refused name renders it open, with the message under the field.
+templ renameEditor(v pageView, s spot.Listed) {
+	<details class="group" open?={ v.renameOpen(s.ID) }>
+		<summary class="flex cursor-pointer list-none items-center gap-2 font-medium text-zone-100 transition hover:text-signal-bright [&::-webkit-details-marker]:hidden">
+			{ s.Name }
+			<svg class="h-3.5 w-3.5 shrink-0 text-zone-500 group-open:text-signal" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M13.6 2.9a2 2 0 0 1 2.8 0l.7.7a2 2 0 0 1 0 2.8l-8.9 8.9-3.9 1 1-3.9 8.3-8.5z"></path></svg>
+			<span class="sr-only">{ i18n.T(ctx, "spots.rename.open") }</span>
+		</summary>
+		<form
+			method="post"
+			action={ templ.SafeURL(spotPath(v.GuildID, s.ID, "rename")) }
+			hx-post={ spotPath(v.GuildID, s.ID, "rename") }
+			hx-target={ "#" + regionID }
+			hx-swap="outerHTML"
+			class="mt-2 flex flex-wrap items-start gap-2"
+		>
+			@keepFilter(v)
+			<label for={ spotDOMID(s.ID) + "-name" } class="sr-only">{ i18n.T(ctx, "spots.rename.label", s.Name) }</label>
+			<input
+				id={ spotDOMID(s.ID) + "-name" }
+				name="name"
+				required
+				maxlength={ strconv.Itoa(spots.MaxNameLength) }
+				value={ v.renameValue(s) }
+				autocomplete="off"
+				if v.renameOpen(s.ID) {
+					aria-invalid="true"
+					aria-describedby={ spotDOMID(s.ID) + "-name-error" }
+					autofocus
+				}
+				class={ "min-h-11 min-w-[12rem] flex-1 rounded-md border bg-zone-850 px-3 py-1.5 text-sm text-zone-100 focus:outline-none focus:ring-2 sm:min-h-9",
+					templ.KV("border-rose-500 focus:border-rose-500 focus:ring-rose-500/30", v.renameOpen(s.ID)),
+					templ.KV("border-zone-700 focus:border-signal focus:ring-signal/30", !v.renameOpen(s.ID)) }
+			/>
+			<button class="letter-btn-quiet min-h-11 sm:min-h-9">{ i18n.T(ctx, "spots.rename.save") }</button>
+			if v.renameOpen(s.ID) {
+				<p id={ spotDOMID(s.ID) + "-name-error" } role="alert" class="w-full text-xs text-rose-400">{ v.RenameError }</p>
+			}
+		</form>
+	</details>
+}
+
+// actionButton is one row action as its own form, so it works without htmx. The
+// question rides on data-confirm, which web/dist/confirm.js asks before submit.
+templ actionButton(v pageView, s spot.Listed, action, class, label, confirm string) {
+	<form
+		method="post"
+		action={ templ.SafeURL(spotPath(v.GuildID, s.ID, action)) }
+		hx-post={ spotPath(v.GuildID, s.ID, action) }
+		hx-target={ "#" + regionID }
+		hx-swap="outerHTML"
+		if confirm != "" {
+			data-confirm={ confirm }
+		}
+	>
+		@keepFilter(v)
+		<button class={ class, "min-h-11 sm:min-h-8" } aria-label={ label + ": " + s.Name }>{ label }</button>
+	</form>
+}

@@ -1,14 +1,12 @@
 package bot
 
 import (
-	"fmt"
 	"spot-assistant/internal/core/dto/guild"
 	"spot-assistant/internal/core/dto/member"
 	"spot-assistant/internal/core/dto/role"
 	"strconv"
 
 	"spot-assistant/internal/common/collections"
-	"spot-assistant/internal/common/strings"
 	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/summary"
@@ -23,9 +21,11 @@ const (
 
 func MapChannel(input *discordgo.Channel) *discord.Channel {
 	return &discord.Channel{
-		ID:   input.ID,
-		Name: input.Name,
-		Type: discord.ChannelType(input.Type),
+		ID:       input.ID,
+		Name:     input.Name,
+		Type:     discord.ChannelType(input.Type),
+		ParentID: input.ParentID,
+		Position: input.Position,
 	}
 }
 
@@ -34,14 +34,16 @@ func mapRole(input *discordgo.Role) *role.Role {
 		ID:          input.ID,
 		Name:        input.Name,
 		Permissions: input.Permissions,
+		Position:    input.Position,
+		Color:       input.Color,
 	}
 }
 
 func MapRoles(input []*discordgo.Role) []*role.Role {
 	roles := make([]*role.Role, len(input))
 
-	for i, role := range input {
-		roles[i] = mapRole(role)
+	for i, r := range input {
+		roles[i] = mapRole(r)
 	}
 
 	return roles
@@ -49,16 +51,18 @@ func MapRoles(input []*discordgo.Role) []*role.Role {
 
 func MapGuild(input *discordgo.Guild) *guild.Guild {
 	return &guild.Guild{
-		Roles: MapRoles(input.Roles),
-		ID:    input.ID,
-		Name:  input.Name,
+		Roles:   MapRoles(input.Roles),
+		ID:      input.ID,
+		Name:    input.Name,
+		Icon:    input.Icon,
+		OwnerID: input.OwnerID,
 	}
 }
 
 func MapGuilds(input []*discordgo.Guild) []*guild.Guild {
 	guilds := make([]*guild.Guild, len(input))
-	for i, guild := range input {
-		guilds[i] = MapGuild(guild)
+	for i, g := range input {
+		guilds[i] = MapGuild(g)
 	}
 
 	return guilds
@@ -81,10 +85,11 @@ func MapMember(input *discordgo.Member) *member.Member {
 	}
 
 	return &member.Member{
-		ID:       input.User.ID,
-		Nick:     input.Nick,
-		Username: input.User.Username,
-		Roles:    input.Roles,
+		ID:          input.User.ID,
+		Nick:        input.Nick,
+		Username:    input.User.Username,
+		Roles:       input.Roles,
+		Permissions: input.Permissions,
 	}
 }
 
@@ -100,9 +105,7 @@ func MapMessage(input *discordgo.Message) *discord.Message {
 }
 
 func MapMessages(input []*discordgo.Message) []*discord.Message {
-	return collections.PoorMansMap(input, func(el *discordgo.Message) *discord.Message {
-		return MapMessage(el)
-	})
+	return collections.PoorMansMap(input, MapMessage)
 }
 
 func MapFooter(text string) *discordgo.MessageEmbedFooter {
@@ -119,15 +122,13 @@ func MapStringToChoice(text string) *discordgo.ApplicationCommandOptionChoice {
 }
 
 func MapStringArrToChoice(texts []string) []*discordgo.ApplicationCommandOptionChoice {
-	return collections.PoorMansMap(texts, func(t string) *discordgo.ApplicationCommandOptionChoice {
-		return MapStringToChoice(t)
-	})
+	return collections.PoorMansMap(texts, MapStringToChoice)
 }
 
 func MapReservationWithSpotArrToChoice(input []*reservation.ReservationWithSpot) []*discordgo.ApplicationCommandOptionChoice {
 	return collections.PoorMansMap(input, func(i *reservation.ReservationWithSpot) *discordgo.ApplicationCommandOptionChoice {
 		return &discordgo.ApplicationCommandOptionChoice{
-			Name:  fmt.Sprintf("%s - %s %s", i.StartAt.Format(strings.DcLongTimeFormat), i.EndAt.Format(strings.DcLongTimeFormat), i.Spot.Name),
+			Name:  i.Label(),
 			Value: strconv.FormatInt(i.Reservation.ID, 10),
 		}
 	})

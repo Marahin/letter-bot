@@ -40,3 +40,118 @@ Following reservations are conflicting **and have been shortened or removed**:
 Your reservation was overbooked by test-nick (<@!test-id>)
 * <@!test-id>  has been clipped to: 2021-01-01 00:00 - 2021-01-01 01:10, 2021-01-01 01:30 - 2021-01-01 02:00
 ---
+[TestDiscordFormatter_FormatFormError - 1]
+Choose a start and a length first.
+/-/-/-/
+No respawn has this name. Search for a part of it, e.g. Library, or pick it from the list.
+/-/-/-/
+This respawn is archived. Choose another respawn.
+/-/-/-/
+You do not have a rank that can book respawns on this server.
+/-/-/-/
+You can only change your own upcoming reservations.
+/-/-/-/
+This reservation does not exist any more.
+/-/-/-/
+This reservation has already ended.
+/-/-/-/
+A reservation can be at most 3 hours long.
+/-/-/-/
+You can book at most 3 hours within 24 hours.
+/-/-/-/
+This start has passed. Choose a later start.
+/-/-/-/
+The reservation must end after it starts.
+/-/-/-/
+A started reservation cannot move to another respawn.
+/-/-/-/
+You cannot overbook your own reservation.
+/-/-/-/
+Other reservations overlap these times. Choose other times or another respawn.
+/-/-/-/
+Other reservations overlap these times. Choose other times or another respawn.
+/-/-/-/
+Sorry, but something went wrong. If you require support, join TibiaLoot.com Discord: https://discord.gg/F4YKgsnzmc 
+Error message:
+```
+db down
+```
+---
+
+[TestDiscordFormatter_FormTexts - 1]
+1. **Library -1** · Mon 05 Oct 18:30 – 20:30
+2. **Library -1** · Mon 05 Oct 18:30 – 20:30 (ongoing)
+Updated **Library -1**, Mon 05 Oct 18:30 – 20:30.
+Cancel **Library -1**, Mon 05 Oct 18:30 – 20:30? You cannot undo this.
+Cancelled **Library -1**, Mon 05 Oct 18:30 – 20:30.
+This button is out of date. Use the buttons in the summary channel or /reservations.
+Use this in a server.
+---
+
+[TestDiscordFormatter_WizardTexts - 1]
+**Book a respawn.** Pick it from a list, or search by name.
+/-/-/-/
+No respawn has this name.
+
+**Change the respawn.** Pick it from a list, or search by name.
+This server has no respawns yet. A manager can add them in the web panel.
+/-/-/-/
+Respawns that match **lib**:
+/-/-/-/
+Respawns that match **lib**:
+The list may not show all of them. If yours is missing, search for more of its name.
+/-/-/-/
+Popular on this server
+/-/-/-/
+You booked it once
+/-/-/-/
+You booked it 7 times
+/-/-/-/
+**Library -1** — pick the start and the length. Times in UTC.
+/-/-/-/
+**Library -1** — pick the start and the length. Times in UTC.
+Chosen: 00:00 Wed – 01:30.
+
+Already booked:
+* 19:00 – 21:00 · Druid
+/-/-/-/
+Status.
+
+**Library -1** — change the start, the length or the respawn. Times in UTC.
+Chosen: now – 19:00.
+
+Already booked:
+* 18:00 – 18:30 · Player 0
+* 19:00 – 19:30 · Player 1
+* 20:00 – 20:30 · Player 2
+* 21:00 – 21:30 · Player 3
+* 22:00 – 22:30 · Player 4
+* 23:00 – 23:30 · Player 5
+* 00:00 tomorrow – 00:30 · Player 6
+* 01:00 tomorrow – 01:30 · Player 7
+* 02:00 tomorrow – 02:30 · Player 8
+* 03:00 tomorrow – 03:30 · Player 9
+…and 2 more.
+/-/-/-/
+**Library -1** — started at 17:00. You can change the length. Times in UTC.
+/-/-/-/
+19:00
+/-/-/-/
+01:00 tomorrow
+/-/-/-/
+01:00 Wed
+/-/-/-/
+30 min
+/-/-/-/
+2 h
+/-/-/-/
+1 h 30
+/-/-/-/
+Now | Free
+/-/-/-/
+19:00 | Booked by Druid until 21:00
+/-/-/-/
+18:10 (current) | Free
+/-/-/-/
+Keep (started 17:00) | 
+---

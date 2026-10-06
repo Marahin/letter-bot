@@ -82,12 +82,81 @@ type DjangoSession struct {
 	ExpireDate  pgtype.Timestamptz
 }
 
+type Guild struct {
+	GuildID           string
+	Name              string
+	Icon              string
+	OwnerID           string
+	BotPresent        bool
+	Premium           bool
+	PremiumForever    bool
+	CommandChannelID  string
+	SummaryChannelID  string
+	ManageRoleIds     []string
+	ViewRoleIds       []string
+	ReserveRoleIds    []string
+	OverbookRoleIds   []string
+	ResyncRequestedAt pgtype.Timestamptz
+	SyncedAt          pgtype.Timestamptz
+	CreatedAt         pgtype.Timestamptz
+	UpdatedAt         pgtype.Timestamptz
+}
+
+type GuildChannel struct {
+	GuildID   string
+	ChannelID string
+	Name      string
+	Type      int32
+	ParentID  string
+	Position  int32
+}
+
+type GuildRole struct {
+	GuildID  string
+	RoleID   string
+	Name     string
+	Color    int32
+	Position int32
+}
+
 type GuildsWorld struct {
 	ID        int64
 	GuildID   string
 	WorldName string
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
+}
+
+type HighscoreRun struct {
+	ID         int64
+	World      string
+	ObservedAt pgtype.Timestamptz
+	FetchedAt  pgtype.Timestamptz
+	Pages      int32
+	Rows       int32
+}
+
+type HighscoreSnapshot struct {
+	ID            int64
+	World         string
+	CharacterKey  string
+	CharacterName string
+	Level         int32
+	Experience    int64
+	Vocation      string
+	ObservedAt    pgtype.Timestamptz
+	LastSeenAt    pgtype.Timestamptz
+}
+
+type ReservationExperience struct {
+	ReservationID   int64
+	CharacterKey    string
+	CharacterName   string
+	StartExperience pgtype.Int8
+	EndExperience   pgtype.Int8
+	Gain            pgtype.Int8
+	Status          string
+	ComputedAt      pgtype.Timestamptz
 }
 
 type WebReservation struct {
@@ -101,8 +170,29 @@ type WebReservation struct {
 	AuthorDiscordID string
 }
 
+type WebSession struct {
+	Token  string
+	Data   []byte
+	Expiry pgtype.Timestamptz
+}
+
 type WebSpot struct {
-	ID        int64
-	Name      string
-	CreatedAt pgtype.Timestamptz
+	ID         int64
+	Name       string
+	CreatedAt  pgtype.Timestamptz
+	GuildID    pgtype.Text
+	ArchivedAt pgtype.Timestamptz
+}
+
+type WebUser struct {
+	DiscordUserID  string
+	Username       string
+	GlobalName     string
+	Avatar         string
+	AccessToken    string
+	RefreshToken   string
+	TokenExpiry    pgtype.Timestamptz
+	CreatedAt      pgtype.Timestamptz
+	UpdatedAt      pgtype.Timestamptz
+	DefaultGuildID string
 }

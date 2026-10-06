@@ -1,0 +1,40 @@
+package web
+
+import (
+	"strconv"
+
+	"spot-assistant/internal/infrastructure/branding"
+	"spot-assistant/internal/infrastructure/i18n"
+)
+
+// ErrorPage is the branded status page rendered for full-page HTML error responses
+// (404, 403, 400, 500, ...): the app shell around a centred card with the status
+// code, a title, a message and a back link (dashboard when signed in, home
+// otherwise). It never discloses which resource failed. title and message arrive
+// already localized from the caller, which is what knows what went wrong.
+templ ErrorPage(baseURL string, status int, title, message string, nav Nav) {
+	@Layout(title+" - "+branding.Name, message, baseURL, "", nav) {
+		<div class="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center gap-6 py-16 text-center">
+			<p class="font-display text-7xl font-bold -tracking-[0.03em] text-signal-bright">{ strconv.Itoa(status) }</p>
+			<h1 class="font-display text-3xl font-bold -tracking-[0.02em] text-zone-50">{ title }</h1>
+			<p class="max-w-md text-zone-300">{ message }</p>
+			if nav.Authenticated {
+				<a href="/dashboard" class="mt-2 rounded-md bg-signal px-5 py-2.5 text-sm font-semibold text-zone-950 shadow-accent transition hover:bg-signal-bright">
+					{ i18n.T(ctx, "error.back_to_dashboard") }
+				</a>
+			} else {
+				<a href="/" class="mt-2 rounded-md bg-signal px-5 py-2.5 text-sm font-semibold text-zone-950 shadow-accent transition hover:bg-signal-bright">
+					{ i18n.T(ctx, "error.back_to_home") }
+				</a>
+			}
+			// Only a missing page or a server fault is worth reporting; a 403 is a
+			// deliberate refusal, so it never invites one.
+			if nav.SupportURL != "" && (status == 404 || status >= 500) {
+				<div class="mt-2 flex flex-col items-center gap-3 border-t border-zone-800 pt-6">
+					<p class="text-sm text-zone-400">{ i18n.T(ctx, "error.report_prompt") }</p>
+					@SupportLink(nav.SupportURL, i18n.T(ctx, "error.report_cta"), "flex items-center gap-2 rounded-md border border-signal/40 px-4 py-2 text-sm font-semibold text-signal-bright transition hover:border-signal hover:bg-signal/[0.08]")
+				</div>
+			}
+		</div>
+	}
+}

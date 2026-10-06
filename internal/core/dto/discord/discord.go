@@ -34,9 +34,11 @@ const (
 )
 
 type Channel struct {
-	ID   string
-	Name string
-	Type ChannelType
+	ID       string
+	Name     string
+	Type     ChannelType
+	ParentID string
+	Position int
 }
 
 // A User stores all data for an individual Discord user.

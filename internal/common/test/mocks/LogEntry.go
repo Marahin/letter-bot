@@ -14,10 +14,19 @@ func NewMockLogEntry(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockLogEntry {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockLogEntry{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -53,9 +62,9 @@ type MockLogEntry_Error_Call struct {
 
 // Error is a helper method to define mock.On call
 //   - args ...interface{}
-func (_e *MockLogEntry_Expecter) Error(args ...interface{}) *MockLogEntry_Error_Call {
+func (_e *MockLogEntry_Expecter) Error(args ...any) *MockLogEntry_Error_Call {
 	return &MockLogEntry_Error_Call{Call: _e.mock.On("Error",
-		append([]interface{}{}, args...)...)}
+		append([]any{}, args...)...)}
 }
 
 func (_c *MockLogEntry_Error_Call) Run(run func(args ...interface{})) *MockLogEntry_Error_Call {

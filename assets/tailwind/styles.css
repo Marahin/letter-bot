@@ -1,0 +1,703 @@
+/* Self-hosted from dist/fonts (latin + latin-ext subsets, OFL licenses beside them); a remote @import
+   is a render-blocking third-party round trip. postcss-import inlines this. */
+@import "fonts.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Alpine hides markup carrying x-cloak until it hydrates, so the session
+   composer's Alpine islands (lead widgets, schedule picker, DM-scope chips) never
+   flash their unhydrated state. Attribute selector, so purge never drops it. */
+[x-cloak] {
+  display: none !important;
+}
+
+@layer base {
+  html {
+    /* Command-center calm: a flat near-black canvas, elevation carried by
+       borders rather than gradients or glass. */
+    background: #0A0A0B;
+    /* Render native form controls (incl. the <select> popup) dark, so the
+       dropdown list matches the theme instead of the OS light grey. */
+    color-scheme: dark;
+  }
+
+  /* The open <select> list is drawn by the browser; style its options to the
+     dark palette (surface-1 bg / primary text) for browsers that honour it. */
+  option,
+  optgroup {
+    background-color: #111113;
+    color: #F4F4F5;
+  }
+
+  ::selection {
+    background-color: rgba(249, 115, 22, 0.30);
+    color: #F4F4F5;
+  }
+
+  code {
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  /* The one scrollbar treatment for the whole app: standard properties only.
+     Chrome 121+ swaps in the native bar when ::-webkit-scrollbar rules coexist
+     with them, and Firefox never paints the WebKit pseudo-elements. Every page
+     loads this sheet (buildcalc and the planner include it through the shell
+     layout), so feature stylesheets must not restyle scrollbars. Thin buttonless
+     burnt-orange thumb on a transparent track. scrollbar-color inherits from
+     html into every scroll box; scrollbar-width does not inherit, so the
+     universal rule sets it. */
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: #C2540A transparent;
+  }
+  * {
+    scrollbar-width: thin;
+  }
+  /* Hover step, one shade up. html:hover matches whenever the pointer is over
+     the page, so the rule lists the known scroll panes instead: the Tailwind
+     overflow utilities, the inline-style panes, and the feature-sheet panes
+     (buildcalc, battle planner). Extend this list when you add a scroll pane.
+     Quiet panes (below) opt out of this step. */
+  .overflow-auto:hover,
+  .overflow-y-auto:hover,
+  .overflow-x-auto:hover,
+  .md\:overflow-y-auto:hover,
+  [style*="overflow:auto"]:hover,
+  [style*="overflow-y:auto"]:hover,
+  [style*="overflow-x:auto"]:hover,
+  #bc-root .bc-combo-panel:hover,
+  .letter-combo-panel:hover,
+  #bc-sim:hover,
+  #bc-sim .exp-scroll:hover,
+  #bp-root .bp-rail:hover,
+  #bp-root #note-editor:hover,
+  #bp-root .bp-plans-list:hover {
+    scrollbar-color: #E5670B transparent;
+  }
+  /* The same panes reserve their gutter, so content does not shift when the
+     bar appears. The gutter adds no visual gap: each pane keeps its content
+     clear of the bar with its own right padding (10px or more). */
+  .overflow-auto,
+  .overflow-y-auto,
+  .overflow-x-auto,
+  .md\:overflow-y-auto,
+  [style*="overflow:auto"],
+  [style*="overflow-y:auto"],
+  [style*="overflow-x:auto"],
+  #bc-root .bc-combo-panel,
+  .letter-combo-panel,
+  #bc-root .bc-summary-col,
+  #bc-sim,
+  #bc-sim .exp-scroll,
+  #bp-root .bp-rail,
+  #bp-root #note-editor,
+  #bp-root .bp-plans-list {
+    scrollbar-gutter: stable;
+  }
+  /* Quiet pane: the buildcalc summary column sits at the right screen edge, so
+     its bar would run beside the page bar. The thumb stays transparent at rest
+     and shows the resting shade on hover (no #E5670B step: one shade keeps the
+     reveal calm). The reserved gutter above keeps the layout still. Wheel and
+     touch scrolling work with the bar hidden. */
+  #bc-root .bc-summary-col {
+    scrollbar-color: transparent transparent;
+  }
+  #bc-root .bc-summary-col:hover {
+    scrollbar-color: #C2540A transparent;
+  }
+}
+
+@layer components {
+  /* Shared trigger look for native <select> controls, modeled on the combobox
+     inputs. appearance:none drops the OS arrow, so the rule paints its own
+     chevron (tertiary-text stroke). The open options list stays browser-drawn;
+     color-scheme and the option colors above are its only theming. */
+  .letter-select {
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2371717A' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.625rem center;
+    background-size: 0.875rem;
+    @apply cursor-pointer rounded-md border border-zone-700 bg-zone-850 py-1.5 pl-2 pr-8 text-sm text-zone-100 outline-none focus:border-signal focus:ring-2 focus:ring-signal/30;
+  }
+  .letter-select:disabled {
+    @apply cursor-not-allowed text-zone-500;
+  }
+
+  /* A text field with a fixed unit on its right edge (₽, %). The frame is the field. */
+  .letter-affix {
+    @apply flex h-11 items-center gap-1.5 rounded-md border border-zone-700 bg-zone-850 px-3 text-sm text-zone-100 focus-within:border-signal focus-within:ring-2 focus-within:ring-signal/30 sm:h-9;
+  }
+  .letter-affix > input {
+    @apply w-full min-w-0 bg-transparent font-mono tabular-nums text-zone-100 outline-none placeholder:font-sans placeholder:text-zone-500;
+  }
+  .letter-affix > span {
+    @apply select-none font-mono text-xs text-zone-500;
+  }
+  .letter-affix:has(> input[aria-invalid="true"]) {
+    @apply border-rose-500/70 focus-within:border-rose-400 focus-within:ring-rose-500/30;
+  }
+
+  .letter-btn-quiet {
+    @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-zone-700 px-2.5 py-1 text-xs font-semibold text-zone-300 transition hover:border-signal hover:text-signal-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/30;
+  }
+  .letter-btn-danger {
+    @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-rose-500/40 bg-rose-500/10 px-2.5 py-1 text-xs font-semibold text-rose-300 transition hover:border-rose-400 hover:bg-rose-500/20 hover:text-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40;
+  }
+
+  /* The searchable picker atom: a text input drawn like the .letter-select trigger,
+     plus an options panel under it that the reader filters by typing. Same
+     convention as the Build Calculator's combobox, in the app palette.
+     .letter-combo-wrap owns the panel's positioning context. */
+  .letter-combo-wrap {
+    @apply relative;
+  }
+  .letter-combo {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2371717A' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.625rem center;
+    background-size: 0.875rem;
+    /* normal-case/tracking/weight: the atom owns its typography, so an
+       uppercase, wide-tracked form label never leaks into the readout. */
+    @apply w-full cursor-pointer rounded-md border border-zone-700 bg-zone-850 py-1.5 pl-2 pr-8 text-sm font-normal normal-case tracking-normal text-zone-100 outline-none placeholder:text-zone-500 focus:border-signal focus:ring-2 focus:ring-signal/30;
+  }
+  .letter-combo-panel {
+    /* The wider right padding keeps the options clear of the scrollbar. */
+    padding: 4px 10px 4px 4px;
+    @apply absolute inset-x-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-lg border border-zone-700 bg-zone-850 font-normal normal-case tracking-normal shadow-glass-sm;
+  }
+  .letter-combo-opt {
+    @apply flex cursor-pointer items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-zone-100;
+  }
+  /* is-hi is the highlighted option, moved by the arrow keys and by the pointer. */
+  .letter-combo-opt.is-hi {
+    background: rgba(249, 115, 22, 0.14);
+    @apply text-signal-bright;
+  }
+  /* A heading over a run of options a picker floats to the top (the time-zone
+     pickers' most-used zones). Not pickable, so it takes no hover state. */
+  .letter-combo-group {
+    @apply px-2.5 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-500;
+  }
+  .letter-combo-label {
+    @apply min-w-0 flex-1 truncate;
+  }
+  .letter-combo-empty {
+    @apply px-2.5 py-3 text-center text-sm text-zone-500;
+  }
+
+  /* Sidebar tree rail: the 14px slot in a sub-view row. is-run draws the line
+     through a row above the active one; is-corner turns into the active label.
+     Segments over-extend the slot (7px row padding, 2px gap, 1px into the section
+     row) so the run reads as one line. Bars, not borders: 1.5px borders round to 1px. */
+  .letter-tree-rail {
+    @apply relative w-[14px] flex-none;
+  }
+  .letter-tree-rail.is-run::before,
+  .letter-tree-rail.is-corner::before,
+  .letter-tree-rail.is-corner::after {
+    @apply absolute left-[5px] bg-signal-bright content-[''];
+  }
+  .letter-tree-rail.is-run::before,
+  .letter-tree-rail.is-corner::before {
+    top: -10px;
+    bottom: -9px;
+    width: 1.5px;
+  }
+  .letter-tree-rail.is-corner::before {
+    bottom: 50%;
+  }
+  .letter-tree-rail.is-corner::after {
+    top: 50%;
+    width: 9px;
+    height: 1.5px;
+  }
+}
+
+/* The navigation progress bar shown by nav-loading.js on a full-page navigation. The
+   class only appears in JS, so it lives outside @layer to survive purge. transform
+   animates on the compositor, so the bar keeps moving while the main thread parses a
+   heavy page (the build calculator). It ramps toward, but never reaches, full width: the
+   destination replaces the page before it would finish. */
+.letter-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 9999;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  background: #FB923C; /* signal-bright */
+  opacity: 0;
+  pointer-events: none;
+}
+.letter-navbar.run {
+  opacity: 1;
+  animation: letter-navbar 8s cubic-bezier(0.1, 0.7, 0.1, 1) forwards;
+}
+@keyframes letter-navbar {
+  0% { transform: scaleX(0); }
+  60% { transform: scaleX(0.7); }
+  100% { transform: scaleX(0.95); }
+}
+
+/* The htmx error toast (htmx-errors.js), in the scxmanager toast style. Its state
+   classes only appear in JS, so it lives outside @layer to survive purge. */
+.letter-toast {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  z-index: 60;
+  max-width: min(90vw, 420px);
+  padding: 14px 22px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 107, 107, 0.4);
+  background: #3a1414;
+  color: #FCA5A5;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, -8px);
+  transition: opacity 0.2s, transform 0.2s, visibility 0.2s;
+  cursor: pointer;
+}
+.letter-toast.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+
+/* The day-range picker's calendar, drawn inline by range-picker.js. Its classes
+   only appear in JS, which Tailwind doesn't scan, so these styles live outside
+   @layer to survive purge. Days that have recorded data carry a small green dot;
+   the selection paints its two endpoints solid and the days between them muted,
+   so a range reads as a range. Touch targets grow to 44px on a coarse pointer,
+   where the popover also becomes a bottom sheet so it cannot overflow a narrow
+   screen. */
+.cal-toggle {
+  min-height: 2.25rem;
+}
+.cal-backdrop,
+.cal-sheet-head {
+  display: none;
+}
+.cal-pop {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  z-index: 30;
+  margin-top: 0.5rem;
+  width: max-content;
+  max-width: calc(100vw - 1rem);
+}
+.cal-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.cal-presets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.cal-preset {
+  min-height: 2rem;
+  border: 1px solid #2A2A30; /* border-default */
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #A8A8B0; /* text-secondary */
+}
+.cal-preset:hover {
+  color: #F97316; /* signal */
+  border-color: #F97316;
+}
+.cal-modes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px;
+  border: 1px solid #2A2A30; /* border-default */
+  border-radius: 0.5rem;
+  padding: 2px;
+}
+.cal-mode {
+  min-height: 2rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #A8A8B0; /* text-secondary */
+}
+.cal-mode[aria-pressed="true"] {
+  background-color: #F97316; /* signal */
+  color: #160B02; /* text on accent */
+}
+.cal-readout {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-radius: 0.375rem;
+  background-color: rgba(255, 255, 255, 0.04);
+  padding: 0.375rem 0.5rem;
+  min-height: 2.75rem;
+  justify-content: center;
+}
+.cal-readout-main {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #F4F4F5; /* text-primary */
+}
+.cal-readout-count {
+  border-radius: 0.25rem;
+  background-color: #F97316; /* signal */
+  color: #160B02; /* text on accent */
+  padding: 0 0.375rem;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.75rem;
+}
+.cal-readout-hint {
+  font-size: 0.6875rem;
+  color: #A8A8B0; /* text-secondary */
+}
+.cal-readout.is-armed {
+  box-shadow: inset 0 0 0 1px #F97316; /* signal */
+}
+.cal-readout.is-armed .cal-readout-hint {
+  color: #FB923C; /* signal-bright */
+}
+.cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.cal-title {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #F4F4F5; /* text-primary */
+}
+.cal-nav {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.375rem;
+  color: #A8A8B0; /* text-secondary */
+  line-height: 1;
+  font-size: 1rem;
+}
+.cal-nav:hover {
+  color: #F97316; /* signal */
+  background-color: rgba(255, 255, 255, 0.06);
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 2.25rem);
+  gap: 3px;
+}
+.cal-row {
+  display: contents;
+}
+.cal-wd {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 1.5rem;
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #71717A; /* text-tertiary */
+}
+.cal-blank {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+.cal-day {
+  position: relative;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.375rem;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.8125rem;
+  color: #A8A8B0; /* text-secondary */
+  user-select: none;
+}
+.cal-day:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+.cal-day.is-today {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+.cal-day.is-in-range {
+  background-color: rgba(249, 115, 22, 0.22); /* signal, muted */
+  border-radius: 0;
+  color: #F4F4F5; /* text-primary */
+}
+.cal-day.is-start,
+.cal-day.is-end {
+  background-color: #F97316; /* signal */
+  color: #160B02; /* text on accent */
+  font-weight: 700;
+}
+.cal-day.is-start {
+  border-radius: 0.375rem 0 0 0.375rem;
+}
+.cal-day.is-end {
+  border-radius: 0 0.375rem 0.375rem 0;
+}
+.cal-day.is-start.is-end {
+  border-radius: 0.375rem;
+}
+.cal-day.is-armed {
+  box-shadow: 0 0 0 2px #111113, 0 0 0 4px #FB923C; /* signal-bright halo */
+  z-index: 1;
+}
+.cal-day:focus-visible,
+.cal-nav:focus-visible,
+.cal-mode:focus-visible,
+.cal-preset:focus-visible,
+.cal-apply:focus-visible,
+.cal-clear:focus-visible,
+.cal-sheet-close:focus-visible {
+  outline: 2px solid #FB923C; /* signal-bright */
+  outline-offset: 2px;
+}
+.cal-dot {
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+  background-color: #4ADE80; /* status-success */
+  pointer-events: none;
+}
+.cal-day.is-start .cal-dot,
+.cal-day.is-end .cal-dot {
+  background-color: #160B02;
+}
+.cal-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.cal-apply,
+.cal-clear {
+  min-height: 2.25rem;
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.cal-apply {
+  flex: 1 1 auto;
+  background-color: #F97316; /* signal */
+  color: #160B02; /* text on accent */
+}
+.cal-apply:hover {
+  background-color: #FB923C; /* signal-bright */
+}
+.cal-clear {
+  border: 1px solid #2A2A30; /* border-default */
+  color: #A8A8B0; /* text-secondary */
+}
+.cal-clear:hover {
+  color: #F97316; /* signal */
+  border-color: #F97316;
+}
+
+@media (pointer: coarse), (max-width: 480px) {
+  .cal-toggle {
+    min-height: 2.75rem;
+  }
+  .cal-backdrop:not([hidden]) {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 29;
+    background-color: rgba(0, 0, 0, 0.6);
+  }
+  .cal-sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+  }
+  .cal-sheet-title {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #F4F4F5; /* text-primary */
+  }
+  .cal-sheet-close {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 0.375rem;
+    color: #A8A8B0; /* text-secondary */
+    font-size: 1rem;
+    line-height: 1;
+  }
+  .cal-pop {
+    position: fixed;
+    inset: auto 0.5rem 0.5rem 0.5rem;
+    width: auto;
+    max-width: none;
+    max-height: calc(100dvh - 1rem);
+    overflow-y: auto;
+  }
+  .cal-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+  }
+  .cal-day,
+  .cal-blank,
+  .cal-nav {
+    width: auto;
+    height: 2.75rem;
+  }
+  .cal-nav {
+    min-width: 2.75rem;
+  }
+  .cal-preset,
+  .cal-mode,
+  .cal-apply,
+  .cal-clear {
+    min-height: 2.75rem;
+  }
+}
+
+/* A short phone (a 640px-tall screen and the bottom sheet's own header) leaves too
+   little room for the full panel, and a sheet that scrolls inside itself hides its
+   own Apply button. Everything shrinks by one step instead. */
+@media (pointer: coarse) and (max-height: 720px), (max-width: 480px) and (max-height: 720px) {
+  .cal-pop {
+    padding: 0.5rem;
+  }
+  .cal-panel {
+    gap: 0.375rem;
+  }
+  .cal-presets {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .cal-preset {
+    padding: 0.25rem;
+  }
+  .cal-grid {
+    gap: 3px;
+  }
+  .cal-wd {
+    height: 1.25rem;
+  }
+  .cal-day,
+  .cal-blank,
+  .cal-nav {
+    height: 2.5rem;
+  }
+  .cal-readout {
+    min-height: 2.25rem;
+  }
+  .cal-preset,
+  .cal-mode,
+  .cal-apply,
+  .cal-clear {
+    min-height: 2.5rem;
+  }
+}
+
+/* The stats tables' metric switch (dist/stats.js). A ratio cell renders both KDA
+   and KD, and a battles cell both the total and the daily average; the container's
+   data-metric-* says which is the main figure. The inactive one shrinks, dims and
+   drops below, and the active one rises. These classes only appear in the JS-driven
+   markup Tailwind purges against, and they must beat the cells' utilities, so they
+   live here, outside @layer. */
+[data-metric-ratio="kda"] .js-ratio-kd,
+[data-metric-ratio="kd"] .js-ratio-kda,
+[data-metric-battles="total"] .js-battles-avg,
+[data-metric-battles="avg"] .js-battles-total {
+  font-size: 0.6875rem;
+  font-weight: 400;
+  opacity: 0.6;
+}
+[data-metric-ratio="kd"] .js-ratio-kd,
+[data-metric-battles="avg"] .js-battles-avg {
+  order: -1;
+}
+/* The pressed half of a switch reads as the chosen one: accented and full
+   opacity, while the other half stays muted. */
+.js-metric-btn[aria-pressed="true"] {
+  color: #FB923C; /* signal-bright */
+  opacity: 1;
+}
+.js-metric-btn[aria-pressed="false"] {
+  color: #71717A; /* text-muted */
+}
+
+/* Admin-authored rich text (the credits document on /about and the
+   contenteditable editing surface on /admin/settings) is stored as HTML and
+   sanitized (bluemonday), so its tags carry no classes for Tailwind to scan.
+   Style them here, outside @layer, to survive purge. */
+.letter-richtext h1,
+.letter-richtext h2,
+.letter-richtext h3 {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-weight: 600;
+  color: #F4F4F5; /* text-primary */
+  margin: 1.25rem 0 0.5rem;
+}
+/* The document owns the page title now that /about has no hardcoded heading, so
+   an authored h1 has to read like one. */
+.letter-richtext h1 {
+  font-size: 1.875rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin-top: 0;
+}
+.letter-richtext h2 { font-size: 1.125rem; }
+.letter-richtext h3 { font-size: 1rem; }
+.letter-richtext p { margin: 0.5rem 0; }
+.letter-richtext ul,
+.letter-richtext ol {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+  list-style-position: outside;
+}
+.letter-richtext ul { list-style-type: disc; }
+.letter-richtext ol { list-style-type: decimal; }
+.letter-richtext li { margin: 0.25rem 0; }
+.letter-richtext a {
+  color: #FB923C; /* signal-bright */
+  text-decoration: underline;
+}
+.letter-richtext a:hover { color: #F97316; /* signal */ }
+.letter-richtext code {
+  background-color: #17171A; /* input / raised surface */
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.85em;
+}
+.letter-richtext pre {
+  background-color: #17171A;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+}
+.letter-richtext pre code { background: transparent; padding: 0; }
+.letter-richtext strong { color: #F4F4F5; font-weight: 600; }
+/* An uploaded image carries its intrinsic size, which would overflow the
+   max-w-3xl column and the editing surface alike. */
+.letter-richtext img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 0.75rem 0;
+}

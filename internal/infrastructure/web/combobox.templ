@@ -1,0 +1,67 @@
+package web
+
+import "spot-assistant/internal/infrastructure/i18n"
+
+// Combobox is the searchable picker atom (see combobox.go for the props and
+// the loading contract). The panel is an x-if template, so its options join the
+// DOM only while it is open: a closed picker leaves no option text for a
+// text-content read to trip over. Escape closes the panel and swallows the
+// event, so a picker inside a <dialog> never closes the dialog with it.
+templ Combobox(p ComboboxProps) {
+	// focusout closes the panel when the keyboard leaves the picker; option
+	// mousedown is prevented below, so a click on an option never blurs first.
+	<div class={ "letter-combo-wrap", p.Class } x-data={ p.xData() } @click.outside="open = false" @focusout="if (!$el.contains($event.relatedTarget)) open = false">
+		<input type="hidden" name={ p.Name } value={ p.Selected } :value="value"/>
+		@p.optionsIsland()
+		<input
+			id={ p.ID }
+			type="text"
+			class="letter-combo"
+			role="combobox"
+			aria-autocomplete="list"
+			aria-controls={ p.ID + "-panel" }
+			aria-expanded="false"
+			:aria-expanded="open"
+			:aria-activedescendant="open ? optionId(hi) : null"
+			value={ p.selectedLabel() }
+			:value="open ? query : selectedLabel()"
+			@focus="openPanel()"
+			@click="if (!open) openPanel()"
+			@input="query = $event.target.value; hi = 0"
+			@keydown.enter="if (open) { $event.preventDefault(); confirmPick() }"
+			@keydown.arrow-down.prevent="nav(1)"
+			@keydown.arrow-up.prevent="nav(-1)"
+			@keydown.escape="if (open) { $event.preventDefault(); $event.stopPropagation(); open = false }"
+			placeholder={ i18n.T(ctx, "combobox.filter") }
+			aria-label={ p.Label }
+			autocomplete="off"
+			spellcheck="false"
+		/>
+		<template x-if="open">
+			<div class="letter-combo-panel" id={ p.ID + "-panel" } role="listbox">
+				// One row per run of options sharing a group heading, so a heading and
+				// the options under it keep one x-for root. it.i is the option's index
+				// in filtered, which is what hi and optionId() count in.
+				<template x-for="g in groups" :key="g.key">
+					<div :role="g.name ? 'group' : 'presentation'" :aria-label="g.name || null">
+						// aria-hidden: role=group carries the same name already.
+						<template x-if="g.name">
+							<div class="letter-combo-group" x-text="g.name" aria-hidden="true"></div>
+						</template>
+						<template x-for="it in g.items" :key="it.o.value">
+							// click.prevent: call sites wrap the picker in a <label>, and a plain
+							// click on a label child forwards a click to the labeled input, whose
+							// focus handler would reopen the panel right after pick closes it.
+							// mousedown.prevent keeps the input focused, so the wrapper's
+							// focusout never closes the panel before the click lands.
+							<div class="letter-combo-opt" role="option" :id="optionId(it.i)" :aria-selected="it.i === hi" :class="{ 'is-hi': it.i === hi }" @mousedown.prevent @click.prevent="pick(it.o.value)" @mouseenter="hi = it.i">
+								<span class="letter-combo-label" x-text="it.o.label"></span>
+							</div>
+						</template>
+					</div>
+				</template>
+				<div x-show="filtered.length === 0" class="letter-combo-empty">{ i18n.T(ctx, "combobox.no_matches") }</div>
+			</div>
+		</template>
+	</div>
+}

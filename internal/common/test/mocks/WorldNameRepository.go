@@ -17,10 +17,19 @@ func NewMockWorldNameRepository(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockWorldNameRepository {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockWorldNameRepository{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -74,7 +83,7 @@ type MockWorldNameRepository_SelectGuildWorld_Call struct {
 // SelectGuildWorld is a helper method to define mock.On call
 //   - ctx context.Context
 //   - guildID string
-func (_e *MockWorldNameRepository_Expecter) SelectGuildWorld(ctx interface{}, guildID interface{}) *MockWorldNameRepository_SelectGuildWorld_Call {
+func (_e *MockWorldNameRepository_Expecter) SelectGuildWorld(ctx any, guildID any) *MockWorldNameRepository_SelectGuildWorld_Call {
 	return &MockWorldNameRepository_SelectGuildWorld_Call{Call: _e.mock.On("SelectGuildWorld", ctx, guildID)}
 }
 
@@ -132,7 +141,7 @@ type MockWorldNameRepository_UpsertGuildWorld_Call struct {
 //   - ctx context.Context
 //   - guildID string
 //   - worldName string
-func (_e *MockWorldNameRepository_Expecter) UpsertGuildWorld(ctx interface{}, guildID interface{}, worldName interface{}) *MockWorldNameRepository_UpsertGuildWorld_Call {
+func (_e *MockWorldNameRepository_Expecter) UpsertGuildWorld(ctx any, guildID any, worldName any) *MockWorldNameRepository_UpsertGuildWorld_Call {
 	return &MockWorldNameRepository_UpsertGuildWorld_Call{Call: _e.mock.On("UpsertGuildWorld", ctx, guildID, worldName)}
 }
 

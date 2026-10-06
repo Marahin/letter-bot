@@ -4,9 +4,8 @@ let
 in
 pkgs.mkShell {
   buildInputs = [
-    unstable.go_1_22
+    unstable.go_1_27
     unstable.jetbrains.goland
-    pkgs.atlas
   ];
   hardeningDisable = [ "fortify" ];
 }

@@ -10,17 +10,17 @@ import (
 
 type Adapter struct {
 	log            *zap.SugaredLogger
-	api            ports.WorldApi
+	api            ports.WorldAPI
 	worldNameRepo  ports.WorldNameRepository
-	guildIdToWorld cmap.ConcurrentMap[string, string]
+	guildIDToWorld cmap.ConcurrentMap[string, string]
 	players        cmap.ConcurrentMap[string, map[string]struct{}]
 }
 
-func NewAdapter(api ports.WorldApi, worldNameRepo ports.WorldNameRepository) *Adapter {
+func NewAdapter(api ports.WorldAPI, worldNameRepo ports.WorldNameRepository) *Adapter {
 	return &Adapter{
 		api:            api,
 		worldNameRepo:  worldNameRepo,
-		guildIdToWorld: cmap.New[string](),
+		guildIDToWorld: cmap.New[string](),
 		players:        cmap.New[map[string]struct{}](),
 	}
 }

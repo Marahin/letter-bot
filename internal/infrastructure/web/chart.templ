@@ -1,0 +1,205 @@
+package web
+
+// Chart is the app's one chart atom, rendered by every view that draws a chart
+// (see chart.go for the props and the geometry). Three shapes: a line chart with
+// optional area fill, a bar chart, and the tiny inline sparkline. It renders
+// nothing at all when there is no data.
+//
+// Never put <text> in a chart SVG (#124): the plot SVG is
+// preserveAspectRatio="none", so glyphs inside it stretch with the container.
+// Labels, gridlines, markers and hover targets are HTML over the plot box.
+templ Chart(p ChartProps) {
+	if !p.empty() {
+		switch p.Kind {
+			case ChartSparkline:
+				@chartSparkline(p.spark())
+			case ChartBar:
+				@chartBarFigure(p)
+			case ChartHBar:
+				@chartHBarFigure(p)
+			default:
+				@chartLineFigure(p)
+		}
+	}
+}
+
+// chartLineFigure is the line chart: the shared frame with the polyline geometry
+// inside it and the day labels in their own band underneath.
+templ chartLineFigure(p ChartProps) {
+	<figure data-chart class={ "min-w-0", p.Class }>
+		@chartCaption(p.Label)
+		@chartFrame(p) {
+			@chartLines(p.lines())
+		}
+		@chartXAxis(p.xTicks())
+	</figure>
+}
+
+// chartBarFigure is the bar chart: pure HTML columns, with the (user-controlled)
+// item names in the label band under the plot, where a fixed plot height can't
+// crop them.
+templ chartBarFigure(p ChartProps) {
+	{{ bars := p.bars() }}
+	<figure data-chart class={ "min-w-0", p.Class }>
+		@chartCaption(p.Label)
+		@chartFrame(p) {
+			@chartBars(bars)
+		}
+		<div class="ml-11 mt-1.5 flex gap-2">
+			for _, b := range bars {
+				<span data-chart-label class="min-w-0 flex-1 truncate text-center text-[11px] leading-tight text-zone-300" title={ b.Name }>{ b.Name }</span>
+			}
+		</div>
+	</figure>
+}
+
+// chartHBarFigure is the horizontal bar list: each row is the (possibly long)
+// name, then the bar and its figure. Names wrap to the row above the bar on a
+// phone, where a fixed name column would leave no room for the bar.
+templ chartHBarFigure(p ChartProps) {
+	<figure data-chart class={ "min-w-0", p.Class }>
+		@chartCaption(p.Label)
+		<ol class="space-y-2.5 sm:space-y-2">
+			for _, b := range p.bars() {
+				<li data-chart-tip={ b.Tip } class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)_auto]">
+					if b.Href != "" {
+						<a data-chart-label href={ templ.SafeURL(b.Href) } class="col-span-2 truncate text-sm text-zone-200 transition hover:text-signal-bright sm:col-span-1" title={ b.Name }>{ b.Name }</a>
+					} else {
+						<span data-chart-label class="col-span-2 truncate text-sm text-zone-200 sm:col-span-1" title={ b.Name }>{ b.Name }</span>
+					}
+					<span class="h-2.5 min-w-0 overflow-hidden rounded-full bg-zone-800" aria-hidden="true">
+						<span class="block h-full rounded-full" style={ b.hFillStyle() }></span>
+					</span>
+					<span class="w-14 text-right font-mono text-xs font-semibold tabular-nums text-zone-300">{ b.Value }</span>
+				</li>
+			}
+		</ol>
+	</figure>
+}
+
+// chartFrame is the shared plot frame: the y-axis label gutter and its gridlines
+// around a plot box whose 0-100% coordinate space every mark shares. The band is
+// inset vertically so the top and bottom tick labels have room to sit on their
+// gridline without spilling out of the figure.
+templ chartFrame(p ChartProps) {
+	{{ ticks := p.yTicks() }}
+	<div class="relative" style={ p.heightStyle() }>
+		<div class="absolute inset-y-2 left-0 w-11">
+			for _, t := range ticks {
+				<span data-chart-label class="absolute right-1.5 -translate-y-1/2 whitespace-nowrap font-mono text-[10px] leading-none tabular-nums text-zone-400" style={ "top:" + t.TopPct + "%" }>{ t.Text }</span>
+			}
+		</div>
+		<div class="absolute inset-y-2 left-11 right-0">
+			for _, t := range ticks {
+				<span class="absolute inset-x-0 h-px bg-zone-700" style={ "top:" + t.TopPct + "%" }></span>
+			}
+			{ children... }
+		</div>
+	</div>
+}
+
+// chartCaption names the chart for screen readers without taking any space.
+templ chartCaption(label string) {
+	if label != "" {
+		<figcaption class="sr-only">{ label }</figcaption>
+	}
+}
+
+// chartXAxis is the label band below the plot, positioned in the same
+// percentages as the points it labels.
+templ chartXAxis(ticks []chartXTick) {
+	if len(ticks) > 0 {
+		<div class="relative ml-11 mt-1 h-3">
+			for _, t := range ticks {
+				<span data-chart-label class="absolute whitespace-nowrap font-mono text-[10px] leading-none tabular-nums text-zone-400" style={ t.style() }>{ t.Text }</span>
+			}
+		</div>
+	}
+}
+
+// chartLines draws the series geometry only. vector-effect keeps the 2px stroke
+// 2 CSS px wide in both axes despite the non-uniform scale; overflow-visible
+// keeps a point sitting exactly on the floor from having its stroke halved.
+templ chartLines(lines []chartLine) {
+	<svg viewBox="0 0 100 100" preserveAspectRatio="none" class="absolute inset-0 h-full w-full overflow-visible" aria-hidden="true">
+		for _, l := range lines {
+			if l.Area != "" {
+				<polygon points={ l.Area } fill={ l.Color } fill-opacity="0.14"></polygon>
+			}
+			<polyline
+				points={ l.Points }
+				fill="none"
+				stroke={ l.Color }
+				stroke-width="2"
+				stroke-linejoin="round"
+				stroke-linecap="round"
+				vector-effect="non-scaling-stroke"
+			></polyline>
+			if l.Dashed != "" {
+				<polyline
+					data-chart-partial
+					points={ l.Dashed }
+					fill="none"
+					stroke={ l.Color }
+					stroke-width="2"
+					stroke-dasharray="4 4"
+					stroke-linecap="round"
+					vector-effect="non-scaling-stroke"
+				></polyline>
+			}
+		}
+	</svg>
+	for _, l := range lines {
+		for _, m := range l.Markers {
+			@chartMarker(m)
+		}
+	}
+}
+
+// chartMarker is one point: an HTML dot (inside the SVG a circle would render as
+// an ellipse) over a larger transparent hover target carrying the tooltip.
+templ chartMarker(m chartPoint) {
+	<span class="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-full" style={ m.dotStyle() }></span>
+	<span
+		data-chart-tip={ m.Tip }
+		class="absolute h-[20px] w-[20px] -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full"
+		style={ m.tipStyle() }
+	></span>
+}
+
+// chartBars draws the columns: a percent-height fill anchored to the plot floor,
+// with its value figure floating just above the bar's top (rather than inside it,
+// where a short bar would crop it).
+templ chartBars(bars []chartBar) {
+	<div class="absolute inset-0 flex items-end gap-2">
+		for _, b := range bars {
+			<div data-chart-tip={ b.Tip } class="relative flex h-full min-w-0 flex-1 cursor-pointer flex-col items-center justify-end">
+				<span
+					class="absolute inset-x-0 mb-1 text-center font-mono text-[11px] font-semibold leading-none tabular-nums text-zone-300"
+					style={ "bottom:" + b.HeightPct + "%" }
+				>{ b.Value }</span>
+				<span class="w-full max-w-[3.5rem] rounded-t" style={ b.fillStyle() }></span>
+			</div>
+		}
+	</div>
+}
+
+// chartSparkline is the inline trend cell: a fixed-size SVG in its own box, so
+// the default (uniform) preserveAspectRatio applies, holding no text at all. The
+// whole cell is the hover target.
+templ chartSparkline(s chartSpark) {
+	<figure data-chart data-chart-tip={ s.Tip } title={ s.Label } class="inline-block cursor-pointer align-middle">
+		<svg viewBox="0 0 92 26" width="92" height="26" class="block" aria-hidden="true">
+			<polyline
+				points={ s.Points }
+				fill="none"
+				stroke={ s.Color }
+				stroke-width="1.5"
+				stroke-linejoin="round"
+				stroke-linecap="round"
+				opacity="0.85"
+			></polyline>
+			<circle cx={ s.DotX } cy={ s.DotY } r="2.5" fill={ s.Color }></circle>
+		</svg>
+	</figure>
+}

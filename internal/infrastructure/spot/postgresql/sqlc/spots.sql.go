@@ -7,27 +7,259 @@ package sqlc
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const selectAllSpots = `-- name: SelectAllSpots :many
-SELECT
-    id,
-    name,
-    created_at
-FROM
-    web_spot
+const archiveSpot = `-- name: ArchiveSpot :execrows
+UPDATE web_spot
+SET archived_at = now()
+WHERE id = $1
+  AND guild_id = $2::text
+  AND archived_at IS NULL
 `
 
-func (q *Queries) SelectAllSpots(ctx context.Context) ([]WebSpot, error) {
-	rows, err := q.db.Query(ctx, selectAllSpots)
+type ArchiveSpotParams struct {
+	ID      int64
+	GuildID string
+}
+
+func (q *Queries) ArchiveSpot(ctx context.Context, arg ArchiveSpotParams) (int64, error) {
+	result, err := q.db.Exec(ctx, archiveSpot, arg.ID, arg.GuildID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const countGuildSpots = `-- name: CountGuildSpots :one
+SELECT count(*) FILTER (WHERE archived_at IS NULL) AS active,
+  count(*) FILTER (WHERE archived_at IS NOT NULL) AS archived
+FROM web_spot
+WHERE guild_id = $1::text
+`
+
+type CountGuildSpotsRow struct {
+	Active   int64
+	Archived int64
+}
+
+func (q *Queries) CountGuildSpots(ctx context.Context, guildID string) (CountGuildSpotsRow, error) {
+	row := q.db.QueryRow(ctx, countGuildSpots, guildID)
+	var i CountGuildSpotsRow
+	err := row.Scan(&i.Active, &i.Archived)
+	return i, err
+}
+
+const deleteSpot = `-- name: DeleteSpot :execrows
+DELETE FROM web_spot
+WHERE web_spot.id = $1
+  AND web_spot.guild_id = $2::text
+  AND NOT EXISTS (SELECT 1 FROM web_reservation r WHERE r.spot_id = web_spot.id)
+`
+
+type DeleteSpotParams struct {
+	ID      int64
+	GuildID string
+}
+
+func (q *Queries) DeleteSpot(ctx context.Context, arg DeleteSpotParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteSpot, arg.ID, arg.GuildID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const insertSpot = `-- name: InsertSpot :one
+INSERT INTO web_spot (name, created_at, guild_id)
+VALUES ($1, now(), $2::text)
+RETURNING id, name, created_at, guild_id, archived_at
+`
+
+type InsertSpotParams struct {
+	Name    string
+	GuildID string
+}
+
+func (q *Queries) InsertSpot(ctx context.Context, arg InsertSpotParams) (WebSpot, error) {
+	row := q.db.QueryRow(ctx, insertSpot, arg.Name, arg.GuildID)
+	var i WebSpot
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.GuildID,
+		&i.ArchivedAt,
+	)
+	return i, err
+}
+
+const insertSpotsIgnoreDuplicates = `-- name: InsertSpotsIgnoreDuplicates :execrows
+INSERT INTO web_spot (guild_id, name, created_at)
+SELECT $1::text, unnest($2::text[]), now()
+ON CONFLICT (guild_id, lower(name)) WHERE archived_at IS NULL DO NOTHING
+`
+
+type InsertSpotsIgnoreDuplicatesParams struct {
+	GuildID string
+	Names   []string
+}
+
+func (q *Queries) InsertSpotsIgnoreDuplicates(ctx context.Context, arg InsertSpotsIgnoreDuplicatesParams) (int64, error) {
+	result, err := q.db.Exec(ctx, insertSpotsIgnoreDuplicates, arg.GuildID, arg.Names)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const renameSpot = `-- name: RenameSpot :execrows
+UPDATE web_spot
+SET name = $1
+WHERE id = $2
+  AND guild_id = $3::text
+`
+
+type RenameSpotParams struct {
+	Name    string
+	ID      int64
+	GuildID string
+}
+
+func (q *Queries) RenameSpot(ctx context.Context, arg RenameSpotParams) (int64, error) {
+	result, err := q.db.Exec(ctx, renameSpot, arg.Name, arg.ID, arg.GuildID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const restoreSpot = `-- name: RestoreSpot :execrows
+UPDATE web_spot
+SET archived_at = NULL
+WHERE id = $1
+  AND guild_id = $2::text
+  AND archived_at IS NOT NULL
+`
+
+type RestoreSpotParams struct {
+	ID      int64
+	GuildID string
+}
+
+func (q *Queries) RestoreSpot(ctx context.Context, arg RestoreSpotParams) (int64, error) {
+	result, err := q.db.Exec(ctx, restoreSpot, arg.ID, arg.GuildID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const selectGuildSpotByID = `-- name: SelectGuildSpotByID :one
+SELECT id, name, created_at, guild_id, archived_at
+FROM web_spot
+WHERE id = $1
+  AND guild_id = $2::text
+LIMIT 1
+`
+
+type SelectGuildSpotByIDParams struct {
+	ID      int64
+	GuildID string
+}
+
+func (q *Queries) SelectGuildSpotByID(ctx context.Context, arg SelectGuildSpotByIDParams) (WebSpot, error) {
+	row := q.db.QueryRow(ctx, selectGuildSpotByID, arg.ID, arg.GuildID)
+	var i WebSpot
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.GuildID,
+		&i.ArchivedAt,
+	)
+	return i, err
+}
+
+const selectGuildSpotByName = `-- name: SelectGuildSpotByName :one
+SELECT id, name, created_at, guild_id, archived_at
+FROM web_spot
+WHERE guild_id = $1::text
+  AND archived_at IS NULL
+  AND lower(name) = lower($2)
+LIMIT 1
+`
+
+type SelectGuildSpotByNameParams struct {
+	GuildID string
+	Name    string
+}
+
+func (q *Queries) SelectGuildSpotByName(ctx context.Context, arg SelectGuildSpotByNameParams) (WebSpot, error) {
+	row := q.db.QueryRow(ctx, selectGuildSpotByName, arg.GuildID, arg.Name)
+	var i WebSpot
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.GuildID,
+		&i.ArchivedAt,
+	)
+	return i, err
+}
+
+const selectGuildSpotList = `-- name: SelectGuildSpotList :many
+SELECT s.id, s.name, s.created_at, s.guild_id, s.archived_at, c.total, c.upcoming
+FROM web_spot s
+  CROSS JOIN LATERAL (
+    SELECT count(*) AS total,
+      count(*) FILTER (WHERE r.end_at >= now()) AS upcoming
+    FROM web_reservation r
+    WHERE r.spot_id = s.id
+  ) c
+WHERE s.guild_id = $1::text
+  AND (s.archived_at IS NOT NULL) = $2::boolean
+  AND lower(s.name) LIKE '%' || lower($3::text) || '%'
+ORDER BY lower(s.name), s.id
+`
+
+type SelectGuildSpotListParams struct {
+	GuildID     string
+	Archived    bool
+	NamePattern string
+}
+
+type SelectGuildSpotListRow struct {
+	ID         int64
+	Name       string
+	CreatedAt  pgtype.Timestamptz
+	GuildID    pgtype.Text
+	ArchivedAt pgtype.Timestamptz
+	Total      int64
+	Upcoming   int64
+}
+
+// One tab of the respawn list. The counts take every reservation that points at
+// the spot, whatever its guild_id, because any of them blocks DeleteSpot.
+func (q *Queries) SelectGuildSpotList(ctx context.Context, arg SelectGuildSpotListParams) ([]SelectGuildSpotListRow, error) {
+	rows, err := q.db.Query(ctx, selectGuildSpotList, arg.GuildID, arg.Archived, arg.NamePattern)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []WebSpot
+	var items []SelectGuildSpotListRow
 	for rows.Next() {
-		var i WebSpot
-		if err := rows.Scan(&i.ID, &i.Name, &i.CreatedAt); err != nil {
+		var i SelectGuildSpotListRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.CreatedAt,
+			&i.GuildID,
+			&i.ArchivedAt,
+			&i.Total,
+			&i.Upcoming,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -38,30 +270,21 @@ func (q *Queries) SelectAllSpots(ctx context.Context) ([]WebSpot, error) {
 	return items, nil
 }
 
-const selectSpotByName = `-- name: SelectSpotByName :one
-SELECT id, name, created_at
+const selectGuildSpots = `-- name: SelectGuildSpots :many
+SELECT id, name, created_at, guild_id, archived_at
 FROM web_spot
-WHERE lower(name) = lower($1)
-LIMIT 1
+WHERE guild_id = $1::text
+  AND ($2::boolean OR archived_at IS NULL)
+ORDER BY lower(name), id
 `
 
-func (q *Queries) SelectSpotByName(ctx context.Context, name string) (WebSpot, error) {
-	row := q.db.QueryRow(ctx, selectSpotByName, name)
-	var i WebSpot
-	err := row.Scan(&i.ID, &i.Name, &i.CreatedAt)
-	return i, err
+type SelectGuildSpotsParams struct {
+	GuildID         string
+	IncludeArchived bool
 }
 
-const selectSpotsByNameCaseInsensitiveLike = `-- name: SelectSpotsByNameCaseInsensitiveLike :many
-SELECT id, name, created_at
-FROM web_spot
-WHERE lower(name) LIKE '%' || lower($1) || '%'
-ORDER BY name
-LIMIT 15
-`
-
-func (q *Queries) SelectSpotsByNameCaseInsensitiveLike(ctx context.Context, namePattern string) ([]WebSpot, error) {
-	rows, err := q.db.Query(ctx, selectSpotsByNameCaseInsensitiveLike, namePattern)
+func (q *Queries) SelectGuildSpots(ctx context.Context, arg SelectGuildSpotsParams) ([]WebSpot, error) {
+	rows, err := q.db.Query(ctx, selectGuildSpots, arg.GuildID, arg.IncludeArchived)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +292,149 @@ func (q *Queries) SelectSpotsByNameCaseInsensitiveLike(ctx context.Context, name
 	var items []WebSpot
 	for rows.Next() {
 		var i WebSpot
-		if err := rows.Scan(&i.ID, &i.Name, &i.CreatedAt); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.CreatedAt,
+			&i.GuildID,
+			&i.ArchivedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const selectGuildSpotsLike = `-- name: SelectGuildSpotsLike :many
+SELECT id, name, created_at, guild_id, archived_at
+FROM web_spot
+WHERE guild_id = $1::text
+  AND archived_at IS NULL
+  AND lower(name) LIKE '%' || lower($2) || '%'
+ORDER BY lower(name), id
+LIMIT $3::int
+`
+
+type SelectGuildSpotsLikeParams struct {
+	GuildID     string
+	NamePattern string
+	RowLimit    int32
+}
+
+func (q *Queries) SelectGuildSpotsLike(ctx context.Context, arg SelectGuildSpotsLikeParams) ([]WebSpot, error) {
+	rows, err := q.db.Query(ctx, selectGuildSpotsLike, arg.GuildID, arg.NamePattern, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []WebSpot
+	for rows.Next() {
+		var i WebSpot
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.CreatedAt,
+			&i.GuildID,
+			&i.ArchivedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const selectSpotReservationCounts = `-- name: SelectSpotReservationCounts :one
+SELECT count(*) AS total,
+  count(*) FILTER (WHERE r.end_at >= now()) AS upcoming
+FROM web_reservation r
+  INNER JOIN web_spot s ON s.id = r.spot_id
+WHERE s.id = $1
+  AND s.guild_id = $2::text
+`
+
+type SelectSpotReservationCountsParams struct {
+	SpotID  int64
+	GuildID string
+}
+
+type SelectSpotReservationCountsRow struct {
+	Total    int64
+	Upcoming int64
+}
+
+// The single-spot variant of the SelectGuildSpotList counts.
+func (q *Queries) SelectSpotReservationCounts(ctx context.Context, arg SelectSpotReservationCountsParams) (SelectSpotReservationCountsRow, error) {
+	row := q.db.QueryRow(ctx, selectSpotReservationCounts, arg.SpotID, arg.GuildID)
+	var i SelectSpotReservationCountsRow
+	err := row.Scan(&i.Total, &i.Upcoming)
+	return i, err
+}
+
+const selectTopGuildSpots = `-- name: SelectTopGuildSpots :many
+SELECT s.id, s.name, s.created_at, s.guild_id, s.archived_at,
+  count(r.id) AS bookings,
+  max(r.start_at)::timestamptz AS last_start_at
+FROM web_reservation r
+  INNER JOIN web_spot s ON s.id = r.spot_id
+WHERE r.guild_id = $1::text
+  AND s.guild_id = $1::text
+  AND s.archived_at IS NULL
+  AND r.start_at >= $2::timestamptz
+  AND ($3::text IS NULL OR r.author_discord_id = $3::text)
+GROUP BY s.id, s.name, s.created_at, s.guild_id, s.archived_at
+ORDER BY bookings DESC, last_start_at DESC, s.id
+LIMIT $4::int
+`
+
+type SelectTopGuildSpotsParams struct {
+	GuildID         string
+	Since           pgtype.Timestamptz
+	AuthorDiscordID pgtype.Text
+	RowLimit        int32
+}
+
+type SelectTopGuildSpotsRow struct {
+	ID          int64
+	Name        string
+	CreatedAt   pgtype.Timestamptz
+	GuildID     pgtype.Text
+	ArchivedAt  pgtype.Timestamptz
+	Bookings    int64
+	LastStartAt pgtype.Timestamptz
+}
+
+// The respawns a member (or anyone, with a NULL author) booked most since a time.
+func (q *Queries) SelectTopGuildSpots(ctx context.Context, arg SelectTopGuildSpotsParams) ([]SelectTopGuildSpotsRow, error) {
+	rows, err := q.db.Query(ctx, selectTopGuildSpots,
+		arg.GuildID,
+		arg.Since,
+		arg.AuthorDiscordID,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SelectTopGuildSpotsRow
+	for rows.Next() {
+		var i SelectTopGuildSpotsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.CreatedAt,
+			&i.GuildID,
+			&i.ArchivedAt,
+			&i.Bookings,
+			&i.LastStartAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

@@ -16,6 +16,7 @@ func NewAdapter(bot ports.BotPort, memberRepo ports.MemberRepository) *Adapter {
 	return &Adapter{
 		bot:        bot,
 		memberRepo: memberRepo,
+		log:        zap.NewNop().Sugar(),
 	}
 }
 

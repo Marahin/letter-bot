@@ -1,4 +1,4 @@
 package eventhandler
 
-func (a *Handler) OnTick() {
+func (h *Handler) OnTick() {
 }

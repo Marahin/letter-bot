@@ -19,7 +19,7 @@ import (
 
 func TestHandler_OnBookWhenSuccessfulWithNoConflicting(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	request := book.BookRequest{
 		Guild:          factories.CreateGuild(),
 		Member:         factories.CreateMember(),
@@ -42,14 +42,14 @@ func TestHandler_OnBookWhenSuccessfulWithNoConflicting(t *testing.T) {
 	response, err := adapter.OnBook(request)
 
 	// assert
-	assert.Nil(err)
-	assert.NotNil(response)
-	assert.Empty(response.ConflictingReservations)
+	is.Nil(err)
+	is.NotNil(response)
+	is.Empty(response.ConflictingReservations)
 }
 
 func TestHandler_OnBookWhenOnUnsuccessful(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	request := book.BookRequest{
 		Guild:          factories.CreateGuild(),
 		Member:         factories.CreateMember(),
@@ -72,14 +72,14 @@ func TestHandler_OnBookWhenOnUnsuccessful(t *testing.T) {
 	response, err := adapter.OnBook(request)
 
 	// assert
-	assert.NotNil(err)
-	assert.Equal("error", err.Error())
-	assert.NotNil(response)
+	is.NotNil(err)
+	is.Equal("error", err.Error())
+	is.NotNil(response)
 }
 
 func TestHandler_OnBookAutocompleteOverbookField(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	adapter := NewHandler(
 		new(mocks.MockBookingService),
 		mocks.NewMockReservationRepository(t),
@@ -94,13 +94,13 @@ func TestHandler_OnBookAutocompleteOverbookField(t *testing.T) {
 	res, err := adapter.OnBookAutocomplete(request)
 
 	// assert
-	assert.Nil(err)
-	assert.Exactly(book.BookAutocompleteResponse{"true", "false"}, res)
+	is.Nil(err)
+	is.Exactly(book.BookAutocompleteResponse{"true", "false"}, res)
 }
 
 func TestHandler_OnBookAutocompleteStartAtField(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	bookingOperations := new(mocks.MockBookingService)
 	bookingOperations.On("GetSuggestedHours", mock.MatchedBy(mocks.TimeMatchedCloseTo), "").Return([]string{"01:00", "02:00"})
 	adapter := NewHandler(
@@ -118,13 +118,13 @@ func TestHandler_OnBookAutocompleteStartAtField(t *testing.T) {
 	res, err := adapter.OnBookAutocomplete(request)
 
 	// assert
-	assert.Nil(err)
-	assert.Exactly(book.BookAutocompleteResponse{"01:00", "02:00"}, res)
+	is.Nil(err)
+	is.Exactly(book.BookAutocompleteResponse{"01:00", "02:00"}, res)
 }
 
 func TestHandler_OnBookAutocompleteEndAtField(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	bookingOperations := new(mocks.MockBookingService)
 	bookingOperations.On("GetSuggestedHours", mock.MatchedBy(mocks.NewMatcherForTimeAndTolerance(
 		time.Now().Add(2*time.Hour),
@@ -145,15 +145,15 @@ func TestHandler_OnBookAutocompleteEndAtField(t *testing.T) {
 	res, err := adapter.OnBookAutocomplete(request)
 
 	// assert
-	assert.Nil(err)
-	assert.Exactly(book.BookAutocompleteResponse{"03:00", "04:00"}, res)
+	is.Nil(err)
+	is.Exactly(book.BookAutocompleteResponse{"03:00", "04:00"}, res)
 }
 
 func TestHandler_OnBookAutocompleteSpotField(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	bookingOperations := new(mocks.MockBookingService)
-	bookingOperations.On("FindAvailableSpots", "asdf").Return([]string{"spot1", "spot2"}, nil)
+	bookingOperations.On("FindAvailableSpots", "guild-1", "asdf").Return([]string{"spot1", "spot2"}, nil)
 	adapter := NewHandler(
 		bookingOperations,
 		mocks.NewMockReservationRepository(t),
@@ -161,21 +161,22 @@ func TestHandler_OnBookAutocompleteSpotField(t *testing.T) {
 		mocks.NewMockSummaryService(t),
 	)
 	request := book.BookAutocompleteRequest{
-		Field: book.BookAutocompleteSpot,
-		Value: "asdf",
+		GuildID: "guild-1",
+		Field:   book.BookAutocompleteSpot,
+		Value:   "asdf",
 	}
 
 	// when
 	res, err := adapter.OnBookAutocomplete(request)
 
 	// assert
-	assert.Nil(err)
-	assert.Exactly(book.BookAutocompleteResponse{"spot1", "spot2"}, res)
+	is.Nil(err)
+	is.Exactly(book.BookAutocompleteResponse{"spot1", "spot2"}, res)
 }
 
 func TestHandler_OnPrivateSummary(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	mockRepo := new(mocks.MockReservationRepository)
 	mockSummarySrv := new(mocks.MockSummaryService)
 	mockCommSrv := new(mocks.MockCommunicationService)
@@ -206,6 +207,6 @@ func TestHandler_OnPrivateSummary(t *testing.T) {
 	err := adapter.OnPrivateSummary(request)
 
 	// assert
-	assert.Nil(err)
+	is.Nil(err)
 	mockRepo.AssertExpectations(t)
 }

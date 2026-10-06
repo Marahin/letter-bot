@@ -11,7 +11,7 @@ on:
 
 jobs:
   lint:
-    name: Run lint
+    name: Run golangci-lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -27,18 +27,40 @@ jobs:
       - name: Run lint
         run: make lint
 
-  migration-check:
-    name: Validate Atlas migrations
+  migrations:
+    name: Run the migrations against Postgres
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:12-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      LETTER_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Setup Atlas
-        uses: ariga/setup-atlas@v0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "^1.27"
 
-      - name: Validate migrations
-        run: make migrations-validate
+      - name: Check the migration order
+        env:
+          MIGRATIONS_BASE: origin/${{ github.base_ref || 'main' }}
+        run: make migrations-order
+
+      - name: Run the database tests
+        run: make test-db
 
   tests:
     name: Run tests
@@ -61,20 +83,68 @@ jobs:
       - name: Run tests
         run: make test
 
-  docker:
-    name: Build and publish image
+  e2e:
+    name: Run the browser e2e suite
     runs-on: ubuntu-latest
-    needs: [lint, migration-check, tests]
+    services:
+      postgres:
+        image: postgres:12-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_HOST: localhost
+      DATABASE_PORT: "5432"
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_NAME: postgres
+      DATABASE_SSL: disable
+      TZ: Europe/Berlin
+      WEB_DEV_AUTH: "true"
+      WEB_ADMIN_DISCORD_IDS: "700000000000000004"
+      WEB_EXPERIENCE_JOB_ENABLED: "false"
+      DISCORD_CLIENT_ID: e2e
+      DISCORD_CLIENT_SECRET: e2e
+      DISCORD_INVITE_LINK: https://discord.gg/b7Qq8V2XFR
+      E2E_CHROME_BIN: /usr/bin/google-chrome
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "^1.27"
+
+      - name: Install dependencies
+        run: make install-dependencies
+
+      - name: Build the templates and the CSS
+        run: make generate css
+
+      - name: Run the e2e suite
+        run: ./scripts/e2e-ci.sh
+
+  docker:
+    name: Build and publish images
+    runs-on: ubuntu-latest
+    needs: [lint, migrations, tests, e2e]
     env:
       APP: letter-bot
+      WEB_APP: letter-web
       REGISTRY: marahin
       TAG: ${{ github.sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build Docker image
-        run: REGISTRY=${{ env.REGISTRY }} APP=${{ env.APP }} TAG=${{ env.TAG }} make docker
+      - name: Build Docker images
+        run: REGISTRY=${{ env.REGISTRY }} APP=${{ env.APP }} WEB_APP=${{ env.WEB_APP }} TAG=${{ env.TAG }} make docker docker-web
 
       - name: Log in to Docker Hub
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -83,6 +153,6 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Push Docker image
+      - name: Push Docker images
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: REGISTRY=${{ env.REGISTRY }} APP=${{ env.APP }} TAG=${{ env.TAG }} make push-to-registry
+        run: REGISTRY=${{ env.REGISTRY }} APP=${{ env.APP }} WEB_APP=${{ env.WEB_APP }} TAG=${{ env.TAG }} make push-to-registry push-web-to-registry

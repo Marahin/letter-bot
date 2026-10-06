@@ -27,6 +27,8 @@ If you like the bot and want to support its development, you can buy me a coffee
   * [Feedback](#Feedback)
   * [Pie chart showing distribution of reservations](#Pie-chart-showing-distribution-of-reservations)
   * [List of upcoming reservations](#List-of-upcoming-reservations)
+* [**Buttons and forms**](#Buttons-and-forms)
+* [**Web panel**](#Web-panel)
 * [**Development**](#Development)
 
 
@@ -63,6 +65,62 @@ Letter bot originated within [Refugees](https://www.tibia.com/community/?subtopi
 
 ![summary list](docs/sample_summary_list.png)
 
+## Buttons and forms
+
+The summary channel has the buttons **Book a respawn**, **My reservations** and
+**Open panel** (when `WEB_BASE_URL` is set). Every reply is visible only to the
+member who clicked.
+
+- **Book a respawn** opens a private message with lists, so you do not type:
+  1. Pick the respawn: your usual respawns, or the full list by name (A–F,
+     G–M, ...). **Search by name** finds it by a part of its name.
+  2. Pick the start (**Now** or a half hour in the next 12 hours; **Later ›**
+     goes further) and the length (30 min to 3 h), then **Book**. The start
+     list shows the times that are already booked.
+
+  When other reservations overlap, the bot lists them, and shows **Overbook
+  them** to members who may overbook.
+- **My reservations** (or `/reservations`) lists your upcoming reservations
+  with **Edit** and **Cancel** buttons. Edit opens step 2 with the current
+  respawn, start and length chosen. An edit never overbooks.
+
+The slash commands `/book`, `/unbook` and `/summary` work as before.
+
+## Web panel
+
+Letter has a web panel, [TibiaLoot.com](https://tibialoot.com) (`cmd/web`, image `marahin/letter-web`). Its landing page opens with the public Loot Calculator. Server members sign in with Discord and:
+
+* manage the respawn list (add, rename, archive, restore, import the default list),
+* search, create, edit and delete reservations,
+* set the command and summary channels, the Tibia world and the ranks that may manage, view, reserve and overbook,
+* read stats per respawn, player and character, with the experience gained during reservations (from the TibiaData highscores, top 1000 only),
+* use the public Loot Calculator (`/tools/loot-calculator`).
+
+The panel is in English and Polish. The bot works only on premium servers; site admins turn premium on in the panel.
+
+Documentation:
+
+* [docs/web/README.md](docs/web/README.md): configuration, deploy (migration order, Kubernetes, Discord portal, bot invite), and how each page works,
+* [docs/web/DECISIONS.md](docs/web/DECISIONS.md): decisions taken for the web panel, and open questions,
+* [docs/web/VOCABULARY.md](docs/web/VOCABULARY.md): the terms used in the UI, the bot and the code.
+
+To run it locally: `make build`, then start `bin/letter-web` with the `DATABASE_*` values, `WEB_BASE_URL` and `DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` (see [.env.sample](.env.sample)). Both binaries apply the migrations on start. With docker-compose, the `web` service does this with hot reload.
+
+Test coverage of the core packages added for the web panel (`make test`):
+
+| Package | Coverage |
+|---|---|
+| `internal/core/auth` | 100% |
+| `internal/core/guildaccess` | 100% |
+| `internal/core/premium` | 100% |
+| `internal/core/permission` | 100% |
+| `internal/core/spots` | 100% |
+| `internal/core/reservations` | 100% |
+| `internal/core/experience` | 100% |
+| `internal/core/characters` | 100% |
+| `internal/core/lootcalc` | 100% |
+| `internal/core/stats` | 99.3% |
+
 ## Development
 
 ### Prerequisites
@@ -70,18 +128,16 @@ Letter bot originated within [Refugees](https://www.tibia.com/community/?subtopi
 * `docker` and `docker-compose` (unless you want to go bare-metal),
 * `make` (unless you want to run commands manually),
 * `go` (if you want to develop),
-* `atlas` to manage migrations https://atlasgo.io
 * `sqlc` to generate Go wrappers around SQL queries https://sqlc.dev/
+* `templ` and the Tailwind CLI for the web panel (`make install-bins` and `make css` install them)
 
 ### docker-compose
 
 #### Initial setup
 
 1. Copy `.env.example` to `.env` and fill in the values (or leave as-is).
-3. Run `docker-compose up -d` to start the stack.
-4. Run `docker-compose exec bot sh -c "bin/migrate"` to apply migrations.
-4. Run `docker-compose exec db bash -c "seed"` to fill any entry-level data.
-5. Run `docker-compose restart bot` (as it failed originally, when the database was not set up).
+2. Run `docker-compose up -d` to start the stack. The bot and the web apply the migrations on start.
+3. Run `docker-compose exec db bash -c "seed"` to fill any entry-level data.
 
 #### After initial setup
 
@@ -97,12 +153,11 @@ Letter bot originated within [Refugees](https://www.tibia.com/community/?subtopi
 
 ### Database and migrations
 
-* make changes in schema, 
-* `bin/generate_migration <migration_title>`
+* `make migration name=<snake_case>` creates a goose migration; write the SQL in it (see `AGENT.md`, "Database"),
 * create new queries, if needed
 * `make sqlc-generate`
 
-To apply migrations, run `docker-compose exec bot sh -c "bin/migrate"`.
+The bot and the web apply the migrations on start.
 
 ### Contributing
 
@@ -127,7 +182,7 @@ There are examples in [.env.sample](.env.sample) file, along with [docker-compos
 The bot exposes Prometheus metrics via an internal HTTP server.
 
 - Endpoint: `/metrics`
-- Address: configured by `METRICS_ADDR`
+- Address: configured by `BOT_METRICS_ADDR` or `METRICS_ADDR` (default `:2112`)
 - Implementation: Prometheus client, wired by infrastructure HTTP server
 
 Exposed metrics
@@ -152,7 +207,7 @@ Two HTTP endpoints are provided for container health probes:
 - `/livez`: liveness probe. Returns 200 when the bot process is running; 503 otherwise.
 - `/readyz`: readiness probe. Returns 200 when the bot is running and database ping succeeds; 503 otherwise.
 
-Configure your probes to hit these endpoints on the same port as metrics (default `:2112`, configurable with `METRICS_ADDR`).
+Configure your probes to hit these endpoints on the same port as metrics (default `:2112`, configurable with `BOT_METRICS_ADDR` or `METRICS_ADDR`).
 
 ## Credits
 Letter-bot is one of many tools prototyped by (and for) [TibiaLoot.com](https://tibialoot.com)  

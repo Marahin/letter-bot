@@ -6,7 +6,6 @@ package mocks
 
 import (
 	"spot-assistant/internal/core/dto/book"
-	"spot-assistant/internal/core/dto/guild"
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/summary"
 
@@ -19,10 +18,19 @@ func NewMockCommunicationService(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockCommunicationService {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockCommunicationService{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -54,7 +62,7 @@ type MockCommunicationService_NotifyOverbookedMember_Call struct {
 // NotifyOverbookedMember is a helper method to define mock.On call
 //   - request book.BookRequest
 //   - res *reservation.ClippedOrRemovedReservation
-func (_e *MockCommunicationService_Expecter) NotifyOverbookedMember(request interface{}, res interface{}) *MockCommunicationService_NotifyOverbookedMember_Call {
+func (_e *MockCommunicationService_Expecter) NotifyOverbookedMember(request any, res any) *MockCommunicationService_NotifyOverbookedMember_Call {
 	return &MockCommunicationService_NotifyOverbookedMember_Call{Call: _e.mock.On("NotifyOverbookedMember", request, res)}
 }
 
@@ -86,66 +94,9 @@ func (_c *MockCommunicationService_NotifyOverbookedMember_Call) RunAndReturn(run
 	return _c
 }
 
-// SendGuildSummary provides a mock function for the type MockCommunicationService
-func (_mock *MockCommunicationService) SendGuildSummary(guild1 *guild.Guild, summary1 *summary.Summary) error {
-	ret := _mock.Called(guild1, summary1)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SendGuildSummary")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*guild.Guild, *summary.Summary) error); ok {
-		r0 = returnFunc(guild1, summary1)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// MockCommunicationService_SendGuildSummary_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SendGuildSummary'
-type MockCommunicationService_SendGuildSummary_Call struct {
-	*mock.Call
-}
-
-// SendGuildSummary is a helper method to define mock.On call
-//   - guild1 *guild.Guild
-//   - summary1 *summary.Summary
-func (_e *MockCommunicationService_Expecter) SendGuildSummary(guild1 interface{}, summary1 interface{}) *MockCommunicationService_SendGuildSummary_Call {
-	return &MockCommunicationService_SendGuildSummary_Call{Call: _e.mock.On("SendGuildSummary", guild1, summary1)}
-}
-
-func (_c *MockCommunicationService_SendGuildSummary_Call) Run(run func(guild1 *guild.Guild, summary1 *summary.Summary)) *MockCommunicationService_SendGuildSummary_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *guild.Guild
-		if args[0] != nil {
-			arg0 = args[0].(*guild.Guild)
-		}
-		var arg1 *summary.Summary
-		if args[1] != nil {
-			arg1 = args[1].(*summary.Summary)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *MockCommunicationService_SendGuildSummary_Call) Return(err error) *MockCommunicationService_SendGuildSummary_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *MockCommunicationService_SendGuildSummary_Call) RunAndReturn(run func(guild1 *guild.Guild, summary1 *summary.Summary) error) *MockCommunicationService_SendGuildSummary_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // SendPrivateSummary provides a mock function for the type MockCommunicationService
-func (_mock *MockCommunicationService) SendPrivateSummary(request summary.PrivateSummaryRequest, summary1 *summary.Summary) error {
-	ret := _mock.Called(request, summary1)
+func (_mock *MockCommunicationService) SendPrivateSummary(request summary.PrivateSummaryRequest, sum *summary.Summary) error {
+	ret := _mock.Called(request, sum)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SendPrivateSummary")
@@ -153,7 +104,7 @@ func (_mock *MockCommunicationService) SendPrivateSummary(request summary.Privat
 
 	var r0 error
 	if returnFunc, ok := ret.Get(0).(func(summary.PrivateSummaryRequest, *summary.Summary) error); ok {
-		r0 = returnFunc(request, summary1)
+		r0 = returnFunc(request, sum)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -167,12 +118,12 @@ type MockCommunicationService_SendPrivateSummary_Call struct {
 
 // SendPrivateSummary is a helper method to define mock.On call
 //   - request summary.PrivateSummaryRequest
-//   - summary1 *summary.Summary
-func (_e *MockCommunicationService_Expecter) SendPrivateSummary(request interface{}, summary1 interface{}) *MockCommunicationService_SendPrivateSummary_Call {
-	return &MockCommunicationService_SendPrivateSummary_Call{Call: _e.mock.On("SendPrivateSummary", request, summary1)}
+//   - sum *summary.Summary
+func (_e *MockCommunicationService_Expecter) SendPrivateSummary(request any, sum any) *MockCommunicationService_SendPrivateSummary_Call {
+	return &MockCommunicationService_SendPrivateSummary_Call{Call: _e.mock.On("SendPrivateSummary", request, sum)}
 }
 
-func (_c *MockCommunicationService_SendPrivateSummary_Call) Run(run func(request summary.PrivateSummaryRequest, summary1 *summary.Summary)) *MockCommunicationService_SendPrivateSummary_Call {
+func (_c *MockCommunicationService_SendPrivateSummary_Call) Run(run func(request summary.PrivateSummaryRequest, sum *summary.Summary)) *MockCommunicationService_SendPrivateSummary_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 summary.PrivateSummaryRequest
 		if args[0] != nil {
@@ -195,7 +146,7 @@ func (_c *MockCommunicationService_SendPrivateSummary_Call) Return(err error) *M
 	return _c
 }
 
-func (_c *MockCommunicationService_SendPrivateSummary_Call) RunAndReturn(run func(request summary.PrivateSummaryRequest, summary1 *summary.Summary) error) *MockCommunicationService_SendPrivateSummary_Call {
+func (_c *MockCommunicationService_SendPrivateSummary_Call) RunAndReturn(run func(request summary.PrivateSummaryRequest, sum *summary.Summary) error) *MockCommunicationService_SendPrivateSummary_Call {
 	_c.Call.Return(run)
 	return _c
 }

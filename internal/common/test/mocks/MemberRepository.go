@@ -17,10 +17,19 @@ func NewMockMemberRepository(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockMemberRepository {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockMemberRepository{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -38,47 +47,47 @@ func (_m *MockMemberRepository) EXPECT() *MockMemberRepository_Expecter {
 	return &MockMemberRepository_Expecter{mock: &_m.Mock}
 }
 
-// GetMemberByGuildAndId provides a mock function for the type MockMemberRepository
-func (_mock *MockMemberRepository) GetMemberByGuildAndId(g *guild.Guild, memberId string) (*member.Member, error) {
-	ret := _mock.Called(g, memberId)
+// GetMemberByGuildAndID provides a mock function for the type MockMemberRepository
+func (_mock *MockMemberRepository) GetMemberByGuildAndID(g *guild.Guild, memberID string) (*member.Member, error) {
+	ret := _mock.Called(g, memberID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetMemberByGuildAndId")
+		panic("no return value specified for GetMemberByGuildAndID")
 	}
 
 	var r0 *member.Member
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(*guild.Guild, string) (*member.Member, error)); ok {
-		return returnFunc(g, memberId)
+		return returnFunc(g, memberID)
 	}
 	if returnFunc, ok := ret.Get(0).(func(*guild.Guild, string) *member.Member); ok {
-		r0 = returnFunc(g, memberId)
+		r0 = returnFunc(g, memberID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*member.Member)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(*guild.Guild, string) error); ok {
-		r1 = returnFunc(g, memberId)
+		r1 = returnFunc(g, memberID)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// MockMemberRepository_GetMemberByGuildAndId_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetMemberByGuildAndId'
-type MockMemberRepository_GetMemberByGuildAndId_Call struct {
+// MockMemberRepository_GetMemberByGuildAndID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetMemberByGuildAndID'
+type MockMemberRepository_GetMemberByGuildAndID_Call struct {
 	*mock.Call
 }
 
-// GetMemberByGuildAndId is a helper method to define mock.On call
+// GetMemberByGuildAndID is a helper method to define mock.On call
 //   - g *guild.Guild
-//   - memberId string
-func (_e *MockMemberRepository_Expecter) GetMemberByGuildAndId(g interface{}, memberId interface{}) *MockMemberRepository_GetMemberByGuildAndId_Call {
-	return &MockMemberRepository_GetMemberByGuildAndId_Call{Call: _e.mock.On("GetMemberByGuildAndId", g, memberId)}
+//   - memberID string
+func (_e *MockMemberRepository_Expecter) GetMemberByGuildAndID(g any, memberID any) *MockMemberRepository_GetMemberByGuildAndID_Call {
+	return &MockMemberRepository_GetMemberByGuildAndID_Call{Call: _e.mock.On("GetMemberByGuildAndID", g, memberID)}
 }
 
-func (_c *MockMemberRepository_GetMemberByGuildAndId_Call) Run(run func(g *guild.Guild, memberId string)) *MockMemberRepository_GetMemberByGuildAndId_Call {
+func (_c *MockMemberRepository_GetMemberByGuildAndID_Call) Run(run func(g *guild.Guild, memberID string)) *MockMemberRepository_GetMemberByGuildAndID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 *guild.Guild
 		if args[0] != nil {
@@ -96,75 +105,12 @@ func (_c *MockMemberRepository_GetMemberByGuildAndId_Call) Run(run func(g *guild
 	return _c
 }
 
-func (_c *MockMemberRepository_GetMemberByGuildAndId_Call) Return(member1 *member.Member, err error) *MockMemberRepository_GetMemberByGuildAndId_Call {
+func (_c *MockMemberRepository_GetMemberByGuildAndID_Call) Return(member1 *member.Member, err error) *MockMemberRepository_GetMemberByGuildAndID_Call {
 	_c.Call.Return(member1, err)
 	return _c
 }
 
-func (_c *MockMemberRepository_GetMemberByGuildAndId_Call) RunAndReturn(run func(g *guild.Guild, memberId string) (*member.Member, error)) *MockMemberRepository_GetMemberByGuildAndId_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// MemberHasRole provides a mock function for the type MockMemberRepository
-func (_mock *MockMemberRepository) MemberHasRole(g *guild.Guild, m *member.Member, roleName string) bool {
-	ret := _mock.Called(g, m, roleName)
-
-	if len(ret) == 0 {
-		panic("no return value specified for MemberHasRole")
-	}
-
-	var r0 bool
-	if returnFunc, ok := ret.Get(0).(func(*guild.Guild, *member.Member, string) bool); ok {
-		r0 = returnFunc(g, m, roleName)
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-	return r0
-}
-
-// MockMemberRepository_MemberHasRole_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MemberHasRole'
-type MockMemberRepository_MemberHasRole_Call struct {
-	*mock.Call
-}
-
-// MemberHasRole is a helper method to define mock.On call
-//   - g *guild.Guild
-//   - m *member.Member
-//   - roleName string
-func (_e *MockMemberRepository_Expecter) MemberHasRole(g interface{}, m interface{}, roleName interface{}) *MockMemberRepository_MemberHasRole_Call {
-	return &MockMemberRepository_MemberHasRole_Call{Call: _e.mock.On("MemberHasRole", g, m, roleName)}
-}
-
-func (_c *MockMemberRepository_MemberHasRole_Call) Run(run func(g *guild.Guild, m *member.Member, roleName string)) *MockMemberRepository_MemberHasRole_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *guild.Guild
-		if args[0] != nil {
-			arg0 = args[0].(*guild.Guild)
-		}
-		var arg1 *member.Member
-		if args[1] != nil {
-			arg1 = args[1].(*member.Member)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *MockMemberRepository_MemberHasRole_Call) Return(b bool) *MockMemberRepository_MemberHasRole_Call {
-	_c.Call.Return(b)
-	return _c
-}
-
-func (_c *MockMemberRepository_MemberHasRole_Call) RunAndReturn(run func(g *guild.Guild, m *member.Member, roleName string) bool) *MockMemberRepository_MemberHasRole_Call {
+func (_c *MockMemberRepository_GetMemberByGuildAndID_Call) RunAndReturn(run func(g *guild.Guild, memberID string) (*member.Member, error)) *MockMemberRepository_GetMemberByGuildAndID_Call {
 	_c.Call.Return(run)
 	return _c
 }

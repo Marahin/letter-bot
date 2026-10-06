@@ -7,6 +7,7 @@ package mocks
 import (
 	"context"
 	"spot-assistant/internal/core/dto/spot"
+	"time"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -17,10 +18,19 @@ func NewMockSpotRepository(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockSpotRepository {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockSpotRepository{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -38,109 +48,246 @@ func (_m *MockSpotRepository) EXPECT() *MockSpotRepository_Expecter {
 	return &MockSpotRepository_Expecter{mock: &_m.Mock}
 }
 
-// SelectAllSpots provides a mock function for the type MockSpotRepository
-func (_mock *MockSpotRepository) SelectAllSpots(ctx context.Context) ([]*spot.Spot, error) {
-	ret := _mock.Called(ctx)
+// ArchiveSpot provides a mock function for the type MockSpotRepository
+func (_mock *MockSpotRepository) ArchiveSpot(ctx context.Context, guildID string, id int64) error {
+	ret := _mock.Called(ctx, guildID, id)
 
 	if len(ret) == 0 {
-		panic("no return value specified for SelectAllSpots")
+		panic("no return value specified for ArchiveSpot")
 	}
 
-	var r0 []*spot.Spot
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context) ([]*spot.Spot, error)); ok {
-		return returnFunc(ctx)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context) []*spot.Spot); ok {
-		r0 = returnFunc(ctx)
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int64) error); ok {
+		r0 = returnFunc(ctx, guildID, id)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*spot.Spot)
-		}
+		r0 = ret.Error(0)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = returnFunc(ctx)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
+	return r0
 }
 
-// MockSpotRepository_SelectAllSpots_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SelectAllSpots'
-type MockSpotRepository_SelectAllSpots_Call struct {
+// MockSpotRepository_ArchiveSpot_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ArchiveSpot'
+type MockSpotRepository_ArchiveSpot_Call struct {
 	*mock.Call
 }
 
-// SelectAllSpots is a helper method to define mock.On call
+// ArchiveSpot is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockSpotRepository_Expecter) SelectAllSpots(ctx interface{}) *MockSpotRepository_SelectAllSpots_Call {
-	return &MockSpotRepository_SelectAllSpots_Call{Call: _e.mock.On("SelectAllSpots", ctx)}
+//   - guildID string
+//   - id int64
+func (_e *MockSpotRepository_Expecter) ArchiveSpot(ctx any, guildID any, id any) *MockSpotRepository_ArchiveSpot_Call {
+	return &MockSpotRepository_ArchiveSpot_Call{Call: _e.mock.On("ArchiveSpot", ctx, guildID, id)}
 }
 
-func (_c *MockSpotRepository_SelectAllSpots_Call) Run(run func(ctx context.Context)) *MockSpotRepository_SelectAllSpots_Call {
+func (_c *MockSpotRepository_ArchiveSpot_Call) Run(run func(ctx context.Context, guildID string, id int64)) *MockSpotRepository_ArchiveSpot_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 int64
+		if args[2] != nil {
+			arg2 = args[2].(int64)
+		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
 }
 
-func (_c *MockSpotRepository_SelectAllSpots_Call) Return(spots []*spot.Spot, err error) *MockSpotRepository_SelectAllSpots_Call {
-	_c.Call.Return(spots, err)
+func (_c *MockSpotRepository_ArchiveSpot_Call) Return(err error) *MockSpotRepository_ArchiveSpot_Call {
+	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *MockSpotRepository_SelectAllSpots_Call) RunAndReturn(run func(ctx context.Context) ([]*spot.Spot, error)) *MockSpotRepository_SelectAllSpots_Call {
+func (_c *MockSpotRepository_ArchiveSpot_Call) RunAndReturn(run func(ctx context.Context, guildID string, id int64) error) *MockSpotRepository_ArchiveSpot_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// SelectSpotByName provides a mock function for the type MockSpotRepository
-func (_mock *MockSpotRepository) SelectSpotByName(ctx context.Context, name string) (*spot.Spot, error) {
-	ret := _mock.Called(ctx, name)
+// CountGuildSpots provides a mock function for the type MockSpotRepository
+func (_mock *MockSpotRepository) CountGuildSpots(ctx context.Context, guildID string) (int, int, error) {
+	ret := _mock.Called(ctx, guildID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for SelectSpotByName")
+		panic("no return value specified for CountGuildSpots")
+	}
+
+	var r0 int
+	var r1 int
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (int, int, error)); ok {
+		return returnFunc(ctx, guildID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) int); ok {
+		r0 = returnFunc(ctx, guildID)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) int); ok {
+		r1 = returnFunc(ctx, guildID)
+	} else {
+		r1 = ret.Get(1).(int)
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, string) error); ok {
+		r2 = returnFunc(ctx, guildID)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// MockSpotRepository_CountGuildSpots_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountGuildSpots'
+type MockSpotRepository_CountGuildSpots_Call struct {
+	*mock.Call
+}
+
+// CountGuildSpots is a helper method to define mock.On call
+//   - ctx context.Context
+//   - guildID string
+func (_e *MockSpotRepository_Expecter) CountGuildSpots(ctx any, guildID any) *MockSpotRepository_CountGuildSpots_Call {
+	return &MockSpotRepository_CountGuildSpots_Call{Call: _e.mock.On("CountGuildSpots", ctx, guildID)}
+}
+
+func (_c *MockSpotRepository_CountGuildSpots_Call) Run(run func(ctx context.Context, guildID string)) *MockSpotRepository_CountGuildSpots_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSpotRepository_CountGuildSpots_Call) Return(active int, archived int, err error) *MockSpotRepository_CountGuildSpots_Call {
+	_c.Call.Return(active, archived, err)
+	return _c
+}
+
+func (_c *MockSpotRepository_CountGuildSpots_Call) RunAndReturn(run func(ctx context.Context, guildID string) (int, int, error)) *MockSpotRepository_CountGuildSpots_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteSpot provides a mock function for the type MockSpotRepository
+func (_mock *MockSpotRepository) DeleteSpot(ctx context.Context, guildID string, id int64) error {
+	ret := _mock.Called(ctx, guildID, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteSpot")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int64) error); ok {
+		r0 = returnFunc(ctx, guildID, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockSpotRepository_DeleteSpot_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteSpot'
+type MockSpotRepository_DeleteSpot_Call struct {
+	*mock.Call
+}
+
+// DeleteSpot is a helper method to define mock.On call
+//   - ctx context.Context
+//   - guildID string
+//   - id int64
+func (_e *MockSpotRepository_Expecter) DeleteSpot(ctx any, guildID any, id any) *MockSpotRepository_DeleteSpot_Call {
+	return &MockSpotRepository_DeleteSpot_Call{Call: _e.mock.On("DeleteSpot", ctx, guildID, id)}
+}
+
+func (_c *MockSpotRepository_DeleteSpot_Call) Run(run func(ctx context.Context, guildID string, id int64)) *MockSpotRepository_DeleteSpot_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 int64
+		if args[2] != nil {
+			arg2 = args[2].(int64)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSpotRepository_DeleteSpot_Call) Return(err error) *MockSpotRepository_DeleteSpot_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockSpotRepository_DeleteSpot_Call) RunAndReturn(run func(ctx context.Context, guildID string, id int64) error) *MockSpotRepository_DeleteSpot_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// InsertSpot provides a mock function for the type MockSpotRepository
+func (_mock *MockSpotRepository) InsertSpot(ctx context.Context, guildID string, name string) (*spot.Spot, error) {
+	ret := _mock.Called(ctx, guildID, name)
+
+	if len(ret) == 0 {
+		panic("no return value specified for InsertSpot")
 	}
 
 	var r0 *spot.Spot
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*spot.Spot, error)); ok {
-		return returnFunc(ctx, name)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) (*spot.Spot, error)); ok {
+		return returnFunc(ctx, guildID, name)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *spot.Spot); ok {
-		r0 = returnFunc(ctx, name)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) *spot.Spot); ok {
+		r0 = returnFunc(ctx, guildID, name)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*spot.Spot)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = returnFunc(ctx, name)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = returnFunc(ctx, guildID, name)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// MockSpotRepository_SelectSpotByName_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SelectSpotByName'
-type MockSpotRepository_SelectSpotByName_Call struct {
+// MockSpotRepository_InsertSpot_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InsertSpot'
+type MockSpotRepository_InsertSpot_Call struct {
 	*mock.Call
 }
 
-// SelectSpotByName is a helper method to define mock.On call
+// InsertSpot is a helper method to define mock.On call
 //   - ctx context.Context
+//   - guildID string
 //   - name string
-func (_e *MockSpotRepository_Expecter) SelectSpotByName(ctx interface{}, name interface{}) *MockSpotRepository_SelectSpotByName_Call {
-	return &MockSpotRepository_SelectSpotByName_Call{Call: _e.mock.On("SelectSpotByName", ctx, name)}
+func (_e *MockSpotRepository_Expecter) InsertSpot(ctx any, guildID any, name any) *MockSpotRepository_InsertSpot_Call {
+	return &MockSpotRepository_InsertSpot_Call{Call: _e.mock.On("InsertSpot", ctx, guildID, name)}
 }
 
-func (_c *MockSpotRepository_SelectSpotByName_Call) Run(run func(ctx context.Context, name string)) *MockSpotRepository_SelectSpotByName_Call {
+func (_c *MockSpotRepository_InsertSpot_Call) Run(run func(ctx context.Context, guildID string, name string)) *MockSpotRepository_InsertSpot_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -150,65 +297,497 @@ func (_c *MockSpotRepository_SelectSpotByName_Call) Run(run func(ctx context.Con
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
 }
 
-func (_c *MockSpotRepository_SelectSpotByName_Call) Return(spot1 *spot.Spot, err error) *MockSpotRepository_SelectSpotByName_Call {
+func (_c *MockSpotRepository_InsertSpot_Call) Return(spot1 *spot.Spot, err error) *MockSpotRepository_InsertSpot_Call {
 	_c.Call.Return(spot1, err)
 	return _c
 }
 
-func (_c *MockSpotRepository_SelectSpotByName_Call) RunAndReturn(run func(ctx context.Context, name string) (*spot.Spot, error)) *MockSpotRepository_SelectSpotByName_Call {
+func (_c *MockSpotRepository_InsertSpot_Call) RunAndReturn(run func(ctx context.Context, guildID string, name string) (*spot.Spot, error)) *MockSpotRepository_InsertSpot_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// SelectSpotsByNameCaseInsensitiveLike provides a mock function for the type MockSpotRepository
-func (_mock *MockSpotRepository) SelectSpotsByNameCaseInsensitiveLike(ctx context.Context, namePattern string) ([]*spot.Spot, error) {
-	ret := _mock.Called(ctx, namePattern)
+// InsertSpotsIgnoreDuplicates provides a mock function for the type MockSpotRepository
+func (_mock *MockSpotRepository) InsertSpotsIgnoreDuplicates(ctx context.Context, guildID string, names []string) (int64, error) {
+	ret := _mock.Called(ctx, guildID, names)
 
 	if len(ret) == 0 {
-		panic("no return value specified for SelectSpotsByNameCaseInsensitiveLike")
+		panic("no return value specified for InsertSpotsIgnoreDuplicates")
+	}
+
+	var r0 int64
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []string) (int64, error)); ok {
+		return returnFunc(ctx, guildID, names)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []string) int64); ok {
+		r0 = returnFunc(ctx, guildID, names)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, []string) error); ok {
+		r1 = returnFunc(ctx, guildID, names)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockSpotRepository_InsertSpotsIgnoreDuplicates_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InsertSpotsIgnoreDuplicates'
+type MockSpotRepository_InsertSpotsIgnoreDuplicates_Call struct {
+	*mock.Call
+}
+
+// InsertSpotsIgnoreDuplicates is a helper method to define mock.On call
+//   - ctx context.Context
+//   - guildID string
+//   - names []string
+func (_e *MockSpotRepository_Expecter) InsertSpotsIgnoreDuplicates(ctx any, guildID any, names any) *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call {
+	return &MockSpotRepository_InsertSpotsIgnoreDuplicates_Call{Call: _e.mock.On("InsertSpotsIgnoreDuplicates", ctx, guildID, names)}
+}
+
+func (_c *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call) Run(run func(ctx context.Context, guildID string, names []string)) *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 []string
+		if args[2] != nil {
+			arg2 = args[2].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call) Return(n int64, err error) *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call) RunAndReturn(run func(ctx context.Context, guildID string, names []string) (int64, error)) *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RenameSpot provides a mock function for the type MockSpotRepository
+func (_mock *MockSpotRepository) RenameSpot(ctx context.Context, guildID string, id int64, name string) error {
+	ret := _mock.Called(ctx, guildID, id, name)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RenameSpot")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int64, string) error); ok {
+		r0 = returnFunc(ctx, guildID, id, name)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockSpotRepository_RenameSpot_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RenameSpot'
+type MockSpotRepository_RenameSpot_Call struct {
+	*mock.Call
+}
+
+// RenameSpot is a helper method to define mock.On call
+//   - ctx context.Context
+//   - guildID string
+//   - id int64
+//   - name string
+func (_e *MockSpotRepository_Expecter) RenameSpot(ctx any, guildID any, id any, name any) *MockSpotRepository_RenameSpot_Call {
+	return &MockSpotRepository_RenameSpot_Call{Call: _e.mock.On("RenameSpot", ctx, guildID, id, name)}
+}
+
+func (_c *MockSpotRepository_RenameSpot_Call) Run(run func(ctx context.Context, guildID string, id int64, name string)) *MockSpotRepository_RenameSpot_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 int64
+		if args[2] != nil {
+			arg2 = args[2].(int64)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSpotRepository_RenameSpot_Call) Return(err error) *MockSpotRepository_RenameSpot_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockSpotRepository_RenameSpot_Call) RunAndReturn(run func(ctx context.Context, guildID string, id int64, name string) error) *MockSpotRepository_RenameSpot_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RestoreSpot provides a mock function for the type MockSpotRepository
+func (_mock *MockSpotRepository) RestoreSpot(ctx context.Context, guildID string, id int64) error {
+	ret := _mock.Called(ctx, guildID, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RestoreSpot")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int64) error); ok {
+		r0 = returnFunc(ctx, guildID, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockSpotRepository_RestoreSpot_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RestoreSpot'
+type MockSpotRepository_RestoreSpot_Call struct {
+	*mock.Call
+}
+
+// RestoreSpot is a helper method to define mock.On call
+//   - ctx context.Context
+//   - guildID string
+//   - id int64
+func (_e *MockSpotRepository_Expecter) RestoreSpot(ctx any, guildID any, id any) *MockSpotRepository_RestoreSpot_Call {
+	return &MockSpotRepository_RestoreSpot_Call{Call: _e.mock.On("RestoreSpot", ctx, guildID, id)}
+}
+
+func (_c *MockSpotRepository_RestoreSpot_Call) Run(run func(ctx context.Context, guildID string, id int64)) *MockSpotRepository_RestoreSpot_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 int64
+		if args[2] != nil {
+			arg2 = args[2].(int64)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSpotRepository_RestoreSpot_Call) Return(err error) *MockSpotRepository_RestoreSpot_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockSpotRepository_RestoreSpot_Call) RunAndReturn(run func(ctx context.Context, guildID string, id int64) error) *MockSpotRepository_RestoreSpot_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SelectGuildSpotByID provides a mock function for the type MockSpotRepository
+func (_mock *MockSpotRepository) SelectGuildSpotByID(ctx context.Context, guildID string, id int64) (*spot.Spot, error) {
+	ret := _mock.Called(ctx, guildID, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SelectGuildSpotByID")
+	}
+
+	var r0 *spot.Spot
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int64) (*spot.Spot, error)); ok {
+		return returnFunc(ctx, guildID, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int64) *spot.Spot); ok {
+		r0 = returnFunc(ctx, guildID, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*spot.Spot)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, int64) error); ok {
+		r1 = returnFunc(ctx, guildID, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockSpotRepository_SelectGuildSpotByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SelectGuildSpotByID'
+type MockSpotRepository_SelectGuildSpotByID_Call struct {
+	*mock.Call
+}
+
+// SelectGuildSpotByID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - guildID string
+//   - id int64
+func (_e *MockSpotRepository_Expecter) SelectGuildSpotByID(ctx any, guildID any, id any) *MockSpotRepository_SelectGuildSpotByID_Call {
+	return &MockSpotRepository_SelectGuildSpotByID_Call{Call: _e.mock.On("SelectGuildSpotByID", ctx, guildID, id)}
+}
+
+func (_c *MockSpotRepository_SelectGuildSpotByID_Call) Run(run func(ctx context.Context, guildID string, id int64)) *MockSpotRepository_SelectGuildSpotByID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 int64
+		if args[2] != nil {
+			arg2 = args[2].(int64)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSpotRepository_SelectGuildSpotByID_Call) Return(spot1 *spot.Spot, err error) *MockSpotRepository_SelectGuildSpotByID_Call {
+	_c.Call.Return(spot1, err)
+	return _c
+}
+
+func (_c *MockSpotRepository_SelectGuildSpotByID_Call) RunAndReturn(run func(ctx context.Context, guildID string, id int64) (*spot.Spot, error)) *MockSpotRepository_SelectGuildSpotByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SelectGuildSpotByName provides a mock function for the type MockSpotRepository
+func (_mock *MockSpotRepository) SelectGuildSpotByName(ctx context.Context, guildID string, name string) (*spot.Spot, error) {
+	ret := _mock.Called(ctx, guildID, name)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SelectGuildSpotByName")
+	}
+
+	var r0 *spot.Spot
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) (*spot.Spot, error)); ok {
+		return returnFunc(ctx, guildID, name)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) *spot.Spot); ok {
+		r0 = returnFunc(ctx, guildID, name)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*spot.Spot)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = returnFunc(ctx, guildID, name)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockSpotRepository_SelectGuildSpotByName_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SelectGuildSpotByName'
+type MockSpotRepository_SelectGuildSpotByName_Call struct {
+	*mock.Call
+}
+
+// SelectGuildSpotByName is a helper method to define mock.On call
+//   - ctx context.Context
+//   - guildID string
+//   - name string
+func (_e *MockSpotRepository_Expecter) SelectGuildSpotByName(ctx any, guildID any, name any) *MockSpotRepository_SelectGuildSpotByName_Call {
+	return &MockSpotRepository_SelectGuildSpotByName_Call{Call: _e.mock.On("SelectGuildSpotByName", ctx, guildID, name)}
+}
+
+func (_c *MockSpotRepository_SelectGuildSpotByName_Call) Run(run func(ctx context.Context, guildID string, name string)) *MockSpotRepository_SelectGuildSpotByName_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSpotRepository_SelectGuildSpotByName_Call) Return(spot1 *spot.Spot, err error) *MockSpotRepository_SelectGuildSpotByName_Call {
+	_c.Call.Return(spot1, err)
+	return _c
+}
+
+func (_c *MockSpotRepository_SelectGuildSpotByName_Call) RunAndReturn(run func(ctx context.Context, guildID string, name string) (*spot.Spot, error)) *MockSpotRepository_SelectGuildSpotByName_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SelectGuildSpotList provides a mock function for the type MockSpotRepository
+func (_mock *MockSpotRepository) SelectGuildSpotList(ctx context.Context, guildID string, filter spot.ListFilter) ([]spot.Listed, error) {
+	ret := _mock.Called(ctx, guildID, filter)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SelectGuildSpotList")
+	}
+
+	var r0 []spot.Listed
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, spot.ListFilter) ([]spot.Listed, error)); ok {
+		return returnFunc(ctx, guildID, filter)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, spot.ListFilter) []spot.Listed); ok {
+		r0 = returnFunc(ctx, guildID, filter)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]spot.Listed)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, spot.ListFilter) error); ok {
+		r1 = returnFunc(ctx, guildID, filter)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockSpotRepository_SelectGuildSpotList_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SelectGuildSpotList'
+type MockSpotRepository_SelectGuildSpotList_Call struct {
+	*mock.Call
+}
+
+// SelectGuildSpotList is a helper method to define mock.On call
+//   - ctx context.Context
+//   - guildID string
+//   - filter spot.ListFilter
+func (_e *MockSpotRepository_Expecter) SelectGuildSpotList(ctx any, guildID any, filter any) *MockSpotRepository_SelectGuildSpotList_Call {
+	return &MockSpotRepository_SelectGuildSpotList_Call{Call: _e.mock.On("SelectGuildSpotList", ctx, guildID, filter)}
+}
+
+func (_c *MockSpotRepository_SelectGuildSpotList_Call) Run(run func(ctx context.Context, guildID string, filter spot.ListFilter)) *MockSpotRepository_SelectGuildSpotList_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 spot.ListFilter
+		if args[2] != nil {
+			arg2 = args[2].(spot.ListFilter)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSpotRepository_SelectGuildSpotList_Call) Return(listeds []spot.Listed, err error) *MockSpotRepository_SelectGuildSpotList_Call {
+	_c.Call.Return(listeds, err)
+	return _c
+}
+
+func (_c *MockSpotRepository_SelectGuildSpotList_Call) RunAndReturn(run func(ctx context.Context, guildID string, filter spot.ListFilter) ([]spot.Listed, error)) *MockSpotRepository_SelectGuildSpotList_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SelectGuildSpots provides a mock function for the type MockSpotRepository
+func (_mock *MockSpotRepository) SelectGuildSpots(ctx context.Context, guildID string, includeArchived bool) ([]*spot.Spot, error) {
+	ret := _mock.Called(ctx, guildID, includeArchived)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SelectGuildSpots")
 	}
 
 	var r0 []*spot.Spot
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) ([]*spot.Spot, error)); ok {
-		return returnFunc(ctx, namePattern)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, bool) ([]*spot.Spot, error)); ok {
+		return returnFunc(ctx, guildID, includeArchived)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) []*spot.Spot); ok {
-		r0 = returnFunc(ctx, namePattern)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, bool) []*spot.Spot); ok {
+		r0 = returnFunc(ctx, guildID, includeArchived)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*spot.Spot)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = returnFunc(ctx, namePattern)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, bool) error); ok {
+		r1 = returnFunc(ctx, guildID, includeArchived)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// MockSpotRepository_SelectSpotsByNameCaseInsensitiveLike_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SelectSpotsByNameCaseInsensitiveLike'
-type MockSpotRepository_SelectSpotsByNameCaseInsensitiveLike_Call struct {
+// MockSpotRepository_SelectGuildSpots_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SelectGuildSpots'
+type MockSpotRepository_SelectGuildSpots_Call struct {
 	*mock.Call
 }
 
-// SelectSpotsByNameCaseInsensitiveLike is a helper method to define mock.On call
+// SelectGuildSpots is a helper method to define mock.On call
 //   - ctx context.Context
-//   - namePattern string
-func (_e *MockSpotRepository_Expecter) SelectSpotsByNameCaseInsensitiveLike(ctx interface{}, namePattern interface{}) *MockSpotRepository_SelectSpotsByNameCaseInsensitiveLike_Call {
-	return &MockSpotRepository_SelectSpotsByNameCaseInsensitiveLike_Call{Call: _e.mock.On("SelectSpotsByNameCaseInsensitiveLike", ctx, namePattern)}
+//   - guildID string
+//   - includeArchived bool
+func (_e *MockSpotRepository_Expecter) SelectGuildSpots(ctx any, guildID any, includeArchived any) *MockSpotRepository_SelectGuildSpots_Call {
+	return &MockSpotRepository_SelectGuildSpots_Call{Call: _e.mock.On("SelectGuildSpots", ctx, guildID, includeArchived)}
 }
 
-func (_c *MockSpotRepository_SelectSpotsByNameCaseInsensitiveLike_Call) Run(run func(ctx context.Context, namePattern string)) *MockSpotRepository_SelectSpotsByNameCaseInsensitiveLike_Call {
+func (_c *MockSpotRepository_SelectGuildSpots_Call) Run(run func(ctx context.Context, guildID string, includeArchived bool)) *MockSpotRepository_SelectGuildSpots_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -218,20 +797,257 @@ func (_c *MockSpotRepository_SelectSpotsByNameCaseInsensitiveLike_Call) Run(run 
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
+		var arg2 bool
+		if args[2] != nil {
+			arg2 = args[2].(bool)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
 }
 
-func (_c *MockSpotRepository_SelectSpotsByNameCaseInsensitiveLike_Call) Return(spots []*spot.Spot, err error) *MockSpotRepository_SelectSpotsByNameCaseInsensitiveLike_Call {
+func (_c *MockSpotRepository_SelectGuildSpots_Call) Return(spots []*spot.Spot, err error) *MockSpotRepository_SelectGuildSpots_Call {
 	_c.Call.Return(spots, err)
 	return _c
 }
 
-func (_c *MockSpotRepository_SelectSpotsByNameCaseInsensitiveLike_Call) RunAndReturn(run func(ctx context.Context, namePattern string) ([]*spot.Spot, error)) *MockSpotRepository_SelectSpotsByNameCaseInsensitiveLike_Call {
+func (_c *MockSpotRepository_SelectGuildSpots_Call) RunAndReturn(run func(ctx context.Context, guildID string, includeArchived bool) ([]*spot.Spot, error)) *MockSpotRepository_SelectGuildSpots_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SelectGuildSpotsLike provides a mock function for the type MockSpotRepository
+func (_mock *MockSpotRepository) SelectGuildSpotsLike(ctx context.Context, guildID string, namePattern string) ([]*spot.Spot, error) {
+	ret := _mock.Called(ctx, guildID, namePattern)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SelectGuildSpotsLike")
+	}
+
+	var r0 []*spot.Spot
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) ([]*spot.Spot, error)); ok {
+		return returnFunc(ctx, guildID, namePattern)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) []*spot.Spot); ok {
+		r0 = returnFunc(ctx, guildID, namePattern)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*spot.Spot)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = returnFunc(ctx, guildID, namePattern)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockSpotRepository_SelectGuildSpotsLike_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SelectGuildSpotsLike'
+type MockSpotRepository_SelectGuildSpotsLike_Call struct {
+	*mock.Call
+}
+
+// SelectGuildSpotsLike is a helper method to define mock.On call
+//   - ctx context.Context
+//   - guildID string
+//   - namePattern string
+func (_e *MockSpotRepository_Expecter) SelectGuildSpotsLike(ctx any, guildID any, namePattern any) *MockSpotRepository_SelectGuildSpotsLike_Call {
+	return &MockSpotRepository_SelectGuildSpotsLike_Call{Call: _e.mock.On("SelectGuildSpotsLike", ctx, guildID, namePattern)}
+}
+
+func (_c *MockSpotRepository_SelectGuildSpotsLike_Call) Run(run func(ctx context.Context, guildID string, namePattern string)) *MockSpotRepository_SelectGuildSpotsLike_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSpotRepository_SelectGuildSpotsLike_Call) Return(spots []*spot.Spot, err error) *MockSpotRepository_SelectGuildSpotsLike_Call {
+	_c.Call.Return(spots, err)
+	return _c
+}
+
+func (_c *MockSpotRepository_SelectGuildSpotsLike_Call) RunAndReturn(run func(ctx context.Context, guildID string, namePattern string) ([]*spot.Spot, error)) *MockSpotRepository_SelectGuildSpotsLike_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SelectSpotReservationCounts provides a mock function for the type MockSpotRepository
+func (_mock *MockSpotRepository) SelectSpotReservationCounts(ctx context.Context, guildID string, id int64) (spot.ReservationCounts, error) {
+	ret := _mock.Called(ctx, guildID, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SelectSpotReservationCounts")
+	}
+
+	var r0 spot.ReservationCounts
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int64) (spot.ReservationCounts, error)); ok {
+		return returnFunc(ctx, guildID, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int64) spot.ReservationCounts); ok {
+		r0 = returnFunc(ctx, guildID, id)
+	} else {
+		r0 = ret.Get(0).(spot.ReservationCounts)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, int64) error); ok {
+		r1 = returnFunc(ctx, guildID, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockSpotRepository_SelectSpotReservationCounts_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SelectSpotReservationCounts'
+type MockSpotRepository_SelectSpotReservationCounts_Call struct {
+	*mock.Call
+}
+
+// SelectSpotReservationCounts is a helper method to define mock.On call
+//   - ctx context.Context
+//   - guildID string
+//   - id int64
+func (_e *MockSpotRepository_Expecter) SelectSpotReservationCounts(ctx any, guildID any, id any) *MockSpotRepository_SelectSpotReservationCounts_Call {
+	return &MockSpotRepository_SelectSpotReservationCounts_Call{Call: _e.mock.On("SelectSpotReservationCounts", ctx, guildID, id)}
+}
+
+func (_c *MockSpotRepository_SelectSpotReservationCounts_Call) Run(run func(ctx context.Context, guildID string, id int64)) *MockSpotRepository_SelectSpotReservationCounts_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 int64
+		if args[2] != nil {
+			arg2 = args[2].(int64)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSpotRepository_SelectSpotReservationCounts_Call) Return(reservationCounts spot.ReservationCounts, err error) *MockSpotRepository_SelectSpotReservationCounts_Call {
+	_c.Call.Return(reservationCounts, err)
+	return _c
+}
+
+func (_c *MockSpotRepository_SelectSpotReservationCounts_Call) RunAndReturn(run func(ctx context.Context, guildID string, id int64) (spot.ReservationCounts, error)) *MockSpotRepository_SelectSpotReservationCounts_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SelectTopGuildSpots provides a mock function for the type MockSpotRepository
+func (_mock *MockSpotRepository) SelectTopGuildSpots(ctx context.Context, guildID string, authorDiscordID string, since time.Time, limit int) ([]spot.Ranked, error) {
+	ret := _mock.Called(ctx, guildID, authorDiscordID, since, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SelectTopGuildSpots")
+	}
+
+	var r0 []spot.Ranked
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, time.Time, int) ([]spot.Ranked, error)); ok {
+		return returnFunc(ctx, guildID, authorDiscordID, since, limit)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, time.Time, int) []spot.Ranked); ok {
+		r0 = returnFunc(ctx, guildID, authorDiscordID, since, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]spot.Ranked)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, time.Time, int) error); ok {
+		r1 = returnFunc(ctx, guildID, authorDiscordID, since, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockSpotRepository_SelectTopGuildSpots_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SelectTopGuildSpots'
+type MockSpotRepository_SelectTopGuildSpots_Call struct {
+	*mock.Call
+}
+
+// SelectTopGuildSpots is a helper method to define mock.On call
+//   - ctx context.Context
+//   - guildID string
+//   - authorDiscordID string
+//   - since time.Time
+//   - limit int
+func (_e *MockSpotRepository_Expecter) SelectTopGuildSpots(ctx any, guildID any, authorDiscordID any, since any, limit any) *MockSpotRepository_SelectTopGuildSpots_Call {
+	return &MockSpotRepository_SelectTopGuildSpots_Call{Call: _e.mock.On("SelectTopGuildSpots", ctx, guildID, authorDiscordID, since, limit)}
+}
+
+func (_c *MockSpotRepository_SelectTopGuildSpots_Call) Run(run func(ctx context.Context, guildID string, authorDiscordID string, since time.Time, limit int)) *MockSpotRepository_SelectTopGuildSpots_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 time.Time
+		if args[3] != nil {
+			arg3 = args[3].(time.Time)
+		}
+		var arg4 int
+		if args[4] != nil {
+			arg4 = args[4].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSpotRepository_SelectTopGuildSpots_Call) Return(rankeds []spot.Ranked, err error) *MockSpotRepository_SelectTopGuildSpots_Call {
+	_c.Call.Return(rankeds, err)
+	return _c
+}
+
+func (_c *MockSpotRepository_SelectTopGuildSpots_Call) RunAndReturn(run func(ctx context.Context, guildID string, authorDiscordID string, since time.Time, limit int) ([]spot.Ranked, error)) *MockSpotRepository_SelectTopGuildSpots_Call {
 	_c.Call.Return(run)
 	return _c
 }

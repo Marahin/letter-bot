@@ -2,6 +2,7 @@ package health
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -28,12 +29,9 @@ func (a *Adapter) WithLogger(log *zap.SugaredLogger) *Adapter {
 
 func (a *Adapter) Live() error {
 	if a.runtime == nil || !a.runtime.IsRunning() {
-		return fmt.Errorf("bot not running")
+		return errors.New("bot not running")
 	}
-	if err := a.runtime.GatewayHealthy(); err != nil {
-		return err
-	}
-	return nil
+	return a.runtime.GatewayHealthy()
 }
 
 func (a *Adapter) Ready() error {

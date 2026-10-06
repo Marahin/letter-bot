@@ -2,6 +2,7 @@ package sqlc
 
 import (
 	"context"
+	"errors"
 	"spot-assistant/internal/core/dto/guild"
 	"spot-assistant/internal/core/dto/member"
 	"testing"
@@ -24,7 +25,7 @@ func newReservationRows() *pgxmock.Rows {
 
 func TestCreateAndDeleteConflictingWithNoConflicting(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	testMember := &member.Member{
 		ID:       "test-member-id",
 		Username: "test-member-username",
@@ -58,14 +59,14 @@ func TestCreateAndDeleteConflictingWithNoConflicting(t *testing.T) {
 	removed, err := repository.CreateAndDeleteConflicting(context.Background(), testMember, testGuild, make([]*reservation.Reservation, 0), spotId, startAt, endAt)
 
 	// assert
-	assert.Nil(err)
-	assert.Empty(removed)
-	assert.Nil(mock.ExpectationsWereMet())
+	is.Nil(err)
+	is.Empty(removed)
+	is.Nil(mock.ExpectationsWereMet())
 }
 
 func TestCreateAndDeleteConflictingWithOneConflicting(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	testMember := &member.Member{
 		ID:       "test-member-id",
 		Username: "test-member-username",
@@ -134,17 +135,17 @@ func TestCreateAndDeleteConflictingWithOneConflicting(t *testing.T) {
 	removed, err := repository.CreateAndDeleteConflicting(context.Background(), testMember, testGuild, conflictingReservations, spotId, reservationInput.StartAt, reservationInput.EndAt)
 
 	// assert
-	assert.Nil(err)
-	assert.NotEmpty(removed)
-	assert.Nil(mock.ExpectationsWereMet())
-	assert.Equal(conflictingReservations, collections.PoorMansMap(removed, func(r *reservation.ClippedOrRemovedReservation) *reservation.Reservation {
+	is.Nil(err)
+	is.NotEmpty(removed)
+	is.Nil(mock.ExpectationsWereMet())
+	is.Equal(conflictingReservations, collections.PoorMansMap(removed, func(r *reservation.ClippedOrRemovedReservation) *reservation.Reservation {
 		return r.Original
 	}))
 }
 
 func TestCreateAndDeleteConflictingWithTwoConflicting(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	testMember := &member.Member{
 		ID:       "test-member-id",
 		Username: "test-member-username",
@@ -226,17 +227,17 @@ func TestCreateAndDeleteConflictingWithTwoConflicting(t *testing.T) {
 	removed, err := repository.CreateAndDeleteConflicting(context.Background(), testMember, testGuild, conflictingReservations, spotId, reservationInput.StartAt, reservationInput.EndAt)
 
 	// assert
-	assert.Nil(err)
-	assert.NotEmpty(removed)
-	assert.Nil(mock.ExpectationsWereMet())
-	assert.Equal(conflictingReservations, collections.PoorMansMap(removed, func(r *reservation.ClippedOrRemovedReservation) *reservation.Reservation {
+	is.Nil(err)
+	is.NotEmpty(removed)
+	is.Nil(mock.ExpectationsWereMet())
+	is.Equal(conflictingReservations, collections.PoorMansMap(removed, func(r *reservation.ClippedOrRemovedReservation) *reservation.Reservation {
 		return r.Original
 	}))
 }
 
 func TestCreateAndDeleteConflictingWithTwoConflictingButSecondOneFromTheSameAuthorAsNewReservation(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	testMember := &member.Member{
 		ID:       "test-member-id",
 		Username: "test-member-username",
@@ -309,10 +310,10 @@ func TestCreateAndDeleteConflictingWithTwoConflictingButSecondOneFromTheSameAuth
 	removed, err := repository.CreateAndDeleteConflicting(context.Background(), testMember, testGuild, conflictingReservations, spotId, reservationInput.StartAt, reservationInput.EndAt)
 
 	// assert
-	assert.Nil(err)
-	assert.NotEmpty(removed)
-	assert.Nil(mock.ExpectationsWereMet())
-	assert.Equal(conflictingReservations, collections.PoorMansMap(removed, func(r *reservation.ClippedOrRemovedReservation) *reservation.Reservation {
+	is.Nil(err)
+	is.NotEmpty(removed)
+	is.Nil(mock.ExpectationsWereMet())
+	is.Equal(conflictingReservations, collections.PoorMansMap(removed, func(r *reservation.ClippedOrRemovedReservation) *reservation.Reservation {
 		return r.Original
 	}))
 }
@@ -320,14 +321,14 @@ func TestCreateAndDeleteConflictingWithTwoConflictingButSecondOneFromTheSameAuth
 func newReservationWithSpotRows() *pgxmock.Rows {
 	return pgxmock.NewRows([]string{
 		// web_spot
-		"id", "name", "created_at",
+		"id", "name", "created_at", "guild_id", "archived_at",
 		// web_reservation
 		"id", "author", "created_at", "start_at", "end_at", "spot_id", "guild_id", "author_discord_id",
 	})
 }
 
 func TestSelectUpcomingReservationsWithSpotForSpot_FiltersBySpotAndGuild(t *testing.T) {
-	assert := assert.New(t)
+	is := assert.New(t)
 	mock, err := pgxmock.NewPool()
 	if err != nil {
 		t.Fatal(err)
@@ -339,28 +340,28 @@ func TestSelectUpcomingReservationsWithSpotForSpot_FiltersBySpotAndGuild(t *test
 		WithArgs("guild-1", "Flimsy").
 		WillReturnRows(newReservationWithSpotRows().
 			AddRow(
-				int64(10), "Flimsy", time.Now(),
+				int64(10), "Flimsy", time.Now(), "guild-1", nil,
 				int64(101), "Mariysz", time.Now(), time.Now(), time.Now().Add(time.Hour), int64(10), "guild-1", "mariysz#1",
 			).
 			AddRow(
-				int64(10), "Flimsy", time.Now(),
+				int64(10), "Flimsy", time.Now(), "guild-1", nil,
 				int64(102), "Asar", time.Now(), time.Now().Add(time.Hour), time.Now().Add(2*time.Hour), int64(10), "guild-1", "asar#1",
 			))
 
 	repo := NewReservationRepository(mock)
 
 	res, err := repo.SelectUpcomingReservationsWithSpotForSpot(context.Background(), "guild-1", "Flimsy")
-	assert.NoError(err)
-	assert.Len(res, 2)
+	is.NoError(err)
+	is.Len(res, 2)
 	for _, r := range res {
-		assert.Equal("Flimsy", r.Spot.Name)
-		assert.Equal("guild-1", r.GuildID)
+		is.Equal("Flimsy", r.Spot.Name)
+		is.Equal("guild-1", r.GuildID)
 	}
-	assert.NoError(mock.ExpectationsWereMet())
+	is.NoError(mock.ExpectationsWereMet())
 }
 
 func TestSelectUpcomingReservationsWithSpotForSpot_EmptyWhenNoMatches(t *testing.T) {
-	assert := assert.New(t)
+	is := assert.New(t)
 	mock, err := pgxmock.NewPool()
 	if err != nil {
 		t.Fatal(err)
@@ -373,7 +374,25 @@ func TestSelectUpcomingReservationsWithSpotForSpot_EmptyWhenNoMatches(t *testing
 
 	repo := NewReservationRepository(mock)
 	res, err := repo.SelectUpcomingReservationsWithSpotForSpot(context.Background(), "guild-1", "Unknown")
-	assert.NoError(err)
-	assert.Len(res, 0)
-	assert.NoError(mock.ExpectationsWereMet())
+	is.NoError(err)
+	is.Len(res, 0)
+	is.NoError(mock.ExpectationsWereMet())
+}
+
+func TestSelectUpcomingMemberReservationsWithSpots_ReturnsDBError(t *testing.T) {
+	// given
+	mock, err := pgxmock.NewPool()
+	assert.NoError(t, err)
+	defer mock.Close()
+	boom := errors.New("boom")
+	mock.ExpectQuery("author_discord_id").WithArgs("guild-1", "u1", int64(7)).WillReturnError(boom)
+	repo := NewReservationRepository(mock)
+
+	// when
+	res, err := repo.SelectUpcomingMemberReservationsWithSpots(context.Background(), &guild.Guild{ID: "guild-1"}, &member.Member{ID: "u1"}, 7)
+
+	// then
+	assert.ErrorIs(t, err, boom)
+	assert.Nil(t, res)
+	assert.NoError(t, mock.ExpectationsWereMet())
 }

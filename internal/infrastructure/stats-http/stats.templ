@@ -1,0 +1,520 @@
+package statshttp
+
+import (
+	"strconv"
+	"time"
+
+	"spot-assistant/internal/core/dto/stats"
+	corestats "spot-assistant/internal/core/stats"
+	"spot-assistant/internal/infrastructure/i18n"
+	"spot-assistant/internal/infrastructure/web"
+)
+
+const cardClass = "rounded-lg border border-zone-800 bg-zone-900 shadow-glass"
+
+const labelClass = "text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-400"
+
+// Overview is the Stats landing page: headline tiles, the daily trend of each figure, the
+// busiest respawns and three leaderboards.
+templ Overview(baseURL string, v overviewView, nav web.Nav) {
+	@web.Layout(i18n.T(ctx, "stats.overview.title", v.GuildName), i18n.T(ctx, "stats.overview.description", v.GuildName), baseURL, web.GuildPath(v.GuildID, "/stats"), nav) {
+		@publicBar(v.pageView, "stats", nav)
+		@heading("", i18n.T(ctx, "stats.overview.heading"), i18n.T(ctx, "stats.overview.lede", v.GuildName))
+		@toolbar(v.pageView)
+		@kpis(v.O.Totals, []kpi{
+			{Label: i18n.T(ctx, "stats.kpi.players"), Value: formatInt(ctx, int64(v.O.Players))},
+			{Label: i18n.T(ctx, "stats.kpi.characters"), Value: formatInt(ctx, int64(v.O.Characters))},
+			{Label: i18n.T(ctx, "stats.kpi.spots"), Value: formatInt(ctx, int64(v.O.Spots))},
+		})
+		if v.O.Totals.Reservations == 0 {
+			@empty(i18n.T(ctx, "stats.empty.range"))
+		} else {
+			@dailyCharts(v.O.Daily, v.O.Totals, v.Today)
+			<section class={ cardClass, "mt-6 p-5" } aria-labelledby="top-spots-heading">
+				@cardHeading("top-spots-heading", i18n.T(ctx, "stats.chart.top_spots"), i18n.T(ctx, "stats.chart.top_spots_hint"))
+				<div class="mt-4">
+					@web.Chart(topSpotsChart(ctx, v.GuildID, v.O.TopSpots))
+				</div>
+				<a href={ templ.SafeURL(web.GuildPath(v.GuildID, "/stats/spots")) } class="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-signal-bright transition hover:text-signal sm:min-h-0">{ i18n.T(ctx, "stats.overview.all_spots") } <span aria-hidden="true" class="ml-1">→</span></a>
+			</section>
+			<div class="mt-6 grid gap-6 lg:grid-cols-3">
+				@leaderboard("lb-players", i18n.T(ctx, "stats.leaderboard.players_hours"), i18n.T(ctx, "stats.leaderboard.players_hours_hint"), playerRows(v.GuildID, v.O.Leaderboards.PlayersByHours), stats.SortHours, web.GuildPath(v.GuildID, "/stats/players"))
+				@leaderboard("lb-exp", i18n.T(ctx, "stats.leaderboard.characters_exp"), i18n.T(ctx, "stats.leaderboard.characters_exp_hint"), characterRows(v.GuildID, v.O.Leaderboards.CharactersByExp), stats.SortExp, web.GuildPath(v.GuildID, "/stats/characters?sort=exp"))
+				@leaderboard("lb-exph", i18n.T(ctx, "stats.leaderboard.characters_exp_hour"), i18n.T(ctx, "stats.leaderboard.characters_exp_hour_hint", strconv.Itoa(int(corestats.MinExpPerHourHours))), characterRows(v.GuildID, v.O.Leaderboards.CharactersByExpPerHour), stats.SortExpPerHour, web.GuildPath(v.GuildID, "/stats/characters?sort=exp_h"))
+			</div>
+		}
+		@noDataNote()
+	}
+}
+
+// Table is the respawn, player or character list, sorted on the server by any column.
+templ Table(baseURL string, v tableView, nav web.Nav) {
+	@web.Layout(v.title(ctx)+" - "+v.GuildName, v.lede(ctx), baseURL, v.path(), nav) {
+		@publicBar(v.pageView, "stats-"+string(v.Kind), nav)
+		@heading("", v.title(ctx), v.lede(ctx))
+		@toolbar(v.pageView) {
+			if v.Total > 0 {
+				<a href={ templ.SafeURL(csvHref(v)) } download class="ml-auto inline-flex min-h-11 items-center rounded-md border border-zone-700 px-3 text-sm text-zone-300 transition hover:border-signal hover:text-signal sm:min-h-9">{ i18n.T(ctx, "stats.table.export_csv") }</a>
+			}
+		}
+		if v.Total == 0 {
+			@empty(i18n.T(ctx, "stats.empty.range"))
+		} else {
+			@statsTable(v.Rows, nameHeader(ctx, v.Kind), &v)
+			if v.Total > len(v.Rows) {
+				<p class="mt-2 text-xs text-zone-400">{ i18n.T(ctx, "stats.table.truncated", formatInt(ctx, int64(len(v.Rows))), formatInt(ctx, int64(v.Total))) }</p>
+			}
+		}
+		@noDataNote()
+	}
+}
+
+// SpotPage is one respawn: its figures, its daily trend, and who hunted there.
+templ SpotPage(baseURL string, v spotView, nav web.Nav) {
+	@web.Layout(i18n.T(ctx, "stats.spot.title", v.D.Spot.Name, v.GuildName), i18n.T(ctx, "stats.spot.description", v.D.Spot.Name), baseURL, spotHref(v.GuildID, v.D.Spot.ID), nav) {
+		@publicBar(v.pageView, "stats-spots", nav)
+		@heading(web.GuildPath(v.GuildID, "/stats/spots"), v.D.Spot.Name, i18n.T(ctx, "stats.spot.lede"))
+		<div class="mt-2 flex flex-wrap items-center gap-3 text-sm">
+			if v.D.Spot.IsArchived() {
+				<span class="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-300">{ i18n.T(ctx, "stats.spot.archived") }</span>
+			}
+			// The respawn's reservations need sign-in and a rank.
+			if !v.Public {
+				<a href={ templ.SafeURL(web.GuildPath(v.GuildID, "/spots/"+strconv.FormatInt(v.D.Spot.ID, 10))) } class="inline-flex min-h-11 items-center text-signal-bright transition hover:text-signal sm:min-h-0">{ i18n.T(ctx, "stats.spot.reservations_link") } <span aria-hidden="true" class="ml-1">→</span></a>
+			}
+		</div>
+		@toolbar(v.pageView)
+		@kpis(v.D.Totals, nil)
+		if v.D.Totals.Reservations == 0 {
+			@empty(i18n.T(ctx, "stats.empty.range"))
+		} else {
+			@dailyCharts(v.D.Daily, v.D.Totals, v.Today)
+			@breakdown(i18n.T(ctx, "stats.spot.players"), v.Players, i18n.T(ctx, "stats.table.player"))
+			@breakdown(i18n.T(ctx, "stats.spot.characters"), v.Characters, i18n.T(ctx, "stats.table.character"))
+		}
+		@noDataNote()
+	}
+}
+
+// PlayerPage is one Discord user: their figures, trend, respawns and characters.
+templ PlayerPage(baseURL string, v playerView, nav web.Nav) {
+	@web.Layout(i18n.T(ctx, "stats.player.title", v.D.Name, v.GuildName), i18n.T(ctx, "stats.player.description", v.D.Name), baseURL, playerHref(v.GuildID, v.D.UserID), nav) {
+		@publicBar(v.pageView, "stats-players", nav)
+		@heading(web.GuildPath(v.GuildID, "/stats/players"), v.D.Name, i18n.T(ctx, "stats.player.lede"))
+		@toolbar(v.pageView)
+		@kpis(v.D.Totals, nil)
+		if v.D.Totals.Reservations == 0 {
+			@empty(i18n.T(ctx, "stats.empty.range"))
+		} else {
+			@dailyCharts(v.D.Daily, v.D.Totals, v.Today)
+			@breakdown(i18n.T(ctx, "stats.player.spots"), v.Spots, i18n.T(ctx, "stats.table.spot"))
+			@breakdown(i18n.T(ctx, "stats.player.characters"), v.Characters, i18n.T(ctx, "stats.table.character"))
+		}
+		@noDataNote()
+	}
+}
+
+// CharacterPage is one character: the TibiaData profile, the experience history from the
+// highscores, and the character's reservations in the range.
+templ CharacterPage(baseURL string, v characterView, nav web.Nav) {
+	@web.Layout(i18n.T(ctx, "stats.character.title", v.P.Name, v.GuildName), i18n.T(ctx, "stats.character.description", v.P.Name), baseURL, characterHref(v.GuildID, v.P.Name), nav) {
+		@publicBar(v.pageView, "stats-characters", nav)
+		@heading(web.GuildPath(v.GuildID, "/stats/characters"), v.P.Name, i18n.T(ctx, "stats.character.lede"))
+		@profileCard(v)
+		@toolbar(v.pageView)
+		@kpis(v.P.Totals, nil)
+		<section class={ cardClass, "mt-6 p-5" } aria-labelledby="history-heading">
+			@cardHeading("history-heading", i18n.T(ctx, "stats.character.history"), i18n.T(ctx, "stats.character.history_hint"))
+			if len(v.P.History) == 0 {
+				@noDataBlock(historyEmpty(ctx, v.P.World))
+			} else {
+				<div class="mt-4">
+					@web.Chart(historyChart(ctx, v.P.History))
+				</div>
+			}
+		</section>
+		if v.P.Totals.Reservations > 0 {
+			@dailyCharts(v.P.Daily, v.P.Totals, v.Today)
+			@breakdown(i18n.T(ctx, "stats.character.spots"), v.Spots, i18n.T(ctx, "stats.table.spot"))
+			@recentReservations(v)
+		} else {
+			@empty(i18n.T(ctx, "stats.character.no_reservations"))
+		}
+		@noDataNote()
+	}
+}
+
+// publicBar heads a Stats page for a visitor who is not a member, in place of the
+// sidebar's server block: the server, the four Stats views, and for a signed-out
+// visitor a sign-in that comes back to this page.
+templ publicBar(p pageView, active string, nav web.Nav) {
+	if p.Public {
+		<div data-public-stats class="mb-8">
+			<div class="flex items-center gap-3">
+				@web.ServerBadge(p.guildIconURL(), p.GuildName)
+				<div class="min-w-0">
+					<p class={ labelClass }>{ i18n.T(ctx, "stats.public.eyebrow") }</p>
+					<p class="truncate font-display text-lg font-bold text-zone-50">{ p.GuildName }</p>
+				</div>
+			</div>
+			<nav aria-label={ i18n.T(ctx, "shell.nav.stats_links") } class="mt-5 flex flex-wrap gap-x-1 border-b border-zone-800">
+				@publicTab(web.GuildPath(p.GuildID, "/stats"), i18n.T(ctx, "shell.nav.stats_overview"), active == "stats")
+				@publicTab(web.GuildPath(p.GuildID, "/stats/spots"), i18n.T(ctx, "shell.nav.stats_spots"), active == "stats-spots")
+				@publicTab(web.GuildPath(p.GuildID, "/stats/players"), i18n.T(ctx, "shell.nav.stats_players"), active == "stats-players")
+				@publicTab(web.GuildPath(p.GuildID, "/stats/characters"), i18n.T(ctx, "shell.nav.stats_characters"), active == "stats-characters")
+			</nav>
+			if !nav.Authenticated {
+				<div data-login-cta class="mt-5 flex flex-col gap-3 rounded-lg border border-signal/30 bg-signal/[0.06] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+					<p class="text-sm text-zone-300">{ i18n.T(ctx, "stats.public.login_prompt", p.GuildName) }</p>
+					<a href={ templ.SafeURL(p.LoginHref) } class="flex min-h-11 shrink-0 items-center justify-center rounded-md bg-signal px-4 text-sm font-semibold text-zone-950 shadow-accent transition hover:bg-signal-bright">{ i18n.T(ctx, "landing.cta.log_in") }</a>
+				</div>
+			}
+		</div>
+	}
+}
+
+templ publicTab(href, label string, active bool) {
+	<a
+		href={ templ.SafeURL(href) }
+		if active {
+			aria-current="page"
+		}
+		class={ "-mb-px inline-flex min-h-11 shrink-0 items-center whitespace-nowrap border-b-2 px-3 text-sm font-semibold transition",
+			templ.KV("border-signal text-signal-bright", active),
+			templ.KV("border-transparent text-zone-400 hover:text-zone-100", !active) }
+	>{ label }</a>
+}
+
+templ heading(back, title, lede string) {
+	<div>
+		if back != "" {
+			<a href={ templ.SafeURL(back) } class="inline-flex min-h-11 items-center text-xs font-semibold uppercase tracking-[0.12em] text-zone-400 transition hover:text-signal-bright sm:min-h-0">
+				<span aria-hidden="true" class="mr-1">←</span> { i18n.T(ctx, "stats.back") }
+			</a>
+		}
+		<h1 class="mt-1 break-words font-display text-4xl font-bold -tracking-[0.02em] text-zone-50">{ title }</h1>
+		<p class="mt-2 max-w-2xl text-sm leading-relaxed text-zone-400">{ lede }</p>
+	</div>
+}
+
+// toolbar holds the day range and the page's own actions, above everything the range scopes.
+templ toolbar(p pageView) {
+	<div class="mt-6 flex flex-wrap items-center gap-3">
+		@web.RangePicker(p.Picker)
+		{ children... }
+	</div>
+}
+
+type kpi struct {
+	Label string
+	Value string
+}
+
+// kpis is the headline row: reservations, booked hours, experience and experience per hour,
+// then any extra counts of the page.
+templ kpis(t stats.Totals, extra []kpi) {
+	<dl class="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+		@tile(i18n.T(ctx, "stats.kpi.reservations"), formatInt(ctx, t.Reservations), "")
+		@tile(i18n.T(ctx, "stats.kpi.hours"), formatHours(ctx, t), i18n.T(ctx, "stats.kpi.hours_hint"))
+		{{ exp, hasExp := formatExp(ctx, t) }}
+		@expTile(i18n.T(ctx, "stats.kpi.exp"), exp, hasExp, coverage(ctx, t))
+		{{ perHour, hasPerHour := formatExpPerHour(ctx, t) }}
+		@expTile(i18n.T(ctx, "stats.kpi.exp_per_hour"), perHour, hasPerHour, i18n.T(ctx, "stats.kpi.exp_per_hour_hint"))
+		for _, k := range extra {
+			@tile(k.Label, k.Value, "")
+		}
+	</dl>
+}
+
+templ tile(label, value, hint string) {
+	<div class={ cardClass, "px-4 py-3" }>
+		<dt class={ labelClass }>{ label }</dt>
+		<dd class="mt-1 font-mono text-2xl font-semibold tabular-nums text-zone-50">{ value }</dd>
+		if hint != "" {
+			<dd class="mt-1 text-xs text-zone-400">{ hint }</dd>
+		}
+	</div>
+}
+
+templ expTile(label, value string, ok bool, hint string) {
+	<div class={ cardClass, "px-4 py-3" }>
+		<dt class={ labelClass }>{ label }</dt>
+		if ok {
+			<dd class="mt-1 font-mono text-2xl font-semibold tabular-nums text-zone-50">{ value }</dd>
+		} else {
+			<dd class="mt-1 text-lg font-semibold text-zone-300">
+				@noData()
+			</dd>
+		}
+		<dd class="mt-1 text-xs text-zone-400">{ hint }</dd>
+	</div>
+}
+
+// noData stands in for every experience figure without data. The tooltip and the page note
+// say why: only the world's top 1000 characters have experience data.
+templ noData() {
+	<span class="cursor-help text-zone-400 underline decoration-dotted decoration-zone-600 underline-offset-4" title={ i18n.T(ctx, "stats.exp.no_data_tip") }>{ i18n.T(ctx, "stats.exp.no_data") }</span>
+}
+
+templ noDataBlock(text string) {
+	<div class="mt-4 rounded-md border border-dashed border-zone-700 px-4 py-6 text-center text-sm text-zone-400">
+		<p class="font-semibold text-zone-300">{ i18n.T(ctx, "stats.exp.no_data") }</p>
+		<p class="mx-auto mt-1 max-w-xl">{ text }</p>
+	</div>
+}
+
+templ noDataNote() {
+	<p class="mt-8 max-w-3xl text-xs leading-relaxed text-zone-400">
+		<span class="font-semibold text-zone-300">{ i18n.T(ctx, "stats.exp.no_data") }:</span> { i18n.T(ctx, "stats.exp.no_data_tip") }
+	</p>
+}
+
+templ empty(text string) {
+	<div class={ cardClass, "mt-6 p-10 text-center text-sm text-zone-400" }>{ text }</div>
+}
+
+templ cardHeading(id, title, hint string) {
+	<div class="flex flex-wrap items-baseline justify-between gap-2">
+		<h2 id={ id } class="font-display text-lg font-semibold text-zone-50">{ title }</h2>
+		if hint != "" {
+			<span class="text-xs text-zone-400">{ hint }</span>
+		}
+	</div>
+}
+
+// dailyCharts are small multiples, one measure each, never two scales on one axis.
+templ dailyCharts(days []stats.Day, t stats.Totals, today time.Time) {
+	<div class="mt-6 grid gap-6 lg:grid-cols-3">
+		if len(days) > 0 && days[len(days)-1].Day.Equal(today) {
+			<p class="text-xs text-zone-400 lg:col-span-3 lg:-mb-3">{ i18n.T(ctx, "stats.chart.today_note") }</p>
+		}
+		<section class={ cardClass, "p-5" } aria-labelledby="chart-reservations">
+			@cardHeading("chart-reservations", i18n.T(ctx, "stats.chart.reservations"), i18n.T(ctx, "stats.chart.per_day"))
+			<div class="mt-4">
+				@web.Chart(reservationsChart(ctx, days, today))
+			</div>
+		</section>
+		<section class={ cardClass, "p-5" } aria-labelledby="chart-hours">
+			@cardHeading("chart-hours", i18n.T(ctx, "stats.chart.hours"), i18n.T(ctx, "stats.chart.per_day"))
+			<div class="mt-4">
+				@web.Chart(hoursChart(ctx, days, today))
+			</div>
+		</section>
+		<section class={ cardClass, "p-5" } aria-labelledby="chart-exp">
+			@cardHeading("chart-exp", i18n.T(ctx, "stats.chart.exp"), i18n.T(ctx, "stats.chart.per_day"))
+			if !t.HasExp() {
+				@noDataBlock(i18n.T(ctx, "stats.exp.no_data_range"))
+			} else {
+				{{ withData := expDays(days) }}
+				<div class="mt-4">
+					@web.Chart(expChart(ctx, days, today))
+				</div>
+				<p class="mt-2 text-xs text-zone-400">{ i18n.T(ctx, "stats.chart.exp_days", formatInt(ctx, int64(len(withData))), formatInt(ctx, int64(len(days)))) }</p>
+			}
+		</section>
+	</div>
+}
+
+// leaderboard is a short ranked list with the figure it ranks by.
+templ leaderboard(id, title, hint string, rows []tableRow, key stats.SortKey, more string) {
+	<section class={ cardClass, "p-5" } aria-labelledby={ id }>
+		@cardHeading(id, title, hint)
+		if len(rows) == 0 {
+			if key == stats.SortExp || key == stats.SortExpPerHour {
+				@noDataBlock(i18n.T(ctx, "stats.exp.no_data_range"))
+			} else {
+				<p class="mt-4 text-sm text-zone-400">{ i18n.T(ctx, "stats.empty.range") }</p>
+			}
+		} else {
+			<ol class="mt-4 divide-y divide-zone-800">
+				for i, r := range rows {
+					<li class="flex items-center gap-3 py-2 text-sm">
+						<span class="w-6 shrink-0 text-right font-mono text-xs tabular-nums text-zone-400">{ strconv.Itoa(i + 1) }</span>
+						<a href={ templ.SafeURL(r.Href) } class="min-w-0 flex-1 truncate font-medium text-zone-100 transition hover:text-signal-bright" title={ r.Name }>{ r.Name }</a>
+						<span class="shrink-0 font-mono tabular-nums text-zone-200">
+							switch key {
+								case stats.SortExp:
+									{{ s, _ := formatExp(ctx, r.Totals) }}
+									{ s }
+								case stats.SortExpPerHour:
+									{{ s, _ := formatExpPerHour(ctx, r.Totals) }}
+									{ i18n.T(ctx, "stats.leaderboard.per_hour", s) }
+								default:
+									{ i18n.T(ctx, "stats.chart.hours_tip", formatHours(ctx, r.Totals)) }
+							}
+						</span>
+					</li>
+				}
+			</ol>
+		}
+		<a href={ templ.SafeURL(more) } class="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-signal-bright transition hover:text-signal sm:min-h-0">{ i18n.T(ctx, "stats.leaderboard.more") } <span aria-hidden="true" class="ml-1">→</span></a>
+	</section>
+}
+
+// breakdown is a detail page's table; the core caps its rows.
+templ breakdown(title string, b breakdownView, name string) {
+	<section class="mt-8">
+		<h2 class="font-display text-lg font-semibold text-zone-50">{ title }</h2>
+		if len(b.Rows) == 0 {
+			<p class="mt-2 text-sm text-zone-400">{ i18n.T(ctx, "stats.empty.range") }</p>
+		} else {
+			@statsTable(b.Rows, name, nil)
+			if b.Total > len(b.Rows) {
+				<p class="mt-2 text-xs text-zone-400">{ i18n.T(ctx, "stats.table.truncated", formatInt(ctx, int64(len(b.Rows))), formatInt(ctx, int64(b.Total))) }</p>
+			}
+		}
+	</section>
+}
+
+// statsTable is the shared figures table. With sort set, the headers are sort links.
+templ statsTable(rows []tableRow, name string, sort *tableView) {
+	<div class={ cardClass, "relative mt-4 overflow-x-auto" }>
+		<table class="w-full text-sm">
+			<thead>
+				<tr class="border-b border-zone-700 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-400">
+					<th scope="col" class="w-10 px-4 py-3 text-right">#</th>
+					@header(stats.SortName, name, false, sort)
+					for _, c := range figureColumns(ctx) {
+						@header(c.Key, c.Label, true, sort)
+					}
+				</tr>
+			</thead>
+			<tbody>
+				for i, r := range rows {
+					<tr class="border-b border-zone-800 last:border-0 hover:bg-white/[0.03]">
+						<td class="px-4 py-2.5 text-right font-mono text-xs tabular-nums text-zone-400">{ strconv.Itoa(i + 1) }</td>
+						<td class="px-4 py-2.5">
+							<a href={ templ.SafeURL(r.Href) } class="font-medium text-zone-100 transition hover:text-signal-bright">{ r.Name }</a>
+							if r.Archived {
+								<span class="ml-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300">{ i18n.T(ctx, "stats.spot.archived") }</span>
+							}
+						</td>
+						<td class="px-4 py-2.5 text-right font-mono tabular-nums text-zone-200">{ formatInt(ctx, r.Reservations) }</td>
+						<td class="px-4 py-2.5 text-right font-mono tabular-nums text-zone-200">{ formatHours(ctx, r.Totals) }</td>
+						<td class="px-4 py-2.5 text-right font-mono tabular-nums text-zone-200">
+							{{ exp, ok := formatExp(ctx, r.Totals) }}
+							if ok {
+								{ exp }
+							} else {
+								@noData()
+							}
+						</td>
+						<td class="px-4 py-2.5 text-right font-mono tabular-nums text-zone-200">
+							{{ perHour, ok := formatExpPerHour(ctx, r.Totals) }}
+							if ok {
+								{ perHour }
+							} else {
+								@noData()
+							}
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	</div>
+}
+
+templ header(key stats.SortKey, label string, numeric bool, sort *tableView) {
+	if sort == nil {
+		<th scope="col" class={ "px-4 py-3", templ.KV("text-right", numeric) }>{ label }</th>
+	} else {
+		<th scope="col" class={ "px-4 py-3", templ.KV("text-right", numeric) } aria-sort={ ariaSort(sort.Sort, key) }>
+			<a href={ templ.SafeURL(sortHref(sort.path(), sort.Sort, key)) } class={ "inline-flex min-h-11 items-center gap-1 transition hover:text-zone-100 sm:min-h-0", templ.KV("text-zone-100", sort.Sort.Key == key) }>
+				{ label }
+				if sort.Sort.Key == key {
+					<span class="text-signal-bright" aria-hidden="true">
+						if sort.Sort.Asc {
+							▲
+						} else {
+							▼
+						}
+					</span>
+				}
+			</a>
+		</th>
+	}
+}
+
+templ profileCard(v characterView) {
+	<section class={ cardClass, "mt-6 p-5" } aria-labelledby="profile-heading">
+		@cardHeading("profile-heading", i18n.T(ctx, "stats.character.profile"), i18n.T(ctx, "stats.character.profile_hint"))
+		switch v.P.Source {
+			case stats.ProfileFound:
+				{{ c := v.P.Character }}
+				<dl class="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 lg:grid-cols-4">
+					@fact(i18n.T(ctx, "stats.character.level"), strconv.Itoa(c.Level), true)
+					@fact(i18n.T(ctx, "stats.character.vocation"), c.Vocation, false)
+					@fact(i18n.T(ctx, "stats.character.world"), c.World, false)
+					@fact(i18n.T(ctx, "stats.character.guild"), guildLine(ctx, c.GuildName, c.GuildRank), false)
+					@fact(i18n.T(ctx, "stats.character.last_login"), lastLogin(ctx, c.LastLogin, v.Now), false)
+					@fact(i18n.T(ctx, "stats.character.account"), c.AccountStatus, false)
+					@fact(i18n.T(ctx, "stats.character.residence"), c.Residence, false)
+					@fact(i18n.T(ctx, "stats.character.achievements"), formatInt(ctx, int64(c.AchievementPoints)), true)
+				</dl>
+			case stats.ProfileNotFound:
+				<p class="mt-4 rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">{ i18n.T(ctx, "stats.character.not_found") }</p>
+			default:
+				<p class="mt-4 rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">{ i18n.T(ctx, "stats.character.unavailable") }</p>
+		}
+	</section>
+}
+
+templ fact(label, value string, mono bool) {
+	<div class="min-w-0">
+		<dt class={ labelClass }>{ label }</dt>
+		<dd class={ "mt-1 break-words text-sm text-zone-100", templ.KV("font-mono tabular-nums", mono) }>
+			if value == "" {
+				<span class="text-zone-500">–</span>
+			} else {
+				{ value }
+			}
+		</dd>
+	</div>
+}
+
+templ recentReservations(v characterView) {
+	<section class="mt-8" aria-labelledby="recent-heading">
+		<h2 id="recent-heading" class="font-display text-lg font-semibold text-zone-50">{ i18n.T(ctx, "stats.character.recent") }</h2>
+		<div class={ cardClass, "relative mt-4 overflow-x-auto" }>
+			<table class="w-full text-sm">
+				<thead>
+					<tr class="border-b border-zone-700 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-400">
+						<th scope="col" class="px-4 py-3">{ i18n.T(ctx, "stats.character.when") }</th>
+						<th scope="col" class="px-4 py-3">{ i18n.T(ctx, "stats.table.spot") }</th>
+						<th scope="col" class="min-w-[14rem] px-4 py-3">{ i18n.T(ctx, "stats.character.party") }</th>
+						<th scope="col" class="px-4 py-3 text-right">{ i18n.T(ctx, "stats.character.gain") }</th>
+					</tr>
+				</thead>
+				<tbody>
+					for _, r := range v.P.Recent {
+						<tr class="border-b border-zone-800 align-top last:border-0">
+							<td class="whitespace-nowrap px-4 py-2.5 font-mono text-xs tabular-nums text-zone-300">{ dayAndHours(ctx, r.StartAt, r.EndAt) }</td>
+							<td class="px-4 py-2.5">
+								<a href={ templ.SafeURL(spotHref(v.GuildID, r.SpotID)) } class="text-zone-100 transition hover:text-signal-bright">{ r.SpotName }</a>
+							</td>
+							<td class="px-4 py-2.5">
+								for i, name := range partyNames(r.Author) {
+									if i > 0 {
+										<span class="text-zone-500">{ " / " }</span>
+									}
+									<a href={ templ.SafeURL(characterHref(v.GuildID, name)) } class="whitespace-nowrap text-zone-200 transition hover:text-signal-bright">{ name }</a>
+								}
+							</td>
+							<td class="px-4 py-2.5 text-right font-mono tabular-nums text-zone-200">
+								{{ text, state := reservationExp(ctx, r) }}
+								switch state {
+									case "ok":
+										{ text }
+									case "no_data":
+										@noData()
+									default:
+										<span class="cursor-help text-zone-400" title={ i18n.T(ctx, "stats.exp.pending_tip") }>{ text }</span>
+								}
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	</section>
+}

@@ -1,6 +1,8 @@
 package booking
 
 import (
+	"time"
+
 	"go.uber.org/zap"
 	"spot-assistant/internal/ports"
 )
@@ -10,6 +12,7 @@ type Adapter struct {
 	spotRepo        ports.SpotRepository
 	commSrv         ports.CommunicationService
 	log             *zap.SugaredLogger
+	now             func() time.Time
 }
 
 func NewAdapter(spotRepo ports.SpotRepository, reservationRepo ports.ReservationRepository, commSrv ports.CommunicationService) *Adapter {
@@ -18,6 +21,7 @@ func NewAdapter(spotRepo ports.SpotRepository, reservationRepo ports.Reservation
 		reservationRepo: reservationRepo,
 		commSrv:         commSrv,
 		log:             zap.NewNop().Sugar(),
+		now:             time.Now,
 	}
 }
 
