@@ -54,3 +54,12 @@ const (
 	RemoveDeleted  RemoveOutcome = "deleted"
 	RemoveArchived RemoveOutcome = "archived"
 )
+
+// Ranked is a spot with the number of its reservations in a period, and the
+// start of the latest one.
+type Ranked struct {
+	Spot
+
+	Bookings    int64
+	LastStartAt time.Time
+}

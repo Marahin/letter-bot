@@ -15,8 +15,6 @@ import (
 
 	"spot-assistant/internal/core/booking"
 	"spot-assistant/internal/core/dto/reservation"
-	"spot-assistant/internal/core/dto/spot"
-	"spot-assistant/internal/core/reservationforms"
 	"spot-assistant/internal/infrastructure/bot/formatter"
 )
 
@@ -90,7 +88,7 @@ func TestListView(t *testing.T) {
 
 func TestListView_StatusAndExtraButtons(t *testing.T) {
 	// given
-	retry := button("Try again", discordgo.SecondaryButton, formAction{Kind: actionEditRetry, ReservationID: 1})
+	retry := button("Try again", discordgo.SecondaryButton, formAction{Kind: actionEditWindow, ReservationID: 1, SpotID: 7, Window: reservation.AutoWindow})
 
 	// when
 	view := viewBot().listView(pageOf(4, 4), "Not changed.", viewNow, retry)
@@ -121,20 +119,17 @@ func TestConfirmCancelView(t *testing.T) {
 	matchJSON(t, viewJSON(view))
 }
 
-func TestModals(t *testing.T) {
-	for name, modal := range map[string]*discordgo.InteractionResponseData{
-		"book":  bookModal(reservation.Form{}),
-		"retry": bookModal(retryForm(formAction{Kind: actionBookRetry, StartText: "1830", SpotText: "Library"})),
-		"edit":  editModal(3, existingForm(listed(3, "Library -1", viewNow.Add(time.Hour)))),
-	} {
-		t.Run(name, func(t *testing.T) {
-			// then
-			assert.LessOrEqual(t, len(modal.Components), 5)
-			assert.LessOrEqual(t, len(modal.Title), 45)
-			matchJSON(t, modal)
-		})
-	}
+func TestSearchModal(t *testing.T) {
+	// when
+	modal := searchModal(formAction{Kind: actionEditSearchSubmit, ReservationID: 3, Now: true, Length: time.Hour})
+
+	// then
+	assert.Len(t, modal.Components, 1)
+	assert.LessOrEqual(t, len(modal.Title), 45)
+	matchJSON(t, modal)
 }
+
+var retryChoice = formAction{SpotID: 7, StartAt: time.Unix(1791226800, 0), Length: 2 * time.Hour, Window: reservation.AutoWindow}
 
 func TestBookOutcomeView_Success(t *testing.T) {
 	// given
@@ -148,7 +143,7 @@ func TestBookOutcomeView_Success(t *testing.T) {
 	}
 
 	// when
-	view := viewBot().bookOutcomeView(outcome, nil, reservation.Form{})
+	view := viewBot().bookOutcomeView(outcome, nil, retryChoice)
 
 	// then
 	matchJSON(t, viewJSON(view))
@@ -164,91 +159,45 @@ func conflictOutcome(canOverbook bool) *reservation.FormOutcome {
 }
 
 func TestBookOutcomeView_Conflicts(t *testing.T) {
-	// given
-	form := reservation.Form{Spot: "Library", StartAt: "19:00", EndAt: "21.00"}
 	for name, canOverbook := range map[string]bool{"can overbook": true, "cannot overbook": false} {
 		t.Run(name, func(t *testing.T) {
 			// when
-			view := viewBot().bookOutcomeView(conflictOutcome(canOverbook), booking.ErrInsufficientPermissions, form)
+			view := viewBot().bookOutcomeView(conflictOutcome(canOverbook), booking.ErrInsufficientPermissions, retryChoice)
 
 			// then
+			assertDiscordLimits(t, view)
 			matchJSON(t, viewJSON(view))
 		})
 	}
 }
 
-func candidates(n int) []*spot.Spot {
-	spots := make([]*spot.Spot, 0, n)
-	for i := range n {
-		spots = append(spots, &spot.Spot{ID: int64(i + 1), Name: fmt.Sprintf("Library -%d", i+1)})
-	}
-	return spots
-}
-
-func TestBookOutcomeView_Ambiguous(t *testing.T) {
-	// given
-	outcome := &reservation.FormOutcome{Draft: reservation.Draft{StartAt: viewNow.Add(time.Hour), EndAt: viewNow.Add(3 * time.Hour)}}
-	err := &reservationforms.AmbiguousSpotError{Query: "Library", Candidates: candidates(15)}
-
-	// when
-	view := viewBot().bookOutcomeView(outcome, err, reservation.Form{Spot: "Library", StartAt: "19:00", EndAt: "21:00"})
-
-	// then
-	selectRow, ok := view.components[0].(discordgo.ActionsRow)
-	require.True(t, ok)
-	menu, ok := selectRow.Components[0].(plainSelect)
-	require.True(t, ok)
-	assert.Len(t, menu.Options, 15)
-	for _, option := range menu.Options {
-		assert.NotEmpty(t, option.Description)
-	}
-	matchJSON(t, viewJSON(view))
-}
-
-func TestBookOutcomeView_TooManyCandidates(t *testing.T) {
-	// given
-	outcome := &reservation.FormOutcome{Draft: reservation.Draft{StartAt: viewNow.Add(time.Hour), EndAt: viewNow.Add(3 * time.Hour)}}
-	err := &reservationforms.AmbiguousSpotError{Query: "Library", Candidates: candidates(30)}
-
-	// when
-	view := viewBot().bookOutcomeView(outcome, err, reservation.Form{Spot: "Library", StartAt: "19:00", EndAt: "21:00"})
-
-	// then
-	selectRow, ok := view.components[0].(discordgo.ActionsRow)
-	require.True(t, ok)
-	menu, ok := selectRow.Components[0].(plainSelect)
-	require.True(t, ok)
-	assert.Len(t, menu.Options, maxSelectOptions)
-	assert.Contains(t, view.content, "type more of its name")
-}
-
 func TestBookOutcomeView_Error(t *testing.T) {
 	// when
-	view := viewBot().bookOutcomeView(nil, reservationforms.ErrTimeFormat, reservation.Form{Spot: "Library", StartAt: "late", EndAt: "21:00"})
+	view := viewBot().bookOutcomeView(nil, booking.ErrStartInPast, formAction{SpotID: 7, Now: true, Length: time.Hour, Window: reservation.AutoWindow})
 
 	// then
+	assert.Equal(t, []string{"lf1:ww:7::now:60"}, customIDs(t, view))
 	matchJSON(t, viewJSON(view))
 }
 
 func TestEditOutcomeView(t *testing.T) {
 	// given
-	form := reservation.Form{Spot: "Library -1", StartAt: "19:00", EndAt: "21:00"}
+	retry := formAction{ReservationID: 1, SpotID: 7, StartAt: time.Unix(1791226800, 0), Length: 2 * time.Hour, Window: reservation.AutoWindow}
 	tests := map[string]struct {
 		outcome *reservation.FormOutcome
 		err     error
 	}{
-		"success":   {conflictOutcome(false), nil},
-		"conflict":  {conflictOutcome(false), booking.ErrConflict},
-		"error":     {nil, errors.New("boom")},
-		"ambiguous": {conflictOutcome(false), &reservationforms.AmbiguousSpotError{Query: "Lib", Candidates: candidates(2)}},
+		"success":  {conflictOutcome(false), nil},
+		"conflict": {conflictOutcome(false), booking.ErrConflict},
+		"error":    {nil, errors.New("boom")},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			// when
-			view := viewBot().editOutcomeView(1, tt.outcome, tt.err, form, pageOf(1, 1), viewNow)
+			view := viewBot().editOutcomeView(tt.outcome, tt.err, retry, pageOf(1, 1), viewNow)
 
 			// then
-			assert.LessOrEqual(t, rowCount(view), 5)
+			assertDiscordLimits(t, view)
 			matchJSON(t, viewJSON(view))
 		})
 	}
@@ -269,24 +218,11 @@ func TestEditOutcomeView_UnreadList(t *testing.T) {
 	outcome := conflictOutcome(false)
 
 	// when
-	view := viewBot().editOutcomeView(1, outcome, nil, reservation.Form{}, nil, viewNow)
+	view := viewBot().editOutcomeView(outcome, nil, formAction{ReservationID: 1}, nil, viewNow)
 
 	// then
 	assert.Contains(t, view.content, "Library -1")
 	assert.Contains(t, view.content, "Could not load your reservations")
-}
-
-func TestOutcomeForm(t *testing.T) {
-	// given
-	outcome := conflictOutcome(false)
-
-	// when
-	form := outcomeForm(outcome)
-	empty := outcomeForm(nil)
-
-	// then
-	assert.Equal(t, reservation.Form{Spot: "Library -1", StartAt: "19:00", EndAt: "21:00"}, form)
-	assert.Equal(t, reservation.Form{}, empty)
 }
 
 func TestCut(t *testing.T) {
@@ -297,14 +233,4 @@ func TestCut(t *testing.T) {
 	// then
 	assert.Equal(t, "abc", short)
 	assert.Equal(t, "ab…", long)
-}
-
-func TestTypedClock(t *testing.T) {
-	// when
-	typed := typedClock("9.30")
-	unparsed := typedClock("late")
-
-	// then
-	assert.Equal(t, "0930", typed)
-	assert.Equal(t, "", unparsed)
 }

@@ -71,13 +71,18 @@ The summary channel has the buttons **Book a respawn**, **My reservations** and
 **Open panel** (when `WEB_BASE_URL` is set). Every reply is visible only to the
 member who clicked.
 
-- **Book a respawn** opens a form: respawn (the name or a part of it), start and
-  end (HH:MM, Europe/Berlin). When more respawns match, the bot asks which one.
+- **Book a respawn** opens a private message with lists, so you do not type:
+  1. Pick the respawn: your usual respawns, or the full list by name (A–F,
+     G–M, ...). **Search by name** finds it by a part of its name.
+  2. Pick the start (**Now** or a half hour in the next 12 hours; **Later ›**
+     goes further) and the length (30 min to 3 h), then **Book**. The start
+     list shows the times that are already booked.
+
   When other reservations overlap, the bot lists them, and shows **Overbook
   them** to members who may overbook.
 - **My reservations** (or `/reservations`) lists your upcoming reservations
-  with **Edit** and **Cancel** buttons. Edit opens the same form, filled in. An
-  edit never overbooks.
+  with **Edit** and **Cancel** buttons. Edit opens step 2 with the current
+  respawn, start and length chosen. An edit never overbooks.
 
 The slash commands `/book`, `/unbook` and `/summary` work as before.
 

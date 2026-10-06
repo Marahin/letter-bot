@@ -3,7 +3,6 @@ package bot
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strconv"
 	"time"
 	"unicode/utf8"
@@ -12,15 +11,20 @@ import (
 
 	"spot-assistant/internal/core/booking"
 	"spot-assistant/internal/core/dto/reservation"
-	"spot-assistant/internal/core/reservationforms"
 )
 
 const (
 	// listLimit leaves one of Discord's five component rows for the list actions.
-	listLimit         = 4
-	maxLabelLength    = 80
-	maxSpotNameLength = 100
-	maxSelectOptions  = 25
+	listLimit = 4
+	// Discord's limits.
+	maxRows              = 5
+	maxButtonsPerRow     = 5
+	maxLabelLength       = 80
+	maxOptionLength      = 100
+	maxPlaceholderLength = 150
+	maxSelectOptions     = 25
+	maxSearchQueryLength = 100
+	minSearchQueryLength = 2
 )
 
 // formView is the content and the components of an ephemeral form message.
@@ -48,6 +52,7 @@ type plainButton struct {
 	Style    discordgo.ButtonStyle `json:"style"`
 	CustomID string                `json:"custom_id,omitempty"`
 	URL      string                `json:"url,omitempty"`
+	Disabled bool                  `json:"disabled,omitempty"`
 }
 
 func (plainButton) Type() discordgo.ComponentType {
@@ -67,6 +72,7 @@ type plainOption struct {
 	Label       string `json:"label"`
 	Value       string `json:"value"`
 	Description string `json:"description,omitempty"`
+	Default     bool   `json:"default,omitempty"`
 }
 
 type plainSelect struct {
@@ -119,65 +125,26 @@ func summaryComponents(webBaseURL string) []discordgo.MessageComponent {
 	return []discordgo.MessageComponent{row(buttons...)}
 }
 
-func textInput(id, label, placeholder, value string, minLength, maxLength int) discordgo.ActionsRow {
-	return row(discordgo.TextInput{
-		CustomID:    id,
-		Label:       label,
-		Style:       discordgo.TextInputShort,
-		Placeholder: placeholder,
-		Value:       value,
-		Required:    true,
-		MinLength:   minLength,
-		MaxLength:   maxLength,
-	})
+func disabledButton(label string, style discordgo.ButtonStyle, action formAction, disabled bool) plainButton {
+	b := button(label, style, action)
+	b.Disabled = disabled
+	return b
 }
 
-func reservationModal(title string, submit formAction, form reservation.Form) *discordgo.InteractionResponseData {
+func searchModal(submit formAction) *discordgo.InteractionResponseData {
 	return &discordgo.InteractionResponseData{
 		CustomID: submit.customID(),
-		Title:    title,
-		Components: []discordgo.MessageComponent{
-			textInput(inputSpot, "Respawn", "Name or a part of it, e.g. Library -1", cut(form.Spot, maxSpotNameLength), 2, maxSpotNameLength),
-			textInput(inputStart, "Start", "HH:MM, e.g. 18:30", form.StartAt, 1, 5),
-			textInput(inputEnd, "End", "HH:MM, at most 3 hours after the start", form.EndAt, 1, 5),
-		},
+		Title:    "Search for a respawn",
+		Components: []discordgo.MessageComponent{row(discordgo.TextInput{
+			CustomID:    inputQuery,
+			Label:       "Respawn",
+			Style:       discordgo.TextInputShort,
+			Placeholder: "Name or a part of it, e.g. Library",
+			Required:    true,
+			MinLength:   minSearchQueryLength,
+			MaxLength:   maxSearchQueryLength,
+		})},
 	}
-}
-
-func bookModal(form reservation.Form) *discordgo.InteractionResponseData {
-	return reservationModal("Book a respawn", formAction{Kind: actionBookSubmit}, form)
-}
-
-func editModal(id int64, form reservation.Form) *discordgo.InteractionResponseData {
-	return reservationModal("Edit reservation", formAction{Kind: actionEditSubmit, ReservationID: id}, form)
-}
-
-func existingForm(r *reservation.ReservationWithSpot) reservation.Form {
-	return reservation.Form{Spot: r.Spot.Name, StartAt: r.StartAt.Format("15:04"), EndAt: r.EndAt.Format("15:04")}
-}
-
-func retryForm(a formAction) reservation.Form {
-	return reservation.Form{Spot: a.SpotText, StartAt: clockInput(a.StartText), EndAt: clockInput(a.EndText)}
-}
-
-func typedClock(text string) string {
-	hour, minute, err := reservationforms.ParseClock(text)
-	if err != nil {
-		return ""
-	}
-	return fmt.Sprintf("%02d%02d", hour, minute)
-}
-
-func retryAction(kind formActionKind, id int64, form reservation.Form) formAction {
-	return formAction{Kind: kind, ReservationID: id, StartText: typedClock(form.StartAt), EndText: typedClock(form.EndAt), SpotText: form.Spot}
-}
-
-// outcomeForm is the form behind an outcome, for a retry after a button.
-func outcomeForm(outcome *reservation.FormOutcome) reservation.Form {
-	if outcome == nil {
-		return reservation.Form{}
-	}
-	return reservation.Form{Spot: outcome.SpotName, StartAt: outcome.Draft.StartAt.Format("15:04"), EndAt: outcome.Draft.EndAt.Format("15:04")}
 }
 
 // listView is the member's reservation list, page nil when it could not be read.
@@ -221,32 +188,6 @@ func (b *Bot) confirmCancelView(r *reservation.ReservationWithSpot) formView {
 	}
 }
 
-// spotPickView asks which respawn the member meant. pick carries the times, the
-// select gives the spot id.
-func (b *Bot) spotPickView(ambiguous *reservationforms.AmbiguousSpotError, pick formAction, back plainButton) formView {
-	candidates := ambiguous.Candidates
-	capped := len(candidates) > maxSelectOptions
-	if capped {
-		candidates = candidates[:maxSelectOptions]
-	}
-	options := make([]plainOption, 0, len(candidates))
-	window := b.formatter.FormatWindow(pick.StartAt, pick.EndAt)
-	for _, candidate := range candidates {
-		options = append(options, plainOption{
-			Label:       cut(candidate.Name, maxLabelLength),
-			Value:       strconv.FormatInt(candidate.ID, 10),
-			Description: window,
-		})
-	}
-	return formView{
-		content: b.formatter.FormatSpotPick(ambiguous.Query, capped),
-		components: []discordgo.MessageComponent{
-			row(plainSelect{CustomID: pick.customID(), Placeholder: "Choose a respawn", Options: options}),
-			row(back),
-		},
-	}
-}
-
 func (b *Bot) bookSuccessView(outcome *reservation.FormOutcome) formView {
 	return formView{
 		content: b.formatter.FormatFormBooked(outcome),
@@ -257,43 +198,34 @@ func (b *Bot) bookSuccessView(outcome *reservation.FormOutcome) formView {
 	}
 }
 
-// bookOutcomeView is the reply to a booking. form is what the member typed; after
-// a button it is the form of the outcome.
-func (b *Bot) bookOutcomeView(outcome *reservation.FormOutcome, err error, form reservation.Form) formView {
-	retry := button("Try again", discordgo.SecondaryButton, retryAction(actionBookRetry, 0, form))
-	var ambiguous *reservationforms.AmbiguousSpotError
-	switch {
-	case err == nil:
+// bookOutcomeView is the reply to a booking. retry returns to step 2 with the
+// choice kept.
+func (b *Bot) bookOutcomeView(outcome *reservation.FormOutcome, err error, retry formAction) formView {
+	if err == nil {
 		return b.bookSuccessView(outcome)
-	case errors.As(err, &ambiguous) && outcome != nil:
-		pick := formAction{Kind: actionBookPick, StartAt: outcome.Draft.StartAt, EndAt: outcome.Draft.EndAt}
-		return b.spotPickView(ambiguous, pick, retry)
-	case errors.Is(err, booking.ErrInsufficientPermissions) && outcome != nil && len(outcome.Conflicts) > 0:
+	}
+	retryButton := button("Try again", discordgo.SecondaryButton, retry.as(actionWindow))
+	if errors.Is(err, booking.ErrInsufficientPermissions) && outcome != nil && len(outcome.Conflicts) > 0 {
 		buttons := []discordgo.MessageComponent{}
 		if outcome.CanOverbook {
 			overbook := formAction{Kind: actionOverbook, SpotID: outcome.Draft.SpotID, StartAt: outcome.Draft.StartAt, EndAt: outcome.Draft.EndAt}
 			buttons = append(buttons, button("Overbook them", discordgo.DangerButton, overbook))
 		}
-		buttons = append(buttons, retry)
+		buttons = append(buttons, retryButton)
 		return formView{content: b.formatter.FormatFormConflicts(outcome), components: []discordgo.MessageComponent{row(buttons...)}}
 	}
-	return formView{content: b.formatter.FormatFormError(err), components: []discordgo.MessageComponent{row(retry)}}
+	return formView{content: b.formatter.FormatFormError(err), components: []discordgo.MessageComponent{row(retryButton)}}
 }
 
 // editOutcomeView is the list after an edit, with the result as its status.
-func (b *Bot) editOutcomeView(id int64, outcome *reservation.FormOutcome, err error, form reservation.Form, page *reservation.Page, now time.Time) formView {
+// retry returns to step 2 with the choice kept.
+func (b *Bot) editOutcomeView(outcome *reservation.FormOutcome, err error, retry formAction, page *reservation.Page, now time.Time) formView {
 	if err == nil {
 		return b.listView(page, b.formatter.FormatFormEdited(outcome), now)
-	}
-	retry := button("Try again", discordgo.SecondaryButton, retryAction(actionEditRetry, id, form))
-	var ambiguous *reservationforms.AmbiguousSpotError
-	if errors.As(err, &ambiguous) && outcome != nil {
-		pick := formAction{Kind: actionEditPick, ReservationID: id, StartAt: outcome.Draft.StartAt, EndAt: outcome.Draft.EndAt}
-		return b.spotPickView(ambiguous, pick, button("Back to the list", discordgo.SecondaryButton, formAction{Kind: actionList}))
 	}
 	status := b.formatter.FormatFormError(err)
 	if errors.Is(err, booking.ErrConflict) && outcome != nil && len(outcome.Conflicts) > 0 {
 		status = b.formatter.FormatFormConflicts(outcome)
 	}
-	return b.listView(page, "Not changed. "+status, now, retry)
+	return b.listView(page, "Not changed. "+status, now, button("Try again", discordgo.SecondaryButton, retry.as(actionWindow)))
 }

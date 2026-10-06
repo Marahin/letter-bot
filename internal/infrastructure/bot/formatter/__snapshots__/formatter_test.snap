@@ -41,11 +41,11 @@ Your reservation was overbooked by test-nick (<@!test-id>)
 * <@!test-id>  has been clipped to: 2021-01-01 00:00 - 2021-01-01 01:10, 2021-01-01 01:30 - 2021-01-01 02:00
 ---
 [TestDiscordFormatter_FormatFormError - 1]
-More than one respawn matches **Lib**. Which one do you mean?
+More than one respawn matches **Lib**. Pick one from the list.
 /-/-/-/
 Write the times as HH:MM, e.g. 18:30.
 /-/-/-/
-No respawn has this name. Write the name or a part of it, e.g. Library.
+No respawn has this name. Search for a part of it, e.g. Library, or pick it from the list.
 /-/-/-/
 This respawn is archived. Choose another respawn.
 /-/-/-/
@@ -88,4 +88,72 @@ Cancel **Library -1**, Mon 05 Oct 18:30 – 20:30? You cannot undo this.
 Cancelled **Library -1**, Mon 05 Oct 18:30 – 20:30.
 This button is out of date. Use the buttons in the summary channel or /reservations.
 Use this in a server.
+---
+
+[TestDiscordFormatter_WizardTexts - 1]
+**Book a respawn** — pick it from a list.
+/-/-/-/
+No respawn has this name.
+
+**Change the respawn** — pick it from a list.
+This server has no respawns yet. A manager can add them in the web panel.
+/-/-/-/
+Respawns that match **lib**:
+/-/-/-/
+Respawns that match **lib**:
+Not all of them fit in the list. If yours is missing, search for more of its name.
+/-/-/-/
+Popular on this server
+/-/-/-/
+You booked it once
+/-/-/-/
+You booked it 7 times
+/-/-/-/
+**Library -1** — pick the start and the length. Times in UTC.
+/-/-/-/
+**Library -1** — pick the start and the length. Times in UTC.
+Chosen: 00:00 Wed – 01:30.
+
+Already booked:
+* 19:00 – 21:00 · Druid
+/-/-/-/
+Status.
+
+**Library -1** — change the start, the length or the respawn. Times in UTC.
+Chosen: now – 19:00.
+
+Already booked:
+* 18:00 – 18:30 · Player 0
+* 19:00 – 19:30 · Player 1
+* 20:00 – 20:30 · Player 2
+* 21:00 – 21:30 · Player 3
+* 22:00 – 22:30 · Player 4
+* 23:00 – 23:30 · Player 5
+* 00:00 tomorrow – 00:30 · Player 6
+* 01:00 tomorrow – 01:30 · Player 7
+* 02:00 tomorrow – 02:30 · Player 8
+* 03:00 tomorrow – 03:30 · Player 9
+…and 2 more.
+/-/-/-/
+**Library -1** — started at 17:00. You can change the length. Times in UTC.
+/-/-/-/
+19:00
+/-/-/-/
+01:00 tomorrow
+/-/-/-/
+01:00 Wed
+/-/-/-/
+30 min
+/-/-/-/
+2 h
+/-/-/-/
+1 h 30
+/-/-/-/
+Now | Free
+/-/-/-/
+19:00 | Booked by Druid until 21:00
+/-/-/-/
+18:10 (current) | Free
+/-/-/-/
+Keep (started 17:00) | 
 ---

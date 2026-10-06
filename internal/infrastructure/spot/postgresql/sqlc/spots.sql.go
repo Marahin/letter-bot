@@ -376,3 +376,70 @@ func (q *Queries) SelectSpotReservationCounts(ctx context.Context, arg SelectSpo
 	err := row.Scan(&i.Total, &i.Upcoming)
 	return i, err
 }
+
+const selectTopGuildSpots = `-- name: SelectTopGuildSpots :many
+SELECT s.id, s.name, s.created_at, s.guild_id, s.archived_at,
+  count(r.id) AS bookings,
+  max(r.start_at)::timestamptz AS last_start_at
+FROM web_reservation r
+  INNER JOIN web_spot s ON s.id = r.spot_id
+WHERE r.guild_id = $1::text
+  AND s.guild_id = $1::text
+  AND s.archived_at IS NULL
+  AND r.start_at >= $2::timestamptz
+  AND ($3::text IS NULL OR r.author_discord_id = $3::text)
+GROUP BY s.id, s.name, s.created_at, s.guild_id, s.archived_at
+ORDER BY bookings DESC, last_start_at DESC, s.id
+LIMIT $4::int
+`
+
+type SelectTopGuildSpotsParams struct {
+	GuildID         string
+	Since           pgtype.Timestamptz
+	AuthorDiscordID pgtype.Text
+	RowLimit        int32
+}
+
+type SelectTopGuildSpotsRow struct {
+	ID          int64
+	Name        string
+	CreatedAt   pgtype.Timestamptz
+	GuildID     pgtype.Text
+	ArchivedAt  pgtype.Timestamptz
+	Bookings    int64
+	LastStartAt pgtype.Timestamptz
+}
+
+// The respawns a member (or anyone, with a NULL author) booked most since a time.
+func (q *Queries) SelectTopGuildSpots(ctx context.Context, arg SelectTopGuildSpotsParams) ([]SelectTopGuildSpotsRow, error) {
+	rows, err := q.db.Query(ctx, selectTopGuildSpots,
+		arg.GuildID,
+		arg.Since,
+		arg.AuthorDiscordID,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SelectTopGuildSpotsRow
+	for rows.Next() {
+		var i SelectTopGuildSpotsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.CreatedAt,
+			&i.GuildID,
+			&i.ArchivedAt,
+			&i.Bookings,
+			&i.LastStartAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

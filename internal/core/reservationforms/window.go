@@ -5,8 +5,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"spot-assistant/internal/core/dto/reservation"
 )
 
 // ErrTimeFormat means a time of day that ParseClock cannot read.
@@ -62,40 +60,6 @@ func NextWindow(start, end string, now time.Time) (time.Time, time.Time, error) 
 	return startAt, endAfter(startAt, eh, em), nil
 }
 
-// EditWindow places a changed reservation. An unchanged start keeps its date, so
-// an ongoing reservation keeps its start. A changed start is the occurrence
-// nearest to the current start that is not in the past.
-func EditWindow(start, end string, existing reservation.Reservation, now time.Time) (time.Time, time.Time, error) {
-	sh, sm, err := ParseClock(start)
-	if err != nil {
-		return time.Time{}, time.Time{}, err
-	}
-	eh, em, err := ParseClock(end)
-	if err != nil {
-		return time.Time{}, time.Time{}, err
-	}
-	current := existing.StartAt.In(now.Location())
-	startAt := current
-	if current.Hour() != sh || current.Minute() != sm {
-		startAt = nearestFuture(current, sh, sm, now.Truncate(time.Minute))
-	}
-	return startAt, endAfter(startAt, eh, em), nil
-}
-
-func nearestFuture(anchor time.Time, hour, minute int, notBefore time.Time) time.Time {
-	var best time.Time
-	for days := -1; days <= 2; days++ {
-		candidate := atClock(anchor, days, hour, minute)
-		if candidate.Before(notBefore) {
-			continue
-		}
-		if best.IsZero() || absDuration(candidate.Sub(anchor)) < absDuration(best.Sub(anchor)) {
-			best = candidate
-		}
-	}
-	return best
-}
-
 func endAfter(startAt time.Time, hour, minute int) time.Time {
 	endAt := atClock(startAt, 0, hour, minute)
 	if !endAt.After(startAt) {
@@ -115,11 +79,4 @@ func isDigits(s string) bool {
 		}
 	}
 	return true
-}
-
-func absDuration(d time.Duration) time.Duration {
-	if d < 0 {
-		return -d
-	}
-	return d
 }

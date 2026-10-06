@@ -7,6 +7,7 @@ package mocks
 import (
 	"context"
 	"spot-assistant/internal/core/dto/reservation"
+	"spot-assistant/internal/core/dto/spot"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -127,49 +128,49 @@ func (_c *MockReservationFormService_Book_Call) RunAndReturn(run func(ctx contex
 	return _c
 }
 
-// BookForm provides a mock function for the type MockReservationFormService
-func (_mock *MockReservationFormService) BookForm(ctx context.Context, guildID string, actor reservation.Actor, form reservation.Form) (*reservation.FormOutcome, error) {
-	ret := _mock.Called(ctx, guildID, actor, form)
+// BookChoice provides a mock function for the type MockReservationFormService
+func (_mock *MockReservationFormService) BookChoice(ctx context.Context, guildID string, actor reservation.Actor, choice reservation.TimeChoice) (*reservation.FormOutcome, error) {
+	ret := _mock.Called(ctx, guildID, actor, choice)
 
 	if len(ret) == 0 {
-		panic("no return value specified for BookForm")
+		panic("no return value specified for BookChoice")
 	}
 
 	var r0 *reservation.FormOutcome
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, reservation.Actor, reservation.Form) (*reservation.FormOutcome, error)); ok {
-		return returnFunc(ctx, guildID, actor, form)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, reservation.Actor, reservation.TimeChoice) (*reservation.FormOutcome, error)); ok {
+		return returnFunc(ctx, guildID, actor, choice)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, reservation.Actor, reservation.Form) *reservation.FormOutcome); ok {
-		r0 = returnFunc(ctx, guildID, actor, form)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, reservation.Actor, reservation.TimeChoice) *reservation.FormOutcome); ok {
+		r0 = returnFunc(ctx, guildID, actor, choice)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*reservation.FormOutcome)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, reservation.Actor, reservation.Form) error); ok {
-		r1 = returnFunc(ctx, guildID, actor, form)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, reservation.Actor, reservation.TimeChoice) error); ok {
+		r1 = returnFunc(ctx, guildID, actor, choice)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// MockReservationFormService_BookForm_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BookForm'
-type MockReservationFormService_BookForm_Call struct {
+// MockReservationFormService_BookChoice_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BookChoice'
+type MockReservationFormService_BookChoice_Call struct {
 	*mock.Call
 }
 
-// BookForm is a helper method to define mock.On call
+// BookChoice is a helper method to define mock.On call
 //   - ctx context.Context
 //   - guildID string
 //   - actor reservation.Actor
-//   - form reservation.Form
-func (_e *MockReservationFormService_Expecter) BookForm(ctx any, guildID any, actor any, form any) *MockReservationFormService_BookForm_Call {
-	return &MockReservationFormService_BookForm_Call{Call: _e.mock.On("BookForm", ctx, guildID, actor, form)}
+//   - choice reservation.TimeChoice
+func (_e *MockReservationFormService_Expecter) BookChoice(ctx any, guildID any, actor any, choice any) *MockReservationFormService_BookChoice_Call {
+	return &MockReservationFormService_BookChoice_Call{Call: _e.mock.On("BookChoice", ctx, guildID, actor, choice)}
 }
 
-func (_c *MockReservationFormService_BookForm_Call) Run(run func(ctx context.Context, guildID string, actor reservation.Actor, form reservation.Form)) *MockReservationFormService_BookForm_Call {
+func (_c *MockReservationFormService_BookChoice_Call) Run(run func(ctx context.Context, guildID string, actor reservation.Actor, choice reservation.TimeChoice)) *MockReservationFormService_BookChoice_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -183,9 +184,9 @@ func (_c *MockReservationFormService_BookForm_Call) Run(run func(ctx context.Con
 		if args[2] != nil {
 			arg2 = args[2].(reservation.Actor)
 		}
-		var arg3 reservation.Form
+		var arg3 reservation.TimeChoice
 		if args[3] != nil {
-			arg3 = args[3].(reservation.Form)
+			arg3 = args[3].(reservation.TimeChoice)
 		}
 		run(
 			arg0,
@@ -197,12 +198,12 @@ func (_c *MockReservationFormService_BookForm_Call) Run(run func(ctx context.Con
 	return _c
 }
 
-func (_c *MockReservationFormService_BookForm_Call) Return(formOutcome *reservation.FormOutcome, err error) *MockReservationFormService_BookForm_Call {
+func (_c *MockReservationFormService_BookChoice_Call) Return(formOutcome *reservation.FormOutcome, err error) *MockReservationFormService_BookChoice_Call {
 	_c.Call.Return(formOutcome, err)
 	return _c
 }
 
-func (_c *MockReservationFormService_BookForm_Call) RunAndReturn(run func(ctx context.Context, guildID string, actor reservation.Actor, form reservation.Form) (*reservation.FormOutcome, error)) *MockReservationFormService_BookForm_Call {
+func (_c *MockReservationFormService_BookChoice_Call) RunAndReturn(run func(ctx context.Context, guildID string, actor reservation.Actor, choice reservation.TimeChoice) (*reservation.FormOutcome, error)) *MockReservationFormService_BookChoice_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -367,50 +368,49 @@ func (_c *MockReservationFormService_Cancellable_Call) RunAndReturn(run func(ctx
 	return _c
 }
 
-// Edit provides a mock function for the type MockReservationFormService
-func (_mock *MockReservationFormService) Edit(ctx context.Context, guildID string, actor reservation.Actor, id int64, draft reservation.Draft) (*reservation.FormOutcome, error) {
-	ret := _mock.Called(ctx, guildID, actor, id, draft)
+// EditChoice provides a mock function for the type MockReservationFormService
+func (_mock *MockReservationFormService) EditChoice(ctx context.Context, guildID string, actor reservation.Actor, choice reservation.TimeChoice) (*reservation.FormOutcome, error) {
+	ret := _mock.Called(ctx, guildID, actor, choice)
 
 	if len(ret) == 0 {
-		panic("no return value specified for Edit")
+		panic("no return value specified for EditChoice")
 	}
 
 	var r0 *reservation.FormOutcome
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, reservation.Actor, int64, reservation.Draft) (*reservation.FormOutcome, error)); ok {
-		return returnFunc(ctx, guildID, actor, id, draft)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, reservation.Actor, reservation.TimeChoice) (*reservation.FormOutcome, error)); ok {
+		return returnFunc(ctx, guildID, actor, choice)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, reservation.Actor, int64, reservation.Draft) *reservation.FormOutcome); ok {
-		r0 = returnFunc(ctx, guildID, actor, id, draft)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, reservation.Actor, reservation.TimeChoice) *reservation.FormOutcome); ok {
+		r0 = returnFunc(ctx, guildID, actor, choice)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*reservation.FormOutcome)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, reservation.Actor, int64, reservation.Draft) error); ok {
-		r1 = returnFunc(ctx, guildID, actor, id, draft)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, reservation.Actor, reservation.TimeChoice) error); ok {
+		r1 = returnFunc(ctx, guildID, actor, choice)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// MockReservationFormService_Edit_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Edit'
-type MockReservationFormService_Edit_Call struct {
+// MockReservationFormService_EditChoice_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'EditChoice'
+type MockReservationFormService_EditChoice_Call struct {
 	*mock.Call
 }
 
-// Edit is a helper method to define mock.On call
+// EditChoice is a helper method to define mock.On call
 //   - ctx context.Context
 //   - guildID string
 //   - actor reservation.Actor
-//   - id int64
-//   - draft reservation.Draft
-func (_e *MockReservationFormService_Expecter) Edit(ctx any, guildID any, actor any, id any, draft any) *MockReservationFormService_Edit_Call {
-	return &MockReservationFormService_Edit_Call{Call: _e.mock.On("Edit", ctx, guildID, actor, id, draft)}
+//   - choice reservation.TimeChoice
+func (_e *MockReservationFormService_Expecter) EditChoice(ctx any, guildID any, actor any, choice any) *MockReservationFormService_EditChoice_Call {
+	return &MockReservationFormService_EditChoice_Call{Call: _e.mock.On("EditChoice", ctx, guildID, actor, choice)}
 }
 
-func (_c *MockReservationFormService_Edit_Call) Run(run func(ctx context.Context, guildID string, actor reservation.Actor, id int64, draft reservation.Draft)) *MockReservationFormService_Edit_Call {
+func (_c *MockReservationFormService_EditChoice_Call) Run(run func(ctx context.Context, guildID string, actor reservation.Actor, choice reservation.TimeChoice)) *MockReservationFormService_EditChoice_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -424,117 +424,26 @@ func (_c *MockReservationFormService_Edit_Call) Run(run func(ctx context.Context
 		if args[2] != nil {
 			arg2 = args[2].(reservation.Actor)
 		}
-		var arg3 int64
+		var arg3 reservation.TimeChoice
 		if args[3] != nil {
-			arg3 = args[3].(int64)
-		}
-		var arg4 reservation.Draft
-		if args[4] != nil {
-			arg4 = args[4].(reservation.Draft)
+			arg3 = args[3].(reservation.TimeChoice)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
-			arg4,
 		)
 	})
 	return _c
 }
 
-func (_c *MockReservationFormService_Edit_Call) Return(formOutcome *reservation.FormOutcome, err error) *MockReservationFormService_Edit_Call {
+func (_c *MockReservationFormService_EditChoice_Call) Return(formOutcome *reservation.FormOutcome, err error) *MockReservationFormService_EditChoice_Call {
 	_c.Call.Return(formOutcome, err)
 	return _c
 }
 
-func (_c *MockReservationFormService_Edit_Call) RunAndReturn(run func(ctx context.Context, guildID string, actor reservation.Actor, id int64, draft reservation.Draft) (*reservation.FormOutcome, error)) *MockReservationFormService_Edit_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// EditForm provides a mock function for the type MockReservationFormService
-func (_mock *MockReservationFormService) EditForm(ctx context.Context, guildID string, actor reservation.Actor, id int64, form reservation.Form) (*reservation.FormOutcome, error) {
-	ret := _mock.Called(ctx, guildID, actor, id, form)
-
-	if len(ret) == 0 {
-		panic("no return value specified for EditForm")
-	}
-
-	var r0 *reservation.FormOutcome
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, reservation.Actor, int64, reservation.Form) (*reservation.FormOutcome, error)); ok {
-		return returnFunc(ctx, guildID, actor, id, form)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, reservation.Actor, int64, reservation.Form) *reservation.FormOutcome); ok {
-		r0 = returnFunc(ctx, guildID, actor, id, form)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*reservation.FormOutcome)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, reservation.Actor, int64, reservation.Form) error); ok {
-		r1 = returnFunc(ctx, guildID, actor, id, form)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// MockReservationFormService_EditForm_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'EditForm'
-type MockReservationFormService_EditForm_Call struct {
-	*mock.Call
-}
-
-// EditForm is a helper method to define mock.On call
-//   - ctx context.Context
-//   - guildID string
-//   - actor reservation.Actor
-//   - id int64
-//   - form reservation.Form
-func (_e *MockReservationFormService_Expecter) EditForm(ctx any, guildID any, actor any, id any, form any) *MockReservationFormService_EditForm_Call {
-	return &MockReservationFormService_EditForm_Call{Call: _e.mock.On("EditForm", ctx, guildID, actor, id, form)}
-}
-
-func (_c *MockReservationFormService_EditForm_Call) Run(run func(ctx context.Context, guildID string, actor reservation.Actor, id int64, form reservation.Form)) *MockReservationFormService_EditForm_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 reservation.Actor
-		if args[2] != nil {
-			arg2 = args[2].(reservation.Actor)
-		}
-		var arg3 int64
-		if args[3] != nil {
-			arg3 = args[3].(int64)
-		}
-		var arg4 reservation.Form
-		if args[4] != nil {
-			arg4 = args[4].(reservation.Form)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-		)
-	})
-	return _c
-}
-
-func (_c *MockReservationFormService_EditForm_Call) Return(formOutcome *reservation.FormOutcome, err error) *MockReservationFormService_EditForm_Call {
-	_c.Call.Return(formOutcome, err)
-	return _c
-}
-
-func (_c *MockReservationFormService_EditForm_Call) RunAndReturn(run func(ctx context.Context, guildID string, actor reservation.Actor, id int64, form reservation.Form) (*reservation.FormOutcome, error)) *MockReservationFormService_EditForm_Call {
+func (_c *MockReservationFormService_EditChoice_Call) RunAndReturn(run func(ctx context.Context, guildID string, actor reservation.Actor, choice reservation.TimeChoice) (*reservation.FormOutcome, error)) *MockReservationFormService_EditChoice_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -619,6 +528,80 @@ func (_c *MockReservationFormService_Editable_Call) RunAndReturn(run func(ctx co
 	return _c
 }
 
+// FindRespawn provides a mock function for the type MockReservationFormService
+func (_mock *MockReservationFormService) FindRespawn(ctx context.Context, guildID string, name string) (*spot.Spot, error) {
+	ret := _mock.Called(ctx, guildID, name)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindRespawn")
+	}
+
+	var r0 *spot.Spot
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) (*spot.Spot, error)); ok {
+		return returnFunc(ctx, guildID, name)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) *spot.Spot); ok {
+		r0 = returnFunc(ctx, guildID, name)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*spot.Spot)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = returnFunc(ctx, guildID, name)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockReservationFormService_FindRespawn_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindRespawn'
+type MockReservationFormService_FindRespawn_Call struct {
+	*mock.Call
+}
+
+// FindRespawn is a helper method to define mock.On call
+//   - ctx context.Context
+//   - guildID string
+//   - name string
+func (_e *MockReservationFormService_Expecter) FindRespawn(ctx any, guildID any, name any) *MockReservationFormService_FindRespawn_Call {
+	return &MockReservationFormService_FindRespawn_Call{Call: _e.mock.On("FindRespawn", ctx, guildID, name)}
+}
+
+func (_c *MockReservationFormService_FindRespawn_Call) Run(run func(ctx context.Context, guildID string, name string)) *MockReservationFormService_FindRespawn_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockReservationFormService_FindRespawn_Call) Return(spot1 *spot.Spot, err error) *MockReservationFormService_FindRespawn_Call {
+	_c.Call.Return(spot1, err)
+	return _c
+}
+
+func (_c *MockReservationFormService_FindRespawn_Call) RunAndReturn(run func(ctx context.Context, guildID string, name string) (*spot.Spot, error)) *MockReservationFormService_FindRespawn_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Mine provides a mock function for the type MockReservationFormService
 func (_mock *MockReservationFormService) Mine(ctx context.Context, guildID string, actor reservation.Actor, limit int) (*reservation.Page, error) {
 	ret := _mock.Called(ctx, guildID, actor, limit)
@@ -695,6 +678,166 @@ func (_c *MockReservationFormService_Mine_Call) Return(page *reservation.Page, e
 }
 
 func (_c *MockReservationFormService_Mine_Call) RunAndReturn(run func(ctx context.Context, guildID string, actor reservation.Actor, limit int) (*reservation.Page, error)) *MockReservationFormService_Mine_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RespawnPicker provides a mock function for the type MockReservationFormService
+func (_mock *MockReservationFormService) RespawnPicker(ctx context.Context, guildID string, actor reservation.Actor, page int) (*reservation.RespawnPicker, error) {
+	ret := _mock.Called(ctx, guildID, actor, page)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RespawnPicker")
+	}
+
+	var r0 *reservation.RespawnPicker
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, reservation.Actor, int) (*reservation.RespawnPicker, error)); ok {
+		return returnFunc(ctx, guildID, actor, page)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, reservation.Actor, int) *reservation.RespawnPicker); ok {
+		r0 = returnFunc(ctx, guildID, actor, page)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*reservation.RespawnPicker)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, reservation.Actor, int) error); ok {
+		r1 = returnFunc(ctx, guildID, actor, page)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockReservationFormService_RespawnPicker_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RespawnPicker'
+type MockReservationFormService_RespawnPicker_Call struct {
+	*mock.Call
+}
+
+// RespawnPicker is a helper method to define mock.On call
+//   - ctx context.Context
+//   - guildID string
+//   - actor reservation.Actor
+//   - page int
+func (_e *MockReservationFormService_Expecter) RespawnPicker(ctx any, guildID any, actor any, page any) *MockReservationFormService_RespawnPicker_Call {
+	return &MockReservationFormService_RespawnPicker_Call{Call: _e.mock.On("RespawnPicker", ctx, guildID, actor, page)}
+}
+
+func (_c *MockReservationFormService_RespawnPicker_Call) Run(run func(ctx context.Context, guildID string, actor reservation.Actor, page int)) *MockReservationFormService_RespawnPicker_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 reservation.Actor
+		if args[2] != nil {
+			arg2 = args[2].(reservation.Actor)
+		}
+		var arg3 int
+		if args[3] != nil {
+			arg3 = args[3].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockReservationFormService_RespawnPicker_Call) Return(respawnPicker *reservation.RespawnPicker, err error) *MockReservationFormService_RespawnPicker_Call {
+	_c.Call.Return(respawnPicker, err)
+	return _c
+}
+
+func (_c *MockReservationFormService_RespawnPicker_Call) RunAndReturn(run func(ctx context.Context, guildID string, actor reservation.Actor, page int) (*reservation.RespawnPicker, error)) *MockReservationFormService_RespawnPicker_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// TimePicker provides a mock function for the type MockReservationFormService
+func (_mock *MockReservationFormService) TimePicker(ctx context.Context, guildID string, actor reservation.Actor, choice reservation.TimeChoice) (*reservation.TimePicker, error) {
+	ret := _mock.Called(ctx, guildID, actor, choice)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TimePicker")
+	}
+
+	var r0 *reservation.TimePicker
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, reservation.Actor, reservation.TimeChoice) (*reservation.TimePicker, error)); ok {
+		return returnFunc(ctx, guildID, actor, choice)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, reservation.Actor, reservation.TimeChoice) *reservation.TimePicker); ok {
+		r0 = returnFunc(ctx, guildID, actor, choice)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*reservation.TimePicker)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, reservation.Actor, reservation.TimeChoice) error); ok {
+		r1 = returnFunc(ctx, guildID, actor, choice)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockReservationFormService_TimePicker_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TimePicker'
+type MockReservationFormService_TimePicker_Call struct {
+	*mock.Call
+}
+
+// TimePicker is a helper method to define mock.On call
+//   - ctx context.Context
+//   - guildID string
+//   - actor reservation.Actor
+//   - choice reservation.TimeChoice
+func (_e *MockReservationFormService_Expecter) TimePicker(ctx any, guildID any, actor any, choice any) *MockReservationFormService_TimePicker_Call {
+	return &MockReservationFormService_TimePicker_Call{Call: _e.mock.On("TimePicker", ctx, guildID, actor, choice)}
+}
+
+func (_c *MockReservationFormService_TimePicker_Call) Run(run func(ctx context.Context, guildID string, actor reservation.Actor, choice reservation.TimeChoice)) *MockReservationFormService_TimePicker_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 reservation.Actor
+		if args[2] != nil {
+			arg2 = args[2].(reservation.Actor)
+		}
+		var arg3 reservation.TimeChoice
+		if args[3] != nil {
+			arg3 = args[3].(reservation.TimeChoice)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockReservationFormService_TimePicker_Call) Return(timePicker *reservation.TimePicker, err error) *MockReservationFormService_TimePicker_Call {
+	_c.Call.Return(timePicker, err)
+	return _c
+}
+
+func (_c *MockReservationFormService_TimePicker_Call) RunAndReturn(run func(ctx context.Context, guildID string, actor reservation.Actor, choice reservation.TimeChoice) (*reservation.TimePicker, error)) *MockReservationFormService_TimePicker_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -258,3 +258,50 @@ func TestDiscordFormatter_FormTexts(t *testing.T) {
 	// then
 	snaps.MatchSnapshot(t, strings.Join(texts, "\n"))
 }
+
+func TestDiscordFormatter_WizardTexts(t *testing.T) {
+	// given
+	f := NewFormatter()
+	now := time.Date(2026, 10, 5, 18, 0, 0, 0, time.UTC)
+	booked := &reservation.Reservation{Author: "Druid", StartAt: now.Add(time.Hour), EndAt: now.Add(3 * time.Hour)}
+	editing := &reservation.ReservationWithSpot{Reservation: reservation.Reservation{StartAt: now.Add(-time.Hour), EndAt: now.Add(time.Hour)}}
+	many := make([]*reservation.Reservation, 0, 12)
+	for i := range 12 {
+		many = append(many, &reservation.Reservation{Author: fmt.Sprintf("Player %d", i), StartAt: now.Add(time.Duration(i) * time.Hour), EndAt: now.Add(time.Duration(i)*time.Hour + 30*time.Minute)})
+	}
+	spot := reservation.Spot{ID: 7, Name: "Library -1"}
+
+	// when
+	texts := make([]string, 0, 21)
+	texts = append(texts,
+		f.FormatRespawnStep(false, false, ""),
+		f.FormatRespawnStep(true, true, "No respawn has this name."),
+		f.FormatRespawnMatches("lib", false),
+		f.FormatRespawnMatches("lib", true),
+		f.FormatUsualRespawn(reservation.UsualRespawn{}),
+		f.FormatUsualRespawn(reservation.UsualRespawn{Bookings: 1}),
+		f.FormatUsualRespawn(reservation.UsualRespawn{Bookings: 7}),
+		f.FormatTimeStep(&reservation.TimePicker{Spot: spot}, "", now),
+		f.FormatTimeStep(&reservation.TimePicker{Spot: spot, Choice: reservation.TimeChoice{StartAt: now.Add(30 * time.Hour), Length: 90 * time.Minute}, Booked: []*reservation.Reservation{booked}}, "", now),
+		f.FormatTimeStep(&reservation.TimePicker{Spot: spot, Editing: editing, Choice: reservation.TimeChoice{Now: true, Length: time.Hour}, Booked: many}, "Status.", now),
+		f.FormatTimeStep(&reservation.TimePicker{Spot: spot, Editing: editing, Ongoing: true}, "", now),
+		f.FormatClock(now.Add(time.Hour), now),
+		f.FormatClock(now.Add(7*time.Hour), now),
+		f.FormatClock(now.Add(31*time.Hour), now),
+		f.FormatLength(30*time.Minute),
+		f.FormatLength(2*time.Hour),
+		f.FormatLength(90*time.Minute),
+	)
+	for _, o := range []reservation.StartOption{
+		{StartAt: now, Now: true},
+		{StartAt: now.Add(time.Hour), BookedBy: booked},
+		{StartAt: now.Add(10 * time.Minute), Current: true},
+		{StartAt: now.Add(-time.Hour), Keep: true},
+	} {
+		label, description := f.FormatStartOption(o, now)
+		texts = append(texts, label+" | "+description)
+	}
+
+	// then
+	snaps.MatchSnapshot(t, strings.Join(texts, "\n---\n"))
+}

@@ -244,25 +244,44 @@ These items of the request were unclear or had a cost. Each has a decision.
 49. **The selected server is stored per user** (`web_users.default_guild_id`), as
     in scxmanager, not in the session: it survives sign-out and a new browser.
     Without one, the first premium server is selected, else the first server.
-50. **Bot forms: buttons, Discord forms (modals) and `/reservations`.** The
+50. **Bot forms: buttons, a booking wizard of lists and `/reservations`.** The
     guild summary gets the buttons "Book a respawn", "My reservations" and
     "Open panel" (only when `WEB_BASE_URL` is set). A DM summary has no buttons.
     A guild without upcoming hunts gets a "No upcoming hunts" message with the
     same buttons, so the channel never shows an old summary. Rules:
-    - discordgo stays at v0.27.1 (see "Parity with scxmanager"). It has no Label
-      component, so a form holds only text fields: Respawn, Start, End. The
-      respawn is free text. An exact name (not case-sensitive) wins, else the
-      only name that contains the text. When more names match, an ephemeral
-      select lists them (up to 15).
-    - Times are typed and shown as HH:MM in the bot time zone (Europe/Berlin).
-      The parser (`internal/core/reservationforms`) accepts H, HH, H:MM,
-      HHMM and ".", ";", "," or "h" as separator; 24:MM is 00:MM. `/book`
-      uses the same parser. Change for `/book`: the current minute is today,
-      not tomorrow, and the same start and end means 24 hours (refused).
-    - A form has no overbook field. A booking that overlaps shows the
-      conflicts. "Overbook them" shows only when the overbook would pass
-      (`booking.OverbookAllowed`: the overbook right, or one abandoned
-      reservation, never an own one).
+    - The member picks from lists (string selects) and does not type. Typed
+      names and times caused too many errors. discordgo stays at v0.27.1 (see
+      "Parity with scxmanager"), and a Discord form (modal) cannot hold a list,
+      so booking is a private message (the wizard) that the bot changes in place.
+    - Step 1, the respawn. List 1, "Your usual respawns": the member's most
+      booked active respawns of the last 90 days (most bookings first, then the
+      latest), filled up to 25 with the most booked respawns of the server of the
+      last 30 days. No bookings: no list. Lists 2 to 4: the active respawns by
+      name, at most 75 on a page, cut into up to 3 lists of the same size. Each
+      list is named by the first letters of its first and last respawn ("A–F");
+      when two lists meet on the same letters, the bot adds letters ("A–Ka",
+      "Ko–Z", at most 3). "‹ Previous" and "More respawns ›" show only with more
+      than 75 respawns. "Search by name" opens a form with one text field: an
+      exact name (not case-sensitive) or the only name that contains the text
+      goes to step 2; more names show one "Matching respawns" list (up to 15);
+      no name shows step 1 with the error. Archived respawns never show.
+    - Step 2, the time. The start list: "Now" (the current minute when the
+      member books), then 24 half-hour starts from the next :00 or :30 (12
+      hours). A start inside a reservation of the respawn says "Booked by X
+      until 20:00", and the message lists the reservations of these 12 hours,
+      so members see the free time. "‹ Earlier" and "Later ›" move by 12 hours,
+      up to 48 hours ahead. The length list: 30 min to 3 hours in steps of 30
+      min (`booking.MaximumReservationLength`). No default. "Book" is disabled
+      until the member picks a start and a length. Times are in the bot time
+      zone (Europe/Berlin), and the message names the zone. Starts step in
+      elapsed time, so a DST change shows the repeated or the skipped hour.
+    - A start that passed when the member presses Book (an old message) starts
+      now if it passed less than 30 minutes ago; else the bot shows the error
+      and "Try again".
+    - A booking that overlaps shows the conflicts. "Overbook them" shows only
+      when the overbook would pass (`booking.OverbookAllowed`: the overbook
+      right, or one abandoned reservation, never an own one). "Try again"
+      returns to step 2 with the choice kept.
     - Create, edit and cancel go through `reservations.Service`, the service of
       the web: the same rights, the same booking rules, the same atomic edit.
       An edit never overbooks. There is no author field; managers choose an
@@ -271,20 +290,25 @@ These items of the request were unclear or had a cost. Each has a decision.
       most 4 (Discord allows 5 rows of buttons). Each has "Edit n" and
       "Cancel n"; a cancel asks to confirm. More reservations: use the web
       panel or `/unbook`.
-    - An edit with an unchanged start keeps the date of the start, so an
-      ongoing reservation keeps its start. A changed start is the occurrence
-      nearest to the old start that is not in the past.
+    - "Edit n" changes the list into step 2 for the reservation, with its
+      respawn, start and length chosen. A start or a length that is not in the
+      list is added first, marked "(current)". The button is "Save", and "Back"
+      returns to the list. "Change respawn" goes to step 1 and keeps the start
+      and the length. An ongoing reservation keeps its start ("Keep (started
+      18:00)") and its respawn; only the length changes.
     - Every reply is ephemeral. The public summary refresh (3 s debounce, in
       the bot process through `bot.LocalNotifier`) shows the change to others.
-    - Buttons and forms need premium and resolve the member's rights fresh on
-      each click. The book form needs the reserve right. The command channel
-      rule of `/book` and `/unbook` does not apply, as the replies are
-      ephemeral.
-    - The state of a button is in its versioned custom id (`lf1:...`, times as
-      Unix seconds, at most 100 characters). The bot stores nothing between
-      clicks. Every id is checked again on the server.
+    - Buttons and lists need premium and resolve the member's rights fresh on
+      each click. Booking needs the reserve right. The command channel rule of
+      `/book` and `/unbook` does not apply, as the replies are ephemeral.
+    - The state of a button or a list is in its versioned custom id (`lf1:...`,
+      times as Unix seconds, at most 100 characters); the chosen options show
+      as selected. The bot stores nothing between clicks. Every id is checked
+      again on the server (respawns and reservations of the guild only).
     - The bot answers every click at once with a deferred reply, except the
-      clicks that open a form (a form must be the first reply).
+      "Search by name" click (a form must be the first reply).
+    - `/book` keeps its text times (`reservationforms.ParseClock`: H, HH, H:MM,
+      HHMM, "." ";" "," or "h" as separator; the current minute is today).
     - The copy is English, in the bot formatter (decision 33). Only the
       overbook button adds a metric (`IncOverbook`). No migration.
 

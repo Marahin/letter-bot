@@ -362,3 +362,41 @@ func TestInsertSpotsIgnoreDuplicates_NoNamesSkipsQuery(t *testing.T) {
 	require.NoError(t, err)
 	assert.Zero(t, inserted)
 }
+
+func TestSelectTopGuildSpots_MapsTheRanking(t *testing.T) {
+	// given
+	mock := newSpotMock(t)
+	since := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+	last := time.Date(2026, 10, 1, 18, 0, 0, 0, time.UTC)
+	mock.ExpectQuery("FROM web_reservation r").
+		WithArgs("guild-1", pgtype.Timestamptz{Time: since, Valid: true}, pgtype.Text{String: "u1", Valid: true}, int32(25)).
+		WillReturnRows(pgxmock.NewRows([]string{"id", "name", "created_at", "guild_id", "archived_at", "bookings", "last_start_at"}).
+			AddRow(int64(1), "Library -1", time.Now(), "guild-1", nil, int64(7), last))
+	repo := NewSpotRepository(mock)
+
+	// when
+	ranked, err := repo.SelectTopGuildSpots(context.Background(), "guild-1", "u1", since, 25)
+
+	// then
+	require.NoError(t, err)
+	require.Len(t, ranked, 1)
+	assert.Equal(t, "Library -1", ranked[0].Name)
+	assert.Equal(t, int64(7), ranked[0].Bookings)
+	assert.True(t, last.Equal(ranked[0].LastStartAt))
+}
+
+func TestSelectTopGuildSpots_AnyAuthorAndErrors(t *testing.T) {
+	// given
+	mock := newSpotMock(t)
+	since := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
+	mock.ExpectQuery("FROM web_reservation r").
+		WithArgs("guild-1", pgtype.Timestamptz{Time: since, Valid: true}, pgtype.Text{}, int32(25)).
+		WillReturnError(errors.New("boom"))
+	repo := NewSpotRepository(mock)
+
+	// when
+	_, err := repo.SelectTopGuildSpots(context.Background(), "guild-1", "", since, 25)
+
+	// then
+	assert.EqualError(t, err, "boom")
+}

@@ -2,6 +2,7 @@ package sqlc
 
 import (
 	"context"
+	"math"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -122,6 +123,25 @@ func (repo *SpotRepository) InsertSpotsIgnoreDuplicates(ctx context.Context, gui
 	}
 
 	return repo.q.InsertSpotsIgnoreDuplicates(ctx, InsertSpotsIgnoreDuplicatesParams{GuildID: guildID, Names: names})
+}
+
+func (repo *SpotRepository) SelectTopGuildSpots(ctx context.Context, guildID, authorDiscordID string, since time.Time, limit int) ([]spot.Ranked, error) {
+	rows, err := repo.q.SelectTopGuildSpots(ctx, SelectTopGuildSpotsParams{
+		GuildID:         guildID,
+		Since:           pgtype.Timestamptz{Time: since, Valid: true},
+		AuthorDiscordID: pgtype.Text{String: authorDiscordID, Valid: authorDiscordID != ""},
+		RowLimit:        int32(min(max(limit, 0), math.MaxInt32)),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]spot.Ranked, 0, len(rows))
+	for _, r := range rows {
+		sp := mapWebSpot(WebSpot{ID: r.ID, Name: r.Name, CreatedAt: r.CreatedAt, GuildID: r.GuildID, ArchivedAt: r.ArchivedAt})
+		out = append(out, spot.Ranked{Spot: *sp, Bookings: r.Bookings, LastStartAt: r.LastStartAt.Time})
+	}
+	return out, nil
 }
 
 func mapWebSpot(s WebSpot) *spot.Spot {

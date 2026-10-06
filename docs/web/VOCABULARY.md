@@ -14,7 +14,7 @@ Polish column is the settled wording of `pl.json` (see
 | Free-text author | Autor wpisany ręcznie | `author_discord_id = ''` | An author that a manager typed, with no Discord account. No quota, no owner. |
 | Overbook | Nadpisz | `Overbook`, `ClippedOrRemovedReservation` | Book over existing reservations. They are shortened or removed, and their authors get a Discord message. |
 | Summary | Podsumowanie | `SummaryService`, `letter-summary` | The bot's message with the upcoming reservations and a chart, in the summary channel. |
-| Form | Formularz (bot only, in English) | `reservation.Form`, `reservationforms` | The bot's Discord pop-up (modal) where a member types the respawn, the start and the end to book or edit a reservation. |
+| Booking wizard | Kreator rezerwacji (bot only, in English) | `reservationforms`, `RespawnPicker`, `TimePicker` | The bot's private message with lists where a member picks the respawn, the start and the length to book or edit a reservation. |
 | My reservations | Moje rezerwacje (bot only, in English) | `actionMine`, `/reservations` | The bot's private list of the member's upcoming reservations, with Edit and Cancel buttons. |
 | Command channel | Kanał komend | `command_channel_id` | The only channel for `/book` and `/unbook` when set. |
 | Summary channel | Kanał podsumowania | `summary_channel_id` | Where the bot posts the summary. Empty = `#letter-summary`. |

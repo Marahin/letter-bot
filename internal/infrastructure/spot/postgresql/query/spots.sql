@@ -95,3 +95,19 @@ WHERE s.id = @spot_id
 INSERT INTO web_spot (guild_id, name, created_at)
 SELECT @guild_id::text, unnest(@names::text[]), now()
 ON CONFLICT (guild_id, lower(name)) WHERE archived_at IS NULL DO NOTHING;
+
+-- The respawns a member (or anyone, with a NULL author) booked most since a time.
+-- name: SelectTopGuildSpots :many
+SELECT s.id, s.name, s.created_at, s.guild_id, s.archived_at,
+  count(r.id) AS bookings,
+  max(r.start_at)::timestamptz AS last_start_at
+FROM web_reservation r
+  INNER JOIN web_spot s ON s.id = r.spot_id
+WHERE r.guild_id = @guild_id::text
+  AND s.guild_id = @guild_id::text
+  AND s.archived_at IS NULL
+  AND r.start_at >= @since::timestamptz
+  AND (sqlc.narg(author_discord_id)::text IS NULL OR r.author_discord_id = sqlc.narg(author_discord_id)::text)
+GROUP BY s.id, s.name, s.created_at, s.guild_id, s.archived_at
+ORDER BY bookings DESC, last_start_at DESC, s.id
+LIMIT @row_limit::int;

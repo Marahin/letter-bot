@@ -18,6 +18,8 @@ import (
 	"spot-assistant/internal/core/booking"
 	"spot-assistant/internal/core/dto/guildconfig"
 	"spot-assistant/internal/core/dto/reservation"
+	"spot-assistant/internal/core/dto/spot"
+	"spot-assistant/internal/core/reservationforms"
 	"spot-assistant/internal/core/reservations"
 	"spot-assistant/internal/infrastructure/bot/formatter"
 )
@@ -115,7 +117,7 @@ func component(customID string, values ...string) *discordgo.InteractionCreate {
 }
 
 // modalSubmit builds the interaction the way discordgo reads it from the gateway.
-func modalSubmit(t *testing.T, customID, spotName, start, end string) *discordgo.InteractionCreate {
+func modalSubmit(t *testing.T, customID, query string) *discordgo.InteractionCreate {
 	t.Helper()
 	payload := map[string]any{
 		"id":       "i1",
@@ -125,9 +127,7 @@ func modalSubmit(t *testing.T, customID, spotName, start, end string) *discordgo
 		"data": map[string]any{
 			"custom_id": customID,
 			"components": []any{
-				map[string]any{"type": 1, "components": []any{map[string]any{"type": 4, "custom_id": inputSpot, "value": spotName}}},
-				map[string]any{"type": 1, "components": []any{map[string]any{"type": 4, "custom_id": inputStart, "value": start}}},
-				map[string]any{"type": 1, "components": []any{map[string]any{"type": 4, "custom_id": inputEnd, "value": end}}},
+				map[string]any{"type": 1, "components": []any{map[string]any{"type": 4, "custom_id": inputQuery, "value": query}}},
 			},
 		},
 	}
@@ -153,53 +153,40 @@ func mine(id int64) *reservation.ReservationWithSpot {
 	}
 }
 
-func TestBookButton_OpensTheForm(t *testing.T) {
+func respawnPicker(n int) *reservation.RespawnPicker {
+	picker := reservationforms.PageRespawns(spotsNamed(n), 0)
+	picker.Usual = usual(2)
+	return &picker
+}
+
+func choiceIs(want reservation.TimeChoice) any {
+	return mock.MatchedBy(func(got reservation.TimeChoice) bool {
+		return got.SpotID == want.SpotID && got.ReservationID == want.ReservationID && got.Window == want.Window &&
+			got.Now == want.Now && got.StartAt.Equal(want.StartAt) && got.Length == want.Length
+	})
+}
+
+const slotUnix = 1791228600
+
+var slotAt = time.Unix(slotUnix, 0)
+
+func TestBookButton_OpensTheWizard(t *testing.T) {
 	// given
 	f := newFormFixture(t)
 	f.premium(guildconfig.Config{})
+	f.forms.On("RespawnPicker", mock.Anything, "g1", isActor("u1", "Knight", true), 0).Return(respawnPicker(30), nil)
 	i := component("lf1:book")
 	got := f.expectRespond(i)
+	f.expectEdit(i)
 
 	// when
 	f.b.InteractionCreate(nil, i)
 
 	// then
-	assert.Equal(t, discordgo.InteractionResponseModal, got.Type)
-	assert.Equal(t, "lf1:mbook", got.Data.CustomID)
-	assert.Len(t, got.Data.Components, 3)
-}
-
-func TestRetryButton_FillsTheFormAgain(t *testing.T) {
-	// given
-	f := newFormFixture(t)
-	f.premium(guildconfig.Config{})
-	i := component("lf1:retry:1830::Library")
-	got := f.expectRespond(i)
-
-	// when
-	f.b.InteractionCreate(nil, i)
-
-	// then
-	values := modalValues(discordgo.ModalSubmitInteractionData{Components: pointerRows(t, got.Data.Components)})
-	assert.Equal(t, map[string]string{inputSpot: "Library", inputStart: "18:30", inputEnd: ""}, values)
-}
-
-// pointerRows turns the rows of a sent modal into the pointer rows of a received one.
-func pointerRows(t *testing.T, components []discordgo.MessageComponent) []discordgo.MessageComponent {
-	t.Helper()
-	out := make([]discordgo.MessageComponent, 0, len(components))
-	for _, c := range components {
-		r, ok := c.(discordgo.ActionsRow)
-		require.True(t, ok)
-		inner := make([]discordgo.MessageComponent, 0, len(r.Components))
-		for _, in := range r.Components {
-			input, ok := in.(discordgo.TextInput)
-			require.True(t, ok)
-			inner = append(inner, &input)
-		}
-		out = append(out, &discordgo.ActionsRow{Components: inner})
-	}
-	return out
+	assert.Equal(t, discordgo.InteractionResponseDeferredChannelMessageWithSource, got.Type)
+	assert.Equal(t, discordgo.MessageFlagsEphemeral, got.Data.Flags)
+	assert.Contains(t, f.editedContent(t), "**Book a respawn**")
+	assert.Equal(t, []string{"lf1:rs:0", "lf1:rs:1", "lf1:rs:2", "lf1:rq"}, f.editedCustomIDs(t))
 }
 
 func TestBookButton_RefusesAMemberWithoutTheReserveRank(t *testing.T) {
@@ -207,6 +194,252 @@ func TestBookButton_RefusesAMemberWithoutTheReserveRank(t *testing.T) {
 	f := newFormFixture(t)
 	f.premium(guildconfig.Config{ReserveRoleIDs: []string{"r-reserve"}})
 	i := component("lf1:book")
+	f.expectRespond(i)
+	f.expectEdit(i)
+
+	// when
+	f.b.InteractionCreate(nil, i)
+
+	// then
+	assert.Contains(t, f.editedContent(t), "rank that can book")
+}
+
+func TestBookButton_ListFailure(t *testing.T) {
+	// given
+	f := newFormFixture(t)
+	f.premium(guildconfig.Config{})
+	f.forms.On("RespawnPicker", mock.Anything, "g1", mock.Anything, 0).Return(nil, errors.New("db down"))
+	i := component("lf1:book")
+	f.expectRespond(i)
+	f.expectEdit(i)
+
+	// when
+	f.b.InteractionCreate(nil, i)
+
+	// then
+	assert.Contains(t, f.editedContent(t), "db down")
+}
+
+func TestWizardSteps_RefuseAMemberWithoutTheReserveRank(t *testing.T) {
+	for _, id := range []string{"lf1:rp:1", "lf1:rs:1", "lf1:ws:7:0:60", "lf1:wl:7:0:now", "lf1:ww:7:1::0", "lf1:wb:7:now:60", "lf1:rqm"} {
+		t.Run(id, func(t *testing.T) {
+			// given
+			f := newFormFixture(t)
+			f.premium(guildconfig.Config{ReserveRoleIDs: []string{"r-reserve"}})
+			i := component(id, "7")
+			f.expectRespond(i)
+			f.expectEdit(i)
+
+			// when
+			f.b.InteractionCreate(nil, i)
+
+			// then: the service mocks fail on any call
+			assert.Contains(t, f.editedContent(t), "rank that can book")
+		})
+	}
+}
+
+func TestRespawnPage_UpdatesInPlace(t *testing.T) {
+	// given
+	f := newFormFixture(t)
+	f.premium(guildconfig.Config{})
+	picker := reservationforms.PageRespawns(spotsNamed(200), 1)
+	f.forms.On("RespawnPicker", mock.Anything, "g1", mock.Anything, 1).Return(&picker, nil)
+	i := component("lf1:rp:1")
+	got := f.expectRespond(i)
+	f.expectEdit(i)
+
+	// when
+	f.b.InteractionCreate(nil, i)
+
+	// then
+	assert.Equal(t, discordgo.InteractionResponseDeferredMessageUpdate, got.Type)
+	assert.Equal(t, []string{"lf1:rs:1", "lf1:rs:2", "lf1:rs:3", "lf1:rp:0", "lf1:rp:2", "lf1:rq"}, f.editedCustomIDs(t))
+}
+
+func TestRespawnPick_ShowsTheTimes(t *testing.T) {
+	// given
+	f := newFormFixture(t)
+	f.premium(guildconfig.Config{})
+	f.forms.On("TimePicker", mock.Anything, "g1", mock.Anything, choiceIs(reservation.TimeChoice{SpotID: 7, Window: reservation.AutoWindow})).
+		Return(timePicker(reservation.TimeChoice{SpotID: 7}), nil)
+	i := component("lf1:rs:2", "7")
+	got := f.expectRespond(i)
+	f.expectEdit(i)
+
+	// when
+	f.b.InteractionCreate(nil, i)
+
+	// then
+	assert.Equal(t, discordgo.InteractionResponseDeferredMessageUpdate, got.Type)
+	assert.Contains(t, f.editedContent(t), "**Library -1** — pick the start and the length.")
+	assert.Equal(t, []string{"lf1:ws:7:0:0", "lf1:wl:7:0:", "lf1:ww:7:0::0", "lf1:ww:7:1::0", "lf1:wb:7::0", "lf1:rp:0"}, f.editedCustomIDs(t))
+}
+
+func TestRespawnPick_ForgedSpot(t *testing.T) {
+	// given
+	f := newFormFixture(t)
+	f.premium(guildconfig.Config{})
+	f.forms.On("TimePicker", mock.Anything, "g1", mock.Anything, choiceIs(reservation.TimeChoice{SpotID: 999, Window: reservation.AutoWindow})).
+		Return(nil, booking.ErrSpotNotFound)
+	i := component("lf1:rs:1", "999")
+	f.expectRespond(i)
+	f.expectEdit(i)
+
+	// when
+	f.b.InteractionCreate(nil, i)
+
+	// then
+	assert.Contains(t, f.editedContent(t), "No respawn has this name")
+	assert.Equal(t, []string{"lf1:rp:0"}, f.editedCustomIDs(t))
+}
+
+func TestSelects_RefuseABadValue(t *testing.T) {
+	for _, tt := range []struct {
+		id     string
+		values []string
+	}{
+		{"lf1:rs:1", []string{"x"}},
+		{"lf1:rs:1", nil},
+		{"lf1:ws:7:0:60", []string{"soon"}},
+		{"lf1:ws:7:0:60", []string{""}},
+		{"lf1:wl:7:0:now", []string{"0"}},
+		{"lf1:wl:7:0:now", []string{"60", "90"}},
+	} {
+		t.Run(tt.id, func(t *testing.T) {
+			// given
+			f := newFormFixture(t)
+			f.premium(guildconfig.Config{})
+			i := component(tt.id, tt.values...)
+			f.expectRespond(i)
+			f.expectEdit(i)
+
+			// when
+			f.b.InteractionCreate(nil, i)
+
+			// then
+			assert.Contains(t, f.editedContent(t), "out of date")
+		})
+	}
+}
+
+func TestTimeSelects_KeepTheOtherChoices(t *testing.T) {
+	tests := []struct {
+		name   string
+		id     string
+		values []string
+		want   reservation.TimeChoice
+	}{
+		{"start", "lf1:ws:7:0:120", []string{"1791228600"}, reservation.TimeChoice{SpotID: 7, StartAt: slotAt, Length: 2 * time.Hour}},
+		{"start now", "lf1:ws:7:0:0", []string{"now"}, reservation.TimeChoice{SpotID: 7, Now: true}},
+		{"length", "lf1:wl:7:0:now", []string{"90"}, reservation.TimeChoice{SpotID: 7, Now: true, Length: 90 * time.Minute}},
+		{"window", "lf1:ww:7:1:1791228600:30", nil, reservation.TimeChoice{SpotID: 7, Window: 1, StartAt: slotAt, Length: 30 * time.Minute}},
+		{"edit start", "lf1:es:5:7:0:60", []string{"now"}, reservation.TimeChoice{ReservationID: 5, SpotID: 7, Now: true, Length: time.Hour}},
+		{"edit respawn", "lf1:ers:5:1791228600:120:1", []string{"8"}, reservation.TimeChoice{ReservationID: 5, SpotID: 8, Window: reservation.AutoWindow, StartAt: slotAt, Length: 2 * time.Hour}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// given
+			f := newFormFixture(t)
+			f.premium(guildconfig.Config{})
+			shown := tt.want
+			if shown.Window == reservation.AutoWindow {
+				shown.Window = 0
+			}
+			f.forms.On("TimePicker", mock.Anything, "g1", mock.Anything, choiceIs(tt.want)).Return(timePicker(shown), nil)
+			i := component(tt.id, tt.values...)
+			f.expectRespond(i)
+			f.expectEdit(i)
+
+			// when
+			f.b.InteractionCreate(nil, i)
+
+			// then
+			assert.Contains(t, f.editedContent(t), "**Library -1**")
+		})
+	}
+}
+
+func TestSubmit_Books(t *testing.T) {
+	// given
+	f := newFormFixture(t)
+	f.premium(guildconfig.Config{})
+	outcome := &reservation.FormOutcome{Draft: reservation.Draft{SpotID: 7, StartAt: formNow, EndAt: formNow.Add(2 * time.Hour)}, SpotName: "Library -1"}
+	f.forms.On("BookChoice", mock.Anything, "g1", isActor("u1", "Knight", true), choiceIs(reservation.TimeChoice{SpotID: 7, Now: true, Length: 2 * time.Hour})).
+		Return(outcome, nil)
+	i := component("lf1:wb:7:now:120")
+	got := f.expectRespond(i)
+	f.expectEdit(i)
+
+	// when
+	f.b.InteractionCreate(nil, i)
+
+	// then
+	assert.Equal(t, discordgo.InteractionResponseDeferredMessageUpdate, got.Type)
+	assert.Contains(t, f.editedContent(t), "Booked **Library -1**")
+	assert.Equal(t, []string{"lf1:mine", "lf1:book"}, f.editedCustomIDs(t))
+}
+
+func TestSubmit_ConflictsOfferAnOverbookAndARetry(t *testing.T) {
+	// given
+	f := newFormFixture(t)
+	f.premium(guildconfig.Config{})
+	draft := reservation.Draft{SpotID: 7, StartAt: slotAt, EndAt: slotAt.Add(2 * time.Hour)}
+	outcome := &reservation.FormOutcome{Draft: draft, SpotName: "Library -1", Conflicts: []*reservation.Reservation{{Author: "Druid"}}, CanOverbook: true}
+	f.forms.On("BookChoice", mock.Anything, "g1", mock.Anything, mock.Anything).Return(outcome, booking.ErrInsufficientPermissions)
+	i := component("lf1:wb:7:1791228600:120")
+	f.expectRespond(i)
+	f.expectEdit(i)
+
+	// when
+	f.b.InteractionCreate(nil, i)
+
+	// then
+	assert.Contains(t, f.editedContent(t), "overlaps these reservations")
+	assert.Equal(t, []string{"lf1:ob:7:1791228600:1791235800", "lf1:ww:7::1791228600:120"}, f.editedCustomIDs(t))
+}
+
+func TestSubmit_WithoutAChoice(t *testing.T) {
+	// given
+	f := newFormFixture(t)
+	f.premium(guildconfig.Config{})
+	f.forms.On("BookChoice", mock.Anything, "g1", mock.Anything, mock.Anything).Return(nil, reservationforms.ErrChoiceIncomplete)
+	i := component("lf1:wb:7::0")
+	f.expectRespond(i)
+	f.expectEdit(i)
+
+	// when
+	f.b.InteractionCreate(nil, i)
+
+	// then
+	assert.Equal(t, "Choose a start and a length first.", f.editedContent(t))
+	assert.Equal(t, []string{"lf1:ww:7:::0"}, f.editedCustomIDs(t))
+}
+
+func TestSearchButton_OpensTheForm(t *testing.T) {
+	for id, want := range map[string]string{"lf1:rq": "lf1:rqm", "lf1:erq:5:now:60": "lf1:erqm:5:now:60"} {
+		t.Run(id, func(t *testing.T) {
+			// given
+			f := newFormFixture(t)
+			f.premium(guildconfig.Config{})
+			i := component(id)
+			got := f.expectRespond(i)
+
+			// when
+			f.b.InteractionCreate(nil, i)
+
+			// then
+			assert.Equal(t, discordgo.InteractionResponseModal, got.Type)
+			assert.Equal(t, want, got.Data.CustomID)
+		})
+	}
+}
+
+func TestSearchButton_RefusesAMemberWithoutTheReserveRank(t *testing.T) {
+	// given
+	f := newFormFixture(t)
+	f.premium(guildconfig.Config{ReserveRoleIDs: []string{"r-reserve"}})
+	i := component("lf1:rq")
 	got := f.expectRespond(i)
 
 	// when
@@ -218,11 +451,160 @@ func TestBookButton_RefusesAMemberWithoutTheReserveRank(t *testing.T) {
 	assert.Contains(t, got.Data.Content, "rank that can book")
 }
 
+func TestSearchSubmit_ExactMatchGoesToTheTimes(t *testing.T) {
+	// given
+	f := newFormFixture(t)
+	f.premium(guildconfig.Config{})
+	f.forms.On("FindRespawn", mock.Anything, "g1", "library -1").Return(&spot.Spot{ID: 7, Name: "Library -1"}, nil)
+	f.forms.On("TimePicker", mock.Anything, "g1", mock.Anything, choiceIs(reservation.TimeChoice{ReservationID: 5, SpotID: 7, Window: reservation.AutoWindow, Now: true, Length: time.Hour})).
+		Return(timePicker(reservation.TimeChoice{ReservationID: 5, SpotID: 7, Now: true, Length: time.Hour}), nil)
+	i := modalSubmit(t, "lf1:erqm:5:now:60", "library -1")
+	got := f.expectRespond(i)
+	f.expectEdit(i)
+
+	// when
+	f.b.InteractionCreate(nil, i)
+
+	// then
+	assert.Equal(t, discordgo.InteractionResponseDeferredMessageUpdate, got.Type)
+	assert.Contains(t, f.editedContent(t), "**Library -1**")
+}
+
+func TestSearchSubmit_Matches(t *testing.T) {
+	// given
+	f := newFormFixture(t)
+	f.premium(guildconfig.Config{})
+	f.forms.On("FindRespawn", mock.Anything, "g1", "lib").Return(nil, &reservationforms.AmbiguousSpotError{Query: "lib", Candidates: spotsNamed(3)})
+	i := modalSubmit(t, "lf1:rqm", "lib")
+	f.expectRespond(i)
+	f.expectEdit(i)
+
+	// when
+	f.b.InteractionCreate(nil, i)
+
+	// then
+	assert.Contains(t, f.editedContent(t), "Respawns that match **lib**")
+	assert.Equal(t, []string{"lf1:rs:4", "lf1:rq", "lf1:rp:0"}, f.editedCustomIDs(t))
+}
+
+func TestSearchSubmit_NoMatchShowsTheLists(t *testing.T) {
+	// given
+	f := newFormFixture(t)
+	f.premium(guildconfig.Config{})
+	f.forms.On("FindRespawn", mock.Anything, "g1", "nowhere").Return(nil, booking.ErrSpotNotFound)
+	f.forms.On("RespawnPicker", mock.Anything, "g1", mock.Anything, 0).Return(respawnPicker(3), nil)
+	i := modalSubmit(t, "lf1:rqm", "nowhere")
+	f.expectRespond(i)
+	f.expectEdit(i)
+
+	// when
+	f.b.InteractionCreate(nil, i)
+
+	// then
+	assert.True(t, strings.HasPrefix(f.editedContent(t), "No respawn has this name"))
+	assert.Contains(t, f.editedContent(t), "**Book a respawn**")
+}
+
+func TestSearchSubmit_Failure(t *testing.T) {
+	// given
+	f := newFormFixture(t)
+	f.premium(guildconfig.Config{})
+	f.forms.On("FindRespawn", mock.Anything, "g1", "lib").Return(nil, errors.New("db down"))
+	i := modalSubmit(t, "lf1:rqm", "lib")
+	f.expectRespond(i)
+	f.expectEdit(i)
+
+	// when
+	f.b.InteractionCreate(nil, i)
+
+	// then
+	assert.Contains(t, f.editedContent(t), "db down")
+}
+
+func TestEditButton_ShowsTheTimesInPlace(t *testing.T) {
+	// given
+	f := newFormFixture(t)
+	f.premium(guildconfig.Config{})
+	picker := timePicker(reservation.TimeChoice{ReservationID: 5, SpotID: 7, StartAt: slotAt, Length: 2 * time.Hour})
+	picker.Editing = mine(5)
+	f.forms.On("TimePicker", mock.Anything, "g1", isActor("u1", "Knight", true), choiceIs(reservation.TimeChoice{ReservationID: 5, Window: reservation.AutoWindow})).
+		Return(picker, nil)
+	i := component("lf1:edit:5")
+	got := f.expectRespond(i)
+	f.expectEdit(i)
+
+	// when
+	f.b.InteractionCreate(nil, i)
+
+	// then
+	assert.Equal(t, discordgo.InteractionResponseDeferredMessageUpdate, got.Type)
+	ids := f.editedCustomIDs(t)
+	assert.Contains(t, ids, "lf1:eb:5:7:1791228600:120")
+	assert.Contains(t, ids, "lf1:erp:5:1791228600:120:0")
+	assert.Contains(t, ids, "lf1:list")
+}
+
+func TestEditButton_WorksWithoutTheReserveRank(t *testing.T) {
+	// given
+	f := newFormFixture(t)
+	f.premium(guildconfig.Config{ReserveRoleIDs: []string{"r-reserve"}})
+	f.forms.On("TimePicker", mock.Anything, "g1", isActor("u1", "Knight", false), mock.Anything).Return(nil, reservations.ErrForbidden)
+	i := component("lf1:edit:5")
+	f.expectRespond(i)
+	f.expectEdit(i)
+
+	// when
+	f.b.InteractionCreate(nil, i)
+
+	// then: the core decides
+	assert.Contains(t, f.editedContent(t), "only change your own")
+	assert.Equal(t, []string{"lf1:list"}, f.editedCustomIDs(t))
+}
+
+func TestEditSave_ShowsTheList(t *testing.T) {
+	// given
+	f := newFormFixture(t)
+	f.premium(guildconfig.Config{})
+	draft := reservation.Draft{SpotID: 7, StartAt: slotAt, EndAt: slotAt.Add(2 * time.Hour)}
+	f.forms.On("EditChoice", mock.Anything, "g1", mock.Anything, choiceIs(reservation.TimeChoice{ReservationID: 5, SpotID: 7, StartAt: slotAt, Length: 2 * time.Hour})).
+		Return(&reservation.FormOutcome{Draft: draft, SpotName: "Library -1"}, nil)
+	f.forms.On("Mine", mock.Anything, "g1", mock.Anything, listLimit).Return(&reservation.Page{Items: []*reservation.ReservationWithSpot{mine(5)}, Total: 1}, nil)
+	i := component("lf1:eb:5:7:1791228600:120")
+	f.expectRespond(i)
+	f.expectEdit(i)
+
+	// when
+	f.b.InteractionCreate(nil, i)
+
+	// then
+	assert.Contains(t, f.editedContent(t), "Updated **Library -1**")
+}
+
+func TestEditSave_ConflictKeepsTheChoice(t *testing.T) {
+	// given
+	f := newFormFixture(t)
+	f.premium(guildconfig.Config{})
+	draft := reservation.Draft{SpotID: 7, StartAt: slotAt, EndAt: slotAt.Add(2 * time.Hour)}
+	outcome := &reservation.FormOutcome{Draft: draft, SpotName: "Library -1", Conflicts: []*reservation.Reservation{{Author: "Druid"}}}
+	f.forms.On("EditChoice", mock.Anything, "g1", mock.Anything, mock.Anything).Return(outcome, booking.ErrConflict)
+	f.forms.On("Mine", mock.Anything, "g1", mock.Anything, listLimit).Return(nil, errors.New("db down"))
+	i := component("lf1:eb:5:7:1791228600:120")
+	f.expectRespond(i)
+	f.expectEdit(i)
+
+	// when
+	f.b.InteractionCreate(nil, i)
+
+	// then
+	assert.True(t, strings.HasPrefix(f.editedContent(t), "Not changed. **Library -1**"))
+	assert.Contains(t, f.editedCustomIDs(t), "lf1:ew:5:7::1791228600:120")
+}
+
 func TestButtons_RefuseANonPremiumServer(t *testing.T) {
 	// given
 	f := newFormFixture(t)
 	f.configs.On("Get", mock.Anything, "g1").Return(&guildconfig.Config{GuildID: "g1"}, nil)
-	i := component("lf1:book")
+	i := component("lf1:rq")
 	got := f.expectRespond(i)
 
 	// when
@@ -236,7 +618,7 @@ func TestButtons_RefuseANonPremiumServer(t *testing.T) {
 func TestButtons_RefuseOutsideAServer(t *testing.T) {
 	// given
 	f := newFormFixture(t)
-	i := component("lf1:book")
+	i := component("lf1:rq")
 	i.GuildID, i.Member, i.User = "", nil, &discordgo.User{ID: "u1"}
 	got := f.expectRespond(i)
 
@@ -254,7 +636,7 @@ func TestButtons_ReportAConfigOrGuildFailure(t *testing.T) {
 	f.configs.On("Get", mock.Anything, "g1").Return(&guildconfig.Config{GuildID: "g1", Premium: true}, nil).Once()
 	f.gateway.On("StateGuild", "g1").Return(nil, discordgo.ErrStateNotFound).Once()
 	f.gateway.On("Guild", "g1").Return(nil, errors.New("discord down")).Once()
-	first, second := component("lf1:book"), component("lf1:book")
+	first, second := component("lf1:rq"), component("lf1:rq")
 	gotFirst := f.expectRespond(first)
 	gotSecond := f.expectRespond(second)
 
@@ -273,7 +655,7 @@ func TestButtons_AskTheAPIForAGuildMissingFromTheState(t *testing.T) {
 	f.configs.On("Get", mock.Anything, "g1").Return(&guildconfig.Config{GuildID: "g1", Premium: true}, nil)
 	f.gateway.On("StateGuild", "g1").Return(nil, discordgo.ErrStateNotFound).Once()
 	f.gateway.On("Guild", "g1").Return(&discordgo.Guild{ID: "g1", OwnerID: "owner"}, nil).Once()
-	i := component("lf1:book")
+	i := component("lf1:rq")
 	got := f.expectRespond(i)
 
 	// when
@@ -304,56 +686,6 @@ func TestInteractionCreate_IgnoresOtherTypes(t *testing.T) {
 	f.b.InteractionCreate(nil, &discordgo.InteractionCreate{Interaction: &discordgo.Interaction{Type: discordgo.InteractionPing}})
 
 	// then: no call to the gateway
-}
-
-func TestEditButton_OpensTheFilledForm(t *testing.T) {
-	// given
-	f := newFormFixture(t)
-	f.premium(guildconfig.Config{})
-	f.forms.On("Editable", mock.Anything, "g1", isActor("u1", "Knight", true), int64(5)).Return(mine(5), nil)
-	i := component("lf1:edit:5")
-	got := f.expectRespond(i)
-
-	// when
-	f.b.InteractionCreate(nil, i)
-
-	// then
-	assert.Equal(t, discordgo.InteractionResponseModal, got.Type)
-	assert.Equal(t, "lf1:medit:5", got.Data.CustomID)
-	values := modalValues(discordgo.ModalSubmitInteractionData{Components: pointerRows(t, got.Data.Components)})
-	assert.Equal(t, map[string]string{inputSpot: "Library -1", inputStart: "19:00", inputEnd: "21:00"}, values)
-}
-
-func TestEditRetryButton_FillsTheAttempt(t *testing.T) {
-	// given
-	f := newFormFixture(t)
-	f.premium(guildconfig.Config{})
-	f.forms.On("Editable", mock.Anything, "g1", mock.Anything, int64(5)).Return(mine(5), nil)
-	i := component("lf1:eretry:5:2000:2200:Hero Cave")
-	got := f.expectRespond(i)
-
-	// when
-	f.b.InteractionCreate(nil, i)
-
-	// then
-	values := modalValues(discordgo.ModalSubmitInteractionData{Components: pointerRows(t, got.Data.Components)})
-	assert.Equal(t, map[string]string{inputSpot: "Hero Cave", inputStart: "20:00", inputEnd: "22:00"}, values)
-}
-
-func TestEditButton_RefusesSomeoneElsesReservation(t *testing.T) {
-	// given
-	f := newFormFixture(t)
-	f.premium(guildconfig.Config{})
-	f.forms.On("Editable", mock.Anything, "g1", mock.Anything, int64(5)).Return(nil, reservations.ErrForbidden)
-	i := component("lf1:edit:5")
-	got := f.expectRespond(i)
-
-	// when
-	f.b.InteractionCreate(nil, i)
-
-	// then
-	assert.Equal(t, discordgo.InteractionResponseChannelMessageWithSource, got.Type)
-	assert.Contains(t, got.Data.Content, "only change your own")
 }
 
 func TestMyReservationsButton_SendsAnEphemeralList(t *testing.T) {
@@ -491,41 +823,6 @@ func TestConfirmCancel_Failure(t *testing.T) {
 	assert.Contains(t, f.editedContent(t), "db down")
 }
 
-func TestBookSubmit_BooksAndRepliesEphemerally(t *testing.T) {
-	// given
-	f := newFormFixture(t)
-	f.premium(guildconfig.Config{})
-	form := reservation.Form{Spot: "Library", StartAt: "19:00", EndAt: "21:00"}
-	outcome := &reservation.FormOutcome{Draft: reservation.Draft{SpotID: 7, StartAt: formNow.Add(time.Hour), EndAt: formNow.Add(3 * time.Hour)}, SpotName: "Library -1"}
-	f.forms.On("BookForm", mock.Anything, "g1", isActor("u1", "Knight", true), form).Return(outcome, nil)
-	i := modalSubmit(t, "lf1:mbook", "Library", "19:00", "21:00")
-	got := f.expectRespond(i)
-	f.expectEdit(i)
-
-	// when
-	f.b.InteractionCreate(nil, i)
-
-	// then
-	assert.Equal(t, discordgo.InteractionResponseDeferredChannelMessageWithSource, got.Type)
-	assert.Equal(t, discordgo.MessageFlagsEphemeral, got.Data.Flags)
-	assert.Contains(t, f.editedContent(t), "Booked **Library -1**")
-}
-
-func TestBookSubmit_WithoutTheReserveRank(t *testing.T) {
-	// given
-	f := newFormFixture(t)
-	f.premium(guildconfig.Config{ReserveRoleIDs: []string{"r-reserve"}})
-	i := modalSubmit(t, "lf1:mbook", "Library", "19:00", "21:00")
-	f.expectRespond(i)
-	f.expectEdit(i)
-
-	// when
-	f.b.InteractionCreate(nil, i)
-
-	// then
-	assert.Contains(t, f.editedContent(t), "rank that can book")
-}
-
 func TestOverbookButton_BooksWithOverbook(t *testing.T) {
 	// given
 	f := newFormFixture(t)
@@ -549,14 +846,12 @@ func TestOverbookButton_BooksWithOverbook(t *testing.T) {
 	assert.Contains(t, f.editedContent(t), "Booked **Library -1**")
 }
 
-func TestPickSelect_BooksThePickedRespawn(t *testing.T) {
+func TestOverbookButton_Fails(t *testing.T) {
 	// given
 	f := newFormFixture(t)
 	f.premium(guildconfig.Config{})
-	draft := reservation.Draft{SpotID: 8, StartAt: time.Unix(1791226800, 0), EndAt: time.Unix(1791234000, 0)}
-	conflict := &reservation.FormOutcome{Draft: draft, SpotName: "Library -2", Conflicts: []*reservation.Reservation{{Author: "Druid"}}}
-	f.forms.On("Book", mock.Anything, "g1", mock.Anything, draft).Return(conflict, booking.ErrInsufficientPermissions)
-	i := component("lf1:pick:1791226800:1791234000", "8")
+	f.forms.On("Book", mock.Anything, "g1", mock.Anything, mock.Anything).Return(nil, booking.ErrQuotaExceeded)
+	i := component("lf1:ob:7:1791226800:1791234000")
 	f.expectRespond(i)
 	f.expectEdit(i)
 
@@ -564,14 +859,15 @@ func TestPickSelect_BooksThePickedRespawn(t *testing.T) {
 	f.b.InteractionCreate(nil, i)
 
 	// then
-	assert.Contains(t, f.editedContent(t), "overlaps these reservations")
+	assert.Contains(t, f.editedContent(t), "at most 3 hours within 24 hours")
+	assert.Equal(t, []string{"lf1:ww:7::1791226800:120"}, f.editedCustomIDs(t))
 }
 
-func TestPickSelect_WithoutAValue(t *testing.T) {
+func TestOverbookButton_WithoutTheReserveRank(t *testing.T) {
 	// given
 	f := newFormFixture(t)
-	f.premium(guildconfig.Config{})
-	i := component("lf1:pick:1791226800:1791234000")
+	f.premium(guildconfig.Config{ReserveRoleIDs: []string{"r-reserve"}})
+	i := component("lf1:ob:7:1791226800:1791234000")
 	f.expectRespond(i)
 	f.expectEdit(i)
 
@@ -579,79 +875,7 @@ func TestPickSelect_WithoutAValue(t *testing.T) {
 	f.b.InteractionCreate(nil, i)
 
 	// then
-	assert.Contains(t, f.editedContent(t), "out of date")
-}
-
-func TestEditPickSelect_EditsAndShowsTheList(t *testing.T) {
-	// given
-	f := newFormFixture(t)
-	f.premium(guildconfig.Config{})
-	draft := reservation.Draft{SpotID: 8, StartAt: time.Unix(1791226800, 0), EndAt: time.Unix(1791234000, 0)}
-	f.forms.On("Edit", mock.Anything, "g1", mock.Anything, int64(5), draft).Return(&reservation.FormOutcome{Draft: draft, SpotName: "Library -2"}, nil)
-	f.forms.On("Mine", mock.Anything, "g1", mock.Anything, listLimit).Return(&reservation.Page{Items: []*reservation.ReservationWithSpot{mine(5)}, Total: 1}, nil)
-	i := component("lf1:epick:5:1791226800:1791234000", "8")
-	f.expectRespond(i)
-	f.expectEdit(i)
-
-	// when
-	f.b.InteractionCreate(nil, i)
-
-	// then
-	assert.Contains(t, f.editedContent(t), "Updated **Library -2**")
-}
-
-func TestEditPickSelect_WithoutAValue(t *testing.T) {
-	// given
-	f := newFormFixture(t)
-	f.premium(guildconfig.Config{})
-	i := component("lf1:epick:5:1791226800:1791234000", "x")
-	f.expectRespond(i)
-	f.expectEdit(i)
-
-	// when
-	f.b.InteractionCreate(nil, i)
-
-	// then
-	assert.Contains(t, f.editedContent(t), "out of date")
-}
-
-func TestEditSubmit_UpdatesTheListInPlace(t *testing.T) {
-	// given
-	f := newFormFixture(t)
-	f.premium(guildconfig.Config{})
-	form := reservation.Form{Spot: "Library -1", StartAt: "19:00", EndAt: "23:00"}
-	f.forms.On("EditForm", mock.Anything, "g1", mock.Anything, int64(5), form).Return(nil, booking.ErrReservationTooLong)
-	f.forms.On("Mine", mock.Anything, "g1", mock.Anything, listLimit).Return(&reservation.Page{Items: []*reservation.ReservationWithSpot{mine(5)}, Total: 1}, nil)
-	i := modalSubmit(t, "lf1:medit:5", "Library -1", "19:00", "23:00")
-	got := f.expectRespond(i)
-	f.expectEdit(i)
-
-	// when
-	f.b.InteractionCreate(nil, i)
-
-	// then
-	assert.Equal(t, discordgo.InteractionResponseDeferredMessageUpdate, got.Type)
-	assert.Contains(t, f.editedContent(t), "Not changed. A reservation can be at most 3 hours long.")
-	assert.Contains(t, f.editedCustomIDs(t), "lf1:eretry:5:1900:2300:Library -1")
-}
-
-func TestEditSubmit_ListFailure(t *testing.T) {
-	// given
-	f := newFormFixture(t)
-	f.premium(guildconfig.Config{})
-	draft := reservation.Draft{SpotID: 8, StartAt: time.Unix(1791226800, 0), EndAt: time.Unix(1791234000, 0)}
-	f.forms.On("EditForm", mock.Anything, "g1", mock.Anything, int64(5), mock.Anything).Return(&reservation.FormOutcome{Draft: draft, SpotName: "Library -1"}, nil)
-	f.forms.On("Mine", mock.Anything, "g1", mock.Anything, listLimit).Return(nil, errors.New("db down"))
-	i := modalSubmit(t, "lf1:medit:5", "Library -1", "19:00", "21:00")
-	f.expectRespond(i)
-	f.expectEdit(i)
-
-	// when
-	f.b.InteractionCreate(nil, i)
-
-	// then
-	assert.Contains(t, f.editedContent(t), "Updated **Library -1**")
-	assert.Contains(t, f.editedContent(t), "Could not load your reservations")
+	assert.Contains(t, f.editedContent(t), "rank that can book")
 }
 
 func TestMyReservationsCommand(t *testing.T) {
@@ -678,12 +902,12 @@ func TestModalValues_SkipsOtherComponents(t *testing.T) {
 	// given
 	data := discordgo.ModalSubmitInteractionData{Components: []discordgo.MessageComponent{
 		&discordgo.Button{CustomID: "x"},
-		&discordgo.ActionsRow{Components: []discordgo.MessageComponent{&discordgo.Button{CustomID: "y"}, &discordgo.TextInput{CustomID: inputSpot, Value: "Library"}}},
+		&discordgo.ActionsRow{Components: []discordgo.MessageComponent{&discordgo.Button{CustomID: "y"}, &discordgo.TextInput{CustomID: inputQuery, Value: "Library"}}},
 	}}
 
 	// when
 	values := modalValues(data)
 
 	// then
-	assert.Equal(t, map[string]string{inputSpot: "Library"}, values)
+	assert.Equal(t, map[string]string{inputQuery: "Library"}, values)
 }

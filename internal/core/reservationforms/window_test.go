@@ -6,8 +6,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"spot-assistant/internal/core/dto/reservation"
 )
 
 func TestParseClock_Accepts(t *testing.T) {
@@ -107,47 +105,6 @@ func TestNextWindow_RejectsABadTime(t *testing.T) {
 	// when
 	_, _, startErr := NextWindow("x", "20:00", now)
 	_, _, endErr := NextWindow("19:00", "x", now)
-
-	// then
-	assert.ErrorIs(t, startErr, ErrTimeFormat)
-	assert.ErrorIs(t, endErr, ErrTimeFormat)
-}
-
-func TestEditWindow(t *testing.T) {
-	now := time.Date(2026, 10, 5, 18, 30, 0, 0, berlin)
-	tests := []struct {
-		name       string
-		existing   reservation.Reservation
-		start, end string
-		wantStart  time.Time
-		wantEnd    time.Time
-	}{
-		{"an ongoing one keeps its start", reservation.Reservation{StartAt: at(5, 17, 0), EndAt: at(5, 19, 0)}, "17:00", "20:00", at(5, 17, 0), at(5, 20, 0)},
-		{"an unchanged start keeps its day", reservation.Reservation{StartAt: at(6, 10, 0), EndAt: at(6, 12, 0)}, "10.00", "11:00", at(6, 10, 0), at(6, 11, 0)},
-		{"a moved start stays near the old one", reservation.Reservation{StartAt: at(6, 10, 0), EndAt: at(6, 12, 0)}, "11:00", "13:00", at(6, 11, 0), at(6, 13, 0)},
-		{"a moved start goes back to today", reservation.Reservation{StartAt: at(6, 1, 0), EndAt: at(6, 2, 0)}, "23:00", "01:00", at(5, 23, 0), at(6, 1, 0)},
-		{"a moved start is not in the past", reservation.Reservation{StartAt: at(5, 23, 0), EndAt: at(6, 1, 0)}, "01:00", "02:00", at(6, 1, 0), at(6, 2, 0)},
-		{"an ongoing one moves its start forward", reservation.Reservation{StartAt: at(5, 17, 0), EndAt: at(5, 19, 0)}, "19:00", "20:00", at(5, 19, 0), at(5, 20, 0)},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// when
-			startAt, endAt, err := EditWindow(tt.start, tt.end, tt.existing, now)
-
-			// then
-			require.NoError(t, err)
-			assert.Equal(t, tt.wantStart, startAt)
-			assert.Equal(t, tt.wantEnd, endAt)
-		})
-	}
-}
-
-func TestEditWindow_RejectsABadTime(t *testing.T) {
-	existing := reservation.Reservation{StartAt: at(6, 10, 0), EndAt: at(6, 12, 0)}
-
-	// when
-	_, _, startErr := EditWindow("", "12:00", existing, at(5, 18, 0))
-	_, _, endErr := EditWindow("10:00", "99", existing, at(5, 18, 0))
 
 	// then
 	assert.ErrorIs(t, startErr, ErrTimeFormat)

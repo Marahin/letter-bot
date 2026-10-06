@@ -12,6 +12,7 @@ import (
 	"spot-assistant/internal/core/dto/guild"
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/permission"
+	"spot-assistant/internal/core/reservationforms"
 )
 
 const interactionTimeout = 10 * time.Second
@@ -65,13 +66,12 @@ func (b *Bot) formGuild(guildID string) (*discordgo.Guild, error) {
 
 func (b *Bot) handleComponent(i *discordgo.InteractionCreate) {
 	data := i.MessageComponentData()
-	b.runFormAction(i, data.CustomID, data.Values, reservation.Form{})
+	b.runFormAction(i, data.CustomID, data.Values, "")
 }
 
 func (b *Bot) handleModalSubmit(i *discordgo.InteractionCreate) {
 	data := i.ModalSubmitData()
-	values := modalValues(data)
-	b.runFormAction(i, data.CustomID, nil, reservation.Form{Spot: values[inputSpot], StartAt: values[inputStart], EndAt: values[inputEnd]})
+	b.runFormAction(i, data.CustomID, nil, modalValues(data)[inputQuery])
 }
 
 func modalValues(data discordgo.ModalSubmitInteractionData) map[string]string {
@@ -90,7 +90,9 @@ func modalValues(data discordgo.ModalSubmitInteractionData) map[string]string {
 	return values
 }
 
-func (b *Bot) runFormAction(i *discordgo.InteractionCreate, customID string, selected []string, form reservation.Form) {
+// runFormAction answers a click, a select or a form. query is the text of the
+// search form.
+func (b *Bot) runFormAction(i *discordgo.InteractionCreate, customID string, selected []string, query string) {
 	ctx, cancel := context.WithTimeout(context.Background(), interactionTimeout)
 	defer cancel()
 	action, err := parseFormAction(customID)
@@ -100,21 +102,19 @@ func (b *Bot) runFormAction(i *discordgo.InteractionCreate, customID string, sel
 		return
 	}
 	switch action.Kind {
-	case actionBookForm, actionBookRetry:
-		b.openBookForm(ctx, i, action)
-	case actionEditForm, actionEditRetry:
-		b.openEditForm(ctx, i, action)
+	case actionSearch, actionEditSearch:
+		b.openSearch(ctx, i, action)
 	case actionMine:
 		b.deferred(ctx, i, discordgo.InteractionResponseDeferredChannelMessageWithSource, func(req *formRequest) formView {
 			return b.myReservationsView(ctx, req, "")
 		})
-	case actionBookSubmit:
+	case actionBookForm:
 		b.deferred(ctx, i, discordgo.InteractionResponseDeferredChannelMessageWithSource, func(req *formRequest) formView {
-			return b.bookFormSubmitted(ctx, req, form)
+			return b.respawnStep(ctx, req, formAction{}, "")
 		})
 	default:
 		b.deferred(ctx, i, discordgo.InteractionResponseDeferredMessageUpdate, func(req *formRequest) formView {
-			return b.updateInPlace(ctx, req, action, selected, form)
+			return b.updateInPlace(ctx, req, action, selected, query)
 		})
 	}
 }
@@ -140,8 +140,11 @@ func (b *Bot) deferred(ctx context.Context, i *discordgo.InteractionCreate, kind
 	}
 }
 
-func (b *Bot) updateInPlace(ctx context.Context, req *formRequest, action formAction, selected []string, form reservation.Form) formView {
+func (b *Bot) updateInPlace(ctx context.Context, req *formRequest, action formAction, selected []string, query string) formView {
 	guildID := req.guild.ID
+	if !action.editing() && isBookingStep(action.Kind) && !req.actor.Caps.Reserve {
+		return formView{content: b.formatter.FormatFormError(booking.ErrReserveNotAllowed)}
+	}
 	switch action.Kind {
 	case actionList:
 		return b.myReservationsView(ctx, req, "")
@@ -163,74 +166,112 @@ func (b *Bot) updateInPlace(ctx context.Context, req *formRequest, action formAc
 		}
 		draft := reservation.Draft{SpotID: action.SpotID, StartAt: action.StartAt, EndAt: action.EndAt, Overbook: true}
 		return b.bookDraft(ctx, req, draft)
-	case actionBookPick:
+	case actionEditForm:
+		return b.timeStep(ctx, req, formAction{ReservationID: action.ReservationID, Window: reservation.AutoWindow})
+	case actionRespawnPage, actionEditRespawnPage:
+		return b.respawnStep(ctx, req, action, "")
+	case actionRespawnPick, actionEditRespawnPick:
 		spotID, ok := selectedID(selected)
 		if !ok {
 			return formView{content: b.formatter.FormatFormOutdated()}
 		}
-		return b.bookDraft(ctx, req, reservation.Draft{SpotID: spotID, StartAt: action.StartAt, EndAt: action.EndAt})
-	case actionEditPick:
-		spotID, ok := selectedID(selected)
+		action.SpotID, action.Window = spotID, reservation.AutoWindow
+		return b.timeStep(ctx, req, action)
+	case actionSearchSubmit, actionEditSearchSubmit:
+		return b.searchResult(ctx, req, action, query)
+	case actionStartPick, actionEditStartPick:
+		now, startAt, ok := selectedStart(selected)
 		if !ok {
 			return formView{content: b.formatter.FormatFormOutdated()}
 		}
-		draft := reservation.Draft{SpotID: spotID, StartAt: action.StartAt, EndAt: action.EndAt}
-		outcome, err := b.forms.Edit(ctx, guildID, req.actor, action.ReservationID, draft)
-		b.logFormError("edit", err)
-		return b.editOutcome(ctx, req, action.ReservationID, outcome, err, outcomeForm(outcome))
+		action.Now, action.StartAt = now, startAt
+		return b.timeStep(ctx, req, action)
+	case actionLengthPick, actionEditLengthPick:
+		length, ok := selectedLength(selected)
+		if !ok {
+			return formView{content: b.formatter.FormatFormOutdated()}
+		}
+		action.Length = length
+		return b.timeStep(ctx, req, action)
+	case actionWindow, actionEditWindow:
+		return b.timeStep(ctx, req, action)
+	case actionSubmit:
+		outcome, err := b.forms.BookChoice(ctx, guildID, req.actor, action.choice())
+		b.logFormError("book", err)
+		return b.bookOutcomeView(outcome, err, retryState(action))
 	case actionEditSubmit:
-		outcome, err := b.forms.EditForm(ctx, guildID, req.actor, action.ReservationID, form)
+		outcome, err := b.forms.EditChoice(ctx, guildID, req.actor, action.choice())
 		b.logFormError("edit", err)
-		return b.editOutcome(ctx, req, action.ReservationID, outcome, err, form)
+		return b.editOutcome(ctx, req, outcome, err, retryState(action))
 	default:
 		b.log.Errorf("no handler for form action %d", action.Kind)
 		return formView{content: b.formatter.FormatFormOutdated()}
 	}
 }
 
-func (b *Bot) openBookForm(ctx context.Context, i *discordgo.InteractionCreate, action formAction) {
+// isBookingStep tells the wizard actions of a booking, which need the reserve right.
+func isBookingStep(kind formActionKind) bool {
+	_, ok := editTwin[kind]
+	return ok
+}
+
+func retryState(action formAction) formAction {
+	action.Window = reservation.AutoWindow
+	return action
+}
+
+func (b *Bot) respawnStep(ctx context.Context, req *formRequest, state formAction, status string) formView {
+	if !state.editing() && !req.actor.Caps.Reserve {
+		return formView{content: b.formatter.FormatFormError(booking.ErrReserveNotAllowed)}
+	}
+	picker, err := b.forms.RespawnPicker(ctx, req.guild.ID, req.actor, state.Page)
+	if err != nil {
+		b.log.Errorf("could not list respawns: %s", err)
+		return formView{content: b.formatter.FormatGenericError(err)}
+	}
+	return b.respawnStepView(picker, state, status)
+}
+
+func (b *Bot) timeStep(ctx context.Context, req *formRequest, state formAction) formView {
+	picker, err := b.forms.TimePicker(ctx, req.guild.ID, req.actor, state.choice())
+	if err != nil {
+		b.logFormError("time picker", err)
+		return b.wizardErrorView(err, state)
+	}
+	return b.timeStepView(picker, "", time.Now())
+}
+
+func (b *Bot) searchResult(ctx context.Context, req *formRequest, state formAction, query string) formView {
+	sp, err := b.forms.FindRespawn(ctx, req.guild.ID, query)
+	var ambiguous *reservationforms.AmbiguousSpotError
+	switch {
+	case err == nil:
+		state.SpotID, state.Window = sp.ID, reservation.AutoWindow
+		return b.timeStep(ctx, req, state)
+	case errors.As(err, &ambiguous):
+		return b.matchesView(ambiguous.Query, ambiguous.Candidates, state)
+	case errors.Is(err, booking.ErrSpotNotFound):
+		state.Page = 0
+		return b.respawnStep(ctx, req, state, b.formatter.FormatFormError(err))
+	}
+	b.log.Errorf("could not search respawns: %s", err)
+	return b.wizardErrorView(err, state)
+}
+
+// openSearch opens the search form; a form must be the first reply to a click.
+func (b *Bot) openSearch(ctx context.Context, i *discordgo.InteractionCreate, action formAction) {
 	req, reply := b.formContext(ctx, i)
 	if req == nil {
 		b.respondEphemeral(i, reply)
 		return
 	}
-	if !req.actor.Caps.Reserve {
+	if !action.editing() && !req.actor.Caps.Reserve {
 		b.respondEphemeral(i, b.formatter.FormatFormError(booking.ErrReserveNotAllowed))
 		return
 	}
-	if err := b.interactionRespond(i, bookModal(retryForm(action)), discordgo.InteractionResponseModal); err != nil {
-		b.log.Errorf("could not open the book form: %s", err)
+	if err := b.interactionRespond(i, searchModal(action.as(actionSearchSubmit)), discordgo.InteractionResponseModal); err != nil {
+		b.log.Errorf("could not open the search form: %s", err)
 	}
-}
-
-func (b *Bot) openEditForm(ctx context.Context, i *discordgo.InteractionCreate, action formAction) {
-	req, reply := b.formContext(ctx, i)
-	if req == nil {
-		b.respondEphemeral(i, reply)
-		return
-	}
-	r, err := b.forms.Editable(ctx, req.guild.ID, req.actor, action.ReservationID)
-	if err != nil {
-		b.logFormError("open edit form", err)
-		b.respondEphemeral(i, b.formatter.FormatFormError(err))
-		return
-	}
-	form := existingForm(r)
-	if action.Kind == actionEditRetry {
-		form = retryForm(action)
-	}
-	if err := b.interactionRespond(i, editModal(r.Reservation.ID, form), discordgo.InteractionResponseModal); err != nil {
-		b.log.Errorf("could not open the edit form: %s", err)
-	}
-}
-
-func (b *Bot) bookFormSubmitted(ctx context.Context, req *formRequest, form reservation.Form) formView {
-	if !req.actor.Caps.Reserve {
-		return formView{content: b.formatter.FormatFormError(booking.ErrReserveNotAllowed)}
-	}
-	outcome, err := b.forms.BookForm(ctx, req.guild.ID, req.actor, form)
-	b.logFormError("book", err)
-	return b.bookOutcomeView(outcome, err, form)
 }
 
 func (b *Bot) bookDraft(ctx context.Context, req *formRequest, draft reservation.Draft) formView {
@@ -239,16 +280,17 @@ func (b *Bot) bookDraft(ctx context.Context, req *formRequest, draft reservation
 	}
 	outcome, err := b.forms.Book(ctx, req.guild.ID, req.actor, draft)
 	b.logFormError("book", err)
-	return b.bookOutcomeView(outcome, err, outcomeForm(outcome))
+	retry := formAction{SpotID: draft.SpotID, StartAt: draft.StartAt, Length: draft.EndAt.Sub(draft.StartAt), Window: reservation.AutoWindow}
+	return b.bookOutcomeView(outcome, err, retry)
 }
 
-func (b *Bot) editOutcome(ctx context.Context, req *formRequest, id int64, outcome *reservation.FormOutcome, err error, form reservation.Form) formView {
+func (b *Bot) editOutcome(ctx context.Context, req *formRequest, outcome *reservation.FormOutcome, err error, retry formAction) formView {
 	page, listErr := b.forms.Mine(ctx, req.guild.ID, req.actor, listLimit)
 	if listErr != nil {
 		b.log.Errorf("could not list reservations: %s", listErr)
 		page = nil
 	}
-	return b.editOutcomeView(id, outcome, err, form, page, time.Now())
+	return b.editOutcomeView(outcome, err, retry, page, time.Now())
 }
 
 // MyReservations answers /reservations, after handleCommand deferred it.
@@ -277,6 +319,22 @@ func (b *Bot) logFormError(what string, err error) {
 	if err != nil {
 		b.log.With("form", what).Debugf("form refused: %s", err)
 	}
+}
+
+func selectedStart(selected []string) (bool, time.Time, bool) {
+	if len(selected) != 1 {
+		return false, time.Time{}, false
+	}
+	now, startAt, err := parseChoice(selected[0])
+	return now, startAt, err == nil && (now || !startAt.IsZero())
+}
+
+func selectedLength(selected []string) (time.Duration, bool) {
+	if len(selected) != 1 {
+		return 0, false
+	}
+	minutes, err := parseSmall(selected[0], maxLengthMin)
+	return time.Duration(minutes) * time.Minute, err == nil && minutes > 0
 }
 
 func selectedID(selected []string) (int64, bool) {

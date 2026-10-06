@@ -212,14 +212,130 @@ func (f *DiscordFormatter) FormatCancelled(r *reservation.ReservationWithSpot) s
 	return fmt.Sprintf("Cancelled **%s**, %s.", r.Spot.Name, f.FormatWindow(r.StartAt, r.EndAt))
 }
 
-// FormatSpotPick asks which of the matching respawns the member meant. capped
+// FormatRespawnStep is the text of step 1 of the booking wizard. status, when
+// set, goes first.
+func (f *DiscordFormatter) FormatRespawnStep(editing, empty bool, status string) string {
+	var msg strings.Builder
+	if status != "" {
+		msg.WriteString(status + "\n\n")
+	}
+	if editing {
+		msg.WriteString("**Change the respawn** — pick it from a list.")
+	} else {
+		msg.WriteString("**Book a respawn** — pick it from a list.")
+	}
+	if empty {
+		msg.WriteString("\nThis server has no respawns yet. A manager can add them in the web panel.")
+	}
+	return msg.String()
+}
+
+// FormatRespawnMatches introduces the respawns that match a search. capped
 // means only some of them are listed.
-func (f *DiscordFormatter) FormatSpotPick(query string, capped bool) string {
-	msg := fmt.Sprintf("More than one respawn matches **%s**. Which one do you mean?", query)
+func (f *DiscordFormatter) FormatRespawnMatches(query string, capped bool) string {
+	msg := fmt.Sprintf("Respawns that match **%s**:", query)
 	if capped {
-		msg += "\nNot all of them fit in the list. If yours is missing, type more of its name."
+		msg += "\nNot all of them fit in the list. If yours is missing, search for more of its name."
 	}
 	return msg
+}
+
+// FormatUsualRespawn describes a respawn in the usual list.
+func (f *DiscordFormatter) FormatUsualRespawn(r reservation.UsualRespawn) string {
+	switch r.Bookings {
+	case 0:
+		return "Popular on this server"
+	case 1:
+		return "You booked it once"
+	}
+	return fmt.Sprintf("You booked it %d times", r.Bookings)
+}
+
+// FormatTimeStep is the text of step 2 of the booking wizard. status, when set,
+// goes first.
+func (f *DiscordFormatter) FormatTimeStep(p *reservation.TimePicker, status string, now time.Time) string {
+	var msg strings.Builder
+	if status != "" {
+		msg.WriteString(status + "\n\n")
+	}
+	zone := now.Format("MST")
+	switch {
+	case p.Ongoing:
+		fmt.Fprintf(&msg, "**%s** — started at %s. You can change the length. Times in %s.", p.Spot.Name, p.Editing.StartAt.In(now.Location()).Format(formTimeFormat), zone)
+	case p.Editing != nil:
+		fmt.Fprintf(&msg, "**%s** — change the start, the length or the respawn. Times in %s.", p.Spot.Name, zone)
+	default:
+		fmt.Fprintf(&msg, "**%s** — pick the start and the length. Times in %s.", p.Spot.Name, zone)
+	}
+	if p.Choice.Complete() {
+		start, startText := p.Choice.StartAt, f.FormatClock(p.Choice.StartAt, now)
+		if p.Choice.Now {
+			start, startText = now, "now"
+		}
+		fmt.Fprintf(&msg, "\nChosen: %s – %s.", startText, start.Add(p.Choice.Length).In(now.Location()).Format(formTimeFormat))
+	}
+	if len(p.Booked) > 0 {
+		msg.WriteString("\n\nAlready booked:")
+		for i, r := range p.Booked {
+			if i == maxBookedLines {
+				fmt.Fprintf(&msg, "\n…and %d more.", len(p.Booked)-i)
+				break
+			}
+			fmt.Fprintf(&msg, "\n* %s – %s · %s", f.FormatClock(r.StartAt, now), r.EndAt.In(now.Location()).Format(formTimeFormat), r.Author)
+		}
+	}
+	return msg.String()
+}
+
+const maxBookedLines = 10
+
+// FormatClock is "18:30", with "tomorrow" or the weekday when not today.
+func (f *DiscordFormatter) FormatClock(t, now time.Time) string {
+	t = t.In(now.Location())
+	clock := t.Format(formTimeFormat)
+	ty, tm, td := t.Date()
+	ny, nm, nd := now.Date()
+	switch {
+	case ty == ny && tm == nm && td == nd:
+		return clock
+	case time.Date(ny, nm, nd+1, 0, 0, 0, 0, now.Location()).Equal(time.Date(ty, tm, td, 0, 0, 0, 0, now.Location())):
+		return clock + " tomorrow"
+	}
+	return clock + " " + t.Format("Mon")
+}
+
+// FormatStartOption is the label and the description of a start in the list.
+func (f *DiscordFormatter) FormatStartOption(o reservation.StartOption, now time.Time) (label, description string) {
+	switch {
+	case o.Keep:
+		label = "Keep (started " + o.StartAt.In(now.Location()).Format(formTimeFormat) + ")"
+	case o.Now:
+		label = "Now"
+	case o.Current:
+		label = f.FormatClock(o.StartAt, now) + " (current)"
+	default:
+		label = f.FormatClock(o.StartAt, now)
+	}
+	description = "Free"
+	if o.BookedBy != nil {
+		description = fmt.Sprintf("Booked by %s until %s", o.BookedBy.Author, o.BookedBy.EndAt.In(now.Location()).Format(formTimeFormat))
+	}
+	if o.Keep {
+		description = ""
+	}
+	return label, description
+}
+
+// FormatLength is "30 min", "2 h" or "1 h 30".
+func (f *DiscordFormatter) FormatLength(d time.Duration) string {
+	hours, minutes := int(d/time.Hour), int(d%time.Hour/time.Minute)
+	switch {
+	case hours == 0:
+		return fmt.Sprintf("%d min", minutes)
+	case minutes == 0:
+		return fmt.Sprintf("%d h", hours)
+	}
+	return fmt.Sprintf("%d h %02d", hours, minutes)
 }
 
 // FormatFormOutdated is the reply to a button of an older bot version.
@@ -238,11 +354,13 @@ func (f *DiscordFormatter) FormatFormError(err error) string {
 	var ambiguous *reservationforms.AmbiguousSpotError
 	switch {
 	case errors.As(err, &ambiguous):
-		return f.FormatSpotPick(ambiguous.Query, false)
+		return fmt.Sprintf("More than one respawn matches **%s**. Pick one from the list.", ambiguous.Query)
+	case errors.Is(err, reservationforms.ErrChoiceIncomplete):
+		return "Choose a start and a length first."
 	case errors.Is(err, reservationforms.ErrTimeFormat):
 		return "Write the times as HH:MM, e.g. 18:30."
 	case errors.Is(err, booking.ErrSpotNotFound):
-		return "No respawn has this name. Write the name or a part of it, e.g. Library."
+		return "No respawn has this name. Search for a part of it, e.g. Library, or pick it from the list."
 	case errors.Is(err, booking.ErrSpotArchived):
 		return "This respawn is archived. Choose another respawn."
 	case errors.Is(err, booking.ErrReserveNotAllowed):

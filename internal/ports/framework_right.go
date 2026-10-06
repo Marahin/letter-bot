@@ -103,6 +103,11 @@ type SpotRepository interface {
 	// SelectGuildSpotList does.
 	SelectSpotReservationCounts(ctx context.Context, guildID string, id int64) (spot.ReservationCounts, error)
 
+	// SelectTopGuildSpots returns the active spots with the most reservations
+	// that start at or after since, by authorDiscordID ("" = anyone): the most
+	// booked first, then the latest booked.
+	SelectTopGuildSpots(ctx context.Context, guildID, authorDiscordID string, since time.Time, limit int) ([]spot.Ranked, error)
+
 	// InsertSpotsIgnoreDuplicates adds the names that are not active in the guild yet.
 	// Returns the number of spots added.
 	InsertSpotsIgnoreDuplicates(ctx context.Context, guildID string, names []string) (int64, error)

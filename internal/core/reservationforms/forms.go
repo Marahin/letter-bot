@@ -1,4 +1,4 @@
-// Package reservationforms reads the bot's Discord forms and buttons and runs
+// Package reservationforms backs the bot's buttons and booking wizard and runs
 // them through the reservations service, under the same rules as the web.
 package reservationforms
 
@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"spot-assistant/internal/core/booking"
@@ -25,21 +24,6 @@ type Service struct {
 
 func New(service ports.ReservationService, spots ports.SpotRepository) *Service {
 	return &Service{reservations: service, spots: spots, now: time.Now}
-}
-
-func (s *Service) BookForm(ctx context.Context, guildID string, actor reservation.Actor, form reservation.Form) (*reservation.FormOutcome, error) {
-	startAt, endAt, err := NextWindow(form.StartAt, form.EndAt, s.now())
-	if err != nil {
-		return nil, err
-	}
-	outcome := &reservation.FormOutcome{Draft: reservation.Draft{StartAt: startAt, EndAt: endAt}}
-	sp, err := s.resolveSpot(ctx, guildID, form.Spot)
-	if err != nil {
-		return outcome, err
-	}
-	outcome.Draft.SpotID = sp.ID
-	outcome.SpotName = sp.Name
-	return s.submitBooking(ctx, guildID, actor, outcome)
 }
 
 func (s *Service) Book(ctx context.Context, guildID string, actor reservation.Actor, draft reservation.Draft) (*reservation.FormOutcome, error) {
@@ -73,29 +57,7 @@ func (s *Service) submitBooking(ctx context.Context, guildID string, actor reser
 	return outcome, nil
 }
 
-func (s *Service) EditForm(ctx context.Context, guildID string, actor reservation.Actor, id int64, form reservation.Form) (*reservation.FormOutcome, error) {
-	existing, err := s.Editable(ctx, guildID, actor, id)
-	if err != nil {
-		return nil, err
-	}
-	startAt, endAt, err := EditWindow(form.StartAt, form.EndAt, existing.Reservation, s.now())
-	if err != nil {
-		return nil, err
-	}
-	outcome := &reservation.FormOutcome{Draft: reservation.Draft{StartAt: startAt, EndAt: endAt}}
-	if strings.EqualFold(strings.TrimSpace(form.Spot), existing.Spot.Name) {
-		outcome.Draft.SpotID, outcome.SpotName = existing.SpotID, existing.Spot.Name
-	} else {
-		sp, err := s.resolveSpot(ctx, guildID, form.Spot)
-		if err != nil {
-			return outcome, err
-		}
-		outcome.Draft.SpotID, outcome.SpotName = sp.ID, sp.Name
-	}
-	return s.submitEdit(ctx, guildID, actor, id, outcome)
-}
-
-func (s *Service) Edit(ctx context.Context, guildID string, actor reservation.Actor, id int64, draft reservation.Draft) (*reservation.FormOutcome, error) {
+func (s *Service) edit(ctx context.Context, guildID string, actor reservation.Actor, id int64, draft reservation.Draft) (*reservation.FormOutcome, error) {
 	outcome := &reservation.FormOutcome{Draft: draft}
 	sp, err := s.spotByID(ctx, guildID, draft.SpotID)
 	if errors.Is(err, ports.ErrNotFound) {

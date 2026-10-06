@@ -7,6 +7,7 @@ package mocks
 import (
 	"context"
 	"spot-assistant/internal/core/dto/spot"
+	"time"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -961,6 +962,92 @@ func (_c *MockSpotRepository_SelectSpotReservationCounts_Call) Return(reservatio
 }
 
 func (_c *MockSpotRepository_SelectSpotReservationCounts_Call) RunAndReturn(run func(ctx context.Context, guildID string, id int64) (spot.ReservationCounts, error)) *MockSpotRepository_SelectSpotReservationCounts_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SelectTopGuildSpots provides a mock function for the type MockSpotRepository
+func (_mock *MockSpotRepository) SelectTopGuildSpots(ctx context.Context, guildID string, authorDiscordID string, since time.Time, limit int) ([]spot.Ranked, error) {
+	ret := _mock.Called(ctx, guildID, authorDiscordID, since, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SelectTopGuildSpots")
+	}
+
+	var r0 []spot.Ranked
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, time.Time, int) ([]spot.Ranked, error)); ok {
+		return returnFunc(ctx, guildID, authorDiscordID, since, limit)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, time.Time, int) []spot.Ranked); ok {
+		r0 = returnFunc(ctx, guildID, authorDiscordID, since, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]spot.Ranked)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, time.Time, int) error); ok {
+		r1 = returnFunc(ctx, guildID, authorDiscordID, since, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockSpotRepository_SelectTopGuildSpots_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SelectTopGuildSpots'
+type MockSpotRepository_SelectTopGuildSpots_Call struct {
+	*mock.Call
+}
+
+// SelectTopGuildSpots is a helper method to define mock.On call
+//   - ctx context.Context
+//   - guildID string
+//   - authorDiscordID string
+//   - since time.Time
+//   - limit int
+func (_e *MockSpotRepository_Expecter) SelectTopGuildSpots(ctx any, guildID any, authorDiscordID any, since any, limit any) *MockSpotRepository_SelectTopGuildSpots_Call {
+	return &MockSpotRepository_SelectTopGuildSpots_Call{Call: _e.mock.On("SelectTopGuildSpots", ctx, guildID, authorDiscordID, since, limit)}
+}
+
+func (_c *MockSpotRepository_SelectTopGuildSpots_Call) Run(run func(ctx context.Context, guildID string, authorDiscordID string, since time.Time, limit int)) *MockSpotRepository_SelectTopGuildSpots_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 time.Time
+		if args[3] != nil {
+			arg3 = args[3].(time.Time)
+		}
+		var arg4 int
+		if args[4] != nil {
+			arg4 = args[4].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSpotRepository_SelectTopGuildSpots_Call) Return(rankeds []spot.Ranked, err error) *MockSpotRepository_SelectTopGuildSpots_Call {
+	_c.Call.Return(rankeds, err)
+	return _c
+}
+
+func (_c *MockSpotRepository_SelectTopGuildSpots_Call) RunAndReturn(run func(ctx context.Context, guildID string, authorDiscordID string, since time.Time, limit int) ([]spot.Ranked, error)) *MockSpotRepository_SelectTopGuildSpots_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -380,7 +380,7 @@
         {
           "label": "Try again",
           "style": 2,
-          "custom_id": "lf1:eretry:1:::",
+          "custom_id": "lf1:ew:1:7:::0",
           "type": 2
         },
         {
@@ -434,7 +434,7 @@
 }
 ---
 
-[TestModals/book - 1]
+[TestSearchModal - 1]
 {
   "tts": false,
   "content": "",
@@ -442,10 +442,10 @@
     {
       "components": [
         {
-          "custom_id": "spot",
+          "custom_id": "query",
           "label": "Respawn",
           "style": 1,
-          "placeholder": "Name or a part of it, e.g. Library -1",
+          "placeholder": "Name or a part of it, e.g. Library",
           "required": true,
           "min_length": 2,
           "max_length": 100,
@@ -453,160 +453,11 @@
         }
       ],
       "type": 1
-    },
-    {
-      "components": [
-        {
-          "custom_id": "start",
-          "label": "Start",
-          "style": 1,
-          "placeholder": "HH:MM, e.g. 18:30",
-          "required": true,
-          "min_length": 1,
-          "max_length": 5,
-          "type": 4
-        }
-      ],
-      "type": 1
-    },
-    {
-      "components": [
-        {
-          "custom_id": "end",
-          "label": "End",
-          "style": 1,
-          "placeholder": "HH:MM, at most 3 hours after the start",
-          "required": true,
-          "min_length": 1,
-          "max_length": 5,
-          "type": 4
-        }
-      ],
-      "type": 1
     }
   ],
   "embeds": null,
-  "custom_id": "lf1:mbook",
-  "title": "Book a respawn"
-}
----
-
-[TestModals/retry - 1]
-{
-  "tts": false,
-  "content": "",
-  "components": [
-    {
-      "components": [
-        {
-          "custom_id": "spot",
-          "label": "Respawn",
-          "style": 1,
-          "placeholder": "Name or a part of it, e.g. Library -1",
-          "value": "Library",
-          "required": true,
-          "min_length": 2,
-          "max_length": 100,
-          "type": 4
-        }
-      ],
-      "type": 1
-    },
-    {
-      "components": [
-        {
-          "custom_id": "start",
-          "label": "Start",
-          "style": 1,
-          "placeholder": "HH:MM, e.g. 18:30",
-          "value": "18:30",
-          "required": true,
-          "min_length": 1,
-          "max_length": 5,
-          "type": 4
-        }
-      ],
-      "type": 1
-    },
-    {
-      "components": [
-        {
-          "custom_id": "end",
-          "label": "End",
-          "style": 1,
-          "placeholder": "HH:MM, at most 3 hours after the start",
-          "required": true,
-          "min_length": 1,
-          "max_length": 5,
-          "type": 4
-        }
-      ],
-      "type": 1
-    }
-  ],
-  "embeds": null,
-  "custom_id": "lf1:mbook",
-  "title": "Book a respawn"
-}
----
-
-[TestModals/edit - 1]
-{
-  "tts": false,
-  "content": "",
-  "components": [
-    {
-      "components": [
-        {
-          "custom_id": "spot",
-          "label": "Respawn",
-          "style": 1,
-          "placeholder": "Name or a part of it, e.g. Library -1",
-          "value": "Library -1",
-          "required": true,
-          "min_length": 2,
-          "max_length": 100,
-          "type": 4
-        }
-      ],
-      "type": 1
-    },
-    {
-      "components": [
-        {
-          "custom_id": "start",
-          "label": "Start",
-          "style": 1,
-          "placeholder": "HH:MM, e.g. 18:30",
-          "value": "19:00",
-          "required": true,
-          "min_length": 1,
-          "max_length": 5,
-          "type": 4
-        }
-      ],
-      "type": 1
-    },
-    {
-      "components": [
-        {
-          "custom_id": "end",
-          "label": "End",
-          "style": 1,
-          "placeholder": "HH:MM, at most 3 hours after the start",
-          "value": "21:00",
-          "required": true,
-          "min_length": 1,
-          "max_length": 5,
-          "type": 4
-        }
-      ],
-      "type": 1
-    }
-  ],
-  "embeds": null,
-  "custom_id": "lf1:medit:3",
-  "title": "Edit reservation"
+  "custom_id": "lf1:erqm:3:now:60",
+  "title": "Search for a respawn"
 }
 ---
 
@@ -649,7 +500,7 @@
         {
           "label": "Try again",
           "style": 2,
-          "custom_id": "lf1:retry:1900:2100:Library",
+          "custom_id": "lf1:ww:7::1791226800:120",
           "type": 2
         }
       ],
@@ -668,7 +519,7 @@
         {
           "label": "Try again",
           "style": 2,
-          "custom_id": "lf1:retry:1900:2100:Library",
+          "custom_id": "lf1:ww:7::1791226800:120",
           "type": 2
         }
       ],
@@ -676,112 +527,6 @@
     }
   ],
   "content": "**Library -1**, Mon 05 Oct 19:00 – 21:00 overlaps these reservations:\n* **Druid** Mon 05 Oct 18:00 – 20:00\n\nChoose other times or another respawn."
-}
----
-
-[TestBookOutcomeView_Ambiguous - 1]
-{
-  "components": [
-    {
-      "components": [
-        {
-          "custom_id": "lf1:pick:1791226800:1791234000",
-          "placeholder": "Choose a respawn",
-          "options": [
-            {
-              "label": "Library -1",
-              "value": "1",
-              "description": "Mon 05 Oct 19:00 – 21:00"
-            },
-            {
-              "label": "Library -2",
-              "value": "2",
-              "description": "Mon 05 Oct 19:00 – 21:00"
-            },
-            {
-              "label": "Library -3",
-              "value": "3",
-              "description": "Mon 05 Oct 19:00 – 21:00"
-            },
-            {
-              "label": "Library -4",
-              "value": "4",
-              "description": "Mon 05 Oct 19:00 – 21:00"
-            },
-            {
-              "label": "Library -5",
-              "value": "5",
-              "description": "Mon 05 Oct 19:00 – 21:00"
-            },
-            {
-              "label": "Library -6",
-              "value": "6",
-              "description": "Mon 05 Oct 19:00 – 21:00"
-            },
-            {
-              "label": "Library -7",
-              "value": "7",
-              "description": "Mon 05 Oct 19:00 – 21:00"
-            },
-            {
-              "label": "Library -8",
-              "value": "8",
-              "description": "Mon 05 Oct 19:00 – 21:00"
-            },
-            {
-              "label": "Library -9",
-              "value": "9",
-              "description": "Mon 05 Oct 19:00 – 21:00"
-            },
-            {
-              "label": "Library -10",
-              "value": "10",
-              "description": "Mon 05 Oct 19:00 – 21:00"
-            },
-            {
-              "label": "Library -11",
-              "value": "11",
-              "description": "Mon 05 Oct 19:00 – 21:00"
-            },
-            {
-              "label": "Library -12",
-              "value": "12",
-              "description": "Mon 05 Oct 19:00 – 21:00"
-            },
-            {
-              "label": "Library -13",
-              "value": "13",
-              "description": "Mon 05 Oct 19:00 – 21:00"
-            },
-            {
-              "label": "Library -14",
-              "value": "14",
-              "description": "Mon 05 Oct 19:00 – 21:00"
-            },
-            {
-              "label": "Library -15",
-              "value": "15",
-              "description": "Mon 05 Oct 19:00 – 21:00"
-            }
-          ],
-          "type": 3
-        }
-      ],
-      "type": 1
-    },
-    {
-      "components": [
-        {
-          "label": "Try again",
-          "style": 2,
-          "custom_id": "lf1:retry:1900:2100:Library",
-          "type": 2
-        }
-      ],
-      "type": 1
-    }
-  ],
-  "content": "More than one respawn matches **Library**. Which one do you mean?"
 }
 ---
 
@@ -793,109 +538,14 @@
         {
           "label": "Try again",
           "style": 2,
-          "custom_id": "lf1:retry::2100:Library",
+          "custom_id": "lf1:ww:7::now:60",
           "type": 2
         }
       ],
       "type": 1
     }
   ],
-  "content": "Write the times as HH:MM, e.g. 18:30."
-}
----
-
-[TestEditOutcomeView/error - 1]
-{
-  "components": [
-    {
-      "components": [
-        {
-          "label": "Edit 1",
-          "style": 2,
-          "custom_id": "lf1:edit:1",
-          "type": 2
-        },
-        {
-          "label": "Cancel 1",
-          "style": 4,
-          "custom_id": "lf1:cancel:1",
-          "type": 2
-        }
-      ],
-      "type": 1
-    },
-    {
-      "components": [
-        {
-          "label": "Try again",
-          "style": 2,
-          "custom_id": "lf1:eretry:1:1900:2100:Library -1",
-          "type": 2
-        },
-        {
-          "label": "Book a respawn",
-          "style": 1,
-          "custom_id": "lf1:book",
-          "type": 2
-        },
-        {
-          "label": "Refresh",
-          "style": 2,
-          "custom_id": "lf1:list",
-          "type": 2
-        },
-        {
-          "label": "Open panel",
-          "style": 5,
-          "url": "https://tibialoot.test",
-          "type": 2
-        }
-      ],
-      "type": 1
-    }
-  ],
-  "content": "Not changed. Sorry, but something went wrong. If you require support, join TibiaLoot.com Discord: https://discord.gg/F4YKgsnzmc \nError message:\n```\nboom\n```\n\n**Your upcoming reservations** (times in UTC)\n1. **Respawn 1** · Mon 05 Oct 15:00 – 17:00 (ongoing)\n"
-}
----
-
-[TestEditOutcomeView/ambiguous - 1]
-{
-  "components": [
-    {
-      "components": [
-        {
-          "custom_id": "lf1:epick:1:1791226800:1791234000",
-          "placeholder": "Choose a respawn",
-          "options": [
-            {
-              "label": "Library -1",
-              "value": "1",
-              "description": "Mon 05 Oct 19:00 – 21:00"
-            },
-            {
-              "label": "Library -2",
-              "value": "2",
-              "description": "Mon 05 Oct 19:00 – 21:00"
-            }
-          ],
-          "type": 3
-        }
-      ],
-      "type": 1
-    },
-    {
-      "components": [
-        {
-          "label": "Back to the list",
-          "style": 2,
-          "custom_id": "lf1:list",
-          "type": 2
-        }
-      ],
-      "type": 1
-    }
-  ],
-  "content": "More than one respawn matches **Lib**. Which one do you mean?"
+  "content": "The reservation cannot start in the past."
 }
 ---
 
@@ -972,7 +622,7 @@
         {
           "label": "Try again",
           "style": 2,
-          "custom_id": "lf1:eretry:1:1900:2100:Library -1",
+          "custom_id": "lf1:ew:1:7::1791226800:120",
           "type": 2
         },
         {
@@ -998,5 +648,2270 @@
     }
   ],
   "content": "Not changed. **Library -1**, Mon 05 Oct 19:00 – 21:00 overlaps these reservations:\n* **Druid** Mon 05 Oct 18:00 – 20:00\n\nChoose other times or another respawn.\n\n**Your upcoming reservations** (times in UTC)\n1. **Respawn 1** · Mon 05 Oct 15:00 – 17:00 (ongoing)\n"
+}
+---
+
+[TestEditOutcomeView/error - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "label": "Edit 1",
+          "style": 2,
+          "custom_id": "lf1:edit:1",
+          "type": 2
+        },
+        {
+          "label": "Cancel 1",
+          "style": 4,
+          "custom_id": "lf1:cancel:1",
+          "type": 2
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Try again",
+          "style": 2,
+          "custom_id": "lf1:ew:1:7::1791226800:120",
+          "type": 2
+        },
+        {
+          "label": "Book a respawn",
+          "style": 1,
+          "custom_id": "lf1:book",
+          "type": 2
+        },
+        {
+          "label": "Refresh",
+          "style": 2,
+          "custom_id": "lf1:list",
+          "type": 2
+        },
+        {
+          "label": "Open panel",
+          "style": 5,
+          "url": "https://tibialoot.test",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "Not changed. Sorry, but something went wrong. If you require support, join TibiaLoot.com Discord: https://discord.gg/F4YKgsnzmc \nError message:\n```\nboom\n```\n\n**Your upcoming reservations** (times in UTC)\n1. **Respawn 1** · Mon 05 Oct 15:00 – 17:00 (ongoing)\n"
+}
+---
+
+[TestRespawnStepView/three_groups,_paged,_usual - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "custom_id": "lf1:rs:0",
+          "placeholder": "Your usual respawns",
+          "options": [
+            {
+              "label": "Usual 0",
+              "value": "500",
+              "description": "You booked it 24 times"
+            },
+            {
+              "label": "Usual 1",
+              "value": "501",
+              "description": "You booked it 23 times"
+            },
+            {
+              "label": "Usual 2",
+              "value": "502",
+              "description": "You booked it 22 times"
+            },
+            {
+              "label": "Usual 3",
+              "value": "503",
+              "description": "You booked it 21 times"
+            },
+            {
+              "label": "Usual 4",
+              "value": "504",
+              "description": "You booked it 20 times"
+            },
+            {
+              "label": "Usual 5",
+              "value": "505",
+              "description": "You booked it 19 times"
+            },
+            {
+              "label": "Usual 6",
+              "value": "506",
+              "description": "You booked it 18 times"
+            },
+            {
+              "label": "Usual 7",
+              "value": "507",
+              "description": "You booked it 17 times"
+            },
+            {
+              "label": "Usual 8",
+              "value": "508",
+              "description": "You booked it 16 times"
+            },
+            {
+              "label": "Usual 9",
+              "value": "509",
+              "description": "You booked it 15 times"
+            },
+            {
+              "label": "Usual 10",
+              "value": "510",
+              "description": "You booked it 14 times"
+            },
+            {
+              "label": "Usual 11",
+              "value": "511",
+              "description": "You booked it 13 times"
+            },
+            {
+              "label": "Usual 12",
+              "value": "512",
+              "description": "You booked it 12 times"
+            },
+            {
+              "label": "Usual 13",
+              "value": "513",
+              "description": "You booked it 11 times"
+            },
+            {
+              "label": "Usual 14",
+              "value": "514",
+              "description": "You booked it 10 times"
+            },
+            {
+              "label": "Usual 15",
+              "value": "515",
+              "description": "You booked it 9 times"
+            },
+            {
+              "label": "Usual 16",
+              "value": "516",
+              "description": "You booked it 8 times"
+            },
+            {
+              "label": "Usual 17",
+              "value": "517",
+              "description": "You booked it 7 times"
+            },
+            {
+              "label": "Usual 18",
+              "value": "518",
+              "description": "You booked it 6 times"
+            },
+            {
+              "label": "Usual 19",
+              "value": "519",
+              "description": "You booked it 5 times"
+            },
+            {
+              "label": "Usual 20",
+              "value": "520",
+              "description": "You booked it 4 times"
+            },
+            {
+              "label": "Usual 21",
+              "value": "521",
+              "description": "You booked it 3 times"
+            },
+            {
+              "label": "Usual 22",
+              "value": "522",
+              "description": "You booked it 2 times"
+            },
+            {
+              "label": "Usual 23",
+              "value": "523",
+              "description": "You booked it once"
+            },
+            {
+              "label": "Usual 24",
+              "value": "524",
+              "description": "Popular on this server"
+            }
+          ],
+          "type": 3
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "custom_id": "lf1:rs:1",
+          "placeholder": "Respawns J r–M",
+          "options": [
+            {
+              "label": "J respawn 075",
+              "value": "76"
+            },
+            {
+              "label": "J respawn 076",
+              "value": "77"
+            },
+            {
+              "label": "K respawn 077",
+              "value": "78"
+            },
+            {
+              "label": "K respawn 078",
+              "value": "79"
+            },
+            {
+              "label": "K respawn 079",
+              "value": "80"
+            },
+            {
+              "label": "K respawn 080",
+              "value": "81"
+            },
+            {
+              "label": "K respawn 081",
+              "value": "82"
+            },
+            {
+              "label": "K respawn 082",
+              "value": "83"
+            },
+            {
+              "label": "K respawn 083",
+              "value": "84"
+            },
+            {
+              "label": "K respawn 084",
+              "value": "85"
+            },
+            {
+              "label": "L respawn 085",
+              "value": "86"
+            },
+            {
+              "label": "L respawn 086",
+              "value": "87"
+            },
+            {
+              "label": "L respawn 087",
+              "value": "88"
+            },
+            {
+              "label": "L respawn 088",
+              "value": "89"
+            },
+            {
+              "label": "L respawn 089",
+              "value": "90"
+            },
+            {
+              "label": "L respawn 090",
+              "value": "91"
+            },
+            {
+              "label": "L respawn 091",
+              "value": "92"
+            },
+            {
+              "label": "L respawn 092",
+              "value": "93"
+            },
+            {
+              "label": "M respawn 093",
+              "value": "94"
+            },
+            {
+              "label": "M respawn 094",
+              "value": "95"
+            },
+            {
+              "label": "M respawn 095",
+              "value": "96"
+            },
+            {
+              "label": "M respawn 096",
+              "value": "97"
+            },
+            {
+              "label": "M respawn 097",
+              "value": "98"
+            },
+            {
+              "label": "M respawn 098",
+              "value": "99"
+            },
+            {
+              "label": "M respawn 099",
+              "value": "100"
+            }
+          ],
+          "type": 3
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "custom_id": "lf1:rs:2",
+          "placeholder": "Respawns N–Q r",
+          "options": [
+            {
+              "label": "N respawn 100",
+              "value": "101"
+            },
+            {
+              "label": "N respawn 101",
+              "value": "102"
+            },
+            {
+              "label": "N respawn 102",
+              "value": "103"
+            },
+            {
+              "label": "N respawn 103",
+              "value": "104"
+            },
+            {
+              "label": "N respawn 104",
+              "value": "105"
+            },
+            {
+              "label": "N respawn 105",
+              "value": "106"
+            },
+            {
+              "label": "N respawn 106",
+              "value": "107"
+            },
+            {
+              "label": "N respawn 107",
+              "value": "108"
+            },
+            {
+              "label": "O respawn 108",
+              "value": "109"
+            },
+            {
+              "label": "O respawn 109",
+              "value": "110"
+            },
+            {
+              "label": "O respawn 110",
+              "value": "111"
+            },
+            {
+              "label": "O respawn 111",
+              "value": "112"
+            },
+            {
+              "label": "O respawn 112",
+              "value": "113"
+            },
+            {
+              "label": "O respawn 113",
+              "value": "114"
+            },
+            {
+              "label": "O respawn 114",
+              "value": "115"
+            },
+            {
+              "label": "O respawn 115",
+              "value": "116"
+            },
+            {
+              "label": "P respawn 116",
+              "value": "117"
+            },
+            {
+              "label": "P respawn 117",
+              "value": "118"
+            },
+            {
+              "label": "P respawn 118",
+              "value": "119"
+            },
+            {
+              "label": "P respawn 119",
+              "value": "120"
+            },
+            {
+              "label": "P respawn 120",
+              "value": "121"
+            },
+            {
+              "label": "P respawn 121",
+              "value": "122"
+            },
+            {
+              "label": "P respawn 122",
+              "value": "123"
+            },
+            {
+              "label": "P respawn 123",
+              "value": "124"
+            },
+            {
+              "label": "Q respawn 124",
+              "value": "125"
+            }
+          ],
+          "type": 3
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "custom_id": "lf1:rs:3",
+          "placeholder": "Respawns Q r–T r",
+          "options": [
+            {
+              "label": "Q respawn 125",
+              "value": "126"
+            },
+            {
+              "label": "Q respawn 126",
+              "value": "127"
+            },
+            {
+              "label": "Q respawn 127",
+              "value": "128"
+            },
+            {
+              "label": "Q respawn 128",
+              "value": "129"
+            },
+            {
+              "label": "Q respawn 129",
+              "value": "130"
+            },
+            {
+              "label": "Q respawn 130",
+              "value": "131"
+            },
+            {
+              "label": "R respawn 131",
+              "value": "132"
+            },
+            {
+              "label": "R respawn 132",
+              "value": "133"
+            },
+            {
+              "label": "R respawn 133",
+              "value": "134"
+            },
+            {
+              "label": "R respawn 134",
+              "value": "135"
+            },
+            {
+              "label": "R respawn 135",
+              "value": "136"
+            },
+            {
+              "label": "R respawn 136",
+              "value": "137"
+            },
+            {
+              "label": "R respawn 137",
+              "value": "138"
+            },
+            {
+              "label": "R respawn 138",
+              "value": "139"
+            },
+            {
+              "label": "S respawn 139",
+              "value": "140"
+            },
+            {
+              "label": "S respawn 140",
+              "value": "141"
+            },
+            {
+              "label": "S respawn 141",
+              "value": "142"
+            },
+            {
+              "label": "S respawn 142",
+              "value": "143"
+            },
+            {
+              "label": "S respawn 143",
+              "value": "144"
+            },
+            {
+              "label": "S respawn 144",
+              "value": "145"
+            },
+            {
+              "label": "S respawn 145",
+              "value": "146"
+            },
+            {
+              "label": "S respawn 146",
+              "value": "147"
+            },
+            {
+              "label": "T respawn 147",
+              "value": "148"
+            },
+            {
+              "label": "T respawn 148",
+              "value": "149"
+            },
+            {
+              "label": "T respawn 149",
+              "value": "150"
+            }
+          ],
+          "type": 3
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "‹ Previous",
+          "style": 2,
+          "custom_id": "lf1:rp:0",
+          "type": 2
+        },
+        {
+          "label": "More respawns ›",
+          "style": 2,
+          "custom_id": "lf1:rp:2",
+          "type": 2
+        },
+        {
+          "label": "Search by name",
+          "style": 1,
+          "custom_id": "lf1:rq",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "**Book a respawn** — pick it from a list."
+}
+---
+
+[TestRespawnStepView/one_group,_no_usual - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "custom_id": "lf1:rs:1",
+          "placeholder": "Respawns A–R",
+          "options": [
+            {
+              "label": "A respawn 000",
+              "value": "1"
+            },
+            {
+              "label": "I respawn 001",
+              "value": "2"
+            },
+            {
+              "label": "R respawn 002",
+              "value": "3"
+            }
+          ],
+          "type": 3
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Search by name",
+          "style": 1,
+          "custom_id": "lf1:rq",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "**Book a respawn** — pick it from a list."
+}
+---
+
+[TestRespawnStepView/no_respawns - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "label": "Search by name",
+          "style": 1,
+          "custom_id": "lf1:rq",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "**Book a respawn** — pick it from a list.\nThis server has no respawns yet. A manager can add them in the web panel."
+}
+---
+
+[TestRespawnStepView/edit,_last_page - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "custom_id": "lf1:ers:9:1791226800:120:0",
+          "placeholder": "Your usual respawns",
+          "options": [
+            {
+              "label": "Usual 0",
+              "value": "500",
+              "description": "You booked it once"
+            },
+            {
+              "label": "Usual 1",
+              "value": "501",
+              "description": "Popular on this server"
+            }
+          ],
+          "type": 3
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "custom_id": "lf1:ers:9:1791226800:120:1",
+          "placeholder": "Respawns Y r–Z",
+          "options": [
+            {
+              "label": "Y respawn 150",
+              "value": "151"
+            },
+            {
+              "label": "Y respawn 151",
+              "value": "152"
+            },
+            {
+              "label": "Y respawn 152",
+              "value": "153"
+            },
+            {
+              "label": "Y respawn 153",
+              "value": "154"
+            },
+            {
+              "label": "Z respawn 154",
+              "value": "155"
+            },
+            {
+              "label": "Z respawn 155",
+              "value": "156"
+            },
+            {
+              "label": "Z respawn 156",
+              "value": "157"
+            },
+            {
+              "label": "Z respawn 157",
+              "value": "158"
+            },
+            {
+              "label": "Z respawn 158",
+              "value": "159"
+            },
+            {
+              "label": "Z respawn 159",
+              "value": "160"
+            }
+          ],
+          "type": 3
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "‹ Previous",
+          "style": 2,
+          "custom_id": "lf1:erp:9:1791226800:120:1",
+          "type": 2
+        },
+        {
+          "label": "More respawns ›",
+          "style": 2,
+          "custom_id": "lf1:erp:9:1791226800:120:2",
+          "disabled": true,
+          "type": 2
+        },
+        {
+          "label": "Search by name",
+          "style": 1,
+          "custom_id": "lf1:erq:9:1791226800:120",
+          "type": 2
+        },
+        {
+          "label": "Back",
+          "style": 2,
+          "custom_id": "lf1:list",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "**Change the respawn** — pick it from a list."
+}
+---
+
+[TestRespawnStepView/with_a_status - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "custom_id": "lf1:rs:0",
+          "placeholder": "Your usual respawns",
+          "options": [
+            {
+              "label": "Usual 0",
+              "value": "500",
+              "description": "Popular on this server"
+            }
+          ],
+          "type": 3
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "custom_id": "lf1:rs:1",
+          "placeholder": "Respawns A–M",
+          "options": [
+            {
+              "label": "A respawn 000",
+              "value": "1"
+            },
+            {
+              "label": "A respawn 001",
+              "value": "2"
+            },
+            {
+              "label": "B respawn 002",
+              "value": "3"
+            },
+            {
+              "label": "C respawn 003",
+              "value": "4"
+            },
+            {
+              "label": "D respawn 004",
+              "value": "5"
+            },
+            {
+              "label": "E respawn 005",
+              "value": "6"
+            },
+            {
+              "label": "F respawn 006",
+              "value": "7"
+            },
+            {
+              "label": "G respawn 007",
+              "value": "8"
+            },
+            {
+              "label": "G respawn 008",
+              "value": "9"
+            },
+            {
+              "label": "H respawn 009",
+              "value": "10"
+            },
+            {
+              "label": "I respawn 010",
+              "value": "11"
+            },
+            {
+              "label": "J respawn 011",
+              "value": "12"
+            },
+            {
+              "label": "K respawn 012",
+              "value": "13"
+            },
+            {
+              "label": "L respawn 013",
+              "value": "14"
+            },
+            {
+              "label": "M respawn 014",
+              "value": "15"
+            }
+          ],
+          "type": 3
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "custom_id": "lf1:rs:2",
+          "placeholder": "Respawns N–Z",
+          "options": [
+            {
+              "label": "N respawn 015",
+              "value": "16"
+            },
+            {
+              "label": "N respawn 016",
+              "value": "17"
+            },
+            {
+              "label": "O respawn 017",
+              "value": "18"
+            },
+            {
+              "label": "P respawn 018",
+              "value": "19"
+            },
+            {
+              "label": "Q respawn 019",
+              "value": "20"
+            },
+            {
+              "label": "R respawn 020",
+              "value": "21"
+            },
+            {
+              "label": "S respawn 021",
+              "value": "22"
+            },
+            {
+              "label": "T respawn 022",
+              "value": "23"
+            },
+            {
+              "label": "T respawn 023",
+              "value": "24"
+            },
+            {
+              "label": "U respawn 024",
+              "value": "25"
+            },
+            {
+              "label": "V respawn 025",
+              "value": "26"
+            },
+            {
+              "label": "W respawn 026",
+              "value": "27"
+            },
+            {
+              "label": "X respawn 027",
+              "value": "28"
+            },
+            {
+              "label": "Y respawn 028",
+              "value": "29"
+            },
+            {
+              "label": "Z respawn 029",
+              "value": "30"
+            }
+          ],
+          "type": 3
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Search by name",
+          "style": 1,
+          "custom_id": "lf1:rq",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "No respawn has this name.\n\n**Book a respawn** — pick it from a list."
+}
+---
+
+[TestMatchesView/two - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "custom_id": "lf1:rs:4",
+          "placeholder": "Matching respawns",
+          "options": [
+            {
+              "label": "A respawn 000",
+              "value": "1"
+            },
+            {
+              "label": "N respawn 001",
+              "value": "2"
+            }
+          ],
+          "type": 3
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Search again",
+          "style": 1,
+          "custom_id": "lf1:rq",
+          "type": 2
+        },
+        {
+          "label": "All respawns",
+          "style": 2,
+          "custom_id": "lf1:rp:0",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "Respawns that match **respawn**:"
+}
+---
+
+[TestMatchesView/too_many,_edit - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "custom_id": "lf1:ers:9:now:60:4",
+          "placeholder": "Matching respawns",
+          "options": [
+            {
+              "label": "A respawn 000",
+              "value": "1"
+            },
+            {
+              "label": "A respawn 001",
+              "value": "2"
+            },
+            {
+              "label": "B respawn 002",
+              "value": "3"
+            },
+            {
+              "label": "C respawn 003",
+              "value": "4"
+            },
+            {
+              "label": "D respawn 004",
+              "value": "5"
+            },
+            {
+              "label": "E respawn 005",
+              "value": "6"
+            },
+            {
+              "label": "F respawn 006",
+              "value": "7"
+            },
+            {
+              "label": "G respawn 007",
+              "value": "8"
+            },
+            {
+              "label": "G respawn 008",
+              "value": "9"
+            },
+            {
+              "label": "H respawn 009",
+              "value": "10"
+            },
+            {
+              "label": "I respawn 010",
+              "value": "11"
+            },
+            {
+              "label": "J respawn 011",
+              "value": "12"
+            },
+            {
+              "label": "K respawn 012",
+              "value": "13"
+            },
+            {
+              "label": "L respawn 013",
+              "value": "14"
+            },
+            {
+              "label": "M respawn 014",
+              "value": "15"
+            },
+            {
+              "label": "N respawn 015",
+              "value": "16"
+            },
+            {
+              "label": "N respawn 016",
+              "value": "17"
+            },
+            {
+              "label": "O respawn 017",
+              "value": "18"
+            },
+            {
+              "label": "P respawn 018",
+              "value": "19"
+            },
+            {
+              "label": "Q respawn 019",
+              "value": "20"
+            },
+            {
+              "label": "R respawn 020",
+              "value": "21"
+            },
+            {
+              "label": "S respawn 021",
+              "value": "22"
+            },
+            {
+              "label": "T respawn 022",
+              "value": "23"
+            },
+            {
+              "label": "T respawn 023",
+              "value": "24"
+            },
+            {
+              "label": "U respawn 024",
+              "value": "25"
+            }
+          ],
+          "type": 3
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Search again",
+          "style": 1,
+          "custom_id": "lf1:erq:9:now:60",
+          "type": 2
+        },
+        {
+          "label": "All respawns",
+          "style": 2,
+          "custom_id": "lf1:erp:9:now:60:0",
+          "type": 2
+        },
+        {
+          "label": "Back",
+          "style": 2,
+          "custom_id": "lf1:list",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "Respawns that match **respawn**:\nNot all of them fit in the list. If yours is missing, search for more of its name."
+}
+---
+
+[TestTimeStepView/fresh - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "custom_id": "lf1:ws:7:0:0",
+          "placeholder": "Start",
+          "options": [
+            {
+              "label": "Now",
+              "value": "now",
+              "description": "Free"
+            },
+            {
+              "label": "18:30",
+              "value": "1791225000",
+              "description": "Free"
+            },
+            {
+              "label": "19:00",
+              "value": "1791226800",
+              "description": "Free"
+            },
+            {
+              "label": "19:30",
+              "value": "1791228600",
+              "description": "Free"
+            },
+            {
+              "label": "20:00",
+              "value": "1791230400",
+              "description": "Free"
+            },
+            {
+              "label": "20:30",
+              "value": "1791232200",
+              "description": "Free"
+            },
+            {
+              "label": "21:00",
+              "value": "1791234000",
+              "description": "Free"
+            },
+            {
+              "label": "21:30",
+              "value": "1791235800",
+              "description": "Free"
+            },
+            {
+              "label": "22:00",
+              "value": "1791237600",
+              "description": "Free"
+            },
+            {
+              "label": "22:30",
+              "value": "1791239400",
+              "description": "Free"
+            },
+            {
+              "label": "23:00",
+              "value": "1791241200",
+              "description": "Free"
+            },
+            {
+              "label": "23:30",
+              "value": "1791243000",
+              "description": "Free"
+            },
+            {
+              "label": "00:00 tomorrow",
+              "value": "1791244800",
+              "description": "Free"
+            },
+            {
+              "label": "00:30 tomorrow",
+              "value": "1791246600",
+              "description": "Free"
+            },
+            {
+              "label": "01:00 tomorrow",
+              "value": "1791248400",
+              "description": "Free"
+            },
+            {
+              "label": "01:30 tomorrow",
+              "value": "1791250200",
+              "description": "Free"
+            },
+            {
+              "label": "02:00 tomorrow",
+              "value": "1791252000",
+              "description": "Free"
+            },
+            {
+              "label": "02:30 tomorrow",
+              "value": "1791253800",
+              "description": "Free"
+            },
+            {
+              "label": "03:00 tomorrow",
+              "value": "1791255600",
+              "description": "Free"
+            },
+            {
+              "label": "03:30 tomorrow",
+              "value": "1791257400",
+              "description": "Free"
+            },
+            {
+              "label": "04:00 tomorrow",
+              "value": "1791259200",
+              "description": "Free"
+            },
+            {
+              "label": "04:30 tomorrow",
+              "value": "1791261000",
+              "description": "Free"
+            },
+            {
+              "label": "05:00 tomorrow",
+              "value": "1791262800",
+              "description": "Free"
+            },
+            {
+              "label": "05:30 tomorrow",
+              "value": "1791264600",
+              "description": "Free"
+            },
+            {
+              "label": "06:00 tomorrow",
+              "value": "1791266400",
+              "description": "Free"
+            }
+          ],
+          "type": 3
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "custom_id": "lf1:wl:7:0:",
+          "placeholder": "Length",
+          "options": [
+            {
+              "label": "30 min",
+              "value": "30"
+            },
+            {
+              "label": "1 h",
+              "value": "60"
+            },
+            {
+              "label": "1 h 30",
+              "value": "90"
+            },
+            {
+              "label": "2 h",
+              "value": "120"
+            },
+            {
+              "label": "2 h 30",
+              "value": "150"
+            },
+            {
+              "label": "3 h",
+              "value": "180"
+            }
+          ],
+          "type": 3
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "‹ Earlier",
+          "style": 2,
+          "custom_id": "lf1:ww:7:0::0",
+          "disabled": true,
+          "type": 2
+        },
+        {
+          "label": "Later ›",
+          "style": 2,
+          "custom_id": "lf1:ww:7:1::0",
+          "type": 2
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Book",
+          "style": 3,
+          "custom_id": "lf1:wb:7::0",
+          "disabled": true,
+          "type": 2
+        },
+        {
+          "label": "Change respawn",
+          "style": 2,
+          "custom_id": "lf1:rp:0",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "**Library -1** — pick the start and the length. Times in UTC."
+}
+---
+
+[TestTimeStepView/chosen,_with_booked_slots - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "custom_id": "lf1:ws:7:0:120",
+          "placeholder": "Start",
+          "options": [
+            {
+              "label": "Now",
+              "value": "now",
+              "description": "Free"
+            },
+            {
+              "label": "18:30",
+              "value": "1791225000",
+              "description": "Free"
+            },
+            {
+              "label": "19:00",
+              "value": "1791226800",
+              "description": "Booked by Druid until 21:00"
+            },
+            {
+              "label": "19:30",
+              "value": "1791228600",
+              "description": "Booked by Druid until 21:00",
+              "default": true
+            },
+            {
+              "label": "20:00",
+              "value": "1791230400",
+              "description": "Booked by Druid until 21:00"
+            },
+            {
+              "label": "20:30",
+              "value": "1791232200",
+              "description": "Booked by Druid until 21:00"
+            },
+            {
+              "label": "21:00",
+              "value": "1791234000",
+              "description": "Free"
+            },
+            {
+              "label": "21:30",
+              "value": "1791235800",
+              "description": "Free"
+            },
+            {
+              "label": "22:00",
+              "value": "1791237600",
+              "description": "Free"
+            },
+            {
+              "label": "22:30",
+              "value": "1791239400",
+              "description": "Free"
+            },
+            {
+              "label": "23:00",
+              "value": "1791241200",
+              "description": "Free"
+            },
+            {
+              "label": "23:30",
+              "value": "1791243000",
+              "description": "Free"
+            },
+            {
+              "label": "00:00 tomorrow",
+              "value": "1791244800",
+              "description": "Free"
+            },
+            {
+              "label": "00:30 tomorrow",
+              "value": "1791246600",
+              "description": "Free"
+            },
+            {
+              "label": "01:00 tomorrow",
+              "value": "1791248400",
+              "description": "Free"
+            },
+            {
+              "label": "01:30 tomorrow",
+              "value": "1791250200",
+              "description": "Free"
+            },
+            {
+              "label": "02:00 tomorrow",
+              "value": "1791252000",
+              "description": "Free"
+            },
+            {
+              "label": "02:30 tomorrow",
+              "value": "1791253800",
+              "description": "Free"
+            },
+            {
+              "label": "03:00 tomorrow",
+              "value": "1791255600",
+              "description": "Free"
+            },
+            {
+              "label": "03:30 tomorrow",
+              "value": "1791257400",
+              "description": "Free"
+            },
+            {
+              "label": "04:00 tomorrow",
+              "value": "1791259200",
+              "description": "Free"
+            },
+            {
+              "label": "04:30 tomorrow",
+              "value": "1791261000",
+              "description": "Free"
+            },
+            {
+              "label": "05:00 tomorrow",
+              "value": "1791262800",
+              "description": "Free"
+            },
+            {
+              "label": "05:30 tomorrow",
+              "value": "1791264600",
+              "description": "Free"
+            },
+            {
+              "label": "06:00 tomorrow",
+              "value": "1791266400",
+              "description": "Free"
+            }
+          ],
+          "type": 3
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "custom_id": "lf1:wl:7:0:1791228600",
+          "placeholder": "Length",
+          "options": [
+            {
+              "label": "30 min",
+              "value": "30"
+            },
+            {
+              "label": "1 h",
+              "value": "60"
+            },
+            {
+              "label": "1 h 30",
+              "value": "90"
+            },
+            {
+              "label": "2 h",
+              "value": "120",
+              "default": true
+            },
+            {
+              "label": "2 h 30",
+              "value": "150"
+            },
+            {
+              "label": "3 h",
+              "value": "180"
+            }
+          ],
+          "type": 3
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "‹ Earlier",
+          "style": 2,
+          "custom_id": "lf1:ww:7:0:1791228600:120",
+          "disabled": true,
+          "type": 2
+        },
+        {
+          "label": "Later ›",
+          "style": 2,
+          "custom_id": "lf1:ww:7:1:1791228600:120",
+          "type": 2
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Book",
+          "style": 3,
+          "custom_id": "lf1:wb:7:1791228600:120",
+          "type": 2
+        },
+        {
+          "label": "Change respawn",
+          "style": 2,
+          "custom_id": "lf1:rp:0",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "**Library -1** — pick the start and the length. Times in UTC.\nChosen: 19:30 – 21:30.\n\nAlready booked:\n* 19:00 – 21:00 · Druid"
+}
+---
+
+[TestTimeStepView/now_chosen - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "custom_id": "lf1:ws:7:0:30",
+          "placeholder": "Start",
+          "options": [
+            {
+              "label": "Now",
+              "value": "now",
+              "description": "Free",
+              "default": true
+            },
+            {
+              "label": "18:30",
+              "value": "1791225000",
+              "description": "Free"
+            },
+            {
+              "label": "19:00",
+              "value": "1791226800",
+              "description": "Free"
+            },
+            {
+              "label": "19:30",
+              "value": "1791228600",
+              "description": "Free"
+            },
+            {
+              "label": "20:00",
+              "value": "1791230400",
+              "description": "Free"
+            },
+            {
+              "label": "20:30",
+              "value": "1791232200",
+              "description": "Free"
+            },
+            {
+              "label": "21:00",
+              "value": "1791234000",
+              "description": "Free"
+            },
+            {
+              "label": "21:30",
+              "value": "1791235800",
+              "description": "Free"
+            },
+            {
+              "label": "22:00",
+              "value": "1791237600",
+              "description": "Free"
+            },
+            {
+              "label": "22:30",
+              "value": "1791239400",
+              "description": "Free"
+            },
+            {
+              "label": "23:00",
+              "value": "1791241200",
+              "description": "Free"
+            },
+            {
+              "label": "23:30",
+              "value": "1791243000",
+              "description": "Free"
+            },
+            {
+              "label": "00:00 tomorrow",
+              "value": "1791244800",
+              "description": "Free"
+            },
+            {
+              "label": "00:30 tomorrow",
+              "value": "1791246600",
+              "description": "Free"
+            },
+            {
+              "label": "01:00 tomorrow",
+              "value": "1791248400",
+              "description": "Free"
+            },
+            {
+              "label": "01:30 tomorrow",
+              "value": "1791250200",
+              "description": "Free"
+            },
+            {
+              "label": "02:00 tomorrow",
+              "value": "1791252000",
+              "description": "Free"
+            },
+            {
+              "label": "02:30 tomorrow",
+              "value": "1791253800",
+              "description": "Free"
+            },
+            {
+              "label": "03:00 tomorrow",
+              "value": "1791255600",
+              "description": "Free"
+            },
+            {
+              "label": "03:30 tomorrow",
+              "value": "1791257400",
+              "description": "Free"
+            },
+            {
+              "label": "04:00 tomorrow",
+              "value": "1791259200",
+              "description": "Free"
+            },
+            {
+              "label": "04:30 tomorrow",
+              "value": "1791261000",
+              "description": "Free"
+            },
+            {
+              "label": "05:00 tomorrow",
+              "value": "1791262800",
+              "description": "Free"
+            },
+            {
+              "label": "05:30 tomorrow",
+              "value": "1791264600",
+              "description": "Free"
+            },
+            {
+              "label": "06:00 tomorrow",
+              "value": "1791266400",
+              "description": "Free"
+            }
+          ],
+          "type": 3
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "custom_id": "lf1:wl:7:0:now",
+          "placeholder": "Length",
+          "options": [
+            {
+              "label": "30 min",
+              "value": "30",
+              "default": true
+            },
+            {
+              "label": "1 h",
+              "value": "60"
+            },
+            {
+              "label": "1 h 30",
+              "value": "90"
+            },
+            {
+              "label": "2 h",
+              "value": "120"
+            },
+            {
+              "label": "2 h 30",
+              "value": "150"
+            },
+            {
+              "label": "3 h",
+              "value": "180"
+            }
+          ],
+          "type": 3
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "‹ Earlier",
+          "style": 2,
+          "custom_id": "lf1:ww:7:0:now:30",
+          "disabled": true,
+          "type": 2
+        },
+        {
+          "label": "Later ›",
+          "style": 2,
+          "custom_id": "lf1:ww:7:1:now:30",
+          "type": 2
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Book",
+          "style": 3,
+          "custom_id": "lf1:wb:7:now:30",
+          "type": 2
+        },
+        {
+          "label": "Change respawn",
+          "style": 2,
+          "custom_id": "lf1:rp:0",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "**Library -1** — pick the start and the length. Times in UTC.\nChosen: now – 18:30."
+}
+---
+
+[TestTimeStepView/the_last_window - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "custom_id": "lf1:ws:7:3:60",
+          "placeholder": "Start",
+          "options": [
+            {
+              "label": "06:30 Wed",
+              "value": "1791354600",
+              "description": "Free"
+            },
+            {
+              "label": "07:00 Wed",
+              "value": "1791356400",
+              "description": "Free"
+            },
+            {
+              "label": "07:30 Wed",
+              "value": "1791358200",
+              "description": "Free"
+            },
+            {
+              "label": "08:00 Wed",
+              "value": "1791360000",
+              "description": "Free"
+            },
+            {
+              "label": "08:30 Wed",
+              "value": "1791361800",
+              "description": "Free"
+            },
+            {
+              "label": "09:00 Wed",
+              "value": "1791363600",
+              "description": "Free"
+            },
+            {
+              "label": "09:30 Wed",
+              "value": "1791365400",
+              "description": "Free"
+            },
+            {
+              "label": "10:00 Wed",
+              "value": "1791367200",
+              "description": "Free"
+            },
+            {
+              "label": "10:30 Wed",
+              "value": "1791369000",
+              "description": "Free"
+            },
+            {
+              "label": "11:00 Wed",
+              "value": "1791370800",
+              "description": "Free"
+            },
+            {
+              "label": "11:30 Wed",
+              "value": "1791372600",
+              "description": "Free"
+            },
+            {
+              "label": "12:00 Wed",
+              "value": "1791374400",
+              "description": "Free"
+            },
+            {
+              "label": "12:30 Wed",
+              "value": "1791376200",
+              "description": "Free"
+            },
+            {
+              "label": "13:00 Wed",
+              "value": "1791378000",
+              "description": "Free"
+            },
+            {
+              "label": "13:30 Wed",
+              "value": "1791379800",
+              "description": "Free"
+            },
+            {
+              "label": "14:00 Wed",
+              "value": "1791381600",
+              "description": "Free"
+            },
+            {
+              "label": "14:30 Wed",
+              "value": "1791383400",
+              "description": "Free"
+            },
+            {
+              "label": "15:00 Wed",
+              "value": "1791385200",
+              "description": "Free"
+            },
+            {
+              "label": "15:30 Wed",
+              "value": "1791387000",
+              "description": "Free"
+            },
+            {
+              "label": "16:00 Wed",
+              "value": "1791388800",
+              "description": "Free"
+            },
+            {
+              "label": "16:30 Wed",
+              "value": "1791390600",
+              "description": "Free"
+            },
+            {
+              "label": "17:00 Wed",
+              "value": "1791392400",
+              "description": "Free"
+            },
+            {
+              "label": "17:30 Wed",
+              "value": "1791394200",
+              "description": "Free"
+            },
+            {
+              "label": "18:00 Wed",
+              "value": "1791396000",
+              "description": "Free"
+            }
+          ],
+          "type": 3
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "custom_id": "lf1:wl:7:3:",
+          "placeholder": "Length",
+          "options": [
+            {
+              "label": "30 min",
+              "value": "30"
+            },
+            {
+              "label": "1 h",
+              "value": "60",
+              "default": true
+            },
+            {
+              "label": "1 h 30",
+              "value": "90"
+            },
+            {
+              "label": "2 h",
+              "value": "120"
+            },
+            {
+              "label": "2 h 30",
+              "value": "150"
+            },
+            {
+              "label": "3 h",
+              "value": "180"
+            }
+          ],
+          "type": 3
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "‹ Earlier",
+          "style": 2,
+          "custom_id": "lf1:ww:7:2::60",
+          "type": 2
+        },
+        {
+          "label": "Later ›",
+          "style": 2,
+          "custom_id": "lf1:ww:7:3::60",
+          "disabled": true,
+          "type": 2
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Book",
+          "style": 3,
+          "custom_id": "lf1:wb:7::60",
+          "disabled": true,
+          "type": 2
+        },
+        {
+          "label": "Change respawn",
+          "style": 2,
+          "custom_id": "lf1:rp:0",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "**Library -1** — pick the start and the length. Times in UTC."
+}
+---
+
+[TestTimeStepView/edit,_current_start_off_the_grid - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "custom_id": "lf1:es:9:7:0:120",
+          "placeholder": "Start",
+          "options": [
+            {
+              "label": "19:10 (current)",
+              "value": "1791227400",
+              "description": "Free",
+              "default": true
+            },
+            {
+              "label": "Now",
+              "value": "now",
+              "description": "Free"
+            },
+            {
+              "label": "18:30",
+              "value": "1791225000",
+              "description": "Free"
+            },
+            {
+              "label": "19:00",
+              "value": "1791226800",
+              "description": "Free"
+            },
+            {
+              "label": "19:30",
+              "value": "1791228600",
+              "description": "Free"
+            },
+            {
+              "label": "20:00",
+              "value": "1791230400",
+              "description": "Free"
+            },
+            {
+              "label": "20:30",
+              "value": "1791232200",
+              "description": "Free"
+            },
+            {
+              "label": "21:00",
+              "value": "1791234000",
+              "description": "Free"
+            },
+            {
+              "label": "21:30",
+              "value": "1791235800",
+              "description": "Free"
+            },
+            {
+              "label": "22:00",
+              "value": "1791237600",
+              "description": "Free"
+            },
+            {
+              "label": "22:30",
+              "value": "1791239400",
+              "description": "Free"
+            },
+            {
+              "label": "23:00",
+              "value": "1791241200",
+              "description": "Free"
+            },
+            {
+              "label": "23:30",
+              "value": "1791243000",
+              "description": "Free"
+            },
+            {
+              "label": "00:00 tomorrow",
+              "value": "1791244800",
+              "description": "Free"
+            },
+            {
+              "label": "00:30 tomorrow",
+              "value": "1791246600",
+              "description": "Free"
+            },
+            {
+              "label": "01:00 tomorrow",
+              "value": "1791248400",
+              "description": "Free"
+            },
+            {
+              "label": "01:30 tomorrow",
+              "value": "1791250200",
+              "description": "Free"
+            },
+            {
+              "label": "02:00 tomorrow",
+              "value": "1791252000",
+              "description": "Free"
+            },
+            {
+              "label": "02:30 tomorrow",
+              "value": "1791253800",
+              "description": "Free"
+            },
+            {
+              "label": "03:00 tomorrow",
+              "value": "1791255600",
+              "description": "Free"
+            },
+            {
+              "label": "03:30 tomorrow",
+              "value": "1791257400",
+              "description": "Free"
+            },
+            {
+              "label": "04:00 tomorrow",
+              "value": "1791259200",
+              "description": "Free"
+            },
+            {
+              "label": "04:30 tomorrow",
+              "value": "1791261000",
+              "description": "Free"
+            },
+            {
+              "label": "05:00 tomorrow",
+              "value": "1791262800",
+              "description": "Free"
+            },
+            {
+              "label": "05:30 tomorrow",
+              "value": "1791264600",
+              "description": "Free"
+            }
+          ],
+          "type": 3
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "custom_id": "lf1:el:9:7:0:1791227400",
+          "placeholder": "Length",
+          "options": [
+            {
+              "label": "1 h 10 (current)",
+              "value": "70"
+            },
+            {
+              "label": "30 min",
+              "value": "30"
+            },
+            {
+              "label": "1 h",
+              "value": "60"
+            },
+            {
+              "label": "1 h 30",
+              "value": "90"
+            },
+            {
+              "label": "2 h",
+              "value": "120",
+              "default": true
+            },
+            {
+              "label": "2 h 30",
+              "value": "150"
+            },
+            {
+              "label": "3 h",
+              "value": "180"
+            }
+          ],
+          "type": 3
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "‹ Earlier",
+          "style": 2,
+          "custom_id": "lf1:ew:9:7:0:1791227400:120",
+          "disabled": true,
+          "type": 2
+        },
+        {
+          "label": "Later ›",
+          "style": 2,
+          "custom_id": "lf1:ew:9:7:1:1791227400:120",
+          "type": 2
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Save",
+          "style": 3,
+          "custom_id": "lf1:eb:9:7:1791227400:120",
+          "type": 2
+        },
+        {
+          "label": "Change respawn",
+          "style": 2,
+          "custom_id": "lf1:erp:9:1791227400:120:0",
+          "type": 2
+        },
+        {
+          "label": "Back",
+          "style": 2,
+          "custom_id": "lf1:list",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "**Library -1** — change the start, the length or the respawn. Times in UTC.\nChosen: 19:10 – 21:10."
+}
+---
+
+[TestTimeStepView/edit,_ongoing - 1]
+{
+  "components": [
+    {
+      "components": [
+        {
+          "custom_id": "lf1:es:9:7:0:120",
+          "placeholder": "Start",
+          "options": [
+            {
+              "label": "Keep (started 17:00)",
+              "value": "1791219600",
+              "default": true
+            }
+          ],
+          "type": 3
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "custom_id": "lf1:el:9:7:0:1791219600",
+          "placeholder": "Length",
+          "options": [
+            {
+              "label": "1 h 30",
+              "value": "90"
+            },
+            {
+              "label": "2 h",
+              "value": "120",
+              "default": true
+            },
+            {
+              "label": "2 h 30",
+              "value": "150"
+            },
+            {
+              "label": "3 h",
+              "value": "180"
+            }
+          ],
+          "type": 3
+        }
+      ],
+      "type": 1
+    },
+    {
+      "components": [
+        {
+          "label": "Save",
+          "style": 3,
+          "custom_id": "lf1:eb:9:7:1791219600:120",
+          "type": 2
+        },
+        {
+          "label": "Back",
+          "style": 2,
+          "custom_id": "lf1:list",
+          "type": 2
+        }
+      ],
+      "type": 1
+    }
+  ],
+  "content": "**Library -1** — started at 17:00. You can change the length. Times in UTC.\nChosen: 17:00 – 19:00."
 }
 ---

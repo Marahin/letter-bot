@@ -6,6 +6,7 @@ import (
 	"spot-assistant/internal/core/dto/guild"
 	"spot-assistant/internal/core/dto/member"
 	"spot-assistant/internal/core/dto/reservation"
+	"spot-assistant/internal/core/dto/spot"
 	"spot-assistant/internal/core/dto/summary"
 	"time"
 )
@@ -75,20 +76,30 @@ type NotifyHandler interface {
 	OnOverbooked(ctx context.Context, request book.BookRequest, res *reservation.ClippedOrRemovedReservation)
 }
 
-// ReservationFormService backs the bot's buttons and forms. It applies the same
+// ReservationFormService backs the bot's buttons and booking wizard. It applies the same
 // rules as the web (ReservationService) to the member who clicked.
 type ReservationFormService interface {
-	// BookForm reads the form and books. It returns a *reservationforms.AmbiguousSpotError
-	// when more than one respawn matches, reservationforms.ErrTimeFormat, and
+	// RespawnPicker returns step 1 of the booking wizard: the actor's usual
+	// respawns and one page (0-based, clamped) of the active respawns.
+	RespawnPicker(ctx context.Context, guildID string, actor reservation.Actor, page int) (*reservation.RespawnPicker, error)
+	// FindRespawn returns the active respawn with the name, or the only one that
+	// contains it. It returns a *reservationforms.AmbiguousSpotError when more
+	// match, and booking.ErrSpotNotFound when none does.
+	FindRespawn(ctx context.Context, guildID, name string) (*spot.Spot, error)
+	// TimePicker returns step 2 of the wizard. With a reservation id in the
+	// choice it checks the edit right (errors as Editable) and fills the unchosen
+	// fields from the reservation. It returns booking.ErrSpotNotFound,
+	// booking.ErrSpotArchived and booking.ErrSpotLocked.
+	TimePicker(ctx context.Context, guildID string, actor reservation.Actor, choice reservation.TimeChoice) (*reservation.TimePicker, error)
+	// BookChoice books the choice. It returns reservationforms.ErrChoiceIncomplete,
+	// booking.ErrStartInPast for an old slot, and the errors of Book.
+	BookChoice(ctx context.Context, guildID string, actor reservation.Actor, choice reservation.TimeChoice) (*reservation.FormOutcome, error)
+	// Book books a draft whose respawn and times are known. It returns
 	// booking.ErrInsufficientPermissions with the conflicts in the outcome.
-	BookForm(ctx context.Context, guildID string, actor reservation.Actor, form reservation.Form) (*reservation.FormOutcome, error)
-	// Book books a draft whose respawn and times are known. Errors as BookForm.
 	Book(ctx context.Context, guildID string, actor reservation.Actor, draft reservation.Draft) (*reservation.FormOutcome, error)
-	// EditForm reads the form and changes the reservation, without overbooking.
+	// EditChoice changes the reservation of the choice, without overbooking.
 	// It returns booking.ErrConflict with the conflicts in the outcome.
-	EditForm(ctx context.Context, guildID string, actor reservation.Actor, id int64, form reservation.Form) (*reservation.FormOutcome, error)
-	// Edit changes the reservation to a draft whose respawn and times are known.
-	Edit(ctx context.Context, guildID string, actor reservation.Actor, id int64, draft reservation.Draft) (*reservation.FormOutcome, error)
+	EditChoice(ctx context.Context, guildID string, actor reservation.Actor, choice reservation.TimeChoice) (*reservation.FormOutcome, error)
 	// Editable returns the reservation when the actor may edit it, else
 	// reservations.ErrForbidden, booking.ErrReservationEnded or ErrNotFound.
 	Editable(ctx context.Context, guildID string, actor reservation.Actor, id int64) (*reservation.ReservationWithSpot, error)

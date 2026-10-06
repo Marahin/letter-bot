@@ -1,13 +1,6 @@
 package reservation
 
-// Form is the text a member typed into a booking or an edit form.
-type Form struct {
-	Spot    string
-	StartAt string
-	EndAt   string
-}
-
-// FormOutcome is the result of a booking or an edit from a form.
+// FormOutcome is the result of a booking or an edit from the bot.
 type FormOutcome struct {
 	Draft    Draft
 	SpotName string
