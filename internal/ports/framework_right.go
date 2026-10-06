@@ -61,6 +61,9 @@ type ReservationRepository interface {
 	SelectKnownAuthors(ctx context.Context, guildID string, pattern string) ([]*reservation.KnownAuthor, error)
 }
 
+// SpotsLikeLimit is the most spots SelectGuildSpotsLike returns.
+const SpotsLikeLimit = 15
+
 type SpotRepository interface {
 	// SelectGuildSpots returns the guild spots ordered by name.
 	SelectGuildSpots(ctx context.Context, guildID string, includeArchived bool) ([]*spot.Spot, error)
@@ -68,7 +71,7 @@ type SpotRepository interface {
 	// SelectGuildSpotByName returns the active spot with the name (case-insensitive), or ports.ErrNotFound.
 	SelectGuildSpotByName(ctx context.Context, guildID string, name string) (*spot.Spot, error)
 
-	// SelectGuildSpotsLike returns up to 15 active spots whose name contains the pattern.
+	// SelectGuildSpotsLike returns up to SpotsLikeLimit active spots whose name contains the pattern.
 	SelectGuildSpotsLike(ctx context.Context, guildID string, namePattern string) ([]*spot.Spot, error)
 
 	// SelectGuildSpotByID returns an active or archived spot, or ports.ErrNotFound.

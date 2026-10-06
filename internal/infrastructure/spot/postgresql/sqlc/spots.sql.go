@@ -316,16 +316,17 @@ WHERE guild_id = $1::text
   AND archived_at IS NULL
   AND lower(name) LIKE '%' || lower($2) || '%'
 ORDER BY lower(name), id
-LIMIT 15
+LIMIT $3::int
 `
 
 type SelectGuildSpotsLikeParams struct {
 	GuildID     string
 	NamePattern string
+	RowLimit    int32
 }
 
 func (q *Queries) SelectGuildSpotsLike(ctx context.Context, arg SelectGuildSpotsLikeParams) ([]WebSpot, error) {
-	rows, err := q.db.Query(ctx, selectGuildSpotsLike, arg.GuildID, arg.NamePattern)
+	rows, err := q.db.Query(ctx, selectGuildSpotsLike, arg.GuildID, arg.NamePattern, arg.RowLimit)
 	if err != nil {
 		return nil, err
 	}

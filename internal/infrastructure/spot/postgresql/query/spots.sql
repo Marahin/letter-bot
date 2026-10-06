@@ -20,7 +20,7 @@ WHERE guild_id = @guild_id::text
   AND archived_at IS NULL
   AND lower(name) LIKE '%' || lower(@name_pattern) || '%'
 ORDER BY lower(name), id
-LIMIT 15;
+LIMIT @row_limit::int;
 
 -- name: SelectGuildSpotByID :one
 SELECT id, name, created_at, guild_id, archived_at

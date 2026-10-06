@@ -104,7 +104,7 @@ func TestSelectGuildSpotsLike(t *testing.T) {
 	// given
 	mock := newSpotMock(t)
 	mock.ExpectQuery("LIKE").
-		WithArgs("guild-1", `dra\_\%`).
+		WithArgs("guild-1", `dra\_\%`, int32(ports.SpotsLikeLimit)).
 		WillReturnRows(newGuildSpotRows().AddRow(int64(1), "Dragon Lords", time.Now(), "guild-1", nil))
 	repo := NewSpotRepository(mock)
 
@@ -119,7 +119,7 @@ func TestSelectGuildSpotsLike(t *testing.T) {
 func TestSelectGuildSpotsLike_Error(t *testing.T) {
 	// given
 	mock := newSpotMock(t)
-	mock.ExpectQuery("LIKE").WithArgs("guild-1", "dra").WillReturnError(errors.New("boom"))
+	mock.ExpectQuery("LIKE").WithArgs("guild-1", "dra", int32(ports.SpotsLikeLimit)).WillReturnError(errors.New("boom"))
 	repo := NewSpotRepository(mock)
 
 	// when

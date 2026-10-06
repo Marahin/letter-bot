@@ -15,15 +15,15 @@ import (
 type AmbiguousSpotError struct {
 	Query      string
 	Candidates []*spot.Spot
+	// Capped means more respawns may match than Candidates holds.
+	Capped bool
 }
 
 func (e *AmbiguousSpotError) Error() string {
 	return fmt.Sprintf("%d respawns match %q", len(e.Candidates), e.Query)
 }
 
-// resolveSpot finds the active respawn with the name, or the only one whose name
-// contains it.
-func (s *Service) resolveSpot(ctx context.Context, guildID, name string) (*spot.Spot, error) {
+func (s *Service) FindRespawn(ctx context.Context, guildID, name string) (*spot.Spot, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return nil, booking.ErrSpotNotFound
@@ -45,6 +45,6 @@ func (s *Service) resolveSpot(ctx context.Context, guildID, name string) (*spot.
 	case 1:
 		return candidates[0], nil
 	default:
-		return nil, &AmbiguousSpotError{Query: name, Candidates: candidates}
+		return nil, &AmbiguousSpotError{Query: name, Candidates: candidates, Capped: len(candidates) >= ports.SpotsLikeLimit}
 	}
 }

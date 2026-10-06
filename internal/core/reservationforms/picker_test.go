@@ -2,6 +2,7 @@ package reservationforms
 
 import (
 	"fmt"
+	"slices"
 	"testing"
 	"time"
 
@@ -339,8 +340,8 @@ func TestStartOptions(t *testing.T) {
 		require.Len(t, options, SelectOptions)
 		assert.True(t, options[0].Current)
 		assert.True(t, options[0].Selected)
-		assert.True(t, options[1].Now)
-		assert.True(t, options[SelectOptions-1].StartAt.Equal(at(5, 5, 30).AddDate(0, 0, 1)), "the last slot is dropped")
+		assert.False(t, slices.ContainsFunc(options, func(o reservation.StartOption) bool { return o.Now }), "the current start takes the place of now")
+		assert.True(t, options[SelectOptions-1].StartAt.Equal(at(6, 6, 0)), "the last slot stays")
 	})
 
 	t.Run("the current start on the grid is not repeated", func(t *testing.T) {

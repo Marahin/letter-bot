@@ -204,8 +204,7 @@ func TestDiscordFormatter_FormatFormError(t *testing.T) {
 	// given
 	f := NewFormatter()
 	errs := []error{
-		&reservationforms.AmbiguousSpotError{Query: "Lib"},
-		reservationforms.ErrTimeFormat,
+		reservationforms.ErrChoiceIncomplete,
 		booking.ErrSpotNotFound,
 		booking.ErrSpotArchived,
 		booking.ErrReserveNotAllowed,

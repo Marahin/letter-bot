@@ -7,7 +7,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 
 	"spot-assistant/internal/core/dto/reservation"
-	"spot-assistant/internal/core/dto/spot"
+	"spot-assistant/internal/core/reservationforms"
 )
 
 // The selects of step 1 are told apart by their index.
@@ -26,7 +26,7 @@ func (b *Bot) respawnStepView(p *reservation.RespawnPicker, state formAction, st
 		for _, u := range p.Usual {
 			options = append(options, spotOption(u.Spot, b.formatter.FormatUsualRespawn(u)))
 		}
-		components = append(components, row(respawnSelect(state, usualSelectIndex, "Your usual respawns", options)))
+		components = append(components, row(respawnSelect(state, usualSelectIndex, usualPlaceholder(p.Usual), options)))
 	}
 	for i, g := range p.Groups {
 		options := make([]plainOption, 0, len(g.Spots))
@@ -41,13 +41,9 @@ func (b *Bot) respawnStepView(p *reservation.RespawnPicker, state formAction, st
 }
 
 // matchesView replaces the respawn lists with the respawns that match a search.
-func (b *Bot) matchesView(query string, candidates []*spot.Spot, state formAction) formView {
-	capped := len(candidates) > maxSelectOptions
-	if capped {
-		candidates = candidates[:maxSelectOptions]
-	}
-	options := make([]plainOption, 0, len(candidates))
-	for _, sp := range candidates {
+func (b *Bot) matchesView(matches *reservationforms.AmbiguousSpotError, state formAction) formView {
+	options := make([]plainOption, 0, len(matches.Candidates))
+	for _, sp := range matches.Candidates {
 		options = append(options, spotOption(reservation.Spot{ID: sp.ID, Name: sp.Name}, ""))
 	}
 	all := state.as(actionRespawnPage)
@@ -60,7 +56,7 @@ func (b *Bot) matchesView(query string, candidates []*spot.Spot, state formActio
 		nav = append(nav, button("Back", discordgo.SecondaryButton, formAction{Kind: actionList}))
 	}
 	return formView{
-		content: b.formatter.FormatRespawnMatches(query, capped),
+		content: b.formatter.FormatRespawnMatches(matches.Query, matches.Capped),
 		components: []discordgo.MessageComponent{
 			row(respawnSelect(state, matchesSelectIndex, "Matching respawns", options)),
 			row(nav...),
@@ -72,6 +68,13 @@ func respawnSelect(state formAction, index int, placeholder string, options []pl
 	pick := state.as(actionRespawnPick)
 	pick.Index = index
 	return plainSelect{CustomID: pick.customID(), Placeholder: cut(placeholder, maxPlaceholderLength), Options: options}
+}
+
+func usualPlaceholder(usual []reservation.UsualRespawn) string {
+	if usual[0].Bookings == 0 {
+		return "Popular respawns"
+	}
+	return "Your usual respawns"
 }
 
 func groupPlaceholder(g reservation.RespawnGroup) string {

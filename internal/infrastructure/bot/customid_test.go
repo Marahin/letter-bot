@@ -18,10 +18,10 @@ func TestFormAction_RoundTrip(t *testing.T) {
 	end := start.Add(2 * time.Hour)
 	auto := reservation.AutoWindow
 	actions := []formAction{
-		{Kind: actionBookForm},
+		{Kind: actionBook},
 		{Kind: actionMine},
 		{Kind: actionList},
-		{Kind: actionEditForm, ReservationID: 5},
+		{Kind: actionEdit, ReservationID: 5},
 		{Kind: actionCancel, ReservationID: 5},
 		{Kind: actionCancelConfirm, ReservationID: 5},
 		{Kind: actionOverbook, SpotID: 7, StartAt: start, EndAt: end},

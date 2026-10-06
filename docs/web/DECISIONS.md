@@ -253,18 +253,21 @@ These items of the request were unclear or had a cost. Each has a decision.
       names and times caused too many errors. discordgo stays at v0.27.1 (see
       "Parity with scxmanager"), and a Discord form (modal) cannot hold a list,
       so booking is a private message (the wizard) that the bot changes in place.
+      "Book a respawn" and "My reservations" in a private message change that
+      message; in the summary channel they send a new one.
     - Step 1, the respawn. List 1, "Your usual respawns": the member's most
       booked active respawns of the last 90 days (most bookings first, then the
       latest), filled up to 25 with the most booked respawns of the server of the
-      last 30 days. No bookings: no list. Lists 2 to 4: the active respawns by
-      name, at most 75 on a page, cut into up to 3 lists of the same size. Each
-      list is named by the first letters of its first and last respawn ("A–F");
-      when two lists meet on the same letters, the bot adds letters ("A–Ka",
-      "Ko–Z", at most 3). "‹ Previous" and "More respawns ›" show only with more
-      than 75 respawns. "Search by name" opens a form with one text field: an
-      exact name (not case-sensitive) or the only name that contains the text
-      goes to step 2; more names show one "Matching respawns" list (up to 15);
-      no name shows step 1 with the error. Archived respawns never show.
+      last 30 days ("Popular respawns" when the member has none). No bookings: no
+      list. Lists 2 to 4: the active respawns by name, at most 75 on a page, cut
+      into up to 3 lists of the same size. Each list is named by the first
+      letters of its first and last respawn ("A–F"); when two lists meet on the
+      same letters, the bot adds letters ("A–Ka", "Ko–Z", at most 3).
+      "‹ Previous" and "More respawns ›" show only with more than 75 respawns.
+      "Search by name" opens a form with one text field: an exact name (not
+      case-sensitive) or the only name that contains the text goes to step 2;
+      more names show one "Matching respawns" list (up to 15); no name shows
+      step 1 with the error. Archived respawns never show.
     - Step 2, the time. The start list: "Now" (the current minute when the
       member books), then 24 half-hour starts from the next :00 or :30 (12
       hours). A start inside a reservation of the respawn says "Booked by X
@@ -292,7 +295,8 @@ These items of the request were unclear or had a cost. Each has a decision.
       panel or `/unbook`.
     - "Edit n" changes the list into step 2 for the reservation, with its
       respawn, start and length chosen. A start or a length that is not in the
-      list is added first, marked "(current)". The button is "Save", and "Back"
+      list is added first, marked "(current)"; such a start replaces "Now"
+      (a list holds 25 options). The button is "Save", and "Back"
       returns to the list. "Change respawn" goes to step 1 and keeps the start
       and the length. An ongoing reservation keeps its start ("Keep (started
       18:00)") and its respawn; only the length changes.

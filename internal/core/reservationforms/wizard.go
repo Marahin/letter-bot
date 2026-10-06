@@ -38,10 +38,6 @@ func (s *Service) RespawnPicker(ctx context.Context, guildID string, actor reser
 	return &picker, nil
 }
 
-func (s *Service) FindRespawn(ctx context.Context, guildID, name string) (*spot.Spot, error) {
-	return s.resolveSpot(ctx, guildID, name)
-}
-
 func (s *Service) TimePicker(ctx context.Context, guildID string, actor reservation.Actor, choice reservation.TimeChoice) (*reservation.TimePicker, error) {
 	now := s.now()
 	picker := &reservation.TimePicker{Windows: Windows}

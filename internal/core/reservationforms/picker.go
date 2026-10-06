@@ -214,16 +214,15 @@ func ResolveStart(choice reservation.TimeChoice, now time.Time) (time.Time, erro
 func startOptions(now time.Time, window int, choice reservation.TimeChoice, current time.Time, booked []*reservation.Reservation) []reservation.StartOption {
 	options := []reservation.StartOption{}
 	slots := StartSlots(now, window)
-	if !current.IsZero() && WindowOf(current, now) == window && !slices.ContainsFunc(slots, current.Equal) {
+	offGrid := !current.IsZero() && WindowOf(current, now) == window && !slices.ContainsFunc(slots, current.Equal)
+	if offGrid {
 		options = append(options, reservation.StartOption{StartAt: current, Current: true})
 	}
-	if window == 0 {
+	// A select holds 25 options. The current start takes the place of Now, so no slot is lost.
+	if window == 0 && !offGrid {
 		options = append(options, reservation.StartOption{StartAt: now.Truncate(time.Minute), Now: true, Selected: choice.Now})
 	}
 	for _, slot := range slots {
-		if len(options) == SelectOptions {
-			break
-		}
 		options = append(options, reservation.StartOption{StartAt: slot})
 	}
 	for i := range options {

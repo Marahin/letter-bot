@@ -10,6 +10,7 @@ import (
 	"spot-assistant/internal/common/collections"
 	"spot-assistant/internal/core/dto/spot"
 	"spot-assistant/internal/infrastructure/db/postgresql"
+	"spot-assistant/internal/ports"
 )
 
 type SpotRepository struct {
@@ -41,7 +42,7 @@ func (repo *SpotRepository) SelectGuildSpotByName(ctx context.Context, guildID s
 }
 
 func (repo *SpotRepository) SelectGuildSpotsLike(ctx context.Context, guildID string, namePattern string) ([]*spot.Spot, error) {
-	res, err := repo.q.SelectGuildSpotsLike(ctx, SelectGuildSpotsLikeParams{GuildID: guildID, NamePattern: postgresql.EscapeLike(namePattern)})
+	res, err := repo.q.SelectGuildSpotsLike(ctx, SelectGuildSpotsLikeParams{GuildID: guildID, NamePattern: postgresql.EscapeLike(namePattern), RowLimit: ports.SpotsLikeLimit})
 	if err != nil {
 		return []*spot.Spot{}, err
 	}

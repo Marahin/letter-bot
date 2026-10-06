@@ -185,8 +185,31 @@ func TestBookButton_OpensTheWizard(t *testing.T) {
 	// then
 	assert.Equal(t, discordgo.InteractionResponseDeferredChannelMessageWithSource, got.Type)
 	assert.Equal(t, discordgo.MessageFlagsEphemeral, got.Data.Flags)
-	assert.Contains(t, f.editedContent(t), "**Book a respawn**")
+	assert.Contains(t, f.editedContent(t), "**Book a respawn.**")
 	assert.Equal(t, []string{"lf1:rs:0", "lf1:rs:1", "lf1:rs:2", "lf1:rq"}, f.editedCustomIDs(t))
+}
+
+func TestBookAndListButtons_InAnEphemeralMessageUpdateInPlace(t *testing.T) {
+	for _, customID := range []string{"lf1:book", "lf1:mine"} {
+		t.Run(customID, func(t *testing.T) {
+			// given
+			f := newFormFixture(t)
+			f.premium(guildconfig.Config{})
+			f.forms.On("RespawnPicker", mock.Anything, "g1", isActor("u1", "Knight", true), 0).Return(respawnPicker(3), nil).Maybe()
+			f.forms.On("Mine", mock.Anything, "g1", isActor("u1", "Knight", true), listLimit).Return(&reservation.Page{}, nil).Maybe()
+			i := component(customID)
+			i.Message = &discordgo.Message{Flags: discordgo.MessageFlagsEphemeral}
+			got := f.expectRespond(i)
+			f.expectEdit(i)
+
+			// when
+			f.b.InteractionCreate(nil, i)
+
+			// then
+			assert.Equal(t, discordgo.InteractionResponseDeferredMessageUpdate, got.Type)
+			assert.Nil(t, got.Data)
+		})
+	}
 }
 
 func TestBookButton_RefusesAMemberWithoutTheReserveRank(t *testing.T) {
@@ -502,7 +525,7 @@ func TestSearchSubmit_NoMatchShowsTheLists(t *testing.T) {
 
 	// then
 	assert.True(t, strings.HasPrefix(f.editedContent(t), "No respawn has this name"))
-	assert.Contains(t, f.editedContent(t), "**Book a respawn**")
+	assert.Contains(t, f.editedContent(t), "**Book a respawn.**")
 }
 
 func TestSearchSubmit_Failure(t *testing.T) {

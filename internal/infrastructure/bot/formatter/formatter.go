@@ -220,9 +220,9 @@ func (f *DiscordFormatter) FormatRespawnStep(editing, empty bool, status string)
 		msg.WriteString(status + "\n\n")
 	}
 	if editing {
-		msg.WriteString("**Change the respawn** — pick it from a list.")
+		msg.WriteString("**Change the respawn.** Pick it from a list, or search by name.")
 	} else {
-		msg.WriteString("**Book a respawn** — pick it from a list.")
+		msg.WriteString("**Book a respawn.** Pick it from a list, or search by name.")
 	}
 	if empty {
 		msg.WriteString("\nThis server has no respawns yet. A manager can add them in the web panel.")
@@ -231,11 +231,11 @@ func (f *DiscordFormatter) FormatRespawnStep(editing, empty bool, status string)
 }
 
 // FormatRespawnMatches introduces the respawns that match a search. capped
-// means only some of them are listed.
+// means some may be missing.
 func (f *DiscordFormatter) FormatRespawnMatches(query string, capped bool) string {
 	msg := fmt.Sprintf("Respawns that match **%s**:", query)
 	if capped {
-		msg += "\nNot all of them fit in the list. If yours is missing, search for more of its name."
+		msg += "\nThe list may not show all of them. If yours is missing, search for more of its name."
 	}
 	return msg
 }
@@ -351,14 +351,9 @@ func (f *DiscordFormatter) FormatFormNoGuild() string {
 // FormatFormError explains why a form or a button failed. An unknown error gets
 // the generic message.
 func (f *DiscordFormatter) FormatFormError(err error) string {
-	var ambiguous *reservationforms.AmbiguousSpotError
 	switch {
-	case errors.As(err, &ambiguous):
-		return fmt.Sprintf("More than one respawn matches **%s**. Pick one from the list.", ambiguous.Query)
 	case errors.Is(err, reservationforms.ErrChoiceIncomplete):
 		return "Choose a start and a length first."
-	case errors.Is(err, reservationforms.ErrTimeFormat):
-		return "Write the times as HH:MM, e.g. 18:30."
 	case errors.Is(err, booking.ErrSpotNotFound):
 		return "No respawn has this name. Search for a part of it, e.g. Library, or pick it from the list."
 	case errors.Is(err, booking.ErrSpotArchived):
@@ -376,7 +371,7 @@ func (f *DiscordFormatter) FormatFormError(err error) string {
 	case errors.Is(err, booking.ErrQuotaExceeded):
 		return "You can book at most 3 hours within 24 hours."
 	case errors.Is(err, booking.ErrStartInPast):
-		return "The reservation cannot start in the past."
+		return "This start has passed. Choose a later start."
 	case errors.Is(err, booking.ErrInvalidRange):
 		return "The reservation must end after it starts."
 	case errors.Is(err, booking.ErrSpotLocked):

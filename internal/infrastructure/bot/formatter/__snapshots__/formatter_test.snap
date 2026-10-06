@@ -41,9 +41,7 @@ Your reservation was overbooked by test-nick (<@!test-id>)
 * <@!test-id>  has been clipped to: 2021-01-01 00:00 - 2021-01-01 01:10, 2021-01-01 01:30 - 2021-01-01 02:00
 ---
 [TestDiscordFormatter_FormatFormError - 1]
-More than one respawn matches **Lib**. Pick one from the list.
-/-/-/-/
-Write the times as HH:MM, e.g. 18:30.
+Choose a start and a length first.
 /-/-/-/
 No respawn has this name. Search for a part of it, e.g. Library, or pick it from the list.
 /-/-/-/
@@ -61,7 +59,7 @@ A reservation can be at most 3 hours long.
 /-/-/-/
 You can book at most 3 hours within 24 hours.
 /-/-/-/
-The reservation cannot start in the past.
+This start has passed. Choose a later start.
 /-/-/-/
 The reservation must end after it starts.
 /-/-/-/
@@ -91,17 +89,17 @@ Use this in a server.
 ---
 
 [TestDiscordFormatter_WizardTexts - 1]
-**Book a respawn** — pick it from a list.
+**Book a respawn.** Pick it from a list, or search by name.
 /-/-/-/
 No respawn has this name.
 
-**Change the respawn** — pick it from a list.
+**Change the respawn.** Pick it from a list, or search by name.
 This server has no respawns yet. A manager can add them in the web panel.
 /-/-/-/
 Respawns that match **lib**:
 /-/-/-/
 Respawns that match **lib**:
-Not all of them fit in the list. If yours is missing, search for more of its name.
+The list may not show all of them. If yours is missing, search for more of its name.
 /-/-/-/
 Popular on this server
 /-/-/-/

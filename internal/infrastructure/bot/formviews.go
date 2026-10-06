@@ -116,7 +116,7 @@ func cut(s string, limit int) string {
 
 func summaryComponents(webBaseURL string) []discordgo.MessageComponent {
 	buttons := []discordgo.MessageComponent{
-		button("Book a respawn", discordgo.PrimaryButton, formAction{Kind: actionBookForm}),
+		button("Book a respawn", discordgo.PrimaryButton, formAction{Kind: actionBook}),
 		button("My reservations", discordgo.SecondaryButton, formAction{Kind: actionMine}),
 	}
 	if webBaseURL != "" {
@@ -161,14 +161,14 @@ func (b *Bot) listView(page *reservation.Page, status string, now time.Time, ext
 		}
 		n := strconv.Itoa(i + 1)
 		components = append(components, row(
-			button("Edit "+n, discordgo.SecondaryButton, formAction{Kind: actionEditForm, ReservationID: r.Reservation.ID}),
+			button("Edit "+n, discordgo.SecondaryButton, formAction{Kind: actionEdit, ReservationID: r.Reservation.ID}),
 			button("Cancel "+n, discordgo.DangerButton, formAction{Kind: actionCancel, ReservationID: r.Reservation.ID}),
 		))
 	}
 	last := make([]discordgo.MessageComponent, 0, len(extra)+3)
 	last = append(last, extra...)
 	last = append(last,
-		button("Book a respawn", discordgo.PrimaryButton, formAction{Kind: actionBookForm}),
+		button("Book a respawn", discordgo.PrimaryButton, formAction{Kind: actionBook}),
 		button("Refresh", discordgo.SecondaryButton, formAction{Kind: actionList}),
 	)
 	if b.webBaseURL != "" {
@@ -193,7 +193,7 @@ func (b *Bot) bookSuccessView(outcome *reservation.FormOutcome) formView {
 		content: b.formatter.FormatFormBooked(outcome),
 		components: []discordgo.MessageComponent{row(
 			button("My reservations", discordgo.SecondaryButton, formAction{Kind: actionMine}),
-			button("Book another", discordgo.PrimaryButton, formAction{Kind: actionBookForm}),
+			button("Book another", discordgo.PrimaryButton, formAction{Kind: actionBook}),
 		)},
 	}
 }

@@ -115,10 +115,26 @@ func TestFindRespawn(t *testing.T) {
 	var ambiguous *AmbiguousSpotError
 	require.ErrorAs(t, ambiguousErr, &ambiguous)
 	assert.Equal(t, candidates, ambiguous.Candidates)
+	assert.False(t, ambiguous.Capped)
 	assert.Contains(t, ambiguous.Error(), "2 respawns")
 	assert.ErrorIs(t, noneErr, booking.ErrSpotNotFound)
 	assert.ErrorIs(t, emptyErr, booking.ErrSpotNotFound)
 	assert.ErrorIs(t, failed, boom)
+}
+
+func TestFindRespawn_FullListMayMissSome(t *testing.T) {
+	// given
+	f := newFixture(t)
+	f.spots.On("SelectGuildSpotByName", ctx, guildID, "a").Return(nil, ports.ErrNotFound)
+	f.spots.On("SelectGuildSpotsLike", ctx, guildID, "a").Return(numbered(ports.SpotsLikeLimit), nil)
+
+	// when
+	_, err := f.s.FindRespawn(ctx, guildID, "a")
+
+	// then
+	var ambiguous *AmbiguousSpotError
+	require.ErrorAs(t, err, &ambiguous)
+	assert.True(t, ambiguous.Capped)
 }
 
 func TestFindRespawn_ByNameFails(t *testing.T) {

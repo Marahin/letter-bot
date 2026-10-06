@@ -168,16 +168,20 @@ func TestRespawnStepView_CutsLongNames(t *testing.T) {
 
 func TestMatchesView(t *testing.T) {
 	for _, tt := range []struct {
-		name  string
-		count int
-		state formAction
+		name   string
+		count  int
+		capped bool
+		state  formAction
 	}{
-		{"two", 2, formAction{}},
-		{"too many, edit", 30, formAction{ReservationID: 9, Now: true, Length: time.Hour}},
+		{"two", 2, false, formAction{}},
+		{"too many, edit", 15, true, formAction{ReservationID: 9, Now: true, Length: time.Hour}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			// given
+			matches := &reservationforms.AmbiguousSpotError{Query: "respawn", Candidates: spotsNamed(tt.count), Capped: tt.capped}
+
 			// when
-			view := viewBot().matchesView("respawn", spotsNamed(tt.count), tt.state)
+			view := viewBot().matchesView(matches, tt.state)
 
 			// then
 			assertDiscordLimits(t, view)
@@ -221,7 +225,7 @@ func TestTimeStepView(t *testing.T) {
 
 	withCurrent := timePicker(reservation.TimeChoice{ReservationID: 9, StartAt: editing.StartAt, Length: 2 * time.Hour})
 	withCurrent.Editing = editing
-	withCurrent.Starts = append([]reservation.StartOption{{StartAt: editing.StartAt, Current: true, Selected: true}}, withCurrent.Starts[:reservationforms.SelectOptions-1]...)
+	withCurrent.Starts = append([]reservation.StartOption{{StartAt: editing.StartAt, Current: true, Selected: true}}, withCurrent.Starts[1:]...)
 	withCurrent.Lengths = append([]reservation.LengthOption{{Length: 70 * time.Minute, Current: true}}, withCurrent.Lengths...)
 
 	running := timePicker(reservation.TimeChoice{ReservationID: 9, StartAt: ongoing.StartAt, Length: 2 * time.Hour})

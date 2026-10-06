@@ -32,10 +32,10 @@ var errBadCustomID = errors.New("unknown custom id")
 type formActionKind int
 
 const (
-	actionBookForm formActionKind = iota + 1
+	actionBook formActionKind = iota + 1
 	actionMine
 	actionList
-	actionEditForm
+	actionEdit
 	actionCancel
 	actionCancelConfirm
 	actionOverbook
@@ -103,10 +103,10 @@ type actionLayout struct {
 }
 
 var actionLayouts = map[formActionKind]actionLayout{
-	actionBookForm:         {"book", nil},
+	actionBook:             {"book", nil},
 	actionMine:             {"mine", nil},
 	actionList:             {"list", nil},
-	actionEditForm:         {"edit", []idField{fieldReservation}},
+	actionEdit:             {"edit", []idField{fieldReservation}},
 	actionCancel:           {"cancel", []idField{fieldReservation}},
 	actionCancelConfirm:    {"cancelok", []idField{fieldReservation}},
 	actionOverbook:         {"ob", []idField{fieldSpot, fieldStart, fieldEnd}},

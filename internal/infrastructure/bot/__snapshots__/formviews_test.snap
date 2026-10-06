@@ -545,7 +545,7 @@
       "type": 1
     }
   ],
-  "content": "The reservation cannot start in the past."
+  "content": "This start has passed. Choose a later start."
 }
 ---
 
@@ -1205,7 +1205,7 @@
       "type": 1
     }
   ],
-  "content": "**Book a respawn** — pick it from a list."
+  "content": "**Book a respawn.** Pick it from a list, or search by name."
 }
 ---
 
@@ -1248,7 +1248,7 @@
       "type": 1
     }
   ],
-  "content": "**Book a respawn** — pick it from a list."
+  "content": "**Book a respawn.** Pick it from a list, or search by name."
 }
 ---
 
@@ -1267,7 +1267,7 @@
       "type": 1
     }
   ],
-  "content": "**Book a respawn** — pick it from a list.\nThis server has no respawns yet. A manager can add them in the web panel."
+  "content": "**Book a respawn.** Pick it from a list, or search by name.\nThis server has no respawns yet. A manager can add them in the web panel."
 }
 ---
 
@@ -1379,7 +1379,7 @@
       "type": 1
     }
   ],
-  "content": "**Change the respawn** — pick it from a list."
+  "content": "**Change the respawn.** Pick it from a list, or search by name."
 }
 ---
 
@@ -1390,7 +1390,7 @@
       "components": [
         {
           "custom_id": "lf1:rs:0",
-          "placeholder": "Your usual respawns",
+          "placeholder": "Popular respawns",
           "options": [
             {
               "label": "Usual 0",
@@ -1559,7 +1559,7 @@
       "type": 1
     }
   ],
-  "content": "No respawn has this name.\n\n**Book a respawn** — pick it from a list."
+  "content": "No respawn has this name.\n\n**Book a respawn.** Pick it from a list, or search by name."
 }
 ---
 
@@ -1622,100 +1622,60 @@
               "value": "1"
             },
             {
-              "label": "A respawn 001",
+              "label": "B respawn 001",
               "value": "2"
             },
             {
-              "label": "B respawn 002",
+              "label": "D respawn 002",
               "value": "3"
             },
             {
-              "label": "C respawn 003",
+              "label": "F respawn 003",
               "value": "4"
             },
             {
-              "label": "D respawn 004",
+              "label": "G respawn 004",
               "value": "5"
             },
             {
-              "label": "E respawn 005",
+              "label": "I respawn 005",
               "value": "6"
             },
             {
-              "label": "F respawn 006",
+              "label": "K respawn 006",
               "value": "7"
             },
             {
-              "label": "G respawn 007",
+              "label": "M respawn 007",
               "value": "8"
             },
             {
-              "label": "G respawn 008",
+              "label": "N respawn 008",
               "value": "9"
             },
             {
-              "label": "H respawn 009",
+              "label": "P respawn 009",
               "value": "10"
             },
             {
-              "label": "I respawn 010",
+              "label": "R respawn 010",
               "value": "11"
             },
             {
-              "label": "J respawn 011",
+              "label": "T respawn 011",
               "value": "12"
             },
             {
-              "label": "K respawn 012",
+              "label": "U respawn 012",
               "value": "13"
             },
             {
-              "label": "L respawn 013",
+              "label": "W respawn 013",
               "value": "14"
             },
             {
-              "label": "M respawn 014",
+              "label": "Y respawn 014",
               "value": "15"
-            },
-            {
-              "label": "N respawn 015",
-              "value": "16"
-            },
-            {
-              "label": "N respawn 016",
-              "value": "17"
-            },
-            {
-              "label": "O respawn 017",
-              "value": "18"
-            },
-            {
-              "label": "P respawn 018",
-              "value": "19"
-            },
-            {
-              "label": "Q respawn 019",
-              "value": "20"
-            },
-            {
-              "label": "R respawn 020",
-              "value": "21"
-            },
-            {
-              "label": "S respawn 021",
-              "value": "22"
-            },
-            {
-              "label": "T respawn 022",
-              "value": "23"
-            },
-            {
-              "label": "T respawn 023",
-              "value": "24"
-            },
-            {
-              "label": "U respawn 024",
-              "value": "25"
             }
           ],
           "type": 3
@@ -1747,7 +1707,7 @@
       "type": 1
     }
   ],
-  "content": "Respawns that match **respawn**:\nNot all of them fit in the list. If yours is missing, search for more of its name."
+  "content": "Respawns that match **respawn**:\nThe list may not show all of them. If yours is missing, search for more of its name."
 }
 ---
 
@@ -2633,11 +2593,6 @@
               "default": true
             },
             {
-              "label": "Now",
-              "value": "now",
-              "description": "Free"
-            },
-            {
               "label": "18:30",
               "value": "1791225000",
               "description": "Free"
@@ -2750,6 +2705,11 @@
             {
               "label": "05:30 tomorrow",
               "value": "1791264600",
+              "description": "Free"
+            },
+            {
+              "label": "06:00 tomorrow",
+              "value": "1791266400",
               "description": "Free"
             }
           ],

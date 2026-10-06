@@ -105,11 +105,11 @@ func (b *Bot) runFormAction(i *discordgo.InteractionCreate, customID string, sel
 	case actionSearch, actionEditSearch:
 		b.openSearch(ctx, i, action)
 	case actionMine:
-		b.deferred(ctx, i, discordgo.InteractionResponseDeferredChannelMessageWithSource, func(req *formRequest) formView {
+		b.deferred(ctx, i, openKind(i), func(req *formRequest) formView {
 			return b.myReservationsView(ctx, req, "")
 		})
-	case actionBookForm:
-		b.deferred(ctx, i, discordgo.InteractionResponseDeferredChannelMessageWithSource, func(req *formRequest) formView {
+	case actionBook:
+		b.deferred(ctx, i, openKind(i), func(req *formRequest) formView {
 			return b.respawnStep(ctx, req, formAction{}, "")
 		})
 	default:
@@ -117,6 +117,15 @@ func (b *Bot) runFormAction(i *discordgo.InteractionCreate, customID string, sel
 			return b.updateInPlace(ctx, req, action, selected, query)
 		})
 	}
+}
+
+// openKind answers a click in the public summary with a new ephemeral message,
+// and a click in an ephemeral message in place, so the member keeps one message.
+func openKind(i *discordgo.InteractionCreate) discordgo.InteractionResponseType {
+	if i.Message != nil && i.Message.Flags&discordgo.MessageFlagsEphemeral != 0 {
+		return discordgo.InteractionResponseDeferredMessageUpdate
+	}
+	return discordgo.InteractionResponseDeferredChannelMessageWithSource
 }
 
 // deferred acknowledges the interaction first, so a slow database does not miss
@@ -166,7 +175,7 @@ func (b *Bot) updateInPlace(ctx context.Context, req *formRequest, action formAc
 		}
 		draft := reservation.Draft{SpotID: action.SpotID, StartAt: action.StartAt, EndAt: action.EndAt, Overbook: true}
 		return b.bookDraft(ctx, req, draft)
-	case actionEditForm:
+	case actionEdit:
 		return b.timeStep(ctx, req, formAction{ReservationID: action.ReservationID, Window: reservation.AutoWindow})
 	case actionRespawnPage, actionEditRespawnPage:
 		return b.respawnStep(ctx, req, action, "")
@@ -249,7 +258,7 @@ func (b *Bot) searchResult(ctx context.Context, req *formRequest, state formActi
 		state.SpotID, state.Window = sp.ID, reservation.AutoWindow
 		return b.timeStep(ctx, req, state)
 	case errors.As(err, &ambiguous):
-		return b.matchesView(ambiguous.Query, ambiguous.Candidates, state)
+		return b.matchesView(ambiguous, state)
 	case errors.Is(err, booking.ErrSpotNotFound):
 		state.Page = 0
 		return b.respawnStep(ctx, req, state, b.formatter.FormatFormError(err))
