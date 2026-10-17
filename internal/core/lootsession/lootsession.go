@@ -17,8 +17,17 @@ import (
 	"spot-assistant/internal/ports"
 )
 
-// FutureSlack tolerates a client clock a little ahead of ours.
-const FutureSlack = 5 * time.Minute
+const (
+	// FutureSlack tolerates a client clock a little ahead of ours.
+	FutureSlack = 5 * time.Minute
+	// MaxFigure bounds each member figure (gp, damage, healing): far above any hunt, and the party
+	// sum of MaxPartySize members stays far from the int64 limit.
+	MaxFigure int64 = 1e12
+	// MaxPartySize is the most pasted lines a counted session may have.
+	MaxPartySize = 10
+	// MinDuration drops a session too short to say anything per hour.
+	MinDuration = time.Minute
+)
 
 type Service struct {
 	repo ports.LootSessionRepository
@@ -39,12 +48,15 @@ func (s *Service) Record(ctx context.Context, sub loot.Submission, count bool) (
 	if !ok {
 		return loot.Outcome{Status: loot.StatusNoTime}, nil
 	}
+	if !inRange(sub, to.Sub(from)) {
+		return loot.Outcome{Status: loot.StatusOutOfRange}, nil
+	}
 	if to.After(s.now().Add(FutureSlack)) {
 		return loot.Outcome{Status: loot.StatusFuture}, nil
 	}
 	session := NewSession(sub, from, to)
 	if len(session.Members) == 0 {
-		return loot.Outcome{Status: loot.StatusUnmatched}, nil
+		return loot.Outcome{Status: loot.StatusOutOfRange}, nil
 	}
 
 	id, err := s.repo.SaveSession(ctx, session)
@@ -63,7 +75,12 @@ func (s *Service) Record(ctx context.Context, sub loot.Submission, count bool) (
 	if match == nil {
 		return loot.Outcome{Status: loot.StatusUnmatched}, nil
 	}
-	counted, err := s.repo.Pick(ctx, id, match.ReservationID, int64(overlap/time.Second))
+	counted, err := s.repo.Pick(ctx, loot.Attribution{
+		SessionID:      id,
+		ReservationID:  match.ReservationID,
+		OverlapSeconds: int64(overlap / time.Second),
+		ByAuthor:       sub.SubmittedBy != "" && sub.SubmittedBy == match.AuthorDiscordID,
+	})
 	if err != nil {
 		return loot.Outcome{}, err
 	}
@@ -73,10 +90,29 @@ func (s *Service) Record(ctx context.Context, sub loot.Submission, count bool) (
 	return loot.Outcome{Status: loot.StatusCounted, Match: match}, nil
 }
 
+// inRange bounds what a public form may store: the length of a reservation at most,
+// a Party Hunt's size, and figures no hunt reaches.
+func inRange(sub loot.Submission, duration time.Duration) bool {
+	if duration < MinDuration || duration > booking.MaximumReservationLength {
+		return false
+	}
+	if len(sub.Members) == 0 || len(sub.Members) > MaxPartySize {
+		return false
+	}
+	for _, m := range sub.Members {
+		for _, v := range []int64{m.Loot, m.Supplies, m.Balance, m.Damage, m.Healing} {
+			if v > MaxFigure || v < -MaxFigure {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 // NewSession builds the stored session. A character named twice keeps its first line; the
 // party figures and the member count still cover every line, as the split does.
 func NewSession(sub loot.Submission, from, to time.Time) loot.Session {
-	s := loot.Session{StartedAt: from, EndedAt: to, Duration: to.Sub(from), PartySize: len(sub.Members)}
+	s := loot.Session{SubmittedBy: sub.SubmittedBy, StartedAt: from, EndedAt: to, Duration: to.Sub(from), PartySize: len(sub.Members)}
 	seen := map[string]bool{}
 	for _, m := range sub.Members {
 		s.Loot += m.Loot

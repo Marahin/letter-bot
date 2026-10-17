@@ -28,8 +28,6 @@ type RangeSelection struct {
 	// cleared is set by a present-but-empty "days", the picker's reset. Without
 	// it the stored cookie would restore the range the user just cleared.
 	cleared bool
-	// cross is a cross-server page: the selection lives in the cross range cookie.
-	cross bool
 }
 
 // hasExplicitRange reports whether the query pins a day selection (the calendar's
@@ -83,11 +81,10 @@ func (d *Deps) WithRangeSelection(next http.HandlerFunc) http.HandlerFunc {
 }
 
 // WithCrossRangeSelection is WithRangeSelection for the cross-server pages, which keep one
-// selection of their own: PersistRangeSelection then writes it whatever guildID it is given.
+// selection of their own; they persist it with PersistCrossRangeSelection.
 func (d *Deps) WithCrossRangeSelection(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		sel := resolveRangeSelectionFrom(r, crossRangeCookie(r))
-		sel.cross = true
 		next(w, r.WithContext(context.WithValue(r.Context(), ctxRangeSelection, sel)))
 	}
 }
@@ -109,15 +106,17 @@ func RangeSelectionFrom(ctx context.Context) RangeSelection {
 // page.
 func (d *Deps) PersistRangeSelection(w http.ResponseWriter, r *http.Request, guildID string, days []time.Time) {
 	sel := RangeSelectionFrom(r.Context())
-	if sel.cross {
-		guildID = crossRangeScope
-	}
 	switch {
 	case sel.cleared:
 		d.SetRangeSelectionCookie(w, guildID, "")
 	case sel.fromQuery:
 		d.SetRangeSelectionCookie(w, guildID, EncodeDays(days))
 	}
+}
+
+// PersistCrossRangeSelection is PersistRangeSelection for the cross-server pages' own cookie.
+func (d *Deps) PersistCrossRangeSelection(w http.ResponseWriter, r *http.Request, days []time.Time) {
+	d.PersistRangeSelection(w, r, crossRangeScope, days)
 }
 
 // EncodeDays joins days as a comma-separated YYYY-MM-DD list, the form of both

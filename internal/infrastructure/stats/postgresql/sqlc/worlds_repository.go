@@ -19,7 +19,7 @@ func NewWorldStatsRepository(db DBTX) *WorldStatsRepository {
 func (r *WorldStatsRepository) PublicWorlds(ctx context.Context) ([]stats.World, error) {
 	rows, err := r.q.PublicWorlds(ctx)
 	if err != nil {
-		return nil, err
+		return nil, postgresql.MapError(err)
 	}
 	out := make([]stats.World, len(rows))
 	for i, row := range rows {
@@ -31,7 +31,7 @@ func (r *WorldStatsRepository) PublicWorlds(ctx context.Context) ([]stats.World,
 func (r *WorldStatsRepository) WorldTotals(ctx context.Context, f stats.WorldFilter) ([]stats.WorldRow, error) {
 	rows, err := r.q.WorldTotals(ctx, WorldTotalsParams{WorldKey: f.WorldKey, FromT: ts(f.From), ToT: ts(f.To), SpawnKey: f.SpawnKey})
 	if err != nil {
-		return nil, err
+		return nil, postgresql.MapError(err)
 	}
 	out := make([]stats.WorldRow, len(rows))
 	for i, row := range rows {
@@ -53,7 +53,7 @@ func (r *WorldStatsRepository) WorldTotals(ctx context.Context, f stats.WorldFil
 func (r *WorldStatsRepository) WorldGuildTotals(ctx context.Context, f stats.WorldFilter) ([]stats.WorldGuildRow, error) {
 	rows, err := r.q.WorldGuildTotals(ctx, WorldGuildTotalsParams{WorldKey: f.WorldKey, FromT: ts(f.From), ToT: ts(f.To), SpawnKey: f.SpawnKey})
 	if err != nil {
-		return nil, err
+		return nil, postgresql.MapError(err)
 	}
 	out := make([]stats.WorldGuildRow, len(rows))
 	for i, row := range rows {
@@ -80,7 +80,7 @@ func (r *WorldStatsRepository) SpawnTotals(ctx context.Context, q stats.WorldQue
 		MinExpSeconds: q.MinExpSeconds, MinLootSeconds: q.MinLootSeconds,
 	})
 	if err != nil {
-		return stats.Page[stats.SpawnRow]{}, err
+		return stats.Page[stats.SpawnRow]{}, postgresql.MapError(err)
 	}
 	page := stats.Page[stats.SpawnRow]{Rows: make([]stats.SpawnRow, len(rows))}
 	for i, row := range rows {
@@ -103,7 +103,7 @@ func (r *WorldStatsRepository) SpawnTotals(ctx context.Context, q stats.WorldQue
 func (r *WorldStatsRepository) SpawnSpotTotals(ctx context.Context, f stats.WorldFilter) ([]stats.SpawnSpotRow, error) {
 	rows, err := r.q.SpawnSpotTotals(ctx, SpawnSpotTotalsParams{WorldKey: f.WorldKey, FromT: ts(f.From), ToT: ts(f.To), SpawnKey: f.SpawnKey})
 	if err != nil {
-		return nil, err
+		return nil, postgresql.MapError(err)
 	}
 	out := make([]stats.SpawnSpotRow, len(rows))
 	for i, row := range rows {
@@ -136,7 +136,7 @@ func (r *WorldStatsRepository) WorldCharacterBoards(ctx context.Context, f stats
 		WorldKey: f.WorldKey, FromT: ts(f.From), ToT: ts(f.To), SpawnKey: f.SpawnKey, Lim: int32(n),
 	})
 	if err != nil {
-		return stats.WorldCharacterBoards{}, err
+		return stats.WorldCharacterBoards{}, postgresql.MapError(err)
 	}
 	var boards stats.WorldCharacterBoards
 	for _, row := range rows {

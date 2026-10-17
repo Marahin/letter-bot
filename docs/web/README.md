@@ -275,14 +275,18 @@ default. A counted session with the `From … to …` line is stored in
 zone, `TZ`; the analyser prints the player's local time without a zone), the
 party totals and each member's figures. The pasted text is not stored. A hash of
 the times and the figures makes a paste count once (a recalculation, a "Load").
+A session shorter than a minute or longer than a reservation, without a named
+member, with more than 10 lines or with a figure beyond ±10^12 is not stored.
 The session then belongs to the reservation of a server with premium and the bot
 present that has one of the members among its author characters and overlaps
-at least half of the session (largest overlap, then latest start). A
-reservation keeps the session with the largest overlap; on a tie the one it has.
-A line under the result says what happened: counted (with a link to the respawn
-stats), unticked, no session line, a session in the future (not stored), no
-matching reservation, the reservation keeps another session, or a storage error
-(the split still shows).
+at least half of the session (largest overlap, then latest start). A session the
+reservation's author pasted while signed in wins, and no one else's replaces it
+(decision 78). Otherwise a reservation keeps the session with the largest
+overlap; on a tie the one it has. Editing a reservation's spot, times or author
+drops its session. A line under the result says what happened: counted (with a
+link to the respawn stats), unticked, no session line, a session in the future
+or out of bounds (not stored), no matching reservation, the reservation keeps
+another session, or a storage error (the split still shows).
 
 To test the loot queries against a real database, run
 `LETTER_TEST_DATABASE_URL=postgres://… go test -run TestLootRepository_Queries ./internal/infrastructure/loot/postgresql/sqlc/`
@@ -311,7 +315,10 @@ several worlds and several servers per world show without a list in the code.
   spawn answers 404.
 
 The range picker works as on the server pages, with its own cookie
-(`letter_range_worlds`) and no dots for days with data. "Worlds" and "Spawns" are
+(`letter_range_worlds`) and no dots for days with data. The answers of the
+cross-server queries are kept in memory for 60 seconds
+(`internal/infrastructure/stats/cache`, at most 512 entries; errors are not
+kept), so the pages may lag a minute behind a new reservation or session. "Worlds" and "Spawns" are
 in the signed-out top bar and in the signed-in sidebar. The queries are in
 `internal/infrastructure/stats/postgresql/query/worlds.sql`; to test them,
 run `LETTER_TEST_DATABASE_URL=postgres://… go test -run TestWorldStatsRepository_Queries ./internal/infrastructure/stats/postgresql/sqlc/`

@@ -151,6 +151,7 @@ type HighscoreSnapshot struct {
 type LootSession struct {
 	ID              int64
 	ContentHash     []byte
+	SubmittedBy     string
 	StartedAt       pgtype.Timestamptz
 	EndedAt         pgtype.Timestamptz
 	DurationSeconds int32
@@ -191,6 +192,7 @@ type ReservationLoot struct {
 	ReservationID  int64
 	SessionID      int64
 	OverlapSeconds int32
+	ByAuthor       bool
 	PickedAt       pgtype.Timestamptz
 }
 

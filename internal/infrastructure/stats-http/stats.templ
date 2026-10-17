@@ -223,13 +223,13 @@ templ kpis(t stats.Totals, extra []kpi) {
 		@tile(i18n.T(ctx, "stats.kpi.reservations"), formatInt(ctx, t.Reservations), "")
 		@tile(i18n.T(ctx, "stats.kpi.hours"), formatHours(ctx, t), i18n.T(ctx, "stats.kpi.hours_hint"))
 		{{ exp, hasExp := formatExp(ctx, t) }}
-		@figureTile(i18n.T(ctx, "stats.kpi.exp"), exp, hasExp, coverage(ctx, t), false, 0)
+		@figureTile(i18n.T(ctx, "stats.kpi.exp"), exp, hasExp, coverage(ctx, t), expSource, signNone)
 		{{ perHour, hasPerHour := formatExpPerHour(ctx, t) }}
-		@figureTile(i18n.T(ctx, "stats.kpi.exp_per_hour"), perHour, hasPerHour, i18n.T(ctx, "stats.kpi.exp_per_hour_hint"), false, 0)
+		@figureTile(i18n.T(ctx, "stats.kpi.exp_per_hour"), perHour, hasPerHour, i18n.T(ctx, "stats.kpi.exp_per_hour_hint"), expSource, signNone)
 		{{ profit, hasProfit := formatGold(ctx, t.ProfitTotal()) }}
-		@figureTile(i18n.T(ctx, "stats.kpi.profit"), profit, hasProfit, lootCoverage(ctx, t), true, profitSign(stats.SortProfit, t))
+		@figureTile(i18n.T(ctx, "stats.kpi.profit"), profit, hasProfit, lootCoverage(ctx, t), lootSource, profitSign(stats.SortProfit, t))
 		{{ profitH, hasProfitH := formatGoldPerHour(ctx, t) }}
-		@figureTile(i18n.T(ctx, "stats.kpi.profit_per_hour"), profitH, hasProfitH, i18n.T(ctx, "stats.kpi.profit_per_hour_hint"), true, profitSign(stats.SortProfitPerHour, t))
+		@figureTile(i18n.T(ctx, "stats.kpi.profit_per_hour"), profitH, hasProfitH, i18n.T(ctx, "stats.kpi.profit_per_hour_hint"), lootSource, profitSign(stats.SortProfitPerHour, t))
 		for _, k := range extra {
 			@tile(k.Label, k.Value, "")
 		}
@@ -240,9 +240,9 @@ templ kpis(t stats.Totals, extra []kpi) {
 templ lootTiles(t stats.Totals) {
 	<dl class="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-6">
 		{{ lootValue, hasLoot := formatGold(ctx, t.LootTotal()) }}
-		@figureTile(i18n.T(ctx, "stats.kpi.loot"), lootValue, hasLoot, "", true, 0)
+		@figureTile(i18n.T(ctx, "stats.kpi.loot"), lootValue, hasLoot, "", lootSource, signNone)
 		{{ supplies, hasSupplies := formatGold(ctx, t.SuppliesTotal()) }}
-		@figureTile(i18n.T(ctx, "stats.kpi.supplies"), supplies, hasSupplies, "", true, 0)
+		@figureTile(i18n.T(ctx, "stats.kpi.supplies"), supplies, hasSupplies, "", lootSource, signNone)
 	</dl>
 }
 
@@ -256,16 +256,16 @@ templ tile(label, value, hint string) {
 	</div>
 }
 
-// figureTile is a tile whose figure may have no data; loot picks the tooltip that says why.
-// sign colours a profit: green for a gain, red for a loss (which keeps its minus sign).
-templ figureTile(label, value string, ok bool, hint string, loot bool, sign int) {
+// figureTile is a tile whose figure may have no data; src picks the tooltip that says why.
+// A loss keeps its minus sign.
+templ figureTile(label, value string, ok bool, hint string, src source, s sign) {
 	<div class={ cardClass, "min-w-0 px-4 py-3" }>
 		<dt class={ labelClass }>{ label }</dt>
 		if ok {
-			<dd class={ "mt-1 truncate font-mono text-2xl font-semibold tabular-nums", signClass(sign, "text-zone-50") } title={ value }>{ value }</dd>
+			<dd class={ "mt-1 truncate font-mono text-2xl font-semibold tabular-nums", signClass(s, "text-zone-50") } title={ value }>{ value }</dd>
 		} else {
 			<dd class="mt-1 text-lg font-semibold text-zone-300">
-				@noData(loot)
+				@noData(src)
 			</dd>
 		}
 		if hint != "" {
@@ -276,20 +276,20 @@ templ figureTile(label, value string, ok bool, hint string, loot bool, sign int)
 
 // noData stands in for every figure without data, never 0. The tooltip and the page note say
 // why: experience comes from the world's top 1000, loot from sessions pasted in the Loot Calculator.
-templ noData(loot bool) {
-	if loot {
-		<span class="cursor-help text-zone-400 underline decoration-dotted decoration-zone-600 underline-offset-4" title={ i18n.T(ctx, "stats.loot.no_data_tip") }>{ i18n.T(ctx, "stats.exp.no_data") }</span>
+templ noData(src source) {
+	if src == lootSource {
+		<span class="cursor-help text-zone-400 underline decoration-dotted decoration-zone-600 underline-offset-4" title={ i18n.T(ctx, "stats.loot.no_data_tip") }>{ i18n.T(ctx, "stats.no_data") }</span>
 	} else {
-		<span class="cursor-help text-zone-400 underline decoration-dotted decoration-zone-600 underline-offset-4" title={ i18n.T(ctx, "stats.exp.no_data_tip") }>{ i18n.T(ctx, "stats.exp.no_data") }</span>
+		<span class="cursor-help text-zone-400 underline decoration-dotted decoration-zone-600 underline-offset-4" title={ i18n.T(ctx, "stats.exp.no_data_tip") }>{ i18n.T(ctx, "stats.no_data") }</span>
 	}
 }
 
 // signClass lives here, not in view.go, so Tailwind (which scans templ output only) keeps the classes.
-func signClass(sign int, neutral string) string {
-	switch {
-	case sign > 0:
+func signClass(s sign, neutral string) string {
+	switch s {
+	case signGain:
 		return "text-emerald-400"
-	case sign < 0:
+	case signLoss:
 		return "text-rose-400"
 	default:
 		return neutral
@@ -298,14 +298,14 @@ func signClass(sign int, neutral string) string {
 
 templ noDataBlock(text string) {
 	<div class="mt-4 rounded-md border border-dashed border-zone-700 px-4 py-6 text-center text-sm text-zone-400">
-		<p class="font-semibold text-zone-300">{ i18n.T(ctx, "stats.exp.no_data") }</p>
+		<p class="font-semibold text-zone-300">{ i18n.T(ctx, "stats.no_data") }</p>
 		<p class="mx-auto mt-1 max-w-xl">{ text }</p>
 	</div>
 }
 
 templ noDataNote() {
 	<div class="mt-8 max-w-3xl space-y-2 text-xs leading-relaxed text-zone-400">
-		<p><span class="font-semibold text-zone-300">{ i18n.T(ctx, "stats.exp.no_data") }:</span> { i18n.T(ctx, "stats.exp.no_data_tip") }</p>
+		<p><span class="font-semibold text-zone-300">{ i18n.T(ctx, "stats.no_data") }:</span> { i18n.T(ctx, "stats.exp.no_data_tip") }</p>
 		<p>{ i18n.T(ctx, "stats.loot.no_data_tip") }</p>
 	</div>
 }
@@ -478,7 +478,7 @@ templ figureCell(key stats.SortKey, r tableRow) {
 		if ok {
 			{ text }
 		} else {
-			@noData(isLootKey(key))
+			@noData(keySource(key))
 		}
 	</td>
 }
@@ -575,7 +575,7 @@ templ recentReservations(v characterView) {
 									case "ok":
 										{ text }
 									case "no_data":
-										@noData(false)
+										@noData(expSource)
 									default:
 										<span class="cursor-help text-zone-400" title={ i18n.T(ctx, "stats.exp.pending_tip") }>{ text }</span>
 								}

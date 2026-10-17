@@ -29,7 +29,7 @@ func TestParseStamp(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// when
-			got, ok := ParseStamp(tt.in, berlin)
+			got, ok := parseStamp(tt.in, berlin)
 
 			// then
 			assert.Equal(t, tt.ok, ok)
@@ -40,7 +40,7 @@ func TestParseStamp(t *testing.T) {
 	}
 }
 
-func TestSession_Interval(t *testing.T) {
+func TestInterval(t *testing.T) {
 	// given
 	berlin, err := time.LoadLocation("Europe/Berlin")
 	require.NoError(t, err)
@@ -62,7 +62,7 @@ func TestSession_Interval(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// when
-			from, to, ok := Session{From: tt.from, To: tt.to}.Interval(berlin)
+			from, to, ok := Interval(tt.from, tt.to, berlin)
 
 			// then
 			assert.Equal(t, tt.ok, ok)

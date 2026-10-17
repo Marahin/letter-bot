@@ -36,6 +36,7 @@ import (
 	spotsqlc "spot-assistant/internal/infrastructure/spot/postgresql/sqlc"
 	spotshttp "spot-assistant/internal/infrastructure/spots-http"
 	statshttp "spot-assistant/internal/infrastructure/stats-http"
+	statscache "spot-assistant/internal/infrastructure/stats/cache"
 	statssqlc "spot-assistant/internal/infrastructure/stats/postgresql/sqlc"
 	toolshttp "spot-assistant/internal/infrastructure/tools-http"
 	"spot-assistant/internal/infrastructure/web"
@@ -70,10 +71,6 @@ func newNotifier(pool *pgxpool.Pool) *notifypg.Notifier {
 
 func newStatsRepository(pool *pgxpool.Pool, tz TimeZone) (*statssqlc.StatsRepository, error) {
 	return statssqlc.NewStatsRepository(pool, string(tz))
-}
-
-func newWorldStatsRepository(pool *pgxpool.Pool) *statssqlc.WorldStatsRepository {
-	return statssqlc.NewWorldStatsRepository(pool)
 }
 
 // newBooking books on the web and signals the bot, which posts on Discord.
@@ -118,8 +115,9 @@ func newLootSessionService(repo *lootsqlc.LootRepository) *lootsession.Service {
 	return lootsession.New(repo, time.Local)
 }
 
+// newWorldStatsService caches the cross-server queries: anyone can open the public pages.
 func newWorldStatsService(repo *statssqlc.WorldStatsRepository) *worldstats.Service {
-	return worldstats.New(repo)
+	return worldstats.New(statscache.NewWorldStats(repo))
 }
 
 type serverParams struct {

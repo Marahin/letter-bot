@@ -5,18 +5,15 @@ package worldstats
 import (
 	"context"
 	"sort"
-	"strings"
 
+	"spot-assistant/internal/core/dto/experience"
 	"spot-assistant/internal/core/dto/stats"
+	corestats "spot-assistant/internal/core/stats"
 	"spot-assistant/internal/ports"
 )
 
-const (
-	// BoardSize is the number of rows in each world page leaderboard.
-	BoardSize = 10
-	// MinPerHourHours keeps a single short hunt off the per-hour leaderboards.
-	MinPerHourHours = 3.0
-)
+// BoardSize is the number of rows in each world page leaderboard.
+const BoardSize = 10
 
 type Service struct {
 	repo ports.WorldStatsRepository
@@ -26,9 +23,9 @@ func New(repo ports.WorldStatsRepository) *Service {
 	return &Service{repo: repo}
 }
 
-// Key normalizes a world or a respawn name as the SQL does: lower(btrim(name)).
+// Key normalizes a world or a respawn name as the SQL does (lower(btrim(name))), like a character name.
 func Key(name string) string {
-	return strings.ToLower(strings.TrimSpace(name))
+	return experience.CharacterKey(name)
 }
 
 func filter(rng stats.Range) stats.WorldFilter {
@@ -60,12 +57,17 @@ func (s *Service) World(ctx context.Context, name string, rng stats.Range) (*sta
 	if err != nil {
 		return nil, err
 	}
-	minSeconds := int64(MinPerHourHours * 3600)
-	byExp, err := s.repo.SpawnTotals(ctx, stats.WorldQuery{WorldFilter: f, Sort: stats.Sort{Key: stats.SortExpPerHour}, Limit: BoardSize, MinExpSeconds: minSeconds})
+	byExp, err := s.repo.SpawnTotals(ctx, stats.WorldQuery{
+		WorldFilter: f, Sort: stats.Sort{Key: stats.SortExpPerHour}, Limit: BoardSize,
+		MinExpSeconds: int64(corestats.MinExpPerHourHours * 3600),
+	})
 	if err != nil {
 		return nil, err
 	}
-	byProfit, err := s.repo.SpawnTotals(ctx, stats.WorldQuery{WorldFilter: f, Sort: stats.Sort{Key: stats.SortProfitPerHour}, Limit: BoardSize, MinLootSeconds: minSeconds})
+	byProfit, err := s.repo.SpawnTotals(ctx, stats.WorldQuery{
+		WorldFilter: f, Sort: stats.Sort{Key: stats.SortProfitPerHour}, Limit: BoardSize,
+		MinLootSeconds: int64(corestats.MinProfitPerHourHours * 3600),
+	})
 	if err != nil {
 		return nil, err
 	}

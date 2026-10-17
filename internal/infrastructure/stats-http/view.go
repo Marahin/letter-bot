@@ -296,18 +296,42 @@ func isLootKey(key stats.SortKey) bool {
 	return key == stats.SortProfit || key == stats.SortProfitPerHour
 }
 
-// profitSign is -1, 0 or 1 for the profit figure of column key, 0 without data.
-func profitSign(key stats.SortKey, t stats.Totals) int {
+// source is where a figure comes from: a figure without data says why in its tooltip.
+type source int
+
+const (
+	expSource source = iota
+	lootSource
+)
+
+func keySource(key stats.SortKey) source {
+	if isLootKey(key) {
+		return lootSource
+	}
+	return expSource
+}
+
+// sign colours a profit: green for a gain, red for a loss.
+type sign int
+
+const (
+	signLoss sign = -1
+	signNone sign = 0
+	signGain sign = 1
+)
+
+// profitSign is the sign of the profit figure of column key, signNone without data.
+func profitSign(key stats.SortKey, t stats.Totals) sign {
 	if !isLootKey(key) || !t.HasLoot() {
-		return 0
+		return signNone
 	}
 	switch {
 	case t.Profit > 0:
-		return 1
+		return signGain
 	case t.Profit < 0:
-		return -1
+		return signLoss
 	}
-	return 0
+	return signNone
 }
 
 func formatInt(ctx context.Context, n int64) string { return i18n.Int(ctx, n) }
@@ -351,7 +375,7 @@ func formatProfitPerHour(ctx context.Context, t stats.Totals) (string, bool) {
 	return i18n.Int(ctx, int64(math.Round(*v))), true
 }
 
-// formatGold is a loot figure of t for a tile ("1,234 gp"), ok false without data.
+// formatGold is a loot figure for a tile ("1,234 gp"), ok false when v is nil (no data).
 func formatGold(ctx context.Context, v *int64) (string, bool) {
 	if v == nil {
 		return "", false
@@ -536,7 +560,7 @@ func reservationExp(ctx context.Context, r stats.CharacterReservation) (text str
 	case r.Status == experience.StatusOK && r.Gain != nil:
 		return i18n.Int(ctx, *r.Gain), "ok"
 	case r.Status == experience.StatusNoData:
-		return i18n.T(ctx, "stats.exp.no_data"), "no_data"
+		return i18n.T(ctx, "stats.no_data"), "no_data"
 	default:
 		return i18n.T(ctx, "stats.exp.pending"), "pending"
 	}

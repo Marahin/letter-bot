@@ -200,8 +200,8 @@ templ statsLine(n statsNotice) {
 		role="status"
 		class={ "rounded-md border px-3.5 py-3 text-[13px] leading-relaxed",
 			templ.KV("border-emerald-500/30 bg-emerald-500/[0.06] text-zone-100", n.Status == loot.StatusCounted),
-			templ.KV("border-amber-500/30 bg-amber-500/10 text-amber-200", n.Status == loot.StatusFailed),
-			templ.KV("border-zone-800 bg-zone-850 text-zone-300", n.Status != loot.StatusCounted && n.Status != loot.StatusFailed) }
+			templ.KV("border-amber-500/30 bg-amber-500/10 text-amber-200", n.Status == statusFailed),
+			templ.KV("border-zone-800 bg-zone-850 text-zone-300", n.Status != loot.StatusCounted && n.Status != statusFailed) }
 	>
 		switch n.Status {
 			case loot.StatusCounted:
@@ -214,9 +214,11 @@ templ statsLine(n statsNotice) {
 				{ i18n.T(ctx, "tools.loot.stats.no_time") }
 			case loot.StatusFuture:
 				{ i18n.T(ctx, "tools.loot.stats.future") }
+			case loot.StatusOutOfRange:
+				{ i18n.T(ctx, "tools.loot.stats.out_of_range") }
 			case loot.StatusOutmatched:
 				{ i18n.T(ctx, "tools.loot.stats.outmatched", n.SpotName, n.GuildName) }
-			case loot.StatusFailed:
+			case statusFailed:
 				{ i18n.T(ctx, "tools.loot.stats.failed") }
 			default:
 				{ i18n.T(ctx, "tools.loot.stats.unmatched") }

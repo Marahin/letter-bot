@@ -24,7 +24,6 @@ func Register(r *web.Router, d *web.Deps) {
 	r.Get("/servers/{id}/stats/players/{user}", guard(h.HandlePlayer))
 	r.Get("/servers/{id}/characters/{name}", guard(h.HandleCharacter))
 
-	// The cross-server pages: public for everyone, with their own range.
 	cross := d.WithCrossRangeSelection
 	r.Get(web.WorldsPath, cross(h.HandleWorlds))
 	r.Get(web.WorldsPath+"/{world}", cross(h.HandleWorld))

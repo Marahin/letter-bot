@@ -4,7 +4,7 @@ import (
 	"strconv"
 
 	"spot-assistant/internal/core/dto/stats"
-	"spot-assistant/internal/core/worldstats"
+	corestats "spot-assistant/internal/core/stats"
 	"spot-assistant/internal/infrastructure/i18n"
 	"spot-assistant/internal/infrastructure/web"
 )
@@ -27,11 +27,11 @@ templ WorldsPage(baseURL string, v worldsView, nav web.Nav) {
 								<span class="shrink-0 text-xs text-zone-400">{ i18n.N(ctx, "worlds.list.guilds", w.Guilds) }</span>
 							</span>
 							<dl class="grid grid-cols-3 gap-2">
-								@cardFigure(i18n.T(ctx, "stats.kpi.reservations"), formatInt(ctx, w.Reservations), true, false, 0)
+								@cardCount(i18n.T(ctx, "stats.kpi.reservations"), formatInt(ctx, w.Reservations))
 								{{ expH, hasExpH := formatExpPerHour(ctx, w.Totals) }}
-								@cardFigure(i18n.T(ctx, "stats.table.exp_per_hour"), expH, hasExpH, false, 0)
+								@cardFigure(i18n.T(ctx, "stats.table.exp_per_hour"), expH, hasExpH, expSource, signNone)
 								{{ profitH, hasProfitH := formatProfitPerHour(ctx, w.Totals) }}
-								@cardFigure(i18n.T(ctx, "stats.table.profit_per_hour"), profitH, hasProfitH, true, profitSign(stats.SortProfitPerHour, w.Totals))
+								@cardFigure(i18n.T(ctx, "stats.table.profit_per_hour"), profitH, hasProfitH, lootSource, profitSign(stats.SortProfitPerHour, w.Totals))
 							</dl>
 							<span class="mt-auto text-sm font-semibold text-signal-bright">{ i18n.T(ctx, "worlds.list.open") } <span aria-hidden="true">→</span></span>
 						</a>
@@ -44,16 +44,24 @@ templ WorldsPage(baseURL string, v worldsView, nav web.Nav) {
 	}
 }
 
-templ cardFigure(label, value string, ok, loot bool, sign int) {
+// cardFigure is a world card figure that may have no data; src picks the tooltip that says why.
+templ cardFigure(label, value string, ok bool, src source, s sign) {
 	<div class="min-w-0">
 		<dt class="text-xs text-zone-400">{ label }</dt>
-		<dd class={ "mt-1 truncate font-mono text-base font-semibold tabular-nums", signClass(sign, "text-zone-50") }>
+		<dd class={ "mt-1 truncate font-mono text-base font-semibold tabular-nums", signClass(s, "text-zone-50") }>
 			if ok {
 				{ value }
 			} else {
-				@noData(loot)
+				@noData(src)
 			}
 		</dd>
+	</div>
+}
+
+templ cardCount(label, value string) {
+	<div class="min-w-0">
+		<dt class="text-xs text-zone-400">{ label }</dt>
+		<dd class="mt-1 truncate font-mono text-base font-semibold tabular-nums text-zone-50">{ value }</dd>
 	</div>
 }
 
@@ -67,10 +75,9 @@ templ WorldPage(baseURL string, v worldView, nav web.Nav) {
 		if v.D.Totals.Reservations == 0 {
 			@empty(i18n.T(ctx, "stats.empty.range"))
 		} else {
-			{{ hours := strconv.Itoa(int(worldstats.MinPerHourHours)) }}
 			<div class="mt-6 grid gap-6 lg:grid-cols-2">
-				@leaderboard("lb-spawns-exph", i18n.T(ctx, "worlds.world.spawns_exp_hour"), i18n.T(ctx, "worlds.world.spawns_exp_hint", hours), spawnRows(v.D.SpawnsByExpPerHour), stats.SortExpPerHour, spawnsMore(v.D.Key, stats.SortExpPerHour))
-				@leaderboard("lb-spawns-profith", i18n.T(ctx, "worlds.world.spawns_profit_hour"), i18n.T(ctx, "worlds.world.spawns_profit_hint", hours), spawnRows(v.D.SpawnsByProfitPerHour), stats.SortProfitPerHour, spawnsMore(v.D.Key, stats.SortProfitPerHour))
+				@leaderboard("lb-spawns-exph", i18n.T(ctx, "worlds.world.spawns_exp_hour"), i18n.T(ctx, "worlds.world.spawns_exp_hint", strconv.Itoa(int(corestats.MinExpPerHourHours))), spawnRows(v.D.SpawnsByExpPerHour), stats.SortExpPerHour, spawnsMore(v.D.Key, stats.SortExpPerHour))
+				@leaderboard("lb-spawns-profith", i18n.T(ctx, "worlds.world.spawns_profit_hour"), i18n.T(ctx, "worlds.world.spawns_profit_hint", strconv.Itoa(int(corestats.MinProfitPerHourHours))), spawnRows(v.D.SpawnsByProfitPerHour), stats.SortProfitPerHour, spawnsMore(v.D.Key, stats.SortProfitPerHour))
 				@leaderboard("lb-characters-exp", i18n.T(ctx, "stats.leaderboard.characters_exp"), i18n.T(ctx, "stats.leaderboard.characters_exp_hint"), worldCharacterRows(v.D.CharactersByExp), stats.SortExp, "")
 				@leaderboard("lb-characters-profit", i18n.T(ctx, "stats.leaderboard.characters_profit"), i18n.T(ctx, "stats.leaderboard.characters_profit_hint"), worldCharacterRows(v.D.CharactersByProfit), stats.SortProfit, "")
 			</div>

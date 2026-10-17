@@ -421,18 +421,31 @@ https://claude.ai/artifact/BZV6jDiWcBeUHoZ384KKin).
     unique, so a recalculation or a "Load" from the history counts once. A form
     without the box (an older page) counts. Unticking writes nothing and leaves
     earlier sessions as they are.
-78. **A session belongs to one reservation.** It matches a reservation of a
-    server with premium and the bot present that has one of the session's
-    members among its author characters and overlaps the session by at least
-    half of the session. Among several: the largest overlap, then the latest
-    start, then the larger id. A reservation keeps one session (`reservation_loot`):
-    the one with the largest overlap; on an equal overlap the session it already
-    has stays, so a later paste cannot displace it. A session that moves to
-    another reservation leaves the first one. The candidate search reads only
-    reservations that start at most `booking.MaximumReservationLength` before
-    the session, so `web_reservation_guild_start_idx` bounds it.
+78. **A session belongs to one reservation, and the author's own session wins.**
+    It matches a reservation of a server with premium and the bot present that
+    has one of the session's members among its author characters and overlaps
+    the session by at least half of the session. Among several: the largest
+    overlap, then the latest start, then the larger id. A reservation keeps one
+    session (`reservation_loot`). The form is public, so anyone can paste a
+    made-up session with a reservation's characters and times; a session posted
+    by the signed-in author of the reservation (`loot_sessions.submitted_by`
+    equals `web_reservation.author_discord_id`) is marked `by_author` and wins
+    over any other, and no one else's session replaces it. Between two sessions
+    of the same kind the larger overlap wins; on an equal overlap the session the
+    reservation already has stays, so a later paste cannot displace it. The same
+    session pasted again keeps `by_author`, and the first submitter stays on a
+    stored session. A session that moves to another reservation leaves the first
+    one. An edit of a reservation's spot, times or author (on the web or in the
+    bot, both through `UpdateReservation`) drops its session in the same
+    statement: the match was for the old values, and the next paste matches
+    again. The candidate search reads only reservations that start at most
+    `booking.MaximumReservationLength` before the session, so
+    `web_reservation_guild_start_idx` bounds it.
 79. **Sessions that do not count.** No `From … to …` line, a session that ends
-    more than 5 minutes in the future (not stored), no matching reservation
+    more than 5 minutes in the future (not stored), a session out of bounds (not
+    stored: shorter than a minute, longer than `booking.MaximumReservationLength`,
+    no named member or more than 10 lines, or a figure beyond ±10^12: a public
+    form must not store figures that break the sums), no matching reservation
     (stored, shown nowhere yet), or a reservation that keeps a better session
     (stored). After each calculation a one-line notice says which, and links the
     respawn on the server's public stats when the session counts. A storage
@@ -542,8 +555,8 @@ Follow-ups: the rename to `internal/infra`. (The go-rod e2e suite is done.)
 6. **Polish copy.** The Polish catalog needs a review by a native speaker.
 7. **Django admin.** When may `spot-assistant-web` (Django) be removed?
 8. **Rate limiting of the public writes.** Anyone can post Loot Calculator
-   sessions, and a counted one changes the public stats. There is no rate limit
-   or sign-in for that yet (decisions 73, 77). Should there be one?
+   sessions, and a counted one changes the public stats (decisions 73, 77, 78).
+   There is no rate limit yet. Should there be one?
 9. **The analyser's time zone.** The analyser prints the player's local time
    without a zone, and the server reads it in `Europe/Berlin` (decision 31). A
    player in another zone gets no match, or a wrong one. Should the calculator

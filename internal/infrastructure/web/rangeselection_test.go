@@ -146,7 +146,7 @@ func runCrossRange(d *Deps, r *http.Request, persist []time.Time) (RangeSelectio
 	rec := httptest.NewRecorder()
 	d.WithCrossRangeSelection(func(w http.ResponseWriter, req *http.Request) {
 		got = RangeSelectionFrom(req.Context())
-		d.PersistRangeSelection(w, req, "", persist)
+		d.PersistCrossRangeSelection(w, req, persist)
 	})(rec, r)
 	return got, rec
 }

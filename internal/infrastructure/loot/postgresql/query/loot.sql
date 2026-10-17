@@ -1,6 +1,6 @@
 -- name: InsertSession :one
-INSERT INTO loot_sessions (content_hash, started_at, ended_at, duration_seconds, members, loot, supplies, balance, damage, healing)
-VALUES (@content_hash, @started_at, @ended_at, @duration_seconds, @members, @loot, @supplies, @balance, @damage, @healing)
+INSERT INTO loot_sessions (content_hash, submitted_by, started_at, ended_at, duration_seconds, members, loot, supplies, balance, damage, healing)
+VALUES (@content_hash, @submitted_by, @started_at, @ended_at, @duration_seconds, @members, @loot, @supplies, @balance, @damage, @healing)
 ON CONFLICT (content_hash) DO NOTHING
 RETURNING id;
 
@@ -16,7 +16,7 @@ ON CONFLICT (session_id, character_key) DO NOTHING;
 -- name: MatchCandidates :many
 -- start_from (the session start minus the longest reservation) bounds the scan on start_at.
 SELECT r.id, r.guild_id::text AS guild_id, g.name AS guild_name, r.spot_id, s.name::text AS spot_name,
-       r.author::text AS author, r.start_at, r.end_at
+       r.author::text AS author, r.author_discord_id::text AS author_discord_id, r.start_at, r.end_at
 FROM guilds g
 JOIN web_reservation r ON r.guild_id = g.guild_id
 JOIN web_spot s ON s.id = r.spot_id
@@ -33,11 +33,17 @@ LIMIT 50;
 DELETE FROM reservation_loot WHERE session_id = @session_id AND reservation_id <> @reservation_id;
 
 -- name: PickSession :one
--- On an equal overlap the reservation keeps its session: a later paste cannot displace it.
-INSERT INTO reservation_loot (reservation_id, session_id, overlap_seconds)
-VALUES (@reservation_id, @session_id, @overlap_seconds)
+-- The author's session wins; among sessions of the same kind the larger overlap, and on an equal
+-- one the reservation keeps its session, so a later paste cannot displace it. The same session
+-- pasted again by someone else keeps by_author.
+INSERT INTO reservation_loot (reservation_id, session_id, overlap_seconds, by_author)
+VALUES (@reservation_id, @session_id, @overlap_seconds, @by_author)
 ON CONFLICT (reservation_id) DO UPDATE
-SET session_id = EXCLUDED.session_id, overlap_seconds = EXCLUDED.overlap_seconds, picked_at = now()
-WHERE reservation_loot.overlap_seconds < EXCLUDED.overlap_seconds
-   OR reservation_loot.session_id = EXCLUDED.session_id
+SET session_id = EXCLUDED.session_id, overlap_seconds = EXCLUDED.overlap_seconds, picked_at = now(),
+    by_author = CASE WHEN reservation_loot.session_id = EXCLUDED.session_id
+                     THEN reservation_loot.by_author OR EXCLUDED.by_author
+                     ELSE EXCLUDED.by_author END
+WHERE reservation_loot.session_id = EXCLUDED.session_id
+   OR (NOT reservation_loot.by_author AND EXCLUDED.by_author)
+   OR (reservation_loot.by_author = EXCLUDED.by_author AND reservation_loot.overlap_seconds < EXCLUDED.overlap_seconds)
 RETURNING session_id;

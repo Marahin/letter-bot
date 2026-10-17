@@ -62,14 +62,15 @@ func (q *Queries) InsertMembers(ctx context.Context, arg InsertMembersParams) er
 }
 
 const insertSession = `-- name: InsertSession :one
-INSERT INTO loot_sessions (content_hash, started_at, ended_at, duration_seconds, members, loot, supplies, balance, damage, healing)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+INSERT INTO loot_sessions (content_hash, submitted_by, started_at, ended_at, duration_seconds, members, loot, supplies, balance, damage, healing)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 ON CONFLICT (content_hash) DO NOTHING
 RETURNING id
 `
 
 type InsertSessionParams struct {
 	ContentHash     []byte
+	SubmittedBy     string
 	StartedAt       pgtype.Timestamptz
 	EndedAt         pgtype.Timestamptz
 	DurationSeconds int32
@@ -84,6 +85,7 @@ type InsertSessionParams struct {
 func (q *Queries) InsertSession(ctx context.Context, arg InsertSessionParams) (int64, error) {
 	row := q.db.QueryRow(ctx, insertSession,
 		arg.ContentHash,
+		arg.SubmittedBy,
 		arg.StartedAt,
 		arg.EndedAt,
 		arg.DurationSeconds,
@@ -101,7 +103,7 @@ func (q *Queries) InsertSession(ctx context.Context, arg InsertSessionParams) (i
 
 const matchCandidates = `-- name: MatchCandidates :many
 SELECT r.id, r.guild_id::text AS guild_id, g.name AS guild_name, r.spot_id, s.name::text AS spot_name,
-       r.author::text AS author, r.start_at, r.end_at
+       r.author::text AS author, r.author_discord_id::text AS author_discord_id, r.start_at, r.end_at
 FROM guilds g
 JOIN web_reservation r ON r.guild_id = g.guild_id
 JOIN web_spot s ON s.id = r.spot_id
@@ -123,14 +125,15 @@ type MatchCandidatesParams struct {
 }
 
 type MatchCandidatesRow struct {
-	ID        int64
-	GuildID   string
-	GuildName string
-	SpotID    int64
-	SpotName  string
-	Author    string
-	StartAt   pgtype.Timestamptz
-	EndAt     pgtype.Timestamptz
+	ID              int64
+	GuildID         string
+	GuildName       string
+	SpotID          int64
+	SpotName        string
+	Author          string
+	AuthorDiscordID string
+	StartAt         pgtype.Timestamptz
+	EndAt           pgtype.Timestamptz
 }
 
 // start_from (the session start minus the longest reservation) bounds the scan on start_at.
@@ -155,6 +158,7 @@ func (q *Queries) MatchCandidates(ctx context.Context, arg MatchCandidatesParams
 			&i.SpotID,
 			&i.SpotName,
 			&i.Author,
+			&i.AuthorDiscordID,
 			&i.StartAt,
 			&i.EndAt,
 		); err != nil {
@@ -169,12 +173,16 @@ func (q *Queries) MatchCandidates(ctx context.Context, arg MatchCandidatesParams
 }
 
 const pickSession = `-- name: PickSession :one
-INSERT INTO reservation_loot (reservation_id, session_id, overlap_seconds)
-VALUES ($1, $2, $3)
+INSERT INTO reservation_loot (reservation_id, session_id, overlap_seconds, by_author)
+VALUES ($1, $2, $3, $4)
 ON CONFLICT (reservation_id) DO UPDATE
-SET session_id = EXCLUDED.session_id, overlap_seconds = EXCLUDED.overlap_seconds, picked_at = now()
-WHERE reservation_loot.overlap_seconds < EXCLUDED.overlap_seconds
-   OR reservation_loot.session_id = EXCLUDED.session_id
+SET session_id = EXCLUDED.session_id, overlap_seconds = EXCLUDED.overlap_seconds, picked_at = now(),
+    by_author = CASE WHEN reservation_loot.session_id = EXCLUDED.session_id
+                     THEN reservation_loot.by_author OR EXCLUDED.by_author
+                     ELSE EXCLUDED.by_author END
+WHERE reservation_loot.session_id = EXCLUDED.session_id
+   OR (NOT reservation_loot.by_author AND EXCLUDED.by_author)
+   OR (reservation_loot.by_author = EXCLUDED.by_author AND reservation_loot.overlap_seconds < EXCLUDED.overlap_seconds)
 RETURNING session_id
 `
 
@@ -182,11 +190,19 @@ type PickSessionParams struct {
 	ReservationID  int64
 	SessionID      int64
 	OverlapSeconds int32
+	ByAuthor       bool
 }
 
-// On an equal overlap the reservation keeps its session: a later paste cannot displace it.
+// The author's session wins; among sessions of the same kind the larger overlap, and on an equal
+// one the reservation keeps its session, so a later paste cannot displace it. The same session
+// pasted again by someone else keeps by_author.
 func (q *Queries) PickSession(ctx context.Context, arg PickSessionParams) (int64, error) {
-	row := q.db.QueryRow(ctx, pickSession, arg.ReservationID, arg.SessionID, arg.OverlapSeconds)
+	row := q.db.QueryRow(ctx, pickSession,
+		arg.ReservationID,
+		arg.SessionID,
+		arg.OverlapSeconds,
+		arg.ByAuthor,
+	)
 	var session_id int64
 	err := row.Scan(&session_id)
 	return session_id, err

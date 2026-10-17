@@ -366,9 +366,10 @@ func TestHandleLootCalculate_StatsNotices(t *testing.T) {
 		{name: "unticked", out: loot.Outcome{Status: loot.StatusUnticked}, want: []string{`data-loot-stats="unticked"`, "the box is unticked"}},
 		{name: "no time", out: loot.Outcome{Status: loot.StatusNoTime}, want: []string{`data-loot-stats="no_time"`, "the text has no session time"}},
 		{name: "future", out: loot.Outcome{Status: loot.StatusFuture}, want: []string{`data-loot-stats="future"`, "ends in the future"}},
+		{name: "out of range", out: loot.Outcome{Status: loot.StatusOutOfRange}, want: []string{`data-loot-stats="out_of_range"`, "has figures no hunt reaches"}},
 		{name: "unmatched", out: loot.Outcome{Status: loot.StatusUnmatched}, want: []string{`data-loot-stats="unmatched"`, "no reservation matches it"}},
 		{name: "outmatched", out: loot.Outcome{Status: loot.StatusOutmatched, Match: match}, want: []string{
-			`data-loot-stats="outmatched"`, "the reservation of Hero Cave on Celesta Community already has a session",
+			`data-loot-stats="outmatched"`, "the reservation of Hero Cave on Celesta Community already has its author's session",
 		}},
 		{name: "failed", err: errors.New("db down"), want: []string{`data-loot-stats="failed"`, "could not be saved", `data-copy="transfer 712259 to Iscarlott"`}},
 	}
@@ -420,6 +421,7 @@ func TestHandleLootCalculate_PassesTheSessionAndTheChoice(t *testing.T) {
 			// then
 			require.Equal(t, http.StatusOK, rec.Code)
 			assert.Equal(t, "2026-09-25, 20:14:39", got.From)
+			assert.Empty(t, got.SubmittedBy, "signed out")
 			require.Len(t, got.Members, 3)
 			assert.Equal(t, loot.Member{Name: "Killer Potato", Leader: true, Loot: 1816623, Supplies: 528367, Balance: 1288256, Damage: 4043228, Healing: 398456}, got.Members[2])
 			entry := regexp.MustCompile(`(?s)<script id="loot-entry" type="application/json">(.*?)</script>`).FindStringSubmatch(rec.Body.String())
@@ -429,6 +431,25 @@ func TestHandleLootCalculate_PassesTheSessionAndTheChoice(t *testing.T) {
 			assert.Equal(t, tt.count, saved.Count, "the history keeps the choice")
 		})
 	}
+}
+
+func TestHandleLootCalculate_SubmitsAsTheSignedInUser(t *testing.T) {
+	// given
+	d, m := webtest.NewDeps(t)
+	h := webtest.Handler(d, Register)
+	cookie := webtest.SignIn(t, d, m, "u1")
+	var got loot.Submission
+	m.Loot.EXPECT().Record(mock.Anything, mock.Anything, true).RunAndReturn(func(_ context.Context, s loot.Submission, _ bool) (loot.Outcome, error) {
+		got = s
+		return loot.Outcome{Status: loot.StatusUnmatched}, nil
+	}).Once()
+
+	// when
+	rec := webtest.Serve(h, htmx(webtest.Post("/tools/loot-calculator", url.Values{"session": {sample}}, cookie)))
+
+	// then
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, "u1", got.SubmittedBy)
 }
 
 func TestHandleLootCalculate_ParseErrorKeepsTheChoiceAndRecordsNothing(t *testing.T) {

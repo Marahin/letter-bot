@@ -3,6 +3,8 @@
 CREATE TABLE loot_sessions (
   id bigserial PRIMARY KEY,
   content_hash bytea NOT NULL,
+  -- The signed-in first submitter's Discord user id, '' when anonymous.
+  submitted_by text NOT NULL DEFAULT '',
   started_at timestamptz NOT NULL,
   ended_at timestamptz NOT NULL,
   duration_seconds integer NOT NULL,
@@ -37,6 +39,8 @@ CREATE TABLE reservation_loot (
   reservation_id bigint PRIMARY KEY REFERENCES web_reservation(id) ON DELETE CASCADE,
   session_id bigint NOT NULL REFERENCES loot_sessions(id) ON DELETE CASCADE,
   overlap_seconds integer NOT NULL CHECK (overlap_seconds > 0),
+  -- The reservation's author submitted the session: no one else's session replaces it.
+  by_author boolean NOT NULL DEFAULT false,
   picked_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT reservation_loot_session_key UNIQUE (session_id)
 );

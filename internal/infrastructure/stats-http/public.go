@@ -106,7 +106,7 @@ func (h *Handlers) crossPage(w http.ResponseWriter, r *http.Request, hidden ...w
 	ctx := r.Context()
 	sel := web.RangeSelectionFrom(ctx)
 	rng := corestats.ResolveRange(parseDays(sel.Query), h.now())
-	h.D.PersistRangeSelection(w, r, "", spanEnds(rng.Days))
+	h.D.PersistCrossRangeSelection(w, r, spanEnds(rng.Days))
 	return crossPage{
 		Range: rng,
 		Picker: web.RangePickerFor(ctx, web.RangePickerProps{

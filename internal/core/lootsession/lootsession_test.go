@@ -3,6 +3,8 @@ package lootsession
 import (
 	"context"
 	"errors"
+	"math"
+	"strconv"
 	"testing"
 	"time"
 
@@ -42,7 +44,7 @@ func newService(t *testing.T) (*Service, *mocks.MockLootSessionRepository) {
 }
 
 func candidate(id int64, from, to time.Time) loot.Candidate {
-	return loot.Candidate{ReservationID: id, GuildID: "g", GuildName: "Guild", SpotID: 7, SpotName: "Hero Cave", Author: "Marahin", StartAt: from, EndAt: to}
+	return loot.Candidate{ReservationID: id, GuildID: "g", GuildName: "Guild", SpotID: 7, SpotName: "Hero Cave", Author: "Marahin", AuthorDiscordID: "111", StartAt: from, EndAt: to}
 }
 
 func TestRecord_UntickedWritesNothing(t *testing.T) {
@@ -117,7 +119,7 @@ func TestRecord_CountsTheMatchedReservation(t *testing.T) {
 	booked := candidate(9, start.Add(-30*time.Minute), end.Add(30*time.Minute))
 	repo.EXPECT().MatchCandidates(mock.Anything, start, end, []string{"marahin", "killer potato"}, booking.MaximumReservationLength).
 		Return([]loot.Candidate{booked}, nil)
-	repo.EXPECT().Pick(mock.Anything, int64(42), int64(9), int64(3600)).Return(true, nil)
+	repo.EXPECT().Pick(mock.Anything, loot.Attribution{SessionID: 42, ReservationID: 9, OverlapSeconds: 3600}).Return(true, nil)
 
 	// when
 	out, err := s.Record(context.Background(), sub(), true)
@@ -142,13 +144,122 @@ func TestRecord_CountsTheMatchedReservation(t *testing.T) {
 	assert.Len(t, saved.Hash, 32)
 }
 
+func TestRecord_TheAuthorsOwnSessionIsByAuthor(t *testing.T) {
+	tests := map[string]struct {
+		submitter string
+		byAuthor  bool
+	}{
+		"the author":   {submitter: "111", byAuthor: true},
+		"someone else": {submitter: "222"},
+		"signed out":   {submitter: ""},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			// given
+			s, repo := newService(t)
+			in := sub()
+			in.SubmittedBy = tt.submitter
+			var saved loot.Session
+			repo.EXPECT().SaveSession(mock.Anything, mock.Anything).RunAndReturn(func(_ context.Context, ls loot.Session) (int64, error) {
+				saved = ls
+				return 42, nil
+			})
+			repo.EXPECT().MatchCandidates(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+				Return([]loot.Candidate{candidate(9, start, end)}, nil)
+			repo.EXPECT().Pick(mock.Anything, loot.Attribution{SessionID: 42, ReservationID: 9, OverlapSeconds: 3600, ByAuthor: tt.byAuthor}).Return(true, nil)
+
+			// when
+			out, err := s.Record(context.Background(), in, true)
+
+			// then
+			require.NoError(t, err)
+			assert.Equal(t, loot.StatusCounted, out.Status)
+			assert.Equal(t, tt.submitter, saved.SubmittedBy)
+		})
+	}
+}
+
+func TestRecord_OutOfRangeWritesNothing(t *testing.T) {
+	tests := map[string]func(*loot.Submission){
+		"shorter than a minute": func(s *loot.Submission) { s.To = "2026-09-25, 20:00:59" },
+		"longer than a reservation": func(s *loot.Submission) {
+			s.From, s.To = "2026-09-25, 17:59:59", "2026-09-25, 21:00:00"
+		},
+		"no party member": func(s *loot.Submission) { s.Members = nil },
+		"more than ten members": func(s *loot.Submission) {
+			for len(s.Members) <= MaxPartySize {
+				s.Members = append(s.Members, loot.Member{Name: "Extra " + strconv.Itoa(len(s.Members))})
+			}
+		},
+		"no member with a name": func(s *loot.Submission) {
+			s.Members = []loot.Member{{Name: "  ", Balance: 1}}
+		},
+		"loot too large":        func(s *loot.Submission) { s.Members[0].Loot = MaxFigure + 1 },
+		"supplies too large":    func(s *loot.Submission) { s.Members[0].Supplies = MaxFigure + 1 },
+		"balance too large":     func(s *loot.Submission) { s.Members[1].Balance = MaxFigure + 1 },
+		"balance too small":     func(s *loot.Submission) { s.Members[1].Balance = -MaxFigure - 1 },
+		"damage too large":      func(s *loot.Submission) { s.Members[0].Damage = MaxFigure + 1 },
+		"healing too large":     func(s *loot.Submission) { s.Members[0].Healing = MaxFigure + 1 },
+		"healing far too small": func(s *loot.Submission) { s.Members[0].Healing = math.MinInt64 },
+	}
+	for name, edit := range tests {
+		t.Run(name, func(t *testing.T) {
+			// given
+			s, _ := newService(t)
+			in := sub()
+			edit(&in)
+
+			// when
+			out, err := s.Record(context.Background(), in, true)
+
+			// then
+			require.NoError(t, err)
+			assert.Equal(t, loot.Outcome{Status: loot.StatusOutOfRange}, out)
+		})
+	}
+}
+
+func TestRecord_TheBoundsAreInclusive(t *testing.T) {
+	tests := map[string]func(*loot.Submission){
+		"one minute": func(s *loot.Submission) { s.To = "2026-09-25, 20:01:00" },
+		"as long as a reservation": func(s *loot.Submission) {
+			s.From, s.To = "2026-09-25, 18:00:00", "2026-09-25, 21:00:00"
+		},
+		"ten members": func(s *loot.Submission) {
+			for len(s.Members) < MaxPartySize {
+				s.Members = append(s.Members, loot.Member{Name: "Extra " + strconv.Itoa(len(s.Members))})
+			}
+		},
+		"the largest figures": func(s *loot.Submission) {
+			s.Members[0].Loot, s.Members[0].Balance = MaxFigure, -MaxFigure
+		},
+	}
+	for name, edit := range tests {
+		t.Run(name, func(t *testing.T) {
+			// given
+			s, repo := newService(t)
+			in := sub()
+			edit(&in)
+			repo.EXPECT().SaveSession(mock.Anything, mock.Anything).Return(42, nil)
+			repo.EXPECT().MatchCandidates(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
+
+			// when
+			out, err := s.Record(context.Background(), in, true)
+
+			// then
+			require.NoError(t, err)
+			assert.Equal(t, loot.StatusUnmatched, out.Status)
+		})
+	}
+}
+
 func TestRecord_OutmatchedKeepsTheMatch(t *testing.T) {
 	// given
 	s, repo := newService(t)
 	booked := candidate(9, start, end)
 	repo.EXPECT().SaveSession(mock.Anything, mock.Anything).Return(42, nil)
 	repo.EXPECT().MatchCandidates(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]loot.Candidate{booked}, nil)
-	repo.EXPECT().Pick(mock.Anything, int64(42), int64(9), int64(3600)).Return(false, nil)
+	repo.EXPECT().Pick(mock.Anything, loot.Attribution{SessionID: 42, ReservationID: 9, OverlapSeconds: 3600}).Return(false, nil)
 
 	// when
 	out, err := s.Record(context.Background(), sub(), true)
@@ -192,7 +303,7 @@ func TestRecord_RepositoryErrors(t *testing.T) {
 					Return([]loot.Candidate{candidate(9, start, end)}, fail(1))
 			}
 			if i >= 2 {
-				repo.EXPECT().Pick(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(false, fail(2))
+				repo.EXPECT().Pick(mock.Anything, mock.Anything).Return(false, fail(2))
 			}
 
 			// when

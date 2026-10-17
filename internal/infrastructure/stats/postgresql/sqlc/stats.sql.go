@@ -418,8 +418,6 @@ WITH r AS (
     AND ($7::text = '' OR re.character_key = $7::text)
   GROUP BY re.reservation_id
 ), l AS (
-  -- One session per reservation (reservation_loot's key). A character filter counts the
-  -- character's equal share, floored as the split pays it, and only sessions it was in.
   SELECT rl.reservation_id, ls.duration_seconds::bigint AS secs,
          CASE WHEN $7::text = '' THEN ls.balance ELSE floor(ls.balance::numeric / ls.members)::bigint END AS profit,
          CASE WHEN $7::text = '' THEN ls.loot ELSE floor(ls.loot::numeric / ls.members)::bigint END AS loot,
@@ -553,8 +551,6 @@ WITH r AS (
     AND ($9::text = '' OR re.character_key = $9::text)
   GROUP BY re.reservation_id
 ), l AS (
-  -- One session per reservation (reservation_loot's key). A character filter counts the
-  -- character's equal share, floored as the split pays it, and only sessions it was in.
   SELECT rl.reservation_id, ls.duration_seconds::bigint AS secs,
          CASE WHEN $9::text = '' THEN ls.balance ELSE floor(ls.balance::numeric / ls.members)::bigint END AS profit,
          CASE WHEN $9::text = '' THEN ls.loot ELSE floor(ls.loot::numeric / ls.members)::bigint END AS loot,
@@ -765,8 +761,6 @@ WITH r AS (
     AND ($9::text = '' OR re.character_key = $9::text)
   GROUP BY re.reservation_id
 ), l AS (
-  -- One session per reservation (reservation_loot's key). A character filter counts the
-  -- character's equal share, floored as the split pays it, and only sessions it was in.
   SELECT rl.reservation_id, ls.duration_seconds::bigint AS secs,
          CASE WHEN $9::text = '' THEN ls.balance ELSE floor(ls.balance::numeric / ls.members)::bigint END AS profit,
          CASE WHEN $9::text = '' THEN ls.loot ELSE floor(ls.loot::numeric / ls.members)::bigint END AS loot,
@@ -862,6 +856,8 @@ type SpotTotalsRow struct {
 // lets the trigram index narrow a character filter before the exact unnest check.
 // They share the ordering too: sort_key's figure (NULL = no data, last in both directions), then
 // the name. lim 0 = every row; total_rows counts the rows before the limit.
+// Every l CTE has one loot session per reservation (reservation_loot's key). A character filter
+// counts the character's equal share, floored as the split pays it, and only sessions it was in.
 func (q *Queries) SpotTotals(ctx context.Context, arg SpotTotalsParams) ([]SpotTotalsRow, error) {
 	rows, err := q.db.Query(ctx, spotTotals,
 		arg.SortKey,

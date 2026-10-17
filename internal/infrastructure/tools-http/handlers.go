@@ -6,7 +6,6 @@ import (
 
 	"github.com/a-h/templ"
 
-	"spot-assistant/internal/core/dto/loot"
 	"spot-assistant/internal/core/lootcalc"
 	"spot-assistant/internal/infrastructure/web"
 )
@@ -74,13 +73,15 @@ func countRequested(r *http.Request) bool {
 	return r.PostFormValue("count_field") == "" || r.PostFormValue("count") == "1"
 }
 
-// record counts the session in the stats. A failure is logged and noticed: the
-// split itself is still right.
+// record counts the session in the stats, as the signed-in user's when there is one. A
+// failure is logged and noticed: the split itself is still right.
 func (h *Handlers) record(r *http.Request, s lootcalc.Session, count bool) statsNotice {
-	out, err := h.D.Loot.Record(r.Context(), s.Submission(), count)
+	sub := s.Submission()
+	sub.SubmittedBy = h.D.SessionUserID(r.Context())
+	out, err := h.D.Loot.Record(r.Context(), sub, count)
 	if err != nil {
 		h.D.Log.Warnw("record loot session", "error", err)
-		return statsNotice{Status: loot.StatusFailed}
+		return statsNotice{Status: statusFailed}
 	}
 	return newStatsNotice(out)
 }

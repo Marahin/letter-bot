@@ -1284,22 +1284,22 @@ func kpis(t stats.Totals, extra []kpi) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		exp, hasExp := formatExp(ctx, t)
-		templ_7745c5c3_Err = figureTile(i18n.T(ctx, "stats.kpi.exp"), exp, hasExp, coverage(ctx, t), false, 0).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = figureTile(i18n.T(ctx, "stats.kpi.exp"), exp, hasExp, coverage(ctx, t), expSource, signNone).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		perHour, hasPerHour := formatExpPerHour(ctx, t)
-		templ_7745c5c3_Err = figureTile(i18n.T(ctx, "stats.kpi.exp_per_hour"), perHour, hasPerHour, i18n.T(ctx, "stats.kpi.exp_per_hour_hint"), false, 0).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = figureTile(i18n.T(ctx, "stats.kpi.exp_per_hour"), perHour, hasPerHour, i18n.T(ctx, "stats.kpi.exp_per_hour_hint"), expSource, signNone).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		profit, hasProfit := formatGold(ctx, t.ProfitTotal())
-		templ_7745c5c3_Err = figureTile(i18n.T(ctx, "stats.kpi.profit"), profit, hasProfit, lootCoverage(ctx, t), true, profitSign(stats.SortProfit, t)).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = figureTile(i18n.T(ctx, "stats.kpi.profit"), profit, hasProfit, lootCoverage(ctx, t), lootSource, profitSign(stats.SortProfit, t)).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		profitH, hasProfitH := formatGoldPerHour(ctx, t)
-		templ_7745c5c3_Err = figureTile(i18n.T(ctx, "stats.kpi.profit_per_hour"), profitH, hasProfitH, i18n.T(ctx, "stats.kpi.profit_per_hour_hint"), true, profitSign(stats.SortProfitPerHour, t)).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = figureTile(i18n.T(ctx, "stats.kpi.profit_per_hour"), profitH, hasProfitH, i18n.T(ctx, "stats.kpi.profit_per_hour_hint"), lootSource, profitSign(stats.SortProfitPerHour, t)).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -1344,12 +1344,12 @@ func lootTiles(t stats.Totals) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		lootValue, hasLoot := formatGold(ctx, t.LootTotal())
-		templ_7745c5c3_Err = figureTile(i18n.T(ctx, "stats.kpi.loot"), lootValue, hasLoot, "", true, 0).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = figureTile(i18n.T(ctx, "stats.kpi.loot"), lootValue, hasLoot, "", lootSource, signNone).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		supplies, hasSupplies := formatGold(ctx, t.SuppliesTotal())
-		templ_7745c5c3_Err = figureTile(i18n.T(ctx, "stats.kpi.supplies"), supplies, hasSupplies, "", true, 0).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = figureTile(i18n.T(ctx, "stats.kpi.supplies"), supplies, hasSupplies, "", lootSource, signNone).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -1479,9 +1479,9 @@ func tile(label, value, hint string) templ.Component {
 	})
 }
 
-// figureTile is a tile whose figure may have no data; loot picks the tooltip that says why.
-// sign colours a profit: green for a gain, red for a loss (which keeps its minus sign).
-func figureTile(label, value string, ok bool, hint string, loot bool, sign int) templ.Component {
+// figureTile is a tile whose figure may have no data; src picks the tooltip that says why.
+// A loss keeps its minus sign.
+func figureTile(label, value string, ok bool, hint string, src source, s sign) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -1560,7 +1560,7 @@ func figureTile(label, value string, ok bool, hint string, loot bool, sign int) 
 			return templ_7745c5c3_Err
 		}
 		if ok {
-			var templ_7745c5c3_Var61 = []any{"mt-1 truncate font-mono text-2xl font-semibold tabular-nums", signClass(sign, "text-zone-50")}
+			var templ_7745c5c3_Var61 = []any{"mt-1 truncate font-mono text-2xl font-semibold tabular-nums", signClass(s, "text-zone-50")}
 			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var61...)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -1585,7 +1585,7 @@ func figureTile(label, value string, ok bool, hint string, loot bool, sign int) 
 			var templ_7745c5c3_Var63 string
 			templ_7745c5c3_Var63, templ_7745c5c3_Err = templ.ResolveAttributeValue(value)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/stats-http/stats.templ`, Line: 265, Col: 125}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/stats-http/stats.templ`, Line: 265, Col: 122}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var63)
 			if templ_7745c5c3_Err != nil {
@@ -1598,7 +1598,7 @@ func figureTile(label, value string, ok bool, hint string, loot bool, sign int) 
 			var templ_7745c5c3_Var64 string
 			templ_7745c5c3_Var64, templ_7745c5c3_Err = templ.JoinStringErrs(value)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/stats-http/stats.templ`, Line: 265, Col: 135}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/stats-http/stats.templ`, Line: 265, Col: 132}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var64))
 			if templ_7745c5c3_Err != nil {
@@ -1613,7 +1613,7 @@ func figureTile(label, value string, ok bool, hint string, loot bool, sign int) 
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = noData(loot).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = noData(src).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -1651,7 +1651,7 @@ func figureTile(label, value string, ok bool, hint string, loot bool, sign int) 
 
 // noData stands in for every figure without data, never 0. The tooltip and the page note say
 // why: experience comes from the world's top 1000, loot from sessions pasted in the Loot Calculator.
-func noData(loot bool) templ.Component {
+func noData(src source) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -1672,7 +1672,7 @@ func noData(loot bool) templ.Component {
 			templ_7745c5c3_Var66 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		if loot {
+		if src == lootSource {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 116, "<span class=\"cursor-help text-zone-400 underline decoration-dotted decoration-zone-600 underline-offset-4\" title=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -1691,9 +1691,9 @@ func noData(loot bool) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var68 string
-			templ_7745c5c3_Var68, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "stats.exp.no_data"))
+			templ_7745c5c3_Var68, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "stats.no_data"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/stats-http/stats.templ`, Line: 281, Col: 191}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/stats-http/stats.templ`, Line: 281, Col: 187}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var68))
 			if templ_7745c5c3_Err != nil {
@@ -1722,9 +1722,9 @@ func noData(loot bool) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var70 string
-			templ_7745c5c3_Var70, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "stats.exp.no_data"))
+			templ_7745c5c3_Var70, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "stats.no_data"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/stats-http/stats.templ`, Line: 283, Col: 190}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/stats-http/stats.templ`, Line: 283, Col: 186}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var70))
 			if templ_7745c5c3_Err != nil {
@@ -1740,11 +1740,11 @@ func noData(loot bool) templ.Component {
 }
 
 // signClass lives here, not in view.go, so Tailwind (which scans templ output only) keeps the classes.
-func signClass(sign int, neutral string) string {
-	switch {
-	case sign > 0:
+func signClass(s sign, neutral string) string {
+	switch s {
+	case signGain:
 		return "text-emerald-400"
-	case sign < 0:
+	case signLoss:
 		return "text-rose-400"
 	default:
 		return neutral
@@ -1777,9 +1777,9 @@ func noDataBlock(text string) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var72 string
-		templ_7745c5c3_Var72, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "stats.exp.no_data"))
+		templ_7745c5c3_Var72, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "stats.no_data"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/stats-http/stats.templ`, Line: 301, Col: 75}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/stats-http/stats.templ`, Line: 301, Col: 71}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var72))
 		if templ_7745c5c3_Err != nil {
@@ -1832,9 +1832,9 @@ func noDataNote() templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var75 string
-		templ_7745c5c3_Var75, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "stats.exp.no_data"))
+		templ_7745c5c3_Var75, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "stats.no_data"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/stats-http/stats.templ`, Line: 308, Col: 81}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/stats-http/stats.templ`, Line: 308, Col: 77}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var75))
 		if templ_7745c5c3_Err != nil {
@@ -1847,7 +1847,7 @@ func noDataNote() templ.Component {
 		var templ_7745c5c3_Var76 string
 		templ_7745c5c3_Var76, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "stats.exp.no_data_tip"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/stats-http/stats.templ`, Line: 308, Col: 130}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/stats-http/stats.templ`, Line: 308, Col: 126}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var76))
 		if templ_7745c5c3_Err != nil {
@@ -2881,7 +2881,7 @@ func figureCell(key stats.SortKey, r tableRow) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = noData(isLootKey(key)).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = noData(keySource(key)).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -3530,7 +3530,7 @@ func recentReservations(v characterView) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			case "no_data":
-				templ_7745c5c3_Err = noData(false).Render(ctx, templ_7745c5c3_Buffer)
+				templ_7745c5c3_Err = noData(expSource).Render(ctx, templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}

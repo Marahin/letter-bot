@@ -135,8 +135,8 @@ func (_c *MockLootSessionRepository_MatchCandidates_Call) RunAndReturn(run func(
 }
 
 // Pick provides a mock function for the type MockLootSessionRepository
-func (_mock *MockLootSessionRepository) Pick(ctx context.Context, sessionID int64, reservationID int64, overlapSeconds int64) (bool, error) {
-	ret := _mock.Called(ctx, sessionID, reservationID, overlapSeconds)
+func (_mock *MockLootSessionRepository) Pick(ctx context.Context, a loot.Attribution) (bool, error) {
+	ret := _mock.Called(ctx, a)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Pick")
@@ -144,16 +144,16 @@ func (_mock *MockLootSessionRepository) Pick(ctx context.Context, sessionID int6
 
 	var r0 bool
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, int64, int64, int64) (bool, error)); ok {
-		return returnFunc(ctx, sessionID, reservationID, overlapSeconds)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, loot.Attribution) (bool, error)); ok {
+		return returnFunc(ctx, a)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, int64, int64, int64) bool); ok {
-		r0 = returnFunc(ctx, sessionID, reservationID, overlapSeconds)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, loot.Attribution) bool); ok {
+		r0 = returnFunc(ctx, a)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, int64, int64, int64) error); ok {
-		r1 = returnFunc(ctx, sessionID, reservationID, overlapSeconds)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, loot.Attribution) error); ok {
+		r1 = returnFunc(ctx, a)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -167,36 +167,24 @@ type MockLootSessionRepository_Pick_Call struct {
 
 // Pick is a helper method to define mock.On call
 //   - ctx context.Context
-//   - sessionID int64
-//   - reservationID int64
-//   - overlapSeconds int64
-func (_e *MockLootSessionRepository_Expecter) Pick(ctx any, sessionID any, reservationID any, overlapSeconds any) *MockLootSessionRepository_Pick_Call {
-	return &MockLootSessionRepository_Pick_Call{Call: _e.mock.On("Pick", ctx, sessionID, reservationID, overlapSeconds)}
+//   - a loot.Attribution
+func (_e *MockLootSessionRepository_Expecter) Pick(ctx any, a any) *MockLootSessionRepository_Pick_Call {
+	return &MockLootSessionRepository_Pick_Call{Call: _e.mock.On("Pick", ctx, a)}
 }
 
-func (_c *MockLootSessionRepository_Pick_Call) Run(run func(ctx context.Context, sessionID int64, reservationID int64, overlapSeconds int64)) *MockLootSessionRepository_Pick_Call {
+func (_c *MockLootSessionRepository_Pick_Call) Run(run func(ctx context.Context, a loot.Attribution)) *MockLootSessionRepository_Pick_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 int64
+		var arg1 loot.Attribution
 		if args[1] != nil {
-			arg1 = args[1].(int64)
-		}
-		var arg2 int64
-		if args[2] != nil {
-			arg2 = args[2].(int64)
-		}
-		var arg3 int64
-		if args[3] != nil {
-			arg3 = args[3].(int64)
+			arg1 = args[1].(loot.Attribution)
 		}
 		run(
 			arg0,
 			arg1,
-			arg2,
-			arg3,
 		)
 	})
 	return _c
@@ -207,7 +195,7 @@ func (_c *MockLootSessionRepository_Pick_Call) Return(b bool, err error) *MockLo
 	return _c
 }
 
-func (_c *MockLootSessionRepository_Pick_Call) RunAndReturn(run func(ctx context.Context, sessionID int64, reservationID int64, overlapSeconds int64) (bool, error)) *MockLootSessionRepository_Pick_Call {
+func (_c *MockLootSessionRepository_Pick_Call) RunAndReturn(run func(ctx context.Context, a loot.Attribution) (bool, error)) *MockLootSessionRepository_Pick_Call {
 	_c.Call.Return(run)
 	return _c
 }

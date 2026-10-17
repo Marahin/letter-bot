@@ -85,28 +85,38 @@ func TestWorldStatsRepository_MapsRows(t *testing.T) {
 	}, boards)
 }
 
-func TestWorldStatsRepository_PropagatesQueryErrors(t *testing.T) {
-	// given
-	mock, repo := newWorldsMock(t)
-	ctx := context.Background()
-	mock.ExpectQuery("name: PublicWorlds").WillReturnError(errBoom)
-	for _, q := range []struct {
-		name string
-		args int
-	}{{"WorldTotals", 4}, {"WorldGuildTotals", 4}, {"SpawnTotals", 9}, {"SpawnSpotTotals", 4}, {"WorldCharacterBoards", 5}} {
-		mock.ExpectQuery("name: " + q.name + " :").WithArgs(anyArgs(q.args)...).WillReturnError(errBoom)
-	}
+func TestWorldStatsRepository_MapsQueryErrors(t *testing.T) {
+	for name, tt := range map[string]struct {
+		err  error
+		want error
+	}{
+		"passed through": {err: errBoom, want: errBoom},
+		"mapped":         {err: pgx.ErrNoRows, want: ports.ErrNotFound},
+	} {
+		t.Run(name, func(t *testing.T) {
+			// given
+			mock, repo := newWorldsMock(t)
+			ctx := context.Background()
+			mock.ExpectQuery("name: PublicWorlds").WillReturnError(tt.err)
+			for _, q := range []struct {
+				name string
+				args int
+			}{{"WorldTotals", 4}, {"WorldGuildTotals", 4}, {"SpawnTotals", 9}, {"SpawnSpotTotals", 4}, {"WorldCharacterBoards", 5}} {
+				mock.ExpectQuery("name: " + q.name + " :").WithArgs(anyArgs(q.args)...).WillReturnError(tt.err)
+			}
 
-	// when
-	_, err1 := repo.PublicWorlds(ctx)
-	_, err2 := repo.WorldTotals(ctx, stats.WorldFilter{})
-	_, err3 := repo.WorldGuildTotals(ctx, stats.WorldFilter{})
-	_, err4 := repo.SpawnTotals(ctx, stats.WorldQuery{})
-	_, err5 := repo.SpawnSpotTotals(ctx, stats.WorldFilter{})
-	_, err6 := repo.WorldCharacterBoards(ctx, stats.WorldFilter{}, 1)
+			// when
+			_, err1 := repo.PublicWorlds(ctx)
+			_, err2 := repo.WorldTotals(ctx, stats.WorldFilter{})
+			_, err3 := repo.WorldGuildTotals(ctx, stats.WorldFilter{})
+			_, err4 := repo.SpawnTotals(ctx, stats.WorldQuery{})
+			_, err5 := repo.SpawnSpotTotals(ctx, stats.WorldFilter{})
+			_, err6 := repo.WorldCharacterBoards(ctx, stats.WorldFilter{}, 1)
 
-	// then
-	for _, err := range []error{err1, err2, err3, err4, err5, err6} {
-		assert.ErrorIs(t, err, errBoom)
+			// then
+			for _, err := range []error{err1, err2, err3, err4, err5, err6} {
+				assert.ErrorIs(t, err, tt.want)
+			}
+		})
 	}
 }

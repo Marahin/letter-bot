@@ -1,6 +1,6 @@
 // Package toolshttp holds the public tools: the Loot Calculator. They need no
 // sign-in, and render in the top bar when signed out and in the sidebar when
-// signed in. The split runs here, on the server; nothing is sent to a third party.
+// signed in.
 package toolshttp
 
 import (

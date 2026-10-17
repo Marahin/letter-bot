@@ -31,7 +31,6 @@ func wiring() fx.Option {
 			newOAuthPort,
 			newNotifier,
 			newStatsRepository,
-			newWorldStatsRepository,
 			newBooking,
 			newAuthService,
 			newAccessService,

@@ -14,8 +14,10 @@ import (
 	"go.uber.org/zap"
 
 	"spot-assistant/internal/core/dto/loot"
+	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/infrastructure/db/postgresql"
 	"spot-assistant/internal/infrastructure/loot/postgresql/sqlc"
+	reservationsqlc "spot-assistant/internal/infrastructure/reservation/postgresql/sqlc"
 )
 
 const (
@@ -23,6 +25,7 @@ const (
 	itFree       = "it-loot-free"
 	itBotAbsent  = "it-loot-absent"
 	itHashPrefix = "it-loot-"
+	itAuthor     = "it-loot-author"
 )
 
 // TestLootRepository_Queries runs the loot queries against a real database. Set
@@ -77,9 +80,11 @@ func TestLootRepository_Queries(t *testing.T) {
 		{990105, 990103, itFree, "Storm Quiet", at(10, 0), at(12, 0)},
 		{990106, 990104, itBotAbsent, "Storm Quiet", at(10, 0), at(12, 0)},
 		{990107, 990102, itPremium, "Storm Quiet", at(14, 0), at(15, 0)},
+		{990108, 990102, itPremium, "Storm Quiet", at(16, 0), at(18, 0)},
+		{990109, 990102, itPremium, "Storm Quiet", at(19, 0), at(21, 0)},
 	} {
 		_, err = pool.Exec(ctx, `INSERT INTO web_reservation (id, author, created_at, start_at, end_at, spot_id, guild_id, author_discord_id)
-			VALUES ($1, $2, now(), $3, $4, $5, $6, '')`, r.id, r.author, r.start, r.end, r.spot, r.guild)
+			VALUES ($1, $2, now(), $3, $4, $5, $6, $7)`, r.id, r.author, r.start, r.end, r.spot, r.guild, itAuthor)
 		require.NoError(t, err)
 	}
 	repo := sqlc.NewLootRepository(pool)
@@ -94,13 +99,16 @@ func TestLootRepository_Queries(t *testing.T) {
 		}
 	}
 
-	t.Run("a session is stored once", func(t *testing.T) {
+	t.Run("a session is stored once, with its first submitter", func(t *testing.T) {
 		// given
 		s := newSession("dedupe", at(10, 30), at(11, 30))
+		s.SubmittedBy = itAuthor
+		again := s
+		again.SubmittedBy = "someone else"
 
 		// when
 		id1, err1 := repo.SaveSession(ctx, s)
-		id2, err2 := repo.SaveSession(ctx, s)
+		id2, err2 := repo.SaveSession(ctx, again)
 
 		// then
 		require.NoError(t, err1)
@@ -109,6 +117,9 @@ func TestLootRepository_Queries(t *testing.T) {
 		var members int
 		require.NoError(t, pool.QueryRow(ctx, `SELECT count(*) FROM loot_session_members WHERE session_id = $1`, id1).Scan(&members))
 		assert.Equal(t, 2, members)
+		var submitter string
+		require.NoError(t, pool.QueryRow(ctx, `SELECT submitted_by FROM loot_sessions WHERE id = $1`, id1).Scan(&submitter))
+		assert.Equal(t, itAuthor, submitter)
 	})
 
 	t.Run("candidates: premium guilds with the bot, the author's characters, the start window", func(t *testing.T) {
@@ -124,7 +135,7 @@ func TestLootRepository_Queries(t *testing.T) {
 		assert.Equal(t, []int64{990102, 990101}, ids, "newest first")
 		assert.Equal(t, loot.Candidate{
 			ReservationID: 990101, GuildID: itPremium, GuildName: "It Premium", SpotID: 990101, SpotName: "It Hero Cave",
-			Author: "Quiet Nyx /  STORM QUIET ", StartAt: at(10, 0), EndAt: at(12, 0),
+			Author: "Quiet Nyx /  STORM QUIET ", AuthorDiscordID: itAuthor, StartAt: at(10, 0), EndAt: at(12, 0),
 		}, normalize(got[1]))
 	})
 
@@ -140,11 +151,11 @@ func TestLootRepository_Queries(t *testing.T) {
 		require.NoError(t, err)
 
 		// when
-		okFirst, err1 := repo.Pick(ctx, first, 990101, 3600)
-		okAgain, err2 := repo.Pick(ctx, first, 990101, 3600)
-		okTie, err3 := repo.Pick(ctx, tie, 990101, 3600)
-		okSmaller, err4 := repo.Pick(ctx, smaller, 990101, 1800)
-		okLarger, err5 := repo.Pick(ctx, larger, 990101, 5400)
+		okFirst, err1 := repo.Pick(ctx, loot.Attribution{SessionID: first, ReservationID: 990101, OverlapSeconds: 3600})
+		okAgain, err2 := repo.Pick(ctx, loot.Attribution{SessionID: first, ReservationID: 990101, OverlapSeconds: 3600})
+		okTie, err3 := repo.Pick(ctx, loot.Attribution{SessionID: tie, ReservationID: 990101, OverlapSeconds: 3600})
+		okSmaller, err4 := repo.Pick(ctx, loot.Attribution{SessionID: smaller, ReservationID: 990101, OverlapSeconds: 1800})
+		okLarger, err5 := repo.Pick(ctx, loot.Attribution{SessionID: larger, ReservationID: 990101, OverlapSeconds: 5400})
 
 		// then
 		require.NoError(t, err1)
@@ -164,18 +175,18 @@ func TestLootRepository_Queries(t *testing.T) {
 		// given
 		s, err := repo.SaveSession(ctx, newSession("moving", at(14, 0), at(14, 50)))
 		require.NoError(t, err)
-		ok, err := repo.Pick(ctx, s, 990102, 600)
+		ok, err := repo.Pick(ctx, loot.Attribution{SessionID: s, ReservationID: 990102, OverlapSeconds: 600})
 		require.NoError(t, err)
 		require.True(t, ok)
 		holder, err := repo.SaveSession(ctx, newSession("holder", at(14, 0), at(15, 0)))
 		require.NoError(t, err)
-		ok, err = repo.Pick(ctx, holder, 990107, 3600)
+		ok, err = repo.Pick(ctx, loot.Attribution{SessionID: holder, ReservationID: 990107, OverlapSeconds: 3600})
 		require.NoError(t, err)
 		require.True(t, ok)
 
 		// when
-		lost, err1 := repo.Pick(ctx, s, 990107, 3000)
-		moved, err2 := repo.Pick(ctx, s, 990103, 3000)
+		lost, err1 := repo.Pick(ctx, loot.Attribution{SessionID: s, ReservationID: 990107, OverlapSeconds: 3000})
+		moved, err2 := repo.Pick(ctx, loot.Attribution{SessionID: s, ReservationID: 990103, OverlapSeconds: 3000})
 
 		// then
 		require.NoError(t, err1)
@@ -185,6 +196,74 @@ func TestLootRepository_Queries(t *testing.T) {
 		assert.Equal(t, holder, pickOf(t, pool, 990107))
 		assert.Equal(t, s, pickOf(t, pool, 990103))
 		assert.Zero(t, pickOf(t, pool, 990102), "the session counts for one reservation")
+	})
+
+	t.Run("the author's session wins over a larger overlap, and no one else's replaces it", func(t *testing.T) {
+		// given
+		fake, err := repo.SaveSession(ctx, newSession("fake", at(16, 0), at(18, 0)))
+		require.NoError(t, err)
+		own, err := repo.SaveSession(ctx, newSession("own", at(16, 30), at(17, 30)))
+		require.NoError(t, err)
+		larger, err := repo.SaveSession(ctx, newSession("fake-larger", at(16, 0), at(17, 59)))
+		require.NoError(t, err)
+		ok, err := repo.Pick(ctx, loot.Attribution{SessionID: fake, ReservationID: 990108, OverlapSeconds: 7200})
+		require.NoError(t, err)
+		require.True(t, ok)
+
+		// when
+		okOwn, err1 := repo.Pick(ctx, loot.Attribution{SessionID: own, ReservationID: 990108, OverlapSeconds: 3600, ByAuthor: true})
+		okLarger, err2 := repo.Pick(ctx, loot.Attribution{SessionID: larger, ReservationID: 990108, OverlapSeconds: 7140})
+		okOwnAgain, err3 := repo.Pick(ctx, loot.Attribution{SessionID: own, ReservationID: 990108, OverlapSeconds: 3600})
+
+		// then
+		require.NoError(t, err1)
+		require.NoError(t, err2)
+		require.NoError(t, err3)
+		assert.True(t, okOwn, "the author's session replaces a larger overlap")
+		assert.False(t, okLarger, "someone else's session never replaces the author's")
+		assert.True(t, okOwnAgain)
+		assert.Equal(t, own, pickOf(t, pool, 990108))
+		var byAuthor bool
+		require.NoError(t, pool.QueryRow(ctx, `SELECT by_author FROM reservation_loot WHERE reservation_id = 990108`).Scan(&byAuthor))
+		assert.True(t, byAuthor, "the same session pasted again by someone else stays the author's")
+	})
+
+	t.Run("an author's session is replaced only by a larger overlap of the author", func(t *testing.T) {
+		// given
+		first, err := repo.SaveSession(ctx, newSession("own-first", at(19, 0), at(20, 0)))
+		require.NoError(t, err)
+		second, err := repo.SaveSession(ctx, newSession("own-second", at(19, 0), at(20, 30)))
+		require.NoError(t, err)
+		ok, err := repo.Pick(ctx, loot.Attribution{SessionID: first, ReservationID: 990109, OverlapSeconds: 3600, ByAuthor: true})
+		require.NoError(t, err)
+		require.True(t, ok)
+
+		// when
+		okSecond, err := repo.Pick(ctx, loot.Attribution{SessionID: second, ReservationID: 990109, OverlapSeconds: 5400, ByAuthor: true})
+
+		// then
+		require.NoError(t, err)
+		assert.True(t, okSecond)
+		assert.Equal(t, second, pickOf(t, pool, 990109))
+	})
+
+	t.Run("an edit of the spot, the times or the author drops the pick, a save without a change keeps it", func(t *testing.T) {
+		// given
+		reservations := reservationsqlc.NewReservationRepository(pool)
+		booked := reservation.Reservation{ID: 990109, SpotID: 990102, StartAt: at(19, 0), EndAt: at(21, 0), Author: "Storm Quiet", AuthorDiscordID: itAuthor}
+		require.NotZero(t, pickOf(t, pool, 990109))
+
+		// when
+		errSame := reservations.UpdateReservation(ctx, itPremium, booked)
+		kept := pickOf(t, pool, 990109)
+		booked.EndAt = at(20, 45)
+		errChanged := reservations.UpdateReservation(ctx, itPremium, booked)
+
+		// then
+		require.NoError(t, errSame)
+		require.NoError(t, errChanged)
+		assert.NotZero(t, kept)
+		assert.Zero(t, pickOf(t, pool, 990109))
 	})
 
 	t.Run("a deleted reservation drops its pick", func(t *testing.T) {

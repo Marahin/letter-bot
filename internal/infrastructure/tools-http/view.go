@@ -69,6 +69,9 @@ type resultView struct {
 	Stats statsNotice
 }
 
+// statusFailed is the notice of a storage error, which the loot session service never reports.
+const statusFailed loot.Status = "failed"
+
 // statsNotice is the line under the result about the public stats. The match
 // fields are set for counted and outmatched.
 type statsNotice struct {
