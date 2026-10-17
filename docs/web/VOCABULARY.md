@@ -34,6 +34,11 @@ Polish column is the settled wording of `pl.json` (see
 | No data | Brak danych | `status = 'no_data'` | No experience figure: the character was outside the world top 1000 or not tracked. Never shown as 0. |
 | Booked hours | Zarezerwowane godziny | `stats.Totals.Seconds` | The length of the reservations, not measured play time. |
 | Loot Calculator | Kalkulator lootu | `lootcalc` | Splits a Tibia party hunt session into bank transfers. |
+| Loot session | Sesja polowania (`sesja`) | `loot_sessions`, `lootsession` | A Party Hunt session counted from the Loot Calculator: its times and each member's figures, not the pasted text. It belongs to at most one reservation (`reservation_loot`). |
+| Profit | Zysk | `stats.Totals.Profit` | The balance of the counted sessions. On a character row, the character's equal share. Can be negative (a loss). |
+| Profit per hour | Zysk na godzinę (`Zysk/h`) | `Totals.ProfitPerHour` | Profit divided by the session time, not the booked time. |
+| World page | Strona świata | `/worlds/{world}`, `worldstats` | The public stats of one Tibia world, across the servers that set it. |
+| Spawn | Resp (`Respy` in the menu) | `/spawns/{key}`, `stats.SpawnRow` | A respawn name across servers, keyed by `lower(trim(name))`. A server's own list keeps "Respawns". |
 | Party Hunt Analyser | Party Hunt Analyser (not translated; `z okna Party Hunt Analyser`) | `lootcalc.Parse` input | Tibia's in-game window whose copied text the Loot Calculator reads. |
 | Public stats | Statystyki publiczne | `web.PublicView`, `pageView.Public` | The Stats pages as anyone sees them without being a member. |
 | Premium lock | Blokada Premium | `web.PremiumRequired` | The page every server page shows on a server without premium. |

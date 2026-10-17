@@ -1,5 +1,6 @@
 // Package statshttp is the Stats section: the overview, the respawn, player and character
-// tables with their detail pages, and a character's own page with its TibiaData profile.
+// tables with their detail pages, a character's own page with its TibiaData profile, and the
+// cross-server world and spawn pages.
 package statshttp
 
 import (
@@ -22,4 +23,11 @@ func Register(r *web.Router, d *web.Deps) {
 	r.Get("/servers/{id}/stats/spots/{spot}", guard(h.HandleSpot))
 	r.Get("/servers/{id}/stats/players/{user}", guard(h.HandlePlayer))
 	r.Get("/servers/{id}/characters/{name}", guard(h.HandleCharacter))
+
+	// The cross-server pages: public for everyone, with their own range.
+	cross := d.WithCrossRangeSelection
+	r.Get(web.WorldsPath, cross(h.HandleWorlds))
+	r.Get(web.WorldsPath+"/{world}", cross(h.HandleWorld))
+	r.Get(web.SpawnsPath, cross(h.HandleSpawns))
+	r.Get(web.SpawnsPath+"/{key}", cross(h.HandleSpawn))
 }

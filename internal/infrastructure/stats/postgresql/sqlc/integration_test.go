@@ -37,7 +37,9 @@ func TestStatsRepository_Queries(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(pool.Close)
 	cleanup := func() {
-		_, err := pool.Exec(ctx, `DELETE FROM web_reservation WHERE guild_id = $1`, itGuild)
+		_, err := pool.Exec(ctx, `DELETE FROM loot_sessions WHERE substring(content_hash FROM 1 FOR 9) = 'it-stats-'::bytea`)
+		require.NoError(t, err)
+		_, err = pool.Exec(ctx, `DELETE FROM web_reservation WHERE guild_id = $1`, itGuild)
 		require.NoError(t, err)
 		_, err = pool.Exec(ctx, `DELETE FROM web_spot WHERE guild_id = $1`, itGuild)
 		require.NoError(t, err)
@@ -294,5 +296,130 @@ func TestStatsRepository_Queries(t *testing.T) {
 		require.NotNil(t, rows[1].Gain)
 		assert.Equal(t, int64(-50), *rows[1].Gain)
 		assert.Equal(t, experience.StatusOK, rows[2].Status)
+	})
+
+	// Loot from here on: the sessions are added after the experience-only checks above.
+	_, err = pool.Exec(ctx, `INSERT INTO loot_sessions (id, content_hash, started_at, ended_at, duration_seconds, members, loot, supplies, balance, damage, healing) VALUES
+		(990001, 'it-stats-a', $1, $2, 3600, 3, 900000, 600000, 300000, 0, 0),
+		(990002, 'it-stats-b', $3, $4, 1800, 1, 10000, 40000, -30000, 0, 0)`,
+		at(1, 10, 0), at(1, 11, 0), at(3, 10, 0), at(3, 10, 30))
+	require.NoError(t, err)
+	_, err = pool.Exec(ctx, `INSERT INTO loot_session_members (session_id, character_key, character_name, position, loot, supplies, balance, damage, healing) VALUES
+		(990001, 'quiet nyx', 'Quiet Nyx', 0, 0, 0, 0, 0, 0),
+		(990001, 'third one', 'Third One', 1, 0, 0, 0, 0, 0),
+		(990001, 'fourth', 'Fourth', 2, 0, 0, 0, 0, 0),
+		(990002, 'quiet nyx', 'Quiet Nyx', 0, 0, 0, 0, 0, 0)`)
+	require.NoError(t, err)
+	_, err = pool.Exec(ctx, `INSERT INTO reservation_loot (reservation_id, session_id, overlap_seconds) VALUES (990001, 990001, 3600), (990004, 990002, 1800)`)
+	require.NoError(t, err)
+	type lootFigures struct{ res, secs, profit, loot, supplies int64 }
+	lootOf := func(t stats.Totals) lootFigures {
+		return lootFigures{t.LootReservations, t.LootSeconds, t.Profit, t.Loot, t.Supplies}
+	}
+
+	t.Run("loot: the party figures on respawns, players and days", func(t *testing.T) {
+		// when
+		spots, err1 := repo.SpotTotals(ctx, every(all))
+		players, err2 := repo.PlayerTotals(ctx, every(all))
+		days, err3 := repo.Daily(ctx, all)
+
+		// then
+		require.NoError(t, errors.Join(err1, err2, err3))
+		got := map[string]lootFigures{}
+		for _, r := range spots.Rows {
+			got[r.Name] = lootOf(r.Totals)
+		}
+		assert.Equal(t, map[string]lootFigures{
+			"It Hero Cave": {1, 3600, 300000, 900000, 600000},
+			"It Dragons":   {1, 1800, -30000, 10000, 40000},
+		}, got)
+		byUser := map[string]lootFigures{}
+		for _, r := range players.Rows {
+			byUser[r.UserID] = lootOf(r.Totals)
+		}
+		assert.Equal(t, lootFigures{2, 5400, 270000, 910000, 640000}, byUser["u1"])
+		assert.Equal(t, lootFigures{}, byUser["u2"])
+		require.Len(t, days, 3)
+		assert.Equal(t, lootFigures{1, 3600, 300000, 900000, 600000}, lootOf(days[0].Totals))
+		assert.Equal(t, lootFigures{1, 1800, -30000, 10000, 40000}, lootOf(days[2].Totals))
+	})
+
+	t.Run("loot: a character gets its floored share of the sessions it was in", func(t *testing.T) {
+		// given
+		quiet, storm := all, all
+		quiet.CharacterKey = "quiet nyx"
+		storm.CharacterKey = "storm quiet"
+
+		// when
+		quietSpots, err1 := repo.SpotTotals(ctx, every(quiet))
+		stormSpots, err2 := repo.SpotTotals(ctx, every(storm))
+		characters, err3 := repo.CharacterTotals(ctx, every(all))
+		quietDays, err4 := repo.Daily(ctx, quiet)
+
+		// then
+		require.NoError(t, errors.Join(err1, err2, err3, err4))
+		got := map[string]lootFigures{}
+		for _, r := range quietSpots.Rows {
+			got[r.Name] = lootOf(r.Totals)
+		}
+		assert.Equal(t, map[string]lootFigures{
+			"It Hero Cave": {1, 3600, 100000, 300000, 200000},
+			"It Dragons":   {1, 1800, -30000, 10000, 40000},
+		}, got)
+		for _, r := range stormSpots.Rows {
+			assert.False(t, r.HasLoot(), "storm quiet booked but was not in the session")
+		}
+		byKey := map[string]lootFigures{}
+		for _, r := range characters.Rows {
+			byKey[r.Key] = lootOf(r.Totals)
+		}
+		assert.Equal(t, map[string]lootFigures{
+			"quiet nyx":   {2, 5400, 70000, 310000, 240000},
+			"storm quiet": {},
+			"free text":   {},
+		}, byKey, "party members outside the author text get no row")
+		var dayProfit int64
+		for _, d := range quietDays {
+			dayProfit += d.Profit
+		}
+		assert.Equal(t, int64(70000), dayProfit)
+	})
+
+	t.Run("loot: sorts by profit with no data last, and the minimum session time", func(t *testing.T) {
+		// given
+		sorted := func(key stats.SortKey, asc bool) stats.Query {
+			return stats.Query{Filter: all, Sort: stats.Sort{Key: key, Asc: asc}}
+		}
+		minHour := sorted(stats.SortProfitPerHour, false)
+		minHour.MinLootSeconds = 3600
+
+		// when
+		byProfitH, err1 := repo.SpotTotals(ctx, sorted(stats.SortProfitPerHour, true))
+		charsByProfit, err2 := repo.CharacterTotals(ctx, sorted(stats.SortProfit, true))
+		longEnough, err3 := repo.SpotTotals(ctx, minHour)
+
+		// then
+		require.NoError(t, errors.Join(err1, err2, err3))
+		require.Len(t, byProfitH.Rows, 2)
+		assert.Equal(t, "It Dragons", byProfitH.Rows[0].Name)
+		require.NotNil(t, byProfitH.Rows[0].ProfitPerHour())
+		assert.InDelta(t, -60000.0, *byProfitH.Rows[0].ProfitPerHour(), 1e-6)
+		require.Len(t, charsByProfit.Rows, 3)
+		assert.Equal(t, "quiet nyx", charsByProfit.Rows[0].Key, "rows without data come last, ascending too")
+		require.Len(t, longEnough.Rows, 1)
+		assert.Equal(t, "It Hero Cave", longEnough.Rows[0].Name)
+		assert.Equal(t, 1, longEnough.Total)
+	})
+
+	t.Run("loot: the profit leaderboard", func(t *testing.T) {
+		// when
+		boards, err := repo.CharacterLeaderboards(ctx, all, 10, 3*3600)
+
+		// then
+		require.NoError(t, err)
+		require.Len(t, boards.ByProfit, 1)
+		assert.Equal(t, "Quiet Nyx", boards.ByProfit[0].Name)
+		assert.Equal(t, lootFigures{2, 5400, 70000, 310000, 240000}, lootOf(boards.ByProfit[0].Totals))
+		assert.Len(t, boards.ByExp, 2, "the other boards are unchanged")
 	})
 }

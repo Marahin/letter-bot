@@ -145,8 +145,11 @@ func TestService_Overview(t *testing.T) {
 	repo.EXPECT().CharacterLeaderboards(mock.Anything, f, LeaderboardSize, int64(3*3600)).Return(stats.CharacterBoards{
 		ByExp:        []stats.CharacterRow{{Name: "alpha"}, {Name: "Charlie"}},
 		ByExpPerHour: []stats.CharacterRow{{Name: "alpha"}},
+		ByProfit:     []stats.CharacterRow{{Name: "Charlie"}},
 		Characters:   4,
 	}, nil)
+	repo.EXPECT().SpotTotals(mock.Anything, stats.Query{Filter: f, Sort: stats.Sort{Key: stats.SortProfitPerHour}, Limit: LeaderboardSize, MinLootSeconds: 3 * 3600}).
+		Return(stats.Page[stats.SpotRow]{Rows: []stats.SpotRow{{SpotID: 2, Name: "Dragons"}}, Total: 1}, nil)
 
 	// when
 	o, err := svc.Overview(context.Background(), "g", rng)
@@ -163,11 +166,14 @@ func TestService_Overview(t *testing.T) {
 	assert.Equal(t, []string{"alpha"}, names(o.Leaderboards.CharactersByExpPerHour))
 	assert.Equal(t, []string{"alpha", "Charlie"}, names(o.Leaderboards.CharactersByExp))
 	assert.Len(t, o.Leaderboards.PlayersByHours, 1)
+	assert.Equal(t, []string{"Charlie"}, names(o.Leaderboards.CharactersByProfit))
+	require.Len(t, o.Leaderboards.SpotsByProfitPerHour, 1)
+	assert.Equal(t, "Dragons", o.Leaderboards.SpotsByProfitPerHour[0].Name)
 }
 
 func TestService_Overview_Errors(t *testing.T) {
 	rng := ResolveRange(nil, now)
-	steps := []string{"daily", "spots", "players", "characters"}
+	steps := []string{"daily", "spots", "players", "characters", "profitable spots"}
 	for i := range steps {
 		t.Run(steps[i], func(t *testing.T) {
 			// given
@@ -180,13 +186,16 @@ func TestService_Overview_Errors(t *testing.T) {
 			}
 			repo.EXPECT().Daily(mock.Anything, mock.Anything).Return(nil, fail(0))
 			if i >= 1 {
-				repo.EXPECT().SpotTotals(mock.Anything, mock.Anything).Return(stats.Page[stats.SpotRow]{}, fail(1))
+				repo.EXPECT().SpotTotals(mock.Anything, mock.Anything).Return(stats.Page[stats.SpotRow]{}, fail(1)).Once()
 			}
 			if i >= 2 {
 				repo.EXPECT().PlayerTotals(mock.Anything, mock.Anything).Return(stats.Page[stats.PlayerRow]{}, fail(2))
 			}
 			if i >= 3 {
 				repo.EXPECT().CharacterLeaderboards(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(stats.CharacterBoards{}, fail(3))
+			}
+			if i >= 4 {
+				repo.EXPECT().SpotTotals(mock.Anything, mock.Anything).Return(stats.Page[stats.SpotRow]{}, fail(4)).Once()
 			}
 
 			// when

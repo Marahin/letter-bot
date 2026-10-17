@@ -1,6 +1,9 @@
 package web
 
-import "net/http"
+import (
+	"net/http"
+	"strings"
+)
 
 // rangeCookieName holds the day-range selection chosen on a range picker. It is a
 // per-server session cookie (see setGuildCookie), so the selection carries between
@@ -17,4 +20,16 @@ func (d *Deps) RangeSelectionCookie(r *http.Request) string {
 // blank value clears it.
 func (d *Deps) SetRangeSelectionCookie(w http.ResponseWriter, guildID, days string) {
 	d.setGuildCookie(w, rangeCookieName, guildID, days)
+}
+
+// crossRangeScope scopes the range cookie of the cross-server pages (/worlds, /spawns): they
+// share one selection, apart from each server's own (letter_range_worlds).
+const crossRangeScope = "worlds"
+
+func crossRangeCookie(r *http.Request) string {
+	c, err := r.Cookie(guildCookieName(rangeCookieName, crossRangeScope))
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(c.Value)
 }

@@ -35,6 +35,15 @@ WITH r AS (
   FROM reservation_experience re
   JOIN r ON r.id = re.reservation_id
   WHERE re.status = 'ok'
+), l AS (
+  SELECT rl.reservation_id, lm.character_key, ls.duration_seconds::bigint AS secs,
+         floor(ls.balance::numeric / ls.members)::bigint AS profit,
+         floor(ls.loot::numeric / ls.members)::bigint AS loot,
+         floor(ls.supplies::numeric / ls.members)::bigint AS supplies
+  FROM reservation_loot rl
+  JOIN r ON r.id = rl.reservation_id
+  JOIN loot_sessions ls ON ls.id = rl.session_id
+  JOIN loot_session_members lm ON lm.session_id = ls.id
 ), g AS (
   SELECT c.character_key,
          (max(ARRAY[extract(epoch FROM c.start_at)::bigint, c.id]))[2] AS last_id,
@@ -42,18 +51,28 @@ WITH r AS (
          coalesce(sum(c.secs), 0)::bigint AS seconds,
          count(e.gain)::bigint AS exp_reservations,
          coalesce(sum(c.secs) FILTER (WHERE e.gain IS NOT NULL), 0)::bigint AS exp_seconds,
-         coalesce(sum(e.gain), 0)::bigint AS exp
+         coalesce(sum(e.gain), 0)::bigint AS exp,
+         count(l.reservation_id)::bigint AS loot_reservations,
+         coalesce(sum(l.secs), 0)::bigint AS loot_seconds,
+         coalesce(sum(l.profit), 0)::bigint AS profit,
+         coalesce(sum(l.loot), 0)::bigint AS loot,
+         coalesce(sum(l.supplies), 0)::bigint AS supplies
   FROM c
   LEFT JOIN e ON e.reservation_id = c.id AND e.character_key = c.character_key
+  LEFT JOIN l ON l.reservation_id = c.id AND l.character_key = c.character_key
   GROUP BY c.character_key
 ), b AS (
-  (SELECT 'exp'::text AS board, g.exp::float8 AS figure, g.character_key, g.last_id, g.reservations, g.seconds, g.exp_reservations, g.exp_seconds, g.exp
+  (SELECT 'exp'::text AS board, g.exp::float8 AS figure, g.character_key, g.last_id, g.reservations, g.seconds, g.exp_reservations, g.exp_seconds, g.exp, g.loot_reservations, g.loot_seconds, g.profit, g.loot, g.supplies
    FROM g WHERE g.exp_reservations > 0
    ORDER BY g.exp DESC, g.character_key LIMIT $7::int)
   UNION ALL
-  (SELECT 'exp_h'::text AS board, g.exp::float8 * 3600 / g.exp_seconds AS figure, g.character_key, g.last_id, g.reservations, g.seconds, g.exp_reservations, g.exp_seconds, g.exp
+  (SELECT 'exp_h'::text AS board, g.exp::float8 * 3600 / g.exp_seconds AS figure, g.character_key, g.last_id, g.reservations, g.seconds, g.exp_reservations, g.exp_seconds, g.exp, g.loot_reservations, g.loot_seconds, g.profit, g.loot, g.supplies
    FROM g WHERE g.exp_seconds > 0 AND g.exp_seconds >= $8::bigint
    ORDER BY g.exp::float8 / g.exp_seconds DESC, g.character_key LIMIT $7::int)
+  UNION ALL
+  (SELECT 'profit'::text AS board, g.profit::float8 AS figure, g.character_key, g.last_id, g.reservations, g.seconds, g.exp_reservations, g.exp_seconds, g.exp, g.loot_reservations, g.loot_seconds, g.profit, g.loot, g.supplies
+   FROM g WHERE g.loot_reservations > 0
+   ORDER BY g.profit DESC, g.character_key LIMIT $7::int)
 )
 SELECT t.total_rows::bigint AS total_rows,
        b.board,
@@ -64,7 +83,12 @@ SELECT t.total_rows::bigint AS total_rows,
        b.seconds,
        b.exp_reservations,
        b.exp_seconds,
-       b.exp
+       b.exp,
+       b.loot_reservations,
+       b.loot_seconds,
+       b.profit,
+       b.loot,
+       b.supplies
 FROM (SELECT count(*) AS total_rows FROM g) AS t
 LEFT JOIN b ON true
 ORDER BY b.board, b.figure DESC, b.character_key
@@ -82,19 +106,24 @@ type CharacterLeaderboardsParams struct {
 }
 
 type CharacterLeaderboardsRow struct {
-	TotalRows       int64
-	Board           pgtype.Text
-	CharacterKey    pgtype.Text
-	Name            string
-	Reservations    pgtype.Int8
-	Seconds         pgtype.Int8
-	ExpReservations pgtype.Int8
-	ExpSeconds      pgtype.Int8
-	Exp             pgtype.Int8
+	TotalRows        int64
+	Board            pgtype.Text
+	CharacterKey     pgtype.Text
+	Name             string
+	Reservations     pgtype.Int8
+	Seconds          pgtype.Int8
+	ExpReservations  pgtype.Int8
+	ExpSeconds       pgtype.Int8
+	Exp              pgtype.Int8
+	LootReservations pgtype.Int8
+	LootSeconds      pgtype.Int8
+	Profit           pgtype.Int8
+	Loot             pgtype.Int8
+	Supplies         pgtype.Int8
 }
 
-// Both overview character leaderboards and the number of characters from one pass over the
-// reservations. The count row always comes back; board is NULL when neither leaderboard has a row.
+// The overview character leaderboards and the number of characters from one pass over the
+// reservations. The count row always comes back; board is NULL when no leaderboard has a row.
 func (q *Queries) CharacterLeaderboards(ctx context.Context, arg CharacterLeaderboardsParams) ([]CharacterLeaderboardsRow, error) {
 	rows, err := q.db.Query(ctx, characterLeaderboards,
 		arg.GuildID,
@@ -123,6 +152,11 @@ func (q *Queries) CharacterLeaderboards(ctx context.Context, arg CharacterLeader
 			&i.ExpReservations,
 			&i.ExpSeconds,
 			&i.Exp,
+			&i.LootReservations,
+			&i.LootSeconds,
+			&i.Profit,
+			&i.Loot,
+			&i.Supplies,
 		); err != nil {
 			return nil, err
 		}
@@ -226,6 +260,15 @@ WITH r AS (
   FROM reservation_experience re
   JOIN r ON r.id = re.reservation_id
   WHERE re.status = 'ok'
+), l AS (
+  SELECT rl.reservation_id, lm.character_key, ls.duration_seconds::bigint AS secs,
+         floor(ls.balance::numeric / ls.members)::bigint AS profit,
+         floor(ls.loot::numeric / ls.members)::bigint AS loot,
+         floor(ls.supplies::numeric / ls.members)::bigint AS supplies
+  FROM reservation_loot rl
+  JOIN r ON r.id = rl.reservation_id
+  JOIN loot_sessions ls ON ls.id = rl.session_id
+  JOIN loot_session_members lm ON lm.session_id = ls.id
 ), g AS (
   SELECT c.character_key,
          (max(ARRAY[extract(epoch FROM c.start_at)::bigint, c.id]))[2] AS last_id,
@@ -233,18 +276,26 @@ WITH r AS (
          coalesce(sum(c.secs), 0)::bigint AS seconds,
          count(e.gain)::bigint AS exp_reservations,
          coalesce(sum(c.secs) FILTER (WHERE e.gain IS NOT NULL), 0)::bigint AS exp_seconds,
-         coalesce(sum(e.gain), 0)::bigint AS exp
+         coalesce(sum(e.gain), 0)::bigint AS exp,
+         count(l.reservation_id)::bigint AS loot_reservations,
+         coalesce(sum(l.secs), 0)::bigint AS loot_seconds,
+         coalesce(sum(l.profit), 0)::bigint AS profit,
+         coalesce(sum(l.loot), 0)::bigint AS loot,
+         coalesce(sum(l.supplies), 0)::bigint AS supplies
   FROM c
   LEFT JOIN e ON e.reservation_id = c.id AND e.character_key = c.character_key
+  LEFT JOIN l ON l.reservation_id = c.id AND l.character_key = c.character_key
   GROUP BY c.character_key
 ), m AS (
-  SELECT g.character_key, g.last_id, g.reservations, g.seconds, g.exp_reservations, g.exp_seconds, g.exp,
+  SELECT g.character_key, g.last_id, g.reservations, g.seconds, g.exp_reservations, g.exp_seconds, g.exp, g.loot_reservations, g.loot_seconds, g.profit, g.loot, g.supplies,
          CASE WHEN $1::text = 'name' THEN (SELECT min(btrim(n.name)) FROM web_reservation w CROSS JOIN LATERAL unnest(string_to_array(w.author, '/')) AS n(name)
         WHERE w.id = g.last_id AND lower(btrim(n.name)) = g.character_key) END AS name,
          CASE $1::text
          WHEN 'reservations' THEN g.reservations::float8
          WHEN 'exp' THEN CASE WHEN g.exp_reservations > 0 THEN g.exp::float8 END
          WHEN 'exp_h' THEN CASE WHEN g.exp_seconds > 0 THEN g.exp::float8 * 3600 / g.exp_seconds END
+         WHEN 'profit' THEN CASE WHEN g.loot_reservations > 0 THEN g.profit::float8 END
+         WHEN 'profit_h' THEN CASE WHEN g.loot_seconds > 0 THEN g.profit::float8 * 3600 / g.loot_seconds END
          WHEN 'name' THEN NULL
          ELSE g.seconds::float8
        END AS figure
@@ -258,6 +309,11 @@ SELECT m.character_key::text AS character_key,
        m.exp_reservations::bigint AS exp_reservations,
        m.exp_seconds::bigint AS exp_seconds,
        m.exp::bigint AS exp,
+       m.loot_reservations::bigint AS loot_reservations,
+       m.loot_seconds::bigint AS loot_seconds,
+       m.profit::bigint AS profit,
+       m.loot::bigint AS loot,
+       m.supplies::bigint AS supplies,
        count(*) OVER ()::bigint AS total_rows
 FROM m
 ORDER BY CASE WHEN $1::text = 'name' AND $2::boolean THEN lower(m.name) END ASC,
@@ -281,14 +337,19 @@ type CharacterTotalsParams struct {
 }
 
 type CharacterTotalsRow struct {
-	CharacterKey    string
-	Name            string
-	Reservations    int64
-	Seconds         int64
-	ExpReservations int64
-	ExpSeconds      int64
-	Exp             int64
-	TotalRows       int64
+	CharacterKey     string
+	Name             string
+	Reservations     int64
+	Seconds          int64
+	ExpReservations  int64
+	ExpSeconds       int64
+	Exp              int64
+	LootReservations int64
+	LootSeconds      int64
+	Profit           int64
+	Loot             int64
+	Supplies         int64
+	TotalRows        int64
 }
 
 // The DISTINCT dedupes a character named twice in one author text; it sorts 1-3 names per
@@ -321,6 +382,11 @@ func (q *Queries) CharacterTotals(ctx context.Context, arg CharacterTotalsParams
 			&i.ExpReservations,
 			&i.ExpSeconds,
 			&i.Exp,
+			&i.LootReservations,
+			&i.LootSeconds,
+			&i.Profit,
+			&i.Loot,
+			&i.Supplies,
 			&i.TotalRows,
 		); err != nil {
 			return nil, err
@@ -351,15 +417,33 @@ WITH r AS (
   WHERE re.status = 'ok'
     AND ($7::text = '' OR re.character_key = $7::text)
   GROUP BY re.reservation_id
+), l AS (
+  -- One session per reservation (reservation_loot's key). A character filter counts the
+  -- character's equal share, floored as the split pays it, and only sessions it was in.
+  SELECT rl.reservation_id, ls.duration_seconds::bigint AS secs,
+         CASE WHEN $7::text = '' THEN ls.balance ELSE floor(ls.balance::numeric / ls.members)::bigint END AS profit,
+         CASE WHEN $7::text = '' THEN ls.loot ELSE floor(ls.loot::numeric / ls.members)::bigint END AS loot,
+         CASE WHEN $7::text = '' THEN ls.supplies ELSE floor(ls.supplies::numeric / ls.members)::bigint END AS supplies
+  FROM reservation_loot rl
+  JOIN r ON r.id = rl.reservation_id
+  JOIN loot_sessions ls ON ls.id = rl.session_id
+  WHERE $7::text = '' OR EXISTS (SELECT 1 FROM loot_session_members lm
+        WHERE lm.session_id = ls.id AND lm.character_key = $7::text)
 )
 SELECT r.day::date AS day,
        count(*)::bigint AS reservations,
        coalesce(sum(r.secs), 0)::bigint AS seconds,
        count(e.reservation_id)::bigint AS exp_reservations,
        coalesce(sum(r.secs) FILTER (WHERE e.reservation_id IS NOT NULL), 0)::bigint AS exp_seconds,
-       coalesce(sum(e.gain), 0)::bigint AS exp
+       coalesce(sum(e.gain), 0)::bigint AS exp,
+       count(l.reservation_id)::bigint AS loot_reservations,
+       coalesce(sum(l.secs), 0)::bigint AS loot_seconds,
+       coalesce(sum(l.profit), 0)::bigint AS profit,
+       coalesce(sum(l.loot), 0)::bigint AS loot,
+       coalesce(sum(l.supplies), 0)::bigint AS supplies
 FROM r
 LEFT JOIN e ON e.reservation_id = r.id
+LEFT JOIN l ON l.reservation_id = r.id
 GROUP BY r.day
 ORDER BY r.day
 `
@@ -375,12 +459,17 @@ type DailyParams struct {
 }
 
 type DailyRow struct {
-	Day             pgtype.Date
-	Reservations    int64
-	Seconds         int64
-	ExpReservations int64
-	ExpSeconds      int64
-	Exp             int64
+	Day              pgtype.Date
+	Reservations     int64
+	Seconds          int64
+	ExpReservations  int64
+	ExpSeconds       int64
+	Exp              int64
+	LootReservations int64
+	LootSeconds      int64
+	Profit           int64
+	Loot             int64
+	Supplies         int64
 }
 
 func (q *Queries) Daily(ctx context.Context, arg DailyParams) ([]DailyRow, error) {
@@ -407,6 +496,11 @@ func (q *Queries) Daily(ctx context.Context, arg DailyParams) ([]DailyRow, error
 			&i.ExpReservations,
 			&i.ExpSeconds,
 			&i.Exp,
+			&i.LootReservations,
+			&i.LootSeconds,
+			&i.Profit,
+			&i.Loot,
+			&i.Supplies,
 		); err != nil {
 			return nil, err
 		}
@@ -458,6 +552,18 @@ WITH r AS (
   WHERE re.status = 'ok'
     AND ($9::text = '' OR re.character_key = $9::text)
   GROUP BY re.reservation_id
+), l AS (
+  -- One session per reservation (reservation_loot's key). A character filter counts the
+  -- character's equal share, floored as the split pays it, and only sessions it was in.
+  SELECT rl.reservation_id, ls.duration_seconds::bigint AS secs,
+         CASE WHEN $9::text = '' THEN ls.balance ELSE floor(ls.balance::numeric / ls.members)::bigint END AS profit,
+         CASE WHEN $9::text = '' THEN ls.loot ELSE floor(ls.loot::numeric / ls.members)::bigint END AS loot,
+         CASE WHEN $9::text = '' THEN ls.supplies ELSE floor(ls.supplies::numeric / ls.members)::bigint END AS supplies
+  FROM reservation_loot rl
+  JOIN r ON r.id = rl.reservation_id
+  JOIN loot_sessions ls ON ls.id = rl.session_id
+  WHERE $9::text = '' OR EXISTS (SELECT 1 FROM loot_session_members lm
+        WHERE lm.session_id = ls.id AND lm.character_key = $9::text)
 ), g AS (
   SELECT r.author_discord_id AS user_id,
          CASE WHEN $2::text = 'name' THEN (SELECT w.author FROM web_reservation w
@@ -467,15 +573,23 @@ WITH r AS (
          coalesce(sum(r.secs), 0)::bigint AS seconds,
          count(e.reservation_id)::bigint AS exp_reservations,
          coalesce(sum(r.secs) FILTER (WHERE e.reservation_id IS NOT NULL), 0)::bigint AS exp_seconds,
-         coalesce(sum(e.gain), 0)::bigint AS exp
+         coalesce(sum(e.gain), 0)::bigint AS exp,
+         count(l.reservation_id)::bigint AS loot_reservations,
+         coalesce(sum(l.secs), 0)::bigint AS loot_seconds,
+         coalesce(sum(l.profit), 0)::bigint AS profit,
+         coalesce(sum(l.loot), 0)::bigint AS loot,
+         coalesce(sum(l.supplies), 0)::bigint AS supplies
   FROM r
   LEFT JOIN e ON e.reservation_id = r.id
+  LEFT JOIN l ON l.reservation_id = r.id
   GROUP BY r.author_discord_id
 ), m AS (
-  SELECT g.user_id, g.name, g.reservations, g.seconds, g.exp_reservations, g.exp_seconds, g.exp, CASE $2::text
+  SELECT g.user_id, g.name, g.reservations, g.seconds, g.exp_reservations, g.exp_seconds, g.exp, g.loot_reservations, g.loot_seconds, g.profit, g.loot, g.supplies, CASE $2::text
          WHEN 'reservations' THEN g.reservations::float8
          WHEN 'exp' THEN CASE WHEN g.exp_reservations > 0 THEN g.exp::float8 END
          WHEN 'exp_h' THEN CASE WHEN g.exp_seconds > 0 THEN g.exp::float8 * 3600 / g.exp_seconds END
+         WHEN 'profit' THEN CASE WHEN g.loot_reservations > 0 THEN g.profit::float8 END
+         WHEN 'profit_h' THEN CASE WHEN g.loot_seconds > 0 THEN g.profit::float8 * 3600 / g.loot_seconds END
          WHEN 'name' THEN NULL
          ELSE g.seconds::float8
        END AS figure
@@ -490,6 +604,11 @@ SELECT m.user_id::text AS user_id,
        m.exp_reservations::bigint AS exp_reservations,
        m.exp_seconds::bigint AS exp_seconds,
        m.exp::bigint AS exp,
+       m.loot_reservations::bigint AS loot_reservations,
+       m.loot_seconds::bigint AS loot_seconds,
+       m.profit::bigint AS profit,
+       m.loot::bigint AS loot,
+       m.supplies::bigint AS supplies,
        count(*) OVER ()::bigint AS total_rows
 FROM m
 ORDER BY CASE WHEN $2::text = 'name' AND $3::boolean THEN lower(m.name) END ASC,
@@ -513,14 +632,19 @@ type PlayerTotalsParams struct {
 }
 
 type PlayerTotalsRow struct {
-	UserID          string
-	Name            string
-	Reservations    int64
-	Seconds         int64
-	ExpReservations int64
-	ExpSeconds      int64
-	Exp             int64
-	TotalRows       int64
+	UserID           string
+	Name             string
+	Reservations     int64
+	Seconds          int64
+	ExpReservations  int64
+	ExpSeconds       int64
+	Exp              int64
+	LootReservations int64
+	LootSeconds      int64
+	Profit           int64
+	Loot             int64
+	Supplies         int64
+	TotalRows        int64
 }
 
 // The name is looked up after the limit: an ordered array_agg would force a sort of every row.
@@ -552,6 +676,11 @@ func (q *Queries) PlayerTotals(ctx context.Context, arg PlayerTotalsParams) ([]P
 			&i.ExpReservations,
 			&i.ExpSeconds,
 			&i.Exp,
+			&i.LootReservations,
+			&i.LootSeconds,
+			&i.Profit,
+			&i.Loot,
+			&i.Supplies,
 			&i.TotalRows,
 		); err != nil {
 			return nil, err
@@ -635,26 +764,47 @@ WITH r AS (
   WHERE re.status = 'ok'
     AND ($9::text = '' OR re.character_key = $9::text)
   GROUP BY re.reservation_id
+), l AS (
+  -- One session per reservation (reservation_loot's key). A character filter counts the
+  -- character's equal share, floored as the split pays it, and only sessions it was in.
+  SELECT rl.reservation_id, ls.duration_seconds::bigint AS secs,
+         CASE WHEN $9::text = '' THEN ls.balance ELSE floor(ls.balance::numeric / ls.members)::bigint END AS profit,
+         CASE WHEN $9::text = '' THEN ls.loot ELSE floor(ls.loot::numeric / ls.members)::bigint END AS loot,
+         CASE WHEN $9::text = '' THEN ls.supplies ELSE floor(ls.supplies::numeric / ls.members)::bigint END AS supplies
+  FROM reservation_loot rl
+  JOIN r ON r.id = rl.reservation_id
+  JOIN loot_sessions ls ON ls.id = rl.session_id
+  WHERE $9::text = '' OR EXISTS (SELECT 1 FROM loot_session_members lm
+        WHERE lm.session_id = ls.id AND lm.character_key = $9::text)
 ), g AS (
   SELECT s.id AS spot_id, s.name::text AS name, (s.archived_at IS NOT NULL)::boolean AS archived,
          count(*)::bigint AS reservations,
          coalesce(sum(r.secs), 0)::bigint AS seconds,
          count(e.reservation_id)::bigint AS exp_reservations,
          coalesce(sum(r.secs) FILTER (WHERE e.reservation_id IS NOT NULL), 0)::bigint AS exp_seconds,
-         coalesce(sum(e.gain), 0)::bigint AS exp
+         coalesce(sum(e.gain), 0)::bigint AS exp,
+         count(l.reservation_id)::bigint AS loot_reservations,
+         coalesce(sum(l.secs), 0)::bigint AS loot_seconds,
+         coalesce(sum(l.profit), 0)::bigint AS profit,
+         coalesce(sum(l.loot), 0)::bigint AS loot,
+         coalesce(sum(l.supplies), 0)::bigint AS supplies
   FROM r
   JOIN web_spot s ON s.id = r.spot_id
   LEFT JOIN e ON e.reservation_id = r.id
+  LEFT JOIN l ON l.reservation_id = r.id
   GROUP BY s.id, s.name, s.archived_at
 ), m AS (
-  SELECT g.spot_id, g.name, g.archived, g.reservations, g.seconds, g.exp_reservations, g.exp_seconds, g.exp, CASE $1::text
+  SELECT g.spot_id, g.name, g.archived, g.reservations, g.seconds, g.exp_reservations, g.exp_seconds, g.exp, g.loot_reservations, g.loot_seconds, g.profit, g.loot, g.supplies, CASE $1::text
          WHEN 'reservations' THEN g.reservations::float8
          WHEN 'exp' THEN CASE WHEN g.exp_reservations > 0 THEN g.exp::float8 END
          WHEN 'exp_h' THEN CASE WHEN g.exp_seconds > 0 THEN g.exp::float8 * 3600 / g.exp_seconds END
+         WHEN 'profit' THEN CASE WHEN g.loot_reservations > 0 THEN g.profit::float8 END
+         WHEN 'profit_h' THEN CASE WHEN g.loot_seconds > 0 THEN g.profit::float8 * 3600 / g.loot_seconds END
          WHEN 'name' THEN NULL
          ELSE g.seconds::float8
        END AS figure
   FROM g
+  WHERE $10::bigint = 0 OR g.loot_seconds >= $10::bigint
 )
 SELECT m.spot_id::bigint AS spot_id, m.name::text AS name, m.archived::boolean AS archived,
        m.reservations::bigint AS reservations,
@@ -662,6 +812,11 @@ SELECT m.spot_id::bigint AS spot_id, m.name::text AS name, m.archived::boolean A
        m.exp_reservations::bigint AS exp_reservations,
        m.exp_seconds::bigint AS exp_seconds,
        m.exp::bigint AS exp,
+       m.loot_reservations::bigint AS loot_reservations,
+       m.loot_seconds::bigint AS loot_seconds,
+       m.profit::bigint AS profit,
+       m.loot::bigint AS loot,
+       m.supplies::bigint AS supplies,
        count(*) OVER ()::bigint AS total_rows
 FROM m
 ORDER BY CASE WHEN $1::text = 'name' AND $2::boolean THEN lower(m.name) END ASC,
@@ -673,27 +828,33 @@ LIMIT NULLIF($3::int, 0)
 `
 
 type SpotTotalsParams struct {
-	SortKey      string
-	Ascending    bool
-	Lim          int32
-	GuildID      string
-	FromT        pgtype.Timestamptz
-	ToT          pgtype.Timestamptz
-	SpotID       int64
-	UserID       string
-	CharacterKey string
+	SortKey        string
+	Ascending      bool
+	Lim            int32
+	GuildID        string
+	FromT          pgtype.Timestamptz
+	ToT            pgtype.Timestamptz
+	SpotID         int64
+	UserID         string
+	CharacterKey   string
+	MinLootSeconds int64
 }
 
 type SpotTotalsRow struct {
-	SpotID          int64
-	Name            string
-	Archived        bool
-	Reservations    int64
-	Seconds         int64
-	ExpReservations int64
-	ExpSeconds      int64
-	Exp             int64
-	TotalRows       int64
+	SpotID           int64
+	Name             string
+	Archived         bool
+	Reservations     int64
+	Seconds          int64
+	ExpReservations  int64
+	ExpSeconds       int64
+	Exp              int64
+	LootReservations int64
+	LootSeconds      int64
+	Profit           int64
+	Loot             int64
+	Supplies         int64
+	TotalRows        int64
 }
 
 // Every totals query filters the same way: guild, start_at in [from_t, to_t), and optional
@@ -712,6 +873,7 @@ func (q *Queries) SpotTotals(ctx context.Context, arg SpotTotalsParams) ([]SpotT
 		arg.SpotID,
 		arg.UserID,
 		arg.CharacterKey,
+		arg.MinLootSeconds,
 	)
 	if err != nil {
 		return nil, err
@@ -729,6 +891,11 @@ func (q *Queries) SpotTotals(ctx context.Context, arg SpotTotalsParams) ([]SpotT
 			&i.ExpReservations,
 			&i.ExpSeconds,
 			&i.Exp,
+			&i.LootReservations,
+			&i.LootSeconds,
+			&i.Profit,
+			&i.Loot,
+			&i.Supplies,
 			&i.TotalRows,
 		); err != nil {
 			return nil, err

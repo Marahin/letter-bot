@@ -20,7 +20,7 @@ templ Overview(baseURL string, v overviewView, nav web.Nav) {
 	@web.Layout(i18n.T(ctx, "stats.overview.title", v.GuildName), i18n.T(ctx, "stats.overview.description", v.GuildName), baseURL, web.GuildPath(v.GuildID, "/stats"), nav) {
 		@publicBar(v.pageView, "stats", nav)
 		@heading("", i18n.T(ctx, "stats.overview.heading"), i18n.T(ctx, "stats.overview.lede", v.GuildName))
-		@toolbar(v.pageView)
+		@toolbar(v.Picker)
 		@kpis(v.O.Totals, []kpi{
 			{Label: i18n.T(ctx, "stats.kpi.players"), Value: formatInt(ctx, int64(v.O.Players))},
 			{Label: i18n.T(ctx, "stats.kpi.characters"), Value: formatInt(ctx, int64(v.O.Characters))},
@@ -41,6 +41,8 @@ templ Overview(baseURL string, v overviewView, nav web.Nav) {
 				@leaderboard("lb-players", i18n.T(ctx, "stats.leaderboard.players_hours"), i18n.T(ctx, "stats.leaderboard.players_hours_hint"), playerRows(v.GuildID, v.O.Leaderboards.PlayersByHours), stats.SortHours, web.GuildPath(v.GuildID, "/stats/players"))
 				@leaderboard("lb-exp", i18n.T(ctx, "stats.leaderboard.characters_exp"), i18n.T(ctx, "stats.leaderboard.characters_exp_hint"), characterRows(v.GuildID, v.O.Leaderboards.CharactersByExp), stats.SortExp, web.GuildPath(v.GuildID, "/stats/characters?sort=exp"))
 				@leaderboard("lb-exph", i18n.T(ctx, "stats.leaderboard.characters_exp_hour"), i18n.T(ctx, "stats.leaderboard.characters_exp_hour_hint", strconv.Itoa(int(corestats.MinExpPerHourHours))), characterRows(v.GuildID, v.O.Leaderboards.CharactersByExpPerHour), stats.SortExpPerHour, web.GuildPath(v.GuildID, "/stats/characters?sort=exp_h"))
+				@leaderboard("lb-profith", i18n.T(ctx, "stats.leaderboard.spots_profit_hour"), i18n.T(ctx, "stats.leaderboard.spots_profit_hour_hint", strconv.Itoa(int(corestats.MinProfitPerHourHours))), spotRows(v.GuildID, v.O.Leaderboards.SpotsByProfitPerHour), stats.SortProfitPerHour, web.GuildPath(v.GuildID, "/stats/spots?sort=profit_h"))
+				@leaderboard("lb-profit", i18n.T(ctx, "stats.leaderboard.characters_profit"), i18n.T(ctx, "stats.leaderboard.characters_profit_hint"), characterRows(v.GuildID, v.O.Leaderboards.CharactersByProfit), stats.SortProfit, web.GuildPath(v.GuildID, "/stats/characters?sort=profit"))
 			</div>
 		}
 		@noDataNote()
@@ -52,7 +54,7 @@ templ Table(baseURL string, v tableView, nav web.Nav) {
 	@web.Layout(v.title(ctx)+" - "+v.GuildName, v.lede(ctx), baseURL, v.path(), nav) {
 		@publicBar(v.pageView, "stats-"+string(v.Kind), nav)
 		@heading("", v.title(ctx), v.lede(ctx))
-		@toolbar(v.pageView) {
+		@toolbar(v.Picker) {
 			if v.Total > 0 {
 				<a href={ templ.SafeURL(csvHref(v)) } download class="ml-auto inline-flex min-h-11 items-center rounded-md border border-zone-700 px-3 text-sm text-zone-300 transition hover:border-signal hover:text-signal sm:min-h-9">{ i18n.T(ctx, "stats.table.export_csv") }</a>
 			}
@@ -60,7 +62,7 @@ templ Table(baseURL string, v tableView, nav web.Nav) {
 		if v.Total == 0 {
 			@empty(i18n.T(ctx, "stats.empty.range"))
 		} else {
-			@statsTable(v.Rows, nameHeader(ctx, v.Kind), &v)
+			@statsTable(v.Rows, nameHeader(ctx, v.Kind), guildColumns(ctx), v.sortState())
 			if v.Total > len(v.Rows) {
 				<p class="mt-2 text-xs text-zone-400">{ i18n.T(ctx, "stats.table.truncated", formatInt(ctx, int64(len(v.Rows))), formatInt(ctx, int64(v.Total))) }</p>
 			}
@@ -83,8 +85,9 @@ templ SpotPage(baseURL string, v spotView, nav web.Nav) {
 				<a href={ templ.SafeURL(web.GuildPath(v.GuildID, "/spots/"+strconv.FormatInt(v.D.Spot.ID, 10))) } class="inline-flex min-h-11 items-center text-signal-bright transition hover:text-signal sm:min-h-0">{ i18n.T(ctx, "stats.spot.reservations_link") } <span aria-hidden="true" class="ml-1">→</span></a>
 			}
 		</div>
-		@toolbar(v.pageView)
+		@toolbar(v.Picker)
 		@kpis(v.D.Totals, nil)
+		@lootTiles(v.D.Totals)
 		if v.D.Totals.Reservations == 0 {
 			@empty(i18n.T(ctx, "stats.empty.range"))
 		} else {
@@ -101,8 +104,9 @@ templ PlayerPage(baseURL string, v playerView, nav web.Nav) {
 	@web.Layout(i18n.T(ctx, "stats.player.title", v.D.Name, v.GuildName), i18n.T(ctx, "stats.player.description", v.D.Name), baseURL, playerHref(v.GuildID, v.D.UserID), nav) {
 		@publicBar(v.pageView, "stats-players", nav)
 		@heading(web.GuildPath(v.GuildID, "/stats/players"), v.D.Name, i18n.T(ctx, "stats.player.lede"))
-		@toolbar(v.pageView)
+		@toolbar(v.Picker)
 		@kpis(v.D.Totals, nil)
+		@lootTiles(v.D.Totals)
 		if v.D.Totals.Reservations == 0 {
 			@empty(i18n.T(ctx, "stats.empty.range"))
 		} else {
@@ -121,8 +125,10 @@ templ CharacterPage(baseURL string, v characterView, nav web.Nav) {
 		@publicBar(v.pageView, "stats-characters", nav)
 		@heading(web.GuildPath(v.GuildID, "/stats/characters"), v.P.Name, i18n.T(ctx, "stats.character.lede"))
 		@profileCard(v)
-		@toolbar(v.pageView)
+		@toolbar(v.Picker)
 		@kpis(v.P.Totals, nil)
+		@lootTiles(v.P.Totals)
+		<p class="mt-2 text-xs text-zone-400">{ i18n.T(ctx, "stats.loot.share_note") }</p>
 		<section class={ cardClass, "mt-6 p-5" } aria-labelledby="history-heading">
 			@cardHeading("history-heading", i18n.T(ctx, "stats.character.history"), i18n.T(ctx, "stats.character.history_hint"))
 			if len(v.P.History) == 0 {
@@ -198,9 +204,9 @@ templ heading(back, title, lede string) {
 }
 
 // toolbar holds the day range and the page's own actions, above everything the range scopes.
-templ toolbar(p pageView) {
+templ toolbar(picker web.RangePickerProps) {
 	<div class="mt-6 flex flex-wrap items-center gap-3">
-		@web.RangePicker(p.Picker)
+		@web.RangePicker(picker)
 		{ children... }
 	</div>
 }
@@ -210,19 +216,33 @@ type kpi struct {
 	Value string
 }
 
-// kpis is the headline row: reservations, booked hours, experience and experience per hour,
-// then any extra counts of the page.
+// kpis is the headline row: reservations, booked hours, experience, experience per hour,
+// profit and profit per hour, then any extra counts of the page.
 templ kpis(t stats.Totals, extra []kpi) {
-	<dl class="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+	<dl class="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-6">
 		@tile(i18n.T(ctx, "stats.kpi.reservations"), formatInt(ctx, t.Reservations), "")
 		@tile(i18n.T(ctx, "stats.kpi.hours"), formatHours(ctx, t), i18n.T(ctx, "stats.kpi.hours_hint"))
 		{{ exp, hasExp := formatExp(ctx, t) }}
-		@expTile(i18n.T(ctx, "stats.kpi.exp"), exp, hasExp, coverage(ctx, t))
+		@figureTile(i18n.T(ctx, "stats.kpi.exp"), exp, hasExp, coverage(ctx, t), false, 0)
 		{{ perHour, hasPerHour := formatExpPerHour(ctx, t) }}
-		@expTile(i18n.T(ctx, "stats.kpi.exp_per_hour"), perHour, hasPerHour, i18n.T(ctx, "stats.kpi.exp_per_hour_hint"))
+		@figureTile(i18n.T(ctx, "stats.kpi.exp_per_hour"), perHour, hasPerHour, i18n.T(ctx, "stats.kpi.exp_per_hour_hint"), false, 0)
+		{{ profit, hasProfit := formatGold(ctx, t.ProfitTotal()) }}
+		@figureTile(i18n.T(ctx, "stats.kpi.profit"), profit, hasProfit, lootCoverage(ctx, t), true, profitSign(stats.SortProfit, t))
+		{{ profitH, hasProfitH := formatGoldPerHour(ctx, t) }}
+		@figureTile(i18n.T(ctx, "stats.kpi.profit_per_hour"), profitH, hasProfitH, i18n.T(ctx, "stats.kpi.profit_per_hour_hint"), true, profitSign(stats.SortProfitPerHour, t))
 		for _, k := range extra {
 			@tile(k.Label, k.Value, "")
 		}
+	</dl>
+}
+
+// lootTiles are a detail page's loot and supplies, the two parts of the profit.
+templ lootTiles(t stats.Totals) {
+	<dl class="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-6">
+		{{ lootValue, hasLoot := formatGold(ctx, t.LootTotal()) }}
+		@figureTile(i18n.T(ctx, "stats.kpi.loot"), lootValue, hasLoot, "", true, 0)
+		{{ supplies, hasSupplies := formatGold(ctx, t.SuppliesTotal()) }}
+		@figureTile(i18n.T(ctx, "stats.kpi.supplies"), supplies, hasSupplies, "", true, 0)
 	</dl>
 }
 
@@ -236,24 +256,44 @@ templ tile(label, value, hint string) {
 	</div>
 }
 
-templ expTile(label, value string, ok bool, hint string) {
-	<div class={ cardClass, "px-4 py-3" }>
+// figureTile is a tile whose figure may have no data; loot picks the tooltip that says why.
+// sign colours a profit: green for a gain, red for a loss (which keeps its minus sign).
+templ figureTile(label, value string, ok bool, hint string, loot bool, sign int) {
+	<div class={ cardClass, "min-w-0 px-4 py-3" }>
 		<dt class={ labelClass }>{ label }</dt>
 		if ok {
-			<dd class="mt-1 font-mono text-2xl font-semibold tabular-nums text-zone-50">{ value }</dd>
+			<dd class={ "mt-1 truncate font-mono text-2xl font-semibold tabular-nums", signClass(sign, "text-zone-50") } title={ value }>{ value }</dd>
 		} else {
 			<dd class="mt-1 text-lg font-semibold text-zone-300">
-				@noData()
+				@noData(loot)
 			</dd>
 		}
-		<dd class="mt-1 text-xs text-zone-400">{ hint }</dd>
+		if hint != "" {
+			<dd class="mt-1 text-xs text-zone-400">{ hint }</dd>
+		}
 	</div>
 }
 
-// noData stands in for every experience figure without data. The tooltip and the page note
-// say why: only the world's top 1000 characters have experience data.
-templ noData() {
-	<span class="cursor-help text-zone-400 underline decoration-dotted decoration-zone-600 underline-offset-4" title={ i18n.T(ctx, "stats.exp.no_data_tip") }>{ i18n.T(ctx, "stats.exp.no_data") }</span>
+// noData stands in for every figure without data, never 0. The tooltip and the page note say
+// why: experience comes from the world's top 1000, loot from sessions pasted in the Loot Calculator.
+templ noData(loot bool) {
+	if loot {
+		<span class="cursor-help text-zone-400 underline decoration-dotted decoration-zone-600 underline-offset-4" title={ i18n.T(ctx, "stats.loot.no_data_tip") }>{ i18n.T(ctx, "stats.exp.no_data") }</span>
+	} else {
+		<span class="cursor-help text-zone-400 underline decoration-dotted decoration-zone-600 underline-offset-4" title={ i18n.T(ctx, "stats.exp.no_data_tip") }>{ i18n.T(ctx, "stats.exp.no_data") }</span>
+	}
+}
+
+// signClass lives here, not in view.go, so Tailwind (which scans templ output only) keeps the classes.
+func signClass(sign int, neutral string) string {
+	switch {
+	case sign > 0:
+		return "text-emerald-400"
+	case sign < 0:
+		return "text-rose-400"
+	default:
+		return neutral
+	}
 }
 
 templ noDataBlock(text string) {
@@ -264,13 +304,25 @@ templ noDataBlock(text string) {
 }
 
 templ noDataNote() {
-	<p class="mt-8 max-w-3xl text-xs leading-relaxed text-zone-400">
-		<span class="font-semibold text-zone-300">{ i18n.T(ctx, "stats.exp.no_data") }:</span> { i18n.T(ctx, "stats.exp.no_data_tip") }
-	</p>
+	<div class="mt-8 max-w-3xl space-y-2 text-xs leading-relaxed text-zone-400">
+		<p><span class="font-semibold text-zone-300">{ i18n.T(ctx, "stats.exp.no_data") }:</span> { i18n.T(ctx, "stats.exp.no_data_tip") }</p>
+		<p>{ i18n.T(ctx, "stats.loot.no_data_tip") }</p>
+	</div>
 }
 
+// empty is an empty range, with how data arrives.
 templ empty(text string) {
-	<div class={ cardClass, "mt-6 p-10 text-center text-sm text-zone-400" }>{ text }</div>
+	<div class={ cardClass, "mt-6 p-10 text-center text-sm text-zone-400" }>
+		<p class="font-semibold text-zone-300">{ text }</p>
+		@emptyHow()
+	</div>
+}
+
+templ emptyHow() {
+	<p class="mx-auto mt-2 max-w-xl">
+		{ i18n.T(ctx, "stats.empty.how") }
+		<a href={ templ.SafeURL(web.LootCalculatorPath) } class="inline-flex min-h-11 items-center font-semibold text-signal-bright transition hover:text-signal sm:min-h-0">{ i18n.T(ctx, "shell.nav.loot_calculator") } <span aria-hidden="true" class="ml-1">→</span></a>
+	</p>
 }
 
 templ cardHeading(id, title, hint string) {
@@ -322,6 +374,8 @@ templ leaderboard(id, title, hint string, rows []tableRow, key stats.SortKey, mo
 		if len(rows) == 0 {
 			if key == stats.SortExp || key == stats.SortExpPerHour {
 				@noDataBlock(i18n.T(ctx, "stats.exp.no_data_range"))
+			} else if isLootKey(key) {
+				@noDataBlock(i18n.T(ctx, "stats.loot.no_data_range"))
 			} else {
 				<p class="mt-4 text-sm text-zone-400">{ i18n.T(ctx, "stats.empty.range") }</p>
 			}
@@ -331,13 +385,19 @@ templ leaderboard(id, title, hint string, rows []tableRow, key stats.SortKey, mo
 					<li class="flex items-center gap-3 py-2 text-sm">
 						<span class="w-6 shrink-0 text-right font-mono text-xs tabular-nums text-zone-400">{ strconv.Itoa(i + 1) }</span>
 						<a href={ templ.SafeURL(r.Href) } class="min-w-0 flex-1 truncate font-medium text-zone-100 transition hover:text-signal-bright" title={ r.Name }>{ r.Name }</a>
-						<span class="shrink-0 font-mono tabular-nums text-zone-200">
+						<span class={ "shrink-0 font-mono tabular-nums", signClass(profitSign(key, r.Totals), "text-zone-200") }>
 							switch key {
 								case stats.SortExp:
 									{{ s, _ := formatExp(ctx, r.Totals) }}
 									{ s }
 								case stats.SortExpPerHour:
 									{{ s, _ := formatExpPerHour(ctx, r.Totals) }}
+									{ i18n.T(ctx, "stats.leaderboard.per_hour", s) }
+								case stats.SortProfit:
+									{{ s, _ := formatGold(ctx, r.ProfitTotal()) }}
+									{ s }
+								case stats.SortProfitPerHour:
+									{{ s, _ := formatGoldPerHour(ctx, r.Totals) }}
 									{ i18n.T(ctx, "stats.leaderboard.per_hour", s) }
 								default:
 									{ i18n.T(ctx, "stats.chart.hours_tip", formatHours(ctx, r.Totals)) }
@@ -347,7 +407,9 @@ templ leaderboard(id, title, hint string, rows []tableRow, key stats.SortKey, mo
 				}
 			</ol>
 		}
-		<a href={ templ.SafeURL(more) } class="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-signal-bright transition hover:text-signal sm:min-h-0">{ i18n.T(ctx, "stats.leaderboard.more") } <span aria-hidden="true" class="ml-1">→</span></a>
+		if more != "" {
+			<a href={ templ.SafeURL(more) } class="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-signal-bright transition hover:text-signal sm:min-h-0">{ i18n.T(ctx, "stats.leaderboard.more") } <span aria-hidden="true" class="ml-1">→</span></a>
+		}
 	</section>
 }
 
@@ -358,7 +420,7 @@ templ breakdown(title string, b breakdownView, name string) {
 		if len(b.Rows) == 0 {
 			<p class="mt-2 text-sm text-zone-400">{ i18n.T(ctx, "stats.empty.range") }</p>
 		} else {
-			@statsTable(b.Rows, name, nil)
+			@statsTable(b.Rows, name, guildColumns(ctx), nil)
 			if b.Total > len(b.Rows) {
 				<p class="mt-2 text-xs text-zone-400">{ i18n.T(ctx, "stats.table.truncated", formatInt(ctx, int64(len(b.Rows))), formatInt(ctx, int64(b.Total))) }</p>
 			}
@@ -366,15 +428,16 @@ templ breakdown(title string, b breakdownView, name string) {
 	</section>
 }
 
-// statsTable is the shared figures table. With sort set, the headers are sort links.
-templ statsTable(rows []tableRow, name string, sort *tableView) {
+// statsTable is the shared figures table, wide tables scrolling sideways inside it. With sort
+// set, the headers are sort links.
+templ statsTable(rows []tableRow, name string, cols []column, sort *sortState) {
 	<div class={ cardClass, "relative mt-4 overflow-x-auto" }>
 		<table class="w-full text-sm">
 			<thead>
 				<tr class="border-b border-zone-700 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-400">
 					<th scope="col" class="w-10 px-4 py-3 text-right">#</th>
 					@header(stats.SortName, name, false, sort)
-					for _, c := range figureColumns(ctx) {
+					for _, c := range cols {
 						@header(c.Key, c.Label, true, sort)
 					}
 				</tr>
@@ -384,29 +447,24 @@ templ statsTable(rows []tableRow, name string, sort *tableView) {
 					<tr class="border-b border-zone-800 last:border-0 hover:bg-white/[0.03]">
 						<td class="px-4 py-2.5 text-right font-mono text-xs tabular-nums text-zone-400">{ strconv.Itoa(i + 1) }</td>
 						<td class="px-4 py-2.5">
-							<a href={ templ.SafeURL(r.Href) } class="font-medium text-zone-100 transition hover:text-signal-bright">{ r.Name }</a>
-							if r.Archived {
-								<span class="ml-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300">{ i18n.T(ctx, "stats.spot.archived") }</span>
-							}
+							<div class="flex min-w-[10rem] items-center gap-3">
+								if r.Badge {
+									@web.ServerBadge(r.IconURL, r.Name)
+								}
+								<div class="min-w-0">
+									<a href={ templ.SafeURL(r.Href) } class="font-medium text-zone-100 transition hover:text-signal-bright">{ r.Name }</a>
+									if r.Archived {
+										<span class="ml-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300">{ i18n.T(ctx, "stats.spot.archived") }</span>
+									}
+									if r.Sub != "" {
+										<p class="text-xs text-zone-400">{ r.Sub }</p>
+									}
+								</div>
+							</div>
 						</td>
-						<td class="px-4 py-2.5 text-right font-mono tabular-nums text-zone-200">{ formatInt(ctx, r.Reservations) }</td>
-						<td class="px-4 py-2.5 text-right font-mono tabular-nums text-zone-200">{ formatHours(ctx, r.Totals) }</td>
-						<td class="px-4 py-2.5 text-right font-mono tabular-nums text-zone-200">
-							{{ exp, ok := formatExp(ctx, r.Totals) }}
-							if ok {
-								{ exp }
-							} else {
-								@noData()
-							}
-						</td>
-						<td class="px-4 py-2.5 text-right font-mono tabular-nums text-zone-200">
-							{{ perHour, ok := formatExpPerHour(ctx, r.Totals) }}
-							if ok {
-								{ perHour }
-							} else {
-								@noData()
-							}
-						</td>
+						for _, c := range cols {
+							@figureCell(c.Key, r)
+						}
 					</tr>
 				}
 			</tbody>
@@ -414,12 +472,23 @@ templ statsTable(rows []tableRow, name string, sort *tableView) {
 	</div>
 }
 
-templ header(key stats.SortKey, label string, numeric bool, sort *tableView) {
+templ figureCell(key stats.SortKey, r tableRow) {
+	<td class={ "whitespace-nowrap px-4 py-2.5 text-right font-mono tabular-nums", signClass(profitSign(key, r.Totals), "text-zone-200") }>
+		{{ text, ok := figure(ctx, key, r) }}
+		if ok {
+			{ text }
+		} else {
+			@noData(isLootKey(key))
+		}
+	</td>
+}
+
+templ header(key stats.SortKey, label string, numeric bool, sort *sortState) {
 	if sort == nil {
-		<th scope="col" class={ "px-4 py-3", templ.KV("text-right", numeric) }>{ label }</th>
+		<th scope="col" class={ "whitespace-nowrap px-4 py-3", templ.KV("text-right", numeric) }>{ label }</th>
 	} else {
-		<th scope="col" class={ "px-4 py-3", templ.KV("text-right", numeric) } aria-sort={ ariaSort(sort.Sort, key) }>
-			<a href={ templ.SafeURL(sortHref(sort.path(), sort.Sort, key)) } class={ "inline-flex min-h-11 items-center gap-1 transition hover:text-zone-100 sm:min-h-0", templ.KV("text-zone-100", sort.Sort.Key == key) }>
+		<th scope="col" class={ "whitespace-nowrap px-4 py-3", templ.KV("text-right", numeric) } aria-sort={ ariaSort(sort.Sort, key) }>
+			<a href={ templ.SafeURL(sortHref(*sort, key)) } class={ "inline-flex min-h-11 items-center gap-1 transition hover:text-zone-100 sm:min-h-0", templ.KV("text-zone-100", sort.Sort.Key == key) }>
 				{ label }
 				if sort.Sort.Key == key {
 					<span class="text-signal-bright" aria-hidden="true">
@@ -506,7 +575,7 @@ templ recentReservations(v characterView) {
 									case "ok":
 										{ text }
 									case "no_data":
-										@noData()
+										@noData(false)
 									default:
 										<span class="cursor-help text-zone-400" title={ i18n.T(ctx, "stats.exp.pending_tip") }>{ text }</span>
 								}

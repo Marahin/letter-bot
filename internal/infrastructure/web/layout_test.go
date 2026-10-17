@@ -477,3 +477,22 @@ func TestNav_PropagatesSupportURL(t *testing.T) {
 		assert.Empty(t, d.NavFromAccess(&webuser.User{DiscordUserID: "1"}, nil, "").SupportURL)
 	})
 }
+
+func TestLayout_WorldsAndSpawnsInBothShells(t *testing.T) {
+	// given
+	signedOut := Nav{Active: "worlds"}
+	signedIn := signedInNav()
+	signedIn.Active = "spawns"
+
+	// when
+	top := render(context.Background(), t, Layout("T", "D", "http://x", "/worlds", signedOut))
+	side := render(context.Background(), t, Layout("T", "D", "http://x", "/spawns", signedIn))
+	polish := render(i18n.WithLocale(context.Background(), i18n.Match("pl")), t, Layout("T", "D", "http://x", "/worlds", signedOut))
+
+	// then
+	assert.Regexp(t, `href="/worlds"\s+aria-current="page"`, top)
+	assert.Contains(t, top, `href="/spawns"`)
+	assert.Regexp(t, `href="/spawns"\s+aria-current="page"`, side)
+	assert.Contains(t, side, `href="/worlds"`)
+	assert.Contains(t, polish, "Światy")
+}

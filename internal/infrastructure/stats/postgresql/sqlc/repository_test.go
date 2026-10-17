@@ -39,7 +39,7 @@ func anyArgs(n int) []any {
 	return args
 }
 
-var totalsCols = []string{"reservations", "seconds", "exp_reservations", "exp_seconds", "exp"}
+var totalsCols = []string{"reservations", "seconds", "exp_reservations", "exp_seconds", "exp", "loot_reservations", "loot_seconds", "profit", "loot", "supplies"}
 
 func TestNewStatsRepository_NeedsANamedZone(t *testing.T) {
 	// when
@@ -59,16 +59,22 @@ func TestStatsRepository_MapsTotalsRows(t *testing.T) {
 	mock, repo := newMock(t)
 	ctx := context.Background()
 	f := stats.Filter{GuildID: "g", From: time.Now(), To: time.Now(), SpotID: 3, UserID: "u", CharacterKey: "k"}
-	q := stats.Query{Filter: f, Sort: stats.Sort{Key: stats.SortExp, Asc: true}, Limit: 10}
+	q := stats.Query{Filter: f, Sort: stats.Sort{Key: stats.SortExp, Asc: true}, Limit: 10, MinLootSeconds: 60}
 	withTotal := func(cols ...string) []string { return append(append(cols, totalsCols...), "total_rows") }
-	mock.ExpectQuery("name: SpotTotals").WithArgs("exp", true, int32(10), "g", pgxmock.AnyArg(), pgxmock.AnyArg(), int64(3), "u", "k").
-		WillReturnRows(pgxmock.NewRows(withTotal("spot_id", "name", "archived")).AddRow(int64(3), "Hero", true, int64(1), int64(3600), int64(1), int64(3600), int64(9), int64(12)))
+	noLoot := []any{int64(0), int64(0), int64(0), int64(0), int64(0)}
+	row := func(vals ...any) []any { return vals }
+	mock.ExpectQuery("name: SpotTotals").WithArgs("exp", true, int32(10), "g", pgxmock.AnyArg(), pgxmock.AnyArg(), int64(3), "u", "k", int64(60)).
+		WillReturnRows(pgxmock.NewRows(withTotal("spot_id", "name", "archived")).AddRow(int64(3), "Hero", true, int64(1), int64(3600), int64(1), int64(3600), int64(9),
+			int64(1), int64(1800), int64(-40), int64(60), int64(100), int64(12)))
 	mock.ExpectQuery("name: PlayerTotals").WithArgs("g", "exp", true, int32(10), pgxmock.AnyArg(), pgxmock.AnyArg(), int64(3), "u", "k").
-		WillReturnRows(pgxmock.NewRows(append([]string{"user_id", "name"}, append(totalsCols, "total_rows")...)).AddRow("u", "A/B", int64(2), int64(7200), int64(0), int64(0), int64(0), int64(5)))
+		WillReturnRows(pgxmock.NewRows(append([]string{"user_id", "name"}, append(totalsCols, "total_rows")...)).
+			AddRow(append(append(row("u", "A/B", int64(2), int64(7200), int64(0), int64(0), int64(0)), noLoot...), int64(5))...))
 	mock.ExpectQuery("name: CharacterTotals").WithArgs("exp", true, int32(10), "g", pgxmock.AnyArg(), pgxmock.AnyArg(), int64(3), "u", "k").
-		WillReturnRows(pgxmock.NewRows(append([]string{"character_key", "name"}, append(totalsCols, "total_rows")...)).AddRow("a", "A", int64(1), int64(60), int64(1), int64(60), int64(-5), int64(7)))
+		WillReturnRows(pgxmock.NewRows(append([]string{"character_key", "name"}, append(totalsCols, "total_rows")...)).
+			AddRow(append(append(row("a", "A", int64(1), int64(60), int64(1), int64(60), int64(-5)), noLoot...), int64(7))...))
 	mock.ExpectQuery("name: Daily").WithArgs(append([]any{"Europe/Berlin"}, anyArgs(6)...)...).
-		WillReturnRows(pgxmock.NewRows(append([]string{"day"}, totalsCols...)).AddRow(pgtype.Date{Time: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC), Valid: true}, int64(1), int64(60), int64(0), int64(0), int64(0)))
+		WillReturnRows(pgxmock.NewRows(append([]string{"day"}, totalsCols...)).
+			AddRow(pgtype.Date{Time: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC), Valid: true}, int64(1), int64(60), int64(0), int64(0), int64(0), int64(1), int64(60), int64(5), int64(6), int64(1)))
 
 	// when
 	spots, err1 := repo.SpotTotals(ctx, q)
@@ -79,7 +85,10 @@ func TestStatsRepository_MapsTotalsRows(t *testing.T) {
 	// then
 	require.NoError(t, errors.Join(err1, err2, err3, err4))
 	assert.Equal(t, stats.Page[stats.SpotRow]{
-		Rows:  []stats.SpotRow{{SpotID: 3, Name: "Hero", Archived: true, Totals: stats.Totals{Reservations: 1, Seconds: 3600, ExpReservations: 1, ExpSeconds: 3600, Exp: 9}}},
+		Rows: []stats.SpotRow{{SpotID: 3, Name: "Hero", Archived: true, Totals: stats.Totals{
+			Reservations: 1, Seconds: 3600, ExpReservations: 1, ExpSeconds: 3600, Exp: 9,
+			LootReservations: 1, LootSeconds: 1800, Profit: -40, Loot: 60, Supplies: 100,
+		}}},
 		Total: 12,
 	}, spots)
 	assert.Equal(t, "A/B", players.Rows[0].Name)
@@ -89,6 +98,7 @@ func TestStatsRepository_MapsTotalsRows(t *testing.T) {
 	assert.Equal(t, 7, characters.Total)
 	require.Len(t, days, 1)
 	assert.Equal(t, "2026-09-01 00:00:00 +0200 CEST", days[0].Day.String())
+	assert.Equal(t, stats.Totals{Reservations: 1, Seconds: 60, LootReservations: 1, LootSeconds: 60, Profit: 5, Loot: 6, Supplies: 1}, days[0].Totals)
 }
 
 func TestStatsRepository_CharacterLeaderboards(t *testing.T) {
@@ -99,11 +109,13 @@ func TestStatsRepository_CharacterLeaderboards(t *testing.T) {
 	txt := func(v string) pgtype.Text { return pgtype.Text{String: v, Valid: true} }
 	mock.ExpectQuery("name: CharacterLeaderboards").WithArgs("g", pgxmock.AnyArg(), pgxmock.AnyArg(), int64(0), "", "", int32(10), int64(10800)).
 		WillReturnRows(pgxmock.NewRows(cols).
-			AddRow(int64(4), txt("exp"), txt("a"), "A", i8(2), i8(7200), i8(1), i8(3600), i8(90)).
-			AddRow(int64(4), txt("exp"), txt("b"), "B", i8(1), i8(3600), i8(1), i8(3600), i8(80)).
-			AddRow(int64(4), txt("exp_h"), txt("b"), "B", i8(1), i8(3600), i8(1), i8(3600), i8(80)))
+			AddRow(int64(4), txt("exp"), txt("a"), "A", i8(2), i8(7200), i8(1), i8(3600), i8(90), i8(0), i8(0), i8(0), i8(0), i8(0)).
+			AddRow(int64(4), txt("exp"), txt("b"), "B", i8(1), i8(3600), i8(1), i8(3600), i8(80), i8(0), i8(0), i8(0), i8(0), i8(0)).
+			AddRow(int64(4), txt("exp_h"), txt("b"), "B", i8(1), i8(3600), i8(1), i8(3600), i8(80), i8(0), i8(0), i8(0), i8(0), i8(0)).
+			AddRow(int64(4), txt("profit"), txt("c"), "C", i8(1), i8(3600), i8(0), i8(0), i8(0), i8(1), i8(1800), i8(300), i8(400), i8(100)))
+	none := pgtype.Int8{}
 	mock.ExpectQuery("name: CharacterLeaderboards").WithArgs(anyArgs(8)...).
-		WillReturnRows(pgxmock.NewRows(cols).AddRow(int64(3), pgtype.Text{}, pgtype.Text{}, "", pgtype.Int8{}, pgtype.Int8{}, pgtype.Int8{}, pgtype.Int8{}, pgtype.Int8{}))
+		WillReturnRows(pgxmock.NewRows(cols).AddRow(int64(3), pgtype.Text{}, pgtype.Text{}, "", none, none, none, none, none, none, none, none, none, none))
 
 	// when
 	boards, err := repo.CharacterLeaderboards(context.Background(), stats.Filter{GuildID: "g"}, 10, 10800)
@@ -116,6 +128,8 @@ func TestStatsRepository_CharacterLeaderboards(t *testing.T) {
 	assert.Equal(t, stats.CharacterRow{Key: "a", Name: "A", Totals: stats.Totals{Reservations: 2, Seconds: 7200, ExpReservations: 1, ExpSeconds: 3600, Exp: 90}}, boards.ByExp[0])
 	require.Len(t, boards.ByExpPerHour, 1)
 	assert.Equal(t, "B", boards.ByExpPerHour[0].Name)
+	require.Len(t, boards.ByProfit, 1)
+	assert.Equal(t, stats.Totals{Reservations: 1, Seconds: 3600, LootReservations: 1, LootSeconds: 1800, Profit: 300, Loot: 400, Supplies: 100}, boards.ByProfit[0].Totals)
 	assert.Equal(t, stats.CharacterBoards{Characters: 3}, empty)
 }
 
@@ -126,7 +140,7 @@ func TestStatsRepository_PropagatesQueryErrors(t *testing.T) {
 	for _, q := range []struct {
 		name string
 		args int
-	}{{"SpotTotals", 9}, {"PlayerTotals", 9}, {"CharacterTotals", 9}, {"CharacterLeaderboards", 8}, {"Daily", 7}, {"ReservationDays", 4}, {"CharacterReservations", 5}} {
+	}{{"SpotTotals", 10}, {"PlayerTotals", 9}, {"CharacterTotals", 9}, {"CharacterLeaderboards", 8}, {"Daily", 7}, {"ReservationDays", 4}, {"CharacterReservations", 5}} {
 		mock.ExpectQuery("name: " + q.name + " :").WithArgs(anyArgs(q.args)...).WillReturnError(errBoom)
 	}
 

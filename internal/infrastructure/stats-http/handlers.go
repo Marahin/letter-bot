@@ -68,7 +68,7 @@ type tableLoader func(ctx context.Context, p pageView, s stats.Sort, limit int) 
 
 func (h *Handlers) table(w http.ResponseWriter, r *http.Request, kind tableKind, load tableLoader) {
 	q := r.URL.Query()
-	sort := parseSort(q.Get("sort"), q.Get("dir"))
+	sort := parseSort(stats.SortKeys, q.Get("sort"), q.Get("dir"))
 	p, ok := h.page(w, r, web.RangePickerHidden{Name: "sort", Value: string(sort.Key)}, web.RangePickerHidden{Name: "dir", Value: sortDir(sort)})
 	if !ok {
 		return
@@ -92,11 +92,11 @@ func (h *Handlers) table(w http.ResponseWriter, r *http.Request, kind tableKind,
 	h.D.Render(w, r, Table(h.D.Cfg.BaseURL, v, h.nav(r, p, active)))
 }
 
-// parseSort reads a sort key and a direction ("asc"/"desc"). An unknown key sorts by hours; no
-// direction means ascending for the name and descending for figures.
-func parseSort(key, dir string) stats.Sort {
+// parseSort reads a sort key among keys and a direction ("asc"/"desc"). An unknown key sorts by
+// hours; no direction means ascending for the name and descending for figures.
+func parseSort(keys []stats.SortKey, key, dir string) stats.Sort {
 	k := stats.SortKey(key)
-	if !slices.Contains(stats.SortKeys, k) {
+	if !slices.Contains(keys, k) {
 		k = stats.SortHours
 	}
 	asc := k == stats.SortName

@@ -14,10 +14,12 @@ import (
 	"spot-assistant/internal/core/booking"
 	"spot-assistant/internal/core/characters"
 	"spot-assistant/internal/core/guildaccess"
+	"spot-assistant/internal/core/lootsession"
 	"spot-assistant/internal/core/premium"
 	"spot-assistant/internal/core/reservations"
 	"spot-assistant/internal/core/spots"
 	corestats "spot-assistant/internal/core/stats"
+	"spot-assistant/internal/core/worldstats"
 	adminhttp "spot-assistant/internal/infrastructure/admin-http"
 	channelshttp "spot-assistant/internal/infrastructure/channels-http"
 	"spot-assistant/internal/infrastructure/discord/oauth"
@@ -25,6 +27,7 @@ import (
 	"spot-assistant/internal/infrastructure/fxmodule"
 	guildsqlc "spot-assistant/internal/infrastructure/guild/postgresql/sqlc"
 	"spot-assistant/internal/infrastructure/guildsettings"
+	lootsqlc "spot-assistant/internal/infrastructure/loot/postgresql/sqlc"
 	notifypg "spot-assistant/internal/infrastructure/notify/postgresql"
 	"spot-assistant/internal/infrastructure/notify/webcomm"
 	reservationsqlc "spot-assistant/internal/infrastructure/reservation/postgresql/sqlc"
@@ -69,6 +72,10 @@ func newStatsRepository(pool *pgxpool.Pool, tz TimeZone) (*statssqlc.StatsReposi
 	return statssqlc.NewStatsRepository(pool, string(tz))
 }
 
+func newWorldStatsRepository(pool *pgxpool.Pool) *statssqlc.WorldStatsRepository {
+	return statssqlc.NewWorldStatsRepository(pool)
+}
+
 // newBooking books on the web and signals the bot, which posts on Discord.
 func newBooking(spotRepo *spotsqlc.SpotRepository, reservationRepo *reservationsqlc.ReservationRepository, notifier *notifypg.Notifier, log *zap.SugaredLogger) *booking.Adapter {
 	return booking.NewAdapter(spotRepo, reservationRepo, webcomm.New(notifier, log)).WithLogger(log)
@@ -106,6 +113,15 @@ func newCharacterService(api *worldapi.HTTPWorldService, worlds *worldnamesqlc.W
 	return characters.New(worldapi.NewCachedCharacters(api), worlds, exp, stats, log)
 }
 
+// newLootSessionService reads the analyser's stamps in the process zone (TZ, D31).
+func newLootSessionService(repo *lootsqlc.LootRepository) *lootsession.Service {
+	return lootsession.New(repo, time.Local)
+}
+
+func newWorldStatsService(repo *statssqlc.WorldStatsRepository) *worldstats.Service {
+	return worldstats.New(repo)
+}
+
 type serverParams struct {
 	fx.In
 
@@ -120,6 +136,8 @@ type serverParams struct {
 	Reservations *reservations.Service
 	Stats        *corestats.Service
 	Characters   *characters.Service
+	Loot         *lootsession.Service
+	Worlds       *worldstats.Service
 }
 
 // features are the feature packages' route registrars, mounted in this order.
@@ -143,6 +161,8 @@ func newServer(p serverParams) *web.Server {
 		Reservations: p.Reservations,
 		Stats:        p.Stats,
 		Characters:   p.Characters,
+		Loot:         p.Loot,
+		Worlds:       p.Worlds,
 	})
 	for _, register := range features {
 		server.Mount(register)

@@ -187,6 +187,14 @@ export), `/stats/spots/{spot}`, `/stats/players/{user}` and
   Experience per hour divides it by the hours of the reservations that have at
   least one `ok` gain. On a character's rows only that character's own gain
   counts; on a respawn or player row every character of the party counts.
+- **Loot figures** come from the Loot Calculator sessions attributed to a
+  reservation (`reservation_loot`, see Loot Calculator). Profit is the party
+  balance; profit per hour divides it by the session time, not the booked time.
+  Loot and supplies show on the respawn, player and character pages. A respawn,
+  player or day counts the whole party; a character row counts the character's
+  equal share (party figure / members, rounded down), only for the sessions it
+  was in. Without a session a figure says "No data" with its own tooltip, never
+  0; a loss keeps its minus sign.
 - **No data.** A figure without any `ok` gain shows "No data" with a tooltip and
   a note on the page, never 0: the highscores show only the top 1000 of a world.
   The daily experience chart plots only the days that have data. A reservation
@@ -197,15 +205,18 @@ export), `/stats/spots/{spot}`, `/stats/players/{user}` and
   character tables.
 - **Characters** come from the author text split on `/` and compared by
   `lower(trim(name))`.
-- **Tables** sort on the server (`?sort=name|reservations|hours|exp|exp_h&dir=asc|desc`);
-  a row without experience data sorts last in both directions. Sorting and the
+- **Tables** sort on the server
+  (`?sort=name|reservations|hours|exp|exp_h|profit|profit_h&dir=asc|desc`);
+  a row without the figure's data sorts last in both directions. Sorting and the
   row cap run in SQL: a table shows at most 500 rows (a detail page table 25);
   `?format=csv` exports up to 5000 rows (an empty cell means no data; a name that
   starts with `= + - @`, a tab or a carriage return gets a leading `'` so a
   spreadsheet does not run it as a formula).
 - **Leaderboards** on the overview: the 10 players with the most booked hours,
-  the 10 characters with the most experience, and the 10 characters with the
-  best experience per hour among those with at least 3 hours of data.
+  the 10 characters with the most experience, the 10 characters with the best
+  experience per hour among those with at least 3 hours of data, the 10
+  respawns with the best profit per hour among those with at least 3 hours of
+  sessions, and the 10 characters with the most profit.
 - **Character page.** The TibiaData profile (`/v4/character/{name}`, cached 5
   minutes in the web process, including "not found"; a TibiaData failure is
   cached 30 seconds and a lookup waits at most 5 seconds) and the experience history
@@ -220,7 +231,10 @@ about 0.6 s, the character totals being the largest part (0.85 s). One respawn,
 player or character takes 1-30 ms. The existing indexes are enough
 (`web_reservation_guild_start_idx`, `web_reservation_guild_spot_start_idx`,
 `web_reservation_guild_author_end_idx`, the author trigram index and the
-`reservation_experience` primary key), so there is no new migration.
+`reservation_experience` primary key). The loot figures join `reservation_loot`
+and `loot_sessions` by their primary keys (migration `…_loot_sessions.sql`
+adds the three tables and no other index); they were not measured on that data
+set.
 
 To test the stats queries against a real database, run
 `LETTER_TEST_DATABASE_URL=postgres://… go test -run TestStatsRepository_Queries ./internal/infrastructure/stats/postgresql/sqlc/`.
@@ -246,11 +260,62 @@ calculator (`tibiadata-front/components/Calculator.vue`) in
 - The Discord and TeamSpeak texts are the same as in the original. The one
   change: the TeamSpeak summary prints "gp" once, not twice.
 
-The server does the calculation and stores nothing. The browser keeps the last
-20 sessions (with the pasted text) in `localStorage` (`letter:loot-history`).
-`dist/loot-calculator.js` does the copy buttons (the Clipboard API, with an
-`execCommand` fallback on plain HTTP), the history and the Load button (it posts
-the saved text again). The form limit is 64 KB.
+The server does the calculation. Nothing goes to a third party: the old
+andromeda telemetry (a POST of each split with a browser fingerprint) is not
+ported, and the form post is the page's only request. The browser keeps the last
+20 sessions (with the pasted text and the "count" choice) in `localStorage`
+(`letter:loot-history`). `dist/loot-calculator.js` does the copy buttons (the
+Clipboard API, with an `execCommand` fallback on plain HTTP), the history and
+the Load button (it posts the saved text again). The form limit is 64 KB.
+
+**Counting a session in the stats** (`internal/core/lootsession`, decisions
+76-79). The form has a "Count this session in public stats" box, ticked by
+default. A counted session with the `From … to …` line is stored in
+`loot_sessions` and `loot_session_members`: the times (read in the process
+zone, `TZ`; the analyser prints the player's local time without a zone), the
+party totals and each member's figures. The pasted text is not stored. A hash of
+the times and the figures makes a paste count once (a recalculation, a "Load").
+The session then belongs to the reservation of a server with premium and the bot
+present that has one of the members among its author characters and overlaps
+at least half of the session (largest overlap, then latest start). A
+reservation keeps the session with the largest overlap; on a tie the one it has.
+A line under the result says what happened: counted (with a link to the respawn
+stats), unticked, no session line, a session in the future (not stored), no
+matching reservation, the reservation keeps another session, or a storage error
+(the split still shows).
+
+To test the loot queries against a real database, run
+`LETTER_TEST_DATABASE_URL=postgres://… go test -run TestLootRepository_Queries ./internal/infrastructure/loot/postgresql/sqlc/`
+(guild ids `it-loot-*`; it deletes its rows after).
+
+## World and spawn stats
+
+`/worlds`, `/worlds/{world}`, `/spawns` and `/spawns/{key}` are public for
+everyone (no sign-in, no premium of the visitor; decision 82). They read the
+servers with premium, the bot present and a world set (`guilds_world`), so
+several worlds and several servers per world show without a list in the code.
+
+- `/worlds`: one card per world, with the number of servers, reservations,
+  experience per hour and profit per hour in the range.
+- `/worlds/{world}` (the name, any case): the totals, the best spawns by
+  experience per hour and by profit per hour (at least 3 hours of data), the
+  characters with the most experience and the most profit (equal shares), and
+  the servers on the world, each linking its public stats. An unknown world
+  answers 404.
+- `/spawns`: the spawn directory. A spawn is a respawn name across servers,
+  keyed by `lower(trim(name))`. Sortable
+  (`?sort=name|worlds|reservations|hours|exp_h|profit_h&dir=asc|desc`),
+  `?world=` narrows it to one world, `?format=csv` exports it (5000 rows).
+- `/spawns/{key}` (the path-escaped key): the totals, one row per world and one
+  per server's respawn, linking the respawn page of that server. An unknown
+  spawn answers 404.
+
+The range picker works as on the server pages, with its own cookie
+(`letter_range_worlds`) and no dots for days with data. "Worlds" and "Spawns" are
+in the signed-out top bar and in the signed-in sidebar. The queries are in
+`internal/infrastructure/stats/postgresql/query/worlds.sql`; to test them,
+run `LETTER_TEST_DATABASE_URL=postgres://… go test -run TestWorldStatsRepository_Queries ./internal/infrastructure/stats/postgresql/sqlc/`
+(guild ids `it-worlds-*`).
 
 ## Configuration
 
@@ -535,9 +600,13 @@ A server that added the bot before keeps its old permissions. Settings has a
   with `WEB_DEV_AUTH=true` and a `localhost`, `127.0.0.1` or `::1` base URL;
   otherwise the routes answer 404. A build without the tag has no such code.
 - `make run-web-dev` runs the web with the tag and the flag. `make seed`
-  (`cmd/seed`, also tagged) writes two servers: `700000000000000900` "Letter E2E"
-  (premium, five respawns, 30 days of reservations with experience) and
-  `700000000000000901` "Letter E2E Locked" (no premium). It is idempotent.
+  (`cmd/seed`, also tagged) writes three servers: `700000000000000900` "Letter
+  E2E" (premium, world Celesta, five respawns, 30 days of reservations with
+  experience), `700000000000000901` "Letter E2E Locked" (no premium) and
+  `700000000000000902` "Letter E2E Allies" (premium, world Antica, no mock user,
+  "Hero Cave" and "Banuta", 10 days of reservations). Two of every three ended
+  reservations of the premium servers get a loot session (one a loss now and
+  then). It is idempotent.
 - Mock users: dev-manager (manage rank), dev-member (view and reserve),
   dev-outsider (no server), dev-siteadmin (site admin when
   `WEB_ADMIN_DISCORD_IDS=700000000000000004`) and dev-owner (Discord admin).

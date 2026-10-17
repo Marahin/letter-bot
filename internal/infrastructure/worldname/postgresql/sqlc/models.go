@@ -148,6 +148,34 @@ type HighscoreSnapshot struct {
 	LastSeenAt    pgtype.Timestamptz
 }
 
+type LootSession struct {
+	ID              int64
+	ContentHash     []byte
+	StartedAt       pgtype.Timestamptz
+	EndedAt         pgtype.Timestamptz
+	DurationSeconds int32
+	Members         int32
+	Loot            int64
+	Supplies        int64
+	Balance         int64
+	Damage          int64
+	Healing         int64
+	CreatedAt       pgtype.Timestamptz
+}
+
+type LootSessionMember struct {
+	SessionID     int64
+	CharacterKey  string
+	CharacterName string
+	Position      int32
+	Leader        bool
+	Loot          int64
+	Supplies      int64
+	Balance       int64
+	Damage        int64
+	Healing       int64
+}
+
 type ReservationExperience struct {
 	ReservationID   int64
 	CharacterKey    string
@@ -157,6 +185,13 @@ type ReservationExperience struct {
 	Gain            pgtype.Int8
 	Status          string
 	ComputedAt      pgtype.Timestamptz
+}
+
+type ReservationLoot struct {
+	ReservationID  int64
+	SessionID      int64
+	OverlapSeconds int32
+	PickedAt       pgtype.Timestamptz
 }
 
 type WebReservation struct {

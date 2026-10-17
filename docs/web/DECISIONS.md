@@ -156,8 +156,10 @@ These items of the request were unclear or had a cost. Each has a decision.
     bot.** It applies to input, display and daily stat buckets. The web does not
     start without `TZ`: PostgreSQL buckets the stat days in that zone by name.
 32. **The Loot Calculator is public and computes on the server.** History (the
-    last 20 sessions) stays in the browser's localStorage, never on the server.
-    The analytics call of the original is dropped. Differences from the original:
+    last 20 sessions) stays in the browser's localStorage. The analytics call of
+    the original is dropped. Since decision 77 the server stores the session's
+    figures (not the pasted text) for the public stats, unless the user unticks
+    that. Differences from the original:
     - The parser is line based and strict: each player block needs Loot,
       Supplies, Balance, Damage and Healing, or the page names the player and
       the missing lines. The original skipped such a block without a word. The
@@ -395,6 +397,80 @@ server page, public stats, `/dev/login` and an e2e suite.
     500. A member does not need more for a spreadsheet, and one limit is simpler
     than one for visitors and one for members.
 
+## Loot stats, worlds and spawns
+
+The owner's request: no andromeda (the old tibialoot.com telemetry), the split on
+the server, loot and experience stats of respawns, players and characters, and
+world and spawn stats, visible without sign-in, for several Tibia worlds. The
+layout of the four new pages follows the Claude Design mockups in
+`docs/web/design/stats/` (`Worlds`, `World`, `Spawns`, `Spawn`; canvas
+https://claude.ai/artifact/BZV6jDiWcBeUHoZ384KKin).
+
+76. **No andromeda, no third party.** The Loot Calculator sends nothing anywhere
+    but its own form post, and fingerprints nobody. The split stays in
+    `lootcalc` on the server; `loot-calculator.js` only copies text and keeps the
+    local history.
+77. **Loot data comes from Loot Calculator sessions.** Every calculation whose
+    text has the `From … to …` line is stored in `loot_sessions` (with one row
+    per character in `loot_session_members`), unless the user unticks "Count
+    this session in public stats" (ticked by default; a note says what is kept).
+    Stored: the From and To times read in the process zone (decision 31), the
+    duration, the party totals and each member's name, key (`lower(trim)`),
+    leader flag, loot, supplies, balance, damage and healing. The pasted text is
+    not stored. A sha256 of the times and the figures (members sorted by key) is
+    unique, so a recalculation or a "Load" from the history counts once. A form
+    without the box (an older page) counts. Unticking writes nothing and leaves
+    earlier sessions as they are.
+78. **A session belongs to one reservation.** It matches a reservation of a
+    server with premium and the bot present that has one of the session's
+    members among its author characters and overlaps the session by at least
+    half of the session. Among several: the largest overlap, then the latest
+    start, then the larger id. A reservation keeps one session (`reservation_loot`):
+    the one with the largest overlap; on an equal overlap the session it already
+    has stays, so a later paste cannot displace it. A session that moves to
+    another reservation leaves the first one. The candidate search reads only
+    reservations that start at most `booking.MaximumReservationLength` before
+    the session, so `web_reservation_guild_start_idx` bounds it.
+79. **Sessions that do not count.** No `From … to …` line, a session that ends
+    more than 5 minutes in the future (not stored), no matching reservation
+    (stored, shown nowhere yet), or a reservation that keeps a better session
+    (stored). After each calculation a one-line notice says which, and links the
+    respawn on the server's public stats when the session counts. A storage
+    error shows its own notice; the split still shows.
+80. **Loot figures.** Profit is the party balance; profit per hour divides it by
+    the session time (not the booked time, as the tile says). Loot and supplies
+    show on the respawn, player, character and spawn pages. A respawn, player,
+    day, world or spawn counts the whole party; a character counts its equal
+    share (party figure / members, rounded down as the split pays it), only for
+    sessions it was in. A party member who is not in the author text gets no
+    character row. Without a session a figure says "No data" (its own tooltip),
+    never 0; a loss keeps its minus sign and is red.
+81. **The server stats get loot.** The overview has profit and profit per hour
+    tiles and two more leaderboards: respawns by profit per hour (at least 3
+    hours of sessions) and characters by profit. The tables and the CSV get
+    Profit and Profit/h, sortable (`profit`, `profit_h`). Visibility is as before
+    (public on a premium server).
+82. **The world and spawn pages are public.** `/worlds`, `/worlds/{world}`,
+    `/spawns` (with `?world=`, the sort and the CSV) and `/spawns/{key}` need no
+    sign-in and no premium of the visitor. They read only servers with premium,
+    the bot present and a world set (`guilds_world`): the data each of those
+    servers already shows publicly. There is no world list in the code; a world
+    appears when such a server sets it. A world is keyed by `lower(trim(name))`
+    and shown with its most common spelling; a spawn is a respawn name keyed the
+    same way across servers. An unknown world or spawn answers 404.
+83. **The cross-server range has its own cookie** (`letter_range_worlds`), apart
+    from each server's. The picker there shows no days with data: that would be
+    a query over every server.
+84. **"Spawns" in the navigation, "Respawn" in the tables.** The cross-server
+    directory is "Spawns" ("Respy"); a server's own list stays "Respawns". Both
+    new links sit in the signed-out top bar and in the signed-in sidebar, under
+    the Loot Calculator.
+85. **The world page's per-hour boards need 3 hours of data**, like the server
+    overview, and its character boards link the character page of the server of
+    the character's latest reservation.
+86. **The spawn page sums its world rows in Go** from the per-server rows (at
+    most 500), so it runs one aggregate query, not two.
+
 ## Parity with scxmanager
 
 The owner asked for the same stack and code style as scxmanager (review of
@@ -465,3 +541,13 @@ Follow-ups: the rename to `internal/infra`. (The go-rod e2e suite is done.)
    now overbook without `Postman` (decision 23). Confirm this is wanted.
 6. **Polish copy.** The Polish catalog needs a review by a native speaker.
 7. **Django admin.** When may `spot-assistant-web` (Django) be removed?
+8. **Rate limiting of the public writes.** Anyone can post Loot Calculator
+   sessions, and a counted one changes the public stats. There is no rate limit
+   or sign-in for that yet (decisions 73, 77). Should there be one?
+9. **The analyser's time zone.** The analyser prints the player's local time
+   without a zone, and the server reads it in `Europe/Berlin` (decision 31). A
+   player in another zone gets no match, or a wrong one. Should the calculator
+   send the browser's zone, or ask for it?
+10. **Unmatched sessions.** They are stored and shown nowhere. A follow-up could
+    attribute them to a world through TibiaData; until then, should they be
+    deleted after some time?

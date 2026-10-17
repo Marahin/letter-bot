@@ -7,6 +7,7 @@ import (
 
 	experiencesqlc "spot-assistant/internal/infrastructure/experience/postgresql/sqlc"
 	guildsqlc "spot-assistant/internal/infrastructure/guild/postgresql/sqlc"
+	lootsqlc "spot-assistant/internal/infrastructure/loot/postgresql/sqlc"
 	reservationsqlc "spot-assistant/internal/infrastructure/reservation/postgresql/sqlc"
 	spotsqlc "spot-assistant/internal/infrastructure/spot/postgresql/sqlc"
 	webusersqlc "spot-assistant/internal/infrastructure/webuser/postgresql/sqlc"
@@ -24,6 +25,7 @@ var Repositories = fx.Provide(
 	webUserRepository,
 	experienceRepository,
 	reservationRepository,
+	lootRepository,
 )
 
 func guildConfigRepository(pool *pgxpool.Pool) *guildsqlc.GuildConfigRepository {
@@ -56,4 +58,8 @@ func experienceRepository(pool *pgxpool.Pool) *experiencesqlc.ExperienceReposito
 
 func reservationRepository(pool *pgxpool.Pool, log *zap.SugaredLogger) *reservationsqlc.ReservationRepository {
 	return reservationsqlc.NewReservationRepository(pool).WithLogger(log)
+}
+
+func lootRepository(pool *pgxpool.Pool) *lootsqlc.LootRepository {
+	return lootsqlc.NewLootRepository(pool)
 }

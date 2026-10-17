@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>World stats</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0A0A0B;color:#F4F4F5;font-family:'Hanken Grotesk',system-ui,sans-serif}
+a{color:#FB923C}a:hover{color:#F97316}
+</style>
+</helmet>
+<div style="min-height: 1180px; background: #0A0A0B; display: flex; flex-direction: column">
+<header style="border-bottom: 1px solid #1F1F23; padding: 14px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px">
+<a href="#" style="display: flex; align-items: center; gap: 10px; color: #F4F4F5; text-decoration: none">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F97316" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 7l9 6 9-6"></path></svg>
+<span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 18px">TibiaLoot</span>
+</a>
+<nav aria-label="Main" style="display: flex; flex-wrap: wrap; gap: 4px; font-size: 14px">
+<a href="Worlds.dc.html" aria-current="page" style="padding: 8px 12px; border-radius: 6px; background: rgba(249,115,22,0.12); color: #FB923C; font-weight: 600; text-decoration: none">Worlds</a>
+<a href="Spawns.dc.html" style="padding: 8px 12px; border-radius: 6px; color: #A8A8B0; text-decoration: none">Spawns</a>
+<a href="#" style="padding: 8px 12px; border-radius: 6px; color: #A8A8B0; text-decoration: none">Loot Calculator</a>
+</nav>
+<a href="#" style="margin-left: auto; min-height: 40px; display: flex; align-items: center; padding: 0 14px; border-radius: 8px; background: #5865F2; color: #FFFFFF; font-size: 14px; font-weight: 600; text-decoration: none">Log in with Discord</a>
+</header>
+<main style="width: 100%; max-width: 1200px; margin: 0 auto; box-sizing: border-box; padding: 40px 24px 64px; display: flex; flex-direction: column; gap: 28px">
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<a href="Worlds.dc.html" style="font-size: 13px; text-decoration: none">← All worlds</a>
+<h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 34px; font-weight: 700; letter-spacing: -0.02em">Celesta</h1>
+<p style="margin: 0; font-size: 15px; color: #A8A8B0">Open PvP · 2 Discord servers use Letter here</p>
+</div>
+<button type="button" style="min-height: 44px; display: flex; align-items: center; gap: 10px; border: 1px solid #2A2A30; background: #111113; border-radius: 8px; padding: 0 14px; color: #F4F4F5; font: inherit; font-size: 14px; cursor: pointer">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A8A8B0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
+<span style="font-family: 'JetBrains Mono', monospace">17 Sep – 17 Oct</span>
+</button>
+</div>
+<section aria-label="Totals" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px">
+<sc-for list="{{kpis}}" as="k" hint-placeholder-count="5">
+<div style="border: 1px solid #2A2A30; background: #111113; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; color: #71717A">{{k.label}}</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 600; color: {{k.color}}">{{k.value}}</span>
+</div>
+</sc-for>
+</section>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px">
+<section aria-labelledby="sp-h" style="border: 1px solid #2A2A30; background: #111113; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px">
+<h2 id="sp-h" style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600">Top spawns by profit/h</h2>
+<a href="Spawns.dc.html" style="font-size: 13px; font-weight: 600; text-decoration: none">All spawns</a>
+</div>
+<p style="margin: 0; font-size: 13px; color: #71717A">At least 3 hours of sessions.</p>
+<ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{spawns}}" as="s" hint-placeholder-count="5">
+<li style="display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 14px">
+<span style="font-family: 'JetBrains Mono', monospace; color: #71717A">{{s.rank}}</span>
+<div style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
+<a href="Spawn.dc.html" style="color: #F4F4F5; font-weight: 600; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{s.name}}</a>
+<div style="height: 6px; border-radius: 3px; background: #1F1F23"><div style="height: 6px; border-radius: 3px; background: #F97316; width: {{s.bar}}"></div></div>
+</div>
+<span style="font-family: 'JetBrains Mono', monospace; color: #34D399">{{s.value}}</span>
+</li>
+</sc-for>
+</ol>
+</section>
+<section aria-labelledby="ch-h" style="border: 1px solid #2A2A30; background: #111113; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<h2 id="ch-h" style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600">Top characters by profit</h2>
+<p style="margin: 0; font-size: 13px; color: #71717A">Each character's equal share of the party balance.</p>
+<ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{chars}}" as="c" hint-placeholder-count="5">
+<li style="display: grid; grid-template-columns: 24px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; font-size: 14px">
+<span style="font-family: 'JetBrains Mono', monospace; color: #71717A">{{c.rank}}</span>
+<a href="#" style="color: #F4F4F5; font-weight: 600; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{c.name}}</a>
+<span style="font-size: 12px; color: #71717A">{{c.sessions}}</span>
+<span style="font-family: 'JetBrains Mono', monospace; color: #34D399">{{c.value}}</span>
+</li>
+</sc-for>
+</ol>
+</section>
+</div>
+<section aria-labelledby="gs-h" style="border: 1px solid #2A2A30; background: #111113; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<h2 id="gs-h" style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600">Discord servers on Celesta</h2>
+<div style="overflow-x: auto">
+<table style="width: 100%; min-width: 640px; border-collapse: collapse; font-size: 14px">
+<thead>
+<tr style="text-align: left; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #71717A">
+<th scope="col" style="padding: 8px 6px; font-weight: 600">Server</th>
+<th scope="col" aria-sort="descending" style="padding: 8px 6px; font-weight: 600; text-align: right; color: #FB923C">Reservations ↓</th>
+<th scope="col" style="padding: 8px 6px; font-weight: 600; text-align: right">Exp/h</th>
+<th scope="col" style="padding: 8px 6px; font-weight: 600; text-align: right">Profit/h</th>
+<th scope="col" style="padding: 8px 6px; font-weight: 600; text-align: right">Stats</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{guilds}}" as="g" hint-placeholder-count="2">
+<tr style="border-top: 1px solid #1F1F23">
+<td style="padding: 10px 6px; font-weight: 600">{{g.name}}</td>
+<td style="padding: 10px 6px; text-align: right; font-family: 'JetBrains Mono', monospace">{{g.res}}</td>
+<td style="padding: 10px 6px; text-align: right; font-family: 'JetBrains Mono', monospace">{{g.exp}}</td>
+<td style="padding: 10px 6px; text-align: right; font-family: 'JetBrains Mono', monospace; color: {{g.profitColor}}">{{g.profit}}</td>
+<td style="padding: 10px 6px; text-align: right"><a href="#" style="font-weight: 600; text-decoration: none">Open</a></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+</section>
+<p style="margin: 0; font-size: 13px; color: #71717A">Experience comes from the world top 1000. Profit comes from Party Hunt sessions pasted in the <a href="#">Loot Calculator</a>.</p>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1180}}'>
+class Component extends DCLogic {
+renderVals() {
+const green = '#34D399';
+return {
+kpis: [
+{ label: 'Reservations', value: '1 284', color: '#F4F4F5' },
+{ label: 'Booked hours', value: '3 412 h', color: '#F4F4F5' },
+{ label: 'Experience', value: '9.8 bn', color: '#F4F4F5' },
+{ label: 'Exp/h', value: '4.1 m', color: '#F4F4F5' },
+{ label: 'Profit/h', value: '+212 k', color: green }
+],
+spawns: [
+{ rank: '1', name: 'Soul War — Bony Sea', bar: '100%', value: '+1.31 m/h' },
+{ rank: '2', name: 'Buried Cathedral -7', bar: '78%', value: '+1.02 m/h' },
+{ rank: '3', name: 'Ingol -3', bar: '61%', value: '+801 k/h' },
+{ rank: '4', name: 'Falcon Bastion', bar: '44%', value: '+577 k/h' },
+{ rank: '5', name: 'Cobra Bastion', bar: '30%', value: '+392 k/h' }
+],
+chars: [
+{ rank: '1', name: 'Killer Potato', sessions: '41 sessions', value: '+38.2 m' },
+{ rank: '2', name: 'Iscarlott', sessions: '35 sessions', value: '+31.9 m' },
+{ rank: '3', name: 'Marahin', sessions: '29 sessions', value: '+24.4 m' },
+{ rank: '4', name: 'Quiet Nyx', sessions: '22 sessions', value: '+17.0 m' },
+{ rank: '5', name: 'Detliks', sessions: '18 sessions', value: '+11.6 m' }
+],
+guilds: [
+{ name: 'Celesta Community', res: '1 120', exp: '4.2 m', profit: '+220 k', profitColor: green },
+{ name: 'Refugees', res: '164', exp: '3.5 m', profit: 'No data', profitColor: '#71717A' }
+]
+};
+}
+}
+</script>
+</body>
+</html>

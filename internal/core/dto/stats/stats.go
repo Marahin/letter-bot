@@ -29,14 +29,22 @@ type Filter struct {
 	CharacterKey string
 }
 
-// Totals sums reservations and their experience. Only reservations with experience data
-// (at least one character with status ok) count in ExpReservations and ExpSeconds.
+// Totals sums reservations, their experience and their loot. Only reservations with experience
+// data (at least one character with status ok) count in ExpReservations and ExpSeconds; only
+// reservations with a loot session count in LootReservations. LootSeconds is session time, not
+// booked time.
 type Totals struct {
 	Reservations    int64
 	Seconds         int64
 	ExpReservations int64
 	ExpSeconds      int64
 	Exp             int64
+
+	LootReservations int64
+	LootSeconds      int64
+	Profit           int64
+	Loot             int64
+	Supplies         int64
 }
 
 func (t Totals) Hours() float64 { return float64(t.Seconds) / 3600 }
@@ -63,13 +71,45 @@ func (t Totals) ExpPerHour() *float64 {
 	return &v
 }
 
+func (t Totals) HasLoot() bool { return t.LootReservations > 0 }
+
+func (t Totals) LootHours() float64 { return float64(t.LootSeconds) / 3600 }
+
+// ProfitTotal is the summed balance, nil when no reservation has a loot session.
+func (t Totals) ProfitTotal() *int64 { return t.lootFigure(t.Profit) }
+
+func (t Totals) LootTotal() *int64 { return t.lootFigure(t.Loot) }
+
+func (t Totals) SuppliesTotal() *int64 { return t.lootFigure(t.Supplies) }
+
+// ProfitPerHour divides the profit by the session hours. It is nil without data.
+func (t Totals) ProfitPerHour() *float64 {
+	if !t.HasLoot() || t.LootSeconds <= 0 {
+		return nil
+	}
+	v := float64(t.Profit) / t.LootHours()
+	return &v
+}
+
+func (t Totals) lootFigure(v int64) *int64 {
+	if !t.HasLoot() {
+		return nil
+	}
+	return &v
+}
+
 func (t Totals) Add(o Totals) Totals {
 	return Totals{
-		Reservations:    t.Reservations + o.Reservations,
-		Seconds:         t.Seconds + o.Seconds,
-		ExpReservations: t.ExpReservations + o.ExpReservations,
-		ExpSeconds:      t.ExpSeconds + o.ExpSeconds,
-		Exp:             t.Exp + o.Exp,
+		Reservations:     t.Reservations + o.Reservations,
+		Seconds:          t.Seconds + o.Seconds,
+		ExpReservations:  t.ExpReservations + o.ExpReservations,
+		ExpSeconds:       t.ExpSeconds + o.ExpSeconds,
+		Exp:              t.Exp + o.Exp,
+		LootReservations: t.LootReservations + o.LootReservations,
+		LootSeconds:      t.LootSeconds + o.LootSeconds,
+		Profit:           t.Profit + o.Profit,
+		Loot:             t.Loot + o.Loot,
+		Supplies:         t.Supplies + o.Supplies,
 	}
 }
 
@@ -120,15 +160,22 @@ type CharacterReservation struct {
 type SortKey string
 
 const (
-	SortName         SortKey = "name"
-	SortReservations SortKey = "reservations"
-	SortHours        SortKey = "hours"
-	SortExp          SortKey = "exp"
-	SortExpPerHour   SortKey = "exp_h"
+	SortName          SortKey = "name"
+	SortReservations  SortKey = "reservations"
+	SortHours         SortKey = "hours"
+	SortExp           SortKey = "exp"
+	SortExpPerHour    SortKey = "exp_h"
+	SortProfit        SortKey = "profit"
+	SortProfitPerHour SortKey = "profit_h"
+	// SortWorlds orders spawns by the number of worlds that booked them.
+	SortWorlds SortKey = "worlds"
 )
 
-// SortKeys lists every SortKey in column order.
-var SortKeys = []SortKey{SortName, SortReservations, SortHours, SortExp, SortExpPerHour}
+// SortKeys lists every SortKey of the guild tables in column order.
+var SortKeys = []SortKey{SortName, SortReservations, SortHours, SortExp, SortExpPerHour, SortProfit, SortProfitPerHour}
+
+// SpawnSortKeys lists every SortKey of the spawn directory in column order.
+var SpawnSortKeys = []SortKey{SortName, SortWorlds, SortReservations, SortHours, SortExpPerHour, SortProfitPerHour}
 
 type Sort struct {
 	Key SortKey
@@ -143,6 +190,8 @@ type Query struct {
 
 	Sort  Sort
 	Limit int
+	// MinLootSeconds keeps rows with less session time out (0 = every row). Only SpotTotals reads it.
+	MinLootSeconds int64
 }
 
 // Page is the first rows of a query and the number of rows without the limit.
@@ -155,6 +204,7 @@ type Page[T any] struct {
 type CharacterBoards struct {
 	ByExp        []CharacterRow
 	ByExpPerHour []CharacterRow
+	ByProfit     []CharacterRow
 	Characters   int
 }
 
@@ -163,6 +213,8 @@ type Leaderboards struct {
 	PlayersByHours         []PlayerRow
 	CharactersByExp        []CharacterRow
 	CharactersByExpPerHour []CharacterRow
+	SpotsByProfitPerHour   []SpotRow
+	CharactersByProfit     []CharacterRow
 }
 
 type Overview struct {

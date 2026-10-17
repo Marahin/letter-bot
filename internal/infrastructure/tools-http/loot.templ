@@ -3,6 +3,7 @@ package toolshttp
 import (
 	"strconv"
 
+	"spot-assistant/internal/core/dto/loot"
 	"spot-assistant/internal/core/lootcalc"
 	"spot-assistant/internal/infrastructure/i18n"
 	"spot-assistant/internal/infrastructure/web"
@@ -94,11 +95,32 @@ templ pasteForm(v lootView) {
 		if v.Error != nil {
 			<p id="loot-session-error" role="alert" class="text-[13px] text-rose-300">{ errorText(ctx, v.Error) }</p>
 		}
+		@countField(!v.Uncounted)
 		<div class="flex flex-wrap justify-end gap-2.5">
 			<button type="button" data-loot-clear class={ quietButtonClass }>{ i18n.T(ctx, "tools.loot.form.clear") }</button>
 			<button type="submit" class={ primaryButtonClass }>{ i18n.T(ctx, "tools.loot.form.submit") }</button>
 		</div>
 	</form>
+}
+
+// countField opts the session in or out of the public stats. The hidden field tells
+// an unticked box from a form without one, which counts.
+templ countField(checked bool) {
+	<input type="hidden" name="count_field" value="1"/>
+	<div class="flex flex-col gap-1">
+		<label class="flex min-h-11 cursor-pointer items-center gap-3 text-sm text-zone-100">
+			<input
+				type="checkbox"
+				name="count"
+				value="1"
+				checked?={ checked }
+				aria-describedby="loot-count-note"
+				class="h-5 w-5 shrink-0 cursor-pointer rounded border-zone-600 bg-zone-850 accent-signal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/40"
+			/>
+			{ i18n.T(ctx, "tools.loot.count.label") }
+		</label>
+		<p id="loot-count-note" class="text-[13px] leading-relaxed text-zone-300">{ i18n.T(ctx, "tools.loot.count.note") }</p>
+	</div>
 }
 
 templ result(r *resultView, from string) {
@@ -109,6 +131,7 @@ templ result(r *resultView, from string) {
 			@tile(i18n.T(ctx, "tools.loot.kpi.players"), strconv.Itoa(r.Split.Players), "text-zone-50")
 			@tile(i18n.T(ctx, "tools.loot.kpi.duration"), duration(r.Session), "text-zone-50")
 		</dl>
+		@statsLine(r.Stats)
 		<section aria-labelledby="loot-transfers-heading" class={ cardClass, "flex flex-col gap-3.5 p-5 sm:p-6" }>
 			<div class="flex items-center justify-between gap-4">
 				<h2 id="loot-transfers-heading" tabindex="-1" data-loot-focus class="font-display text-lg font-semibold text-zone-50 focus:outline-none">{ i18n.T(ctx, "tools.loot.transfers.heading") }</h2>
@@ -168,6 +191,37 @@ templ result(r *resultView, from string) {
 		</section>
 		@templ.JSONScript(entryScriptID, r.Entry)
 	</div>
+}
+
+// statsLine says whether the session counts in the public stats, and why not.
+templ statsLine(n statsNotice) {
+	<p
+		data-loot-stats={ string(n.Status) }
+		role="status"
+		class={ "rounded-md border px-3.5 py-3 text-[13px] leading-relaxed",
+			templ.KV("border-emerald-500/30 bg-emerald-500/[0.06] text-zone-100", n.Status == loot.StatusCounted),
+			templ.KV("border-amber-500/30 bg-amber-500/10 text-amber-200", n.Status == loot.StatusFailed),
+			templ.KV("border-zone-800 bg-zone-850 text-zone-300", n.Status != loot.StatusCounted && n.Status != loot.StatusFailed) }
+	>
+		switch n.Status {
+			case loot.StatusCounted:
+				{ i18n.T(ctx, "tools.loot.stats.counted", n.SpotName, n.GuildName) }
+				{ " " }
+				<a href={ templ.SafeURL(n.Href) } class="inline-flex min-h-11 items-center font-semibold text-signal-bright underline-offset-2 transition hover:text-signal hover:underline sm:min-h-0">{ i18n.T(ctx, "tools.loot.stats.view") } <span aria-hidden="true" class="ml-1">→</span></a>
+			case loot.StatusUnticked:
+				{ i18n.T(ctx, "tools.loot.stats.unticked") }
+			case loot.StatusNoTime:
+				{ i18n.T(ctx, "tools.loot.stats.no_time") }
+			case loot.StatusFuture:
+				{ i18n.T(ctx, "tools.loot.stats.future") }
+			case loot.StatusOutmatched:
+				{ i18n.T(ctx, "tools.loot.stats.outmatched", n.SpotName, n.GuildName) }
+			case loot.StatusFailed:
+				{ i18n.T(ctx, "tools.loot.stats.failed") }
+			default:
+				{ i18n.T(ctx, "tools.loot.stats.unmatched") }
+		}
+	</p>
 }
 
 templ tile(label, value, valueClass string) {

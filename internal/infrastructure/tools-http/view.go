@@ -7,8 +7,10 @@ import (
 	"strconv"
 	"strings"
 
+	"spot-assistant/internal/core/dto/loot"
 	"spot-assistant/internal/core/lootcalc"
 	"spot-assistant/internal/infrastructure/i18n"
+	"spot-assistant/internal/infrastructure/web"
 )
 
 // entryScriptID is the JSON island of a result that loot-calculator.js saves.
@@ -24,6 +26,8 @@ type lootView struct {
 	Rows   int
 	// Autofocus focuses the empty paste box on a fine pointer (loot-calculator.js).
 	Autofocus bool
+	// Uncounted unticks "count in public stats"; the zero value is the ticked default.
+	Uncounted bool
 }
 
 const (
@@ -61,6 +65,27 @@ type resultView struct {
 	TeamSpeak string
 	// Entry is the history record loot-calculator.js keeps in localStorage.
 	Entry historyEntry
+	// Stats says whether the session counts in the public stats.
+	Stats statsNotice
+}
+
+// statsNotice is the line under the result about the public stats. The match
+// fields are set for counted and outmatched.
+type statsNotice struct {
+	Status    loot.Status
+	GuildName string
+	SpotName  string
+	Href      string
+}
+
+func newStatsNotice(out loot.Outcome) statsNotice {
+	n := statsNotice{Status: out.Status}
+	if m := out.Match; m != nil {
+		n.GuildName = m.GuildName
+		n.SpotName = m.SpotName
+		n.Href = web.GuildPath(m.GuildID, "/stats/spots/"+strconv.FormatInt(m.SpotID, 10))
+	}
+	return n
 }
 
 // historyEntry is one saved session. Key identifies the same hunt, as the
@@ -72,6 +97,8 @@ type historyEntry struct {
 	Names []string `json:"names"`
 	Total int64    `json:"total"`
 	Text  string   `json:"text"`
+	// Count is the "count in public stats" choice, kept when the entry is loaded again.
+	Count bool `json:"count"`
 }
 
 func newResultView(text string, s lootcalc.Session, r lootcalc.Result) *resultView {

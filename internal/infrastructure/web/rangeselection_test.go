@@ -140,3 +140,76 @@ func TestEncodeDays(t *testing.T) {
 		time.Date(2026, 6, 22, 0, 0, 0, 0, time.Local),
 	}))
 }
+
+func runCrossRange(d *Deps, r *http.Request, persist []time.Time) (RangeSelection, *httptest.ResponseRecorder) {
+	var got RangeSelection
+	rec := httptest.NewRecorder()
+	d.WithCrossRangeSelection(func(w http.ResponseWriter, req *http.Request) {
+		got = RangeSelectionFrom(req.Context())
+		d.PersistRangeSelection(w, req, "", persist)
+	})(rec, r)
+	return got, rec
+}
+
+func TestCrossRangeSelection_PersistsInItsOwnCookie(t *testing.T) {
+	// given
+	d := rangeDeps()
+	r := httptest.NewRequest(http.MethodGet, "/worlds?days=2026-06-18", nil)
+
+	// when
+	sel, rec := runCrossRange(d, r, []time.Time{time.Date(2026, 6, 18, 0, 0, 0, 0, time.Local)})
+
+	// then
+	assert.True(t, sel.Explicit)
+	cookies := rec.Result().Cookies()
+	require.Len(t, cookies, 1)
+	assert.Equal(t, "letter_range_worlds", cookies[0].Name)
+	assert.Equal(t, "2026-06-18", cookies[0].Value)
+}
+
+func TestCrossRangeSelection_RestoresItsCookieAndIgnoresAServers(t *testing.T) {
+	// given
+	d := rangeDeps()
+	r := httptest.NewRequest(http.MethodGet, "/spawns", nil)
+	r.AddCookie(&http.Cookie{Name: "letter_range_worlds", Value: "2026-06-01,2026-06-05"})
+	r.AddCookie(&http.Cookie{Name: "letter_range_g1", Value: "2026-01-01"})
+
+	// when
+	sel, rec := runCrossRange(d, r, nil)
+
+	// then
+	assert.True(t, sel.Explicit)
+	assert.Equal(t, "2026-06-01,2026-06-05", sel.Query.Get("days"))
+	assert.Empty(t, rec.Result().Cookies(), "a restored selection is not written again")
+}
+
+func TestCrossRangeSelection_ClearDropsItsCookie(t *testing.T) {
+	// given
+	d := rangeDeps()
+	r := httptest.NewRequest(http.MethodGet, "/worlds?days=", nil)
+	r.AddCookie(&http.Cookie{Name: "letter_range_worlds", Value: "2026-06-01"})
+
+	// when
+	sel, rec := runCrossRange(d, r, nil)
+
+	// then
+	assert.False(t, sel.Explicit)
+	cookies := rec.Result().Cookies()
+	require.Len(t, cookies, 1)
+	assert.Equal(t, "letter_range_worlds", cookies[0].Name)
+	assert.Negative(t, cookies[0].MaxAge)
+}
+
+func TestRangeSelection_AServerPageIgnoresTheCrossCookie(t *testing.T) {
+	// given
+	d := rangeDeps()
+	r := httptest.NewRequest(http.MethodGet, "/servers/g1/stats", nil)
+	r.SetPathValue("id", "g1")
+	r.AddCookie(&http.Cookie{Name: "letter_range_worlds", Value: "2026-06-01"})
+
+	// when
+	sel, _ := runRange(d, r, nil)
+
+	// then
+	assert.False(t, sel.Explicit)
+}

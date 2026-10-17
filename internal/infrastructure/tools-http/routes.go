@@ -1,6 +1,6 @@
 // Package toolshttp holds the public tools: the Loot Calculator. They need no
 // sign-in, and render in the top bar when signed out and in the sidebar when
-// signed in.
+// signed in. The split runs here, on the server; nothing is sent to a third party.
 package toolshttp
 
 import (
@@ -8,7 +8,7 @@ import (
 )
 
 // LootCalculatorPath is the Loot Calculator page and its form action.
-const LootCalculatorPath = "/tools/loot-calculator"
+const LootCalculatorPath = web.LootCalculatorPath
 
 // Register wires the tool routes.
 func Register(r *web.Router, d *web.Deps) {

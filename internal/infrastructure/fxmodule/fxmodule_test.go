@@ -16,6 +16,7 @@ import (
 	"spot-assistant/internal/infrastructure/db/postgresql"
 	experiencesqlc "spot-assistant/internal/infrastructure/experience/postgresql/sqlc"
 	guildsqlc "spot-assistant/internal/infrastructure/guild/postgresql/sqlc"
+	lootsqlc "spot-assistant/internal/infrastructure/loot/postgresql/sqlc"
 	reservationsqlc "spot-assistant/internal/infrastructure/reservation/postgresql/sqlc"
 	spotsqlc "spot-assistant/internal/infrastructure/spot/postgresql/sqlc"
 	webusersqlc "spot-assistant/internal/infrastructure/webuser/postgresql/sqlc"
@@ -167,7 +168,7 @@ func TestRepositories_BuildOverAPool(t *testing.T) {
 		fx.Invoke(func(
 			*guildsqlc.GuildConfigRepository, *guildsqlc.GuildChannelRepository, *guildsqlc.GuildRoleRepository,
 			*worldnamesqlc.WorldNameRepository, *spotsqlc.SpotRepository, *webusersqlc.WebUserRepository,
-			*experiencesqlc.ExperienceRepository, *worldapi.HTTPWorldService,
+			*experiencesqlc.ExperienceRepository, *lootsqlc.LootRepository, *worldapi.HTTPWorldService,
 		) {
 		}),
 	)

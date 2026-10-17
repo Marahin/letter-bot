@@ -27,7 +27,7 @@ type RangePickerProps struct {
 	DataDays     []string
 	// Explicit is true when the selection is pinned rather than the page default.
 	Explicit bool
-	// DataLegend is the already-localized dot legend, which differs per page.
+	// DataLegend is the already-localized dot legend, which differs per page; "" hides it.
 	DataLegend string
 	// Hidden carries the page's non-range query values through the submit.
 	Hidden []RangePickerHidden

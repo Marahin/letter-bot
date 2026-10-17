@@ -302,8 +302,14 @@ templ sidebar(nav Nav, path string) {
 	<aside class="z-30 flex flex-col gap-6 border-b border-zone-800 bg-zone-900 px-5 py-6 md:sticky md:top-0 md:h-screen md:w-[264px] md:shrink-0 md:self-start md:overflow-y-auto md:overscroll-contain md:border-b-0 md:border-r">
 		@wordmark("/dashboard", "shrink-0")
 		<nav class="flex flex-col gap-0.5 text-sm">
-			@sidebarIconLink(lootCalculatorPath, i18n.T(ctx, "shell.nav.loot_calculator"), nav.Active == "loot-calculator") {
+			@sidebarIconLink(LootCalculatorPath, i18n.T(ctx, "shell.nav.loot_calculator"), nav.Active == "loot-calculator") {
 				@toolGlyph("calculator", "h-[15px] w-[15px]")
+			}
+			@sidebarIconLink(WorldsPath, i18n.T(ctx, "shell.nav.worlds"), nav.Active == "worlds") {
+				@toolGlyph("globe", "h-[15px] w-[15px]")
+			}
+			@sidebarIconLink(SpawnsPath, i18n.T(ctx, "shell.nav.spawns"), nav.Active == "spawns") {
+				@toolGlyph("map-pin", "h-[15px] w-[15px]")
 			}
 		</nav>
 		if nav.CurrentGuildID != "" {
@@ -455,6 +461,10 @@ templ toolGlyph(icon, class string) {
 	switch icon {
 		case "calculator":
 			<svg class={ class } viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"></rect><path d="M8 6h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 19h.01M12 19h4"></path></svg>
+		case "globe":
+			<svg class={ class } viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10Z"></path></svg>
+		case "map-pin":
+			<svg class={ class } viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
 	}
 }
 

@@ -38,6 +38,7 @@ func (r *StatsRepository) SpotTotals(ctx context.Context, q stats.Query) (stats.
 	rows, err := r.q.SpotTotals(ctx, SpotTotalsParams{
 		SortKey: string(q.Sort.Key), Ascending: q.Sort.Asc, Lim: int32(q.Limit),
 		GuildID: f.GuildID, FromT: ts(f.From), ToT: ts(f.To), SpotID: f.SpotID, UserID: f.UserID, CharacterKey: f.CharacterKey,
+		MinLootSeconds: q.MinLootSeconds,
 	})
 	if err != nil {
 		return stats.Page[stats.SpotRow]{}, err
@@ -49,7 +50,12 @@ func (r *StatsRepository) SpotTotals(ctx context.Context, q stats.Query) (stats.
 			SpotID:   row.SpotID,
 			Name:     row.Name,
 			Archived: row.Archived,
-			Totals:   totals(row.Reservations, row.Seconds, row.ExpReservations, row.ExpSeconds, row.Exp),
+			Totals: stats.Totals{
+				Reservations: row.Reservations, Seconds: row.Seconds,
+				ExpReservations: row.ExpReservations, ExpSeconds: row.ExpSeconds, Exp: row.Exp,
+				LootReservations: row.LootReservations, LootSeconds: row.LootSeconds,
+				Profit: row.Profit, Loot: row.Loot, Supplies: row.Supplies,
+			},
 		}
 	}
 	return page, nil
@@ -70,7 +76,12 @@ func (r *StatsRepository) PlayerTotals(ctx context.Context, q stats.Query) (stat
 		page.Rows[i] = stats.PlayerRow{
 			UserID: row.UserID,
 			Name:   row.Name,
-			Totals: totals(row.Reservations, row.Seconds, row.ExpReservations, row.ExpSeconds, row.Exp),
+			Totals: stats.Totals{
+				Reservations: row.Reservations, Seconds: row.Seconds,
+				ExpReservations: row.ExpReservations, ExpSeconds: row.ExpSeconds, Exp: row.Exp,
+				LootReservations: row.LootReservations, LootSeconds: row.LootSeconds,
+				Profit: row.Profit, Loot: row.Loot, Supplies: row.Supplies,
+			},
 		}
 	}
 	return page, nil
@@ -89,9 +100,14 @@ func (r *StatsRepository) CharacterTotals(ctx context.Context, q stats.Query) (s
 	for i, row := range rows {
 		page.Total = int(row.TotalRows)
 		page.Rows[i] = stats.CharacterRow{
-			Key:    row.CharacterKey,
-			Name:   row.Name,
-			Totals: totals(row.Reservations, row.Seconds, row.ExpReservations, row.ExpSeconds, row.Exp),
+			Key:  row.CharacterKey,
+			Name: row.Name,
+			Totals: stats.Totals{
+				Reservations: row.Reservations, Seconds: row.Seconds,
+				ExpReservations: row.ExpReservations, ExpSeconds: row.ExpSeconds, Exp: row.Exp,
+				LootReservations: row.LootReservations, LootSeconds: row.LootSeconds,
+				Profit: row.Profit, Loot: row.Loot, Supplies: row.Supplies,
+			},
 		}
 	}
 	return page, nil
@@ -109,15 +125,22 @@ func (r *StatsRepository) CharacterLeaderboards(ctx context.Context, f stats.Fil
 	for _, row := range rows {
 		boards.Characters = int(row.TotalRows)
 		c := stats.CharacterRow{
-			Key:    row.CharacterKey.String,
-			Name:   row.Name,
-			Totals: totals(row.Reservations.Int64, row.Seconds.Int64, row.ExpReservations.Int64, row.ExpSeconds.Int64, row.Exp.Int64),
+			Key:  row.CharacterKey.String,
+			Name: row.Name,
+			Totals: stats.Totals{
+				Reservations: row.Reservations.Int64, Seconds: row.Seconds.Int64,
+				ExpReservations: row.ExpReservations.Int64, ExpSeconds: row.ExpSeconds.Int64, Exp: row.Exp.Int64,
+				LootReservations: row.LootReservations.Int64, LootSeconds: row.LootSeconds.Int64,
+				Profit: row.Profit.Int64, Loot: row.Loot.Int64, Supplies: row.Supplies.Int64,
+			},
 		}
 		switch row.Board.String {
 		case "exp":
 			boards.ByExp = append(boards.ByExp, c)
 		case "exp_h":
 			boards.ByExpPerHour = append(boards.ByExpPerHour, c)
+		case "profit":
+			boards.ByProfit = append(boards.ByProfit, c)
 		}
 	}
 	return boards, nil
@@ -133,8 +156,13 @@ func (r *StatsRepository) Daily(ctx context.Context, f stats.Filter) ([]stats.Da
 	out := make([]stats.Day, len(rows))
 	for i, row := range rows {
 		out[i] = stats.Day{
-			Day:    r.day(row.Day),
-			Totals: totals(row.Reservations, row.Seconds, row.ExpReservations, row.ExpSeconds, row.Exp),
+			Day: r.day(row.Day),
+			Totals: stats.Totals{
+				Reservations: row.Reservations, Seconds: row.Seconds,
+				ExpReservations: row.ExpReservations, ExpSeconds: row.ExpSeconds, Exp: row.Exp,
+				LootReservations: row.LootReservations, LootSeconds: row.LootSeconds,
+				Profit: row.Profit, Loot: row.Loot, Supplies: row.Supplies,
+			},
 		}
 	}
 	return out, nil
@@ -187,10 +215,6 @@ func (r *StatsRepository) CharacterReservations(ctx context.Context, f stats.Fil
 func (r *StatsRepository) day(d pgtype.Date) time.Time {
 	y, m, dd := d.Time.Date()
 	return time.Date(y, m, dd, 0, 0, 0, 0, r.loc)
-}
-
-func totals(reservations, seconds, expReservations, expSeconds, exp int64) stats.Totals {
-	return stats.Totals{Reservations: reservations, Seconds: seconds, ExpReservations: expReservations, ExpSeconds: expSeconds, Exp: exp}
 }
 
 func ts(t time.Time) pgtype.Timestamptz {
