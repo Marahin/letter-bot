@@ -8,7 +8,7 @@ import (
 )
 
 // LootCalculatorPath is the Loot Calculator page and its form action.
-const LootCalculatorPath = "/tools/loot-calculator"
+const LootCalculatorPath = web.LootCalculatorPath
 
 // Register wires the tool routes.
 func Register(r *web.Router, d *web.Deps) {

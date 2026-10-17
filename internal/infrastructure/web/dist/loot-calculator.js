@@ -1,5 +1,6 @@
 // Loot Calculator: copy buttons and the session history. The history lives in
-// this browser's localStorage only (the server never stores loot data).
+// this browser's localStorage only. The only request is the form post: the server
+// splits the session and, if the box is ticked, counts it in the public stats.
 // Delegated on document, so the result htmx swaps in needs no set-up.
 (function () {
   var KEY = "letter:loot-history";
@@ -154,7 +155,12 @@
     var section = document.querySelector("[data-loot-history]");
     if (!entry || !section) return;
     var action = section.getAttribute("data-loot-action");
-    var values = { session: entry.text, from: section.getAttribute("data-loot-from") || "" };
+    var values = {
+      session: entry.text,
+      from: section.getAttribute("data-loot-from") || "",
+      count_field: "1",
+      count: entry.count === false ? "" : "1",
+    };
     if (window.htmx) {
       window.htmx.ajax("POST", action, { target: "#loot-main", swap: "outerHTML", values: values });
       return;

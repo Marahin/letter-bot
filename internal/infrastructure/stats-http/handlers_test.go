@@ -48,6 +48,11 @@ func tot(res, secs, expRes, expSecs, exp int64) stats.Totals {
 	return stats.Totals{Reservations: res, Seconds: secs, ExpReservations: expRes, ExpSeconds: expSecs, Exp: exp}
 }
 
+func withLoot(t stats.Totals, res, secs, profit int64) stats.Totals {
+	t.LootReservations, t.LootSeconds, t.Profit = res, secs, profit
+	return t
+}
+
 func days(rng stats.Range, t stats.Totals) []stats.Day {
 	out := make([]stats.Day, len(rng.Days))
 	for i, d := range rng.Days {
@@ -202,7 +207,7 @@ func TestHandleOverview_DataDaysFailureStillRenders(t *testing.T) {
 func spotRowsFixture() stats.Page[stats.SpotRow] {
 	return stats.Page[stats.SpotRow]{Rows: []stats.SpotRow{
 		{SpotID: 4, Name: "Hero Cave", Totals: tot(3, 3*3600, 1, 3600, 1_200_000)},
-		{SpotID: 5, Name: "Old Spot", Archived: true, Totals: tot(1, 1800, 0, 0, 0)},
+		{SpotID: 5, Name: "Old Spot", Archived: true, Totals: withLoot(tot(1, 1800, 0, 0, 0), 1, 1800, -45_000)},
 		{SpotID: 6, Name: "=HYPERLINK(\"x\")", Totals: tot(1, 3600, 0, 0, 0)},
 	}, Total: 3}
 }
@@ -224,6 +229,10 @@ func TestHandleSpots_SortsOnTheServer(t *testing.T) {
 	assert.Contains(t, body, "1,200,000")
 	assert.Contains(t, body, "Archived")
 	assert.Contains(t, body, "No data")
+	assert.Contains(t, body, "-45,000", "a loss keeps its minus sign")
+	assert.Contains(t, body, "text-rose-400")
+	assert.Contains(t, body, `href="/servers/g1/stats/spots?sort=profit_h"`)
+	assert.Contains(t, body, "Profit/h")
 	assert.Contains(t, body, `name="sort" value="exp"`)
 	assert.Contains(t, body, "format=csv")
 }
@@ -240,7 +249,10 @@ func TestHandleSpots_CSVExportsUpToTheCapWithEmptyNoDataCells(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.Equal(t, "text/csv; charset=utf-8", rec.Header().Get("Content-Type"))
 	assert.Contains(t, rec.Header().Get("Content-Disposition"), "stats-spots-2026-09-01_2026-09-02.csv")
-	assert.Equal(t, "Respawn,Reservations,Hours,Experience,Exp/h\nHero Cave,3,3.00,1200000,1200000\nOld Spot,1,0.50,,\n\"'=HYPERLINK(\"\"x\"\")\",1,1.00,,\n", rec.Body.String())
+	assert.Equal(t, "Respawn,Reservations,Hours,Experience,Exp/h,Profit,Profit/h\n"+
+		"Hero Cave,3,3.00,1200000,1200000,,\n"+
+		"Old Spot,1,0.50,,,-45000,-90000\n"+
+		"\"'=HYPERLINK(\"\"x\"\")\",1,1.00,,,,\n", rec.Body.String())
 }
 
 func TestHandlePlayersAndCharacters_ListsAndTruncates(t *testing.T) {
@@ -516,7 +528,7 @@ func TestParseSort(t *testing.T) {
 	}
 	for _, c := range cases {
 		// when
-		got := parseSort(c.key, c.dir)
+		got := parseSort(stats.SortKeys, c.key, c.dir)
 
 		// then
 		assert.Equal(t, c.want, got, "%s/%s", c.key, c.dir)

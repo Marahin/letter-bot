@@ -12,8 +12,12 @@ import (
 	"spot-assistant/internal/infrastructure/i18n"
 )
 
-// lootCalculatorPath is the public tool the marketing top bar and the sidebar link to.
-const lootCalculatorPath = "/tools/loot-calculator"
+// The public pages the marketing top bar and the sidebar link to.
+const (
+	LootCalculatorPath = "/tools/loot-calculator"
+	WorldsPath         = "/worlds"
+	SpawnsPath         = "/spawns"
+)
 
 // serverFeature is one card in the landing feature grid.
 type serverFeature struct {
@@ -57,7 +61,8 @@ type Nav struct {
 	// SiteAdmin gates the sidebar's site-wide Admin section.
 	SiteAdmin bool
 	// Active is the current section or sub-view: reservations | spots | stats |
-	// channels | settings | loot-calculator | admin-guilds, or a key from statsSubviews.
+	// channels | settings | loot-calculator | worlds | spawns | admin-guilds, or a key from
+	// statsSubviews.
 	Active string
 	// Wide drops the centred content max-width so a page can fill the width.
 	Wide bool
@@ -130,7 +135,9 @@ type topBarTool struct {
 
 func (n Nav) topBarTools(ctx context.Context) []topBarTool {
 	return []topBarTool{
-		{Name: i18n.T(ctx, "shell.nav.loot_calculator"), Href: lootCalculatorPath, Icon: "calculator", Current: n.Active == "loot-calculator"},
+		{Name: i18n.T(ctx, "shell.nav.loot_calculator"), Href: LootCalculatorPath, Icon: "calculator", Current: n.Active == "loot-calculator"},
+		{Name: i18n.T(ctx, "shell.nav.worlds"), Href: WorldsPath, Icon: "globe", Current: n.Active == "worlds"},
+		{Name: i18n.T(ctx, "shell.nav.spawns"), Href: SpawnsPath, Icon: "map-pin", Current: n.Active == "spawns"},
 	}
 }
 

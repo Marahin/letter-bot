@@ -48,13 +48,28 @@ type overviewView struct {
 	O *stats.Overview
 }
 
-// tableRow is one row of any stats table: a respawn, a player or a character.
+// tableRow is one row of any stats table: a respawn, a player, a character, a spawn or a world.
 type tableRow struct {
 	stats.Totals
 
 	Name     string
 	Href     string
 	Archived bool
+	// Worlds is the spawn directory's worlds column.
+	Worlds int
+	// Sub is a second, muted line under the name.
+	Sub string
+	// Badge draws the server icon (IconURL, or the initial) before the name.
+	Badge   bool
+	IconURL string
+}
+
+// sortState makes a table's headers sort links: the column flips the direction on Path, keeping
+// Extra (a filter) in the query.
+type sortState struct {
+	Path  string
+	Sort  stats.Sort
+	Extra url.Values
 }
 
 type tableView struct {
@@ -145,13 +160,17 @@ func sortDir(s stats.Sort) string {
 
 // sortHref is a column header link: the same column flips the direction, another column
 // starts at its default.
-func sortHref(path string, current stats.Sort, key stats.SortKey) string {
-	q := url.Values{"sort": {string(key)}}
-	if key == current.Key {
-		next := stats.Sort{Key: key, Asc: !current.Asc}
+func sortHref(s sortState, key stats.SortKey) string {
+	q := url.Values{}
+	for k, v := range s.Extra {
+		q[k] = v
+	}
+	q.Set("sort", string(key))
+	if key == s.Sort.Key {
+		next := stats.Sort{Key: key, Asc: !s.Sort.Asc}
 		q.Set("dir", sortDir(next))
 	}
-	return path + "?" + q.Encode()
+	return s.Path + "?" + q.Encode()
 }
 
 // ariaSort is the header's aria-sort value.
@@ -173,6 +192,10 @@ func csvHref(v tableView) string {
 
 func (v tableView) path() string {
 	return web.GuildPath(v.GuildID, "/stats/"+string(v.Kind))
+}
+
+func (v tableView) sortState() *sortState {
+	return &sortState{Path: v.path(), Sort: v.Sort}
 }
 
 func (v tableView) title(ctx context.Context) string {
@@ -213,13 +236,102 @@ type column struct {
 	Label string
 }
 
-func figureColumns(ctx context.Context) []column {
+// guildColumns are the figure columns of a server's tables.
+func guildColumns(ctx context.Context) []column {
 	return []column{
 		{stats.SortReservations, i18n.T(ctx, "stats.table.reservations")},
 		{stats.SortHours, i18n.T(ctx, "stats.table.hours")},
 		{stats.SortExp, i18n.T(ctx, "stats.table.exp")},
 		{stats.SortExpPerHour, i18n.T(ctx, "stats.table.exp_per_hour")},
+		{stats.SortProfit, i18n.T(ctx, "stats.table.profit")},
+		{stats.SortProfitPerHour, i18n.T(ctx, "stats.table.profit_per_hour")},
 	}
+}
+
+// spawnColumns are the figure columns of the spawn directory: totals of different guilds,
+// so per-hour figures only.
+func spawnColumns(ctx context.Context) []column {
+	return []column{
+		{stats.SortWorlds, i18n.T(ctx, "spawns.table.worlds")},
+		{stats.SortReservations, i18n.T(ctx, "stats.table.reservations")},
+		{stats.SortHours, i18n.T(ctx, "stats.table.hours")},
+		{stats.SortExpPerHour, i18n.T(ctx, "stats.table.exp_per_hour")},
+		{stats.SortProfitPerHour, i18n.T(ctx, "stats.table.profit_per_hour")},
+	}
+}
+
+// worldColumns are the figure columns of a cross-server table without sorting.
+func worldColumns(ctx context.Context) []column {
+	return []column{
+		{stats.SortReservations, i18n.T(ctx, "stats.table.reservations")},
+		{stats.SortHours, i18n.T(ctx, "stats.table.hours")},
+		{stats.SortExpPerHour, i18n.T(ctx, "stats.table.exp_per_hour")},
+		{stats.SortProfitPerHour, i18n.T(ctx, "stats.table.profit_per_hour")},
+	}
+}
+
+// figure is the cell of column key; ok is false for "no data".
+func figure(ctx context.Context, key stats.SortKey, r tableRow) (text string, ok bool) {
+	switch key {
+	case stats.SortWorlds:
+		return formatInt(ctx, int64(r.Worlds)), true
+	case stats.SortReservations:
+		return formatInt(ctx, r.Reservations), true
+	case stats.SortHours:
+		return formatHours(ctx, r.Totals), true
+	case stats.SortExp:
+		return formatExp(ctx, r.Totals)
+	case stats.SortExpPerHour:
+		return formatExpPerHour(ctx, r.Totals)
+	case stats.SortProfit:
+		return formatProfit(ctx, r.Totals)
+	case stats.SortProfitPerHour:
+		return formatProfitPerHour(ctx, r.Totals)
+	default:
+		return "", false
+	}
+}
+
+func isLootKey(key stats.SortKey) bool {
+	return key == stats.SortProfit || key == stats.SortProfitPerHour
+}
+
+// source is where a figure comes from: a figure without data says why in its tooltip.
+type source int
+
+const (
+	expSource source = iota
+	lootSource
+)
+
+func keySource(key stats.SortKey) source {
+	if isLootKey(key) {
+		return lootSource
+	}
+	return expSource
+}
+
+// sign colours a profit: green for a gain, red for a loss.
+type sign int
+
+const (
+	signLoss sign = -1
+	signNone sign = 0
+	signGain sign = 1
+)
+
+// profitSign is the sign of the profit figure of column key, signNone without data.
+func profitSign(key stats.SortKey, t stats.Totals) sign {
+	if !isLootKey(key) || !t.HasLoot() {
+		return signNone
+	}
+	switch {
+	case t.Profit > 0:
+		return signGain
+	case t.Profit < 0:
+		return signLoss
+	}
+	return signNone
 }
 
 func formatInt(ctx context.Context, n int64) string { return i18n.Int(ctx, n) }
@@ -244,6 +356,44 @@ func formatExpPerHour(ctx context.Context, t stats.Totals) (string, bool) {
 		return "", false
 	}
 	return i18n.Int(ctx, int64(*v+0.5)), true
+}
+
+// formatProfit is the profit figure; ok is false without a loot session. A loss keeps its minus sign.
+func formatProfit(ctx context.Context, t stats.Totals) (string, bool) {
+	v := t.ProfitTotal()
+	if v == nil {
+		return "", false
+	}
+	return i18n.Int(ctx, *v), true
+}
+
+func formatProfitPerHour(ctx context.Context, t stats.Totals) (string, bool) {
+	v := t.ProfitPerHour()
+	if v == nil {
+		return "", false
+	}
+	return i18n.Int(ctx, int64(math.Round(*v))), true
+}
+
+// formatGold is a loot figure for a tile ("1,234 gp"), ok false when v is nil (no data).
+func formatGold(ctx context.Context, v *int64) (string, bool) {
+	if v == nil {
+		return "", false
+	}
+	return i18n.T(ctx, "stats.number.gold", i18n.Int(ctx, *v)), true
+}
+
+func formatGoldPerHour(ctx context.Context, t stats.Totals) (string, bool) {
+	s, ok := formatProfitPerHour(ctx, t)
+	if !ok {
+		return "", false
+	}
+	return i18n.T(ctx, "stats.number.gold", s), true
+}
+
+// lootCoverage says how many reservations the loot figures cover.
+func lootCoverage(ctx context.Context, t stats.Totals) string {
+	return i18n.T(ctx, "stats.loot.coverage", i18n.Int(ctx, t.LootReservations), i18n.Int(ctx, t.Reservations))
 }
 
 // coverage says how many reservations the experience figures cover.
@@ -410,7 +560,7 @@ func reservationExp(ctx context.Context, r stats.CharacterReservation) (text str
 	case r.Status == experience.StatusOK && r.Gain != nil:
 		return i18n.Int(ctx, *r.Gain), "ok"
 	case r.Status == experience.StatusNoData:
-		return i18n.T(ctx, "stats.exp.no_data"), "no_data"
+		return i18n.T(ctx, "stats.no_data"), "no_data"
 	default:
 		return i18n.T(ctx, "stats.exp.pending"), "pending"
 	}

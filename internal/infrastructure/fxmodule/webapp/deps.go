@@ -14,10 +14,12 @@ import (
 	"spot-assistant/internal/core/booking"
 	"spot-assistant/internal/core/characters"
 	"spot-assistant/internal/core/guildaccess"
+	"spot-assistant/internal/core/lootsession"
 	"spot-assistant/internal/core/premium"
 	"spot-assistant/internal/core/reservations"
 	"spot-assistant/internal/core/spots"
 	corestats "spot-assistant/internal/core/stats"
+	"spot-assistant/internal/core/worldstats"
 	adminhttp "spot-assistant/internal/infrastructure/admin-http"
 	channelshttp "spot-assistant/internal/infrastructure/channels-http"
 	"spot-assistant/internal/infrastructure/discord/oauth"
@@ -25,6 +27,7 @@ import (
 	"spot-assistant/internal/infrastructure/fxmodule"
 	guildsqlc "spot-assistant/internal/infrastructure/guild/postgresql/sqlc"
 	"spot-assistant/internal/infrastructure/guildsettings"
+	lootsqlc "spot-assistant/internal/infrastructure/loot/postgresql/sqlc"
 	notifypg "spot-assistant/internal/infrastructure/notify/postgresql"
 	"spot-assistant/internal/infrastructure/notify/webcomm"
 	reservationsqlc "spot-assistant/internal/infrastructure/reservation/postgresql/sqlc"
@@ -33,6 +36,7 @@ import (
 	spotsqlc "spot-assistant/internal/infrastructure/spot/postgresql/sqlc"
 	spotshttp "spot-assistant/internal/infrastructure/spots-http"
 	statshttp "spot-assistant/internal/infrastructure/stats-http"
+	statscache "spot-assistant/internal/infrastructure/stats/cache"
 	statssqlc "spot-assistant/internal/infrastructure/stats/postgresql/sqlc"
 	toolshttp "spot-assistant/internal/infrastructure/tools-http"
 	"spot-assistant/internal/infrastructure/web"
@@ -106,6 +110,16 @@ func newCharacterService(api *worldapi.HTTPWorldService, worlds *worldnamesqlc.W
 	return characters.New(worldapi.NewCachedCharacters(api), worlds, exp, stats, log)
 }
 
+// newLootSessionService reads the analyser's stamps in the process zone (TZ, D31).
+func newLootSessionService(repo *lootsqlc.LootRepository) *lootsession.Service {
+	return lootsession.New(repo, time.Local)
+}
+
+// newWorldStatsService caches the cross-server queries: anyone can open the public pages.
+func newWorldStatsService(repo *statssqlc.WorldStatsRepository) *worldstats.Service {
+	return worldstats.New(statscache.NewWorldStats(repo))
+}
+
 type serverParams struct {
 	fx.In
 
@@ -120,6 +134,8 @@ type serverParams struct {
 	Reservations *reservations.Service
 	Stats        *corestats.Service
 	Characters   *characters.Service
+	Loot         *lootsession.Service
+	Worlds       *worldstats.Service
 }
 
 // features are the feature packages' route registrars, mounted in this order.
@@ -143,6 +159,8 @@ func newServer(p serverParams) *web.Server {
 		Reservations: p.Reservations,
 		Stats:        p.Stats,
 		Characters:   p.Characters,
+		Loot:         p.Loot,
+		Worlds:       p.Worlds,
 	})
 	for _, register := range features {
 		server.Mount(register)

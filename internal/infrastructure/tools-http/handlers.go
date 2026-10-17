@@ -29,9 +29,10 @@ func LandingCalculator() templ.Component {
 	return calculator(lootView{From: landingFrom, Rows: landingRows, Autofocus: true})
 }
 
-// HandleLootCalculate splits the pasted session. htmx gets the main column
-// (the result, or the form with the error under the field); a plain post gets
-// the whole page. Nothing is stored on the server.
+// HandleLootCalculate splits the pasted session and counts it in the public stats
+// unless the user unticked that (the raw text is never stored). htmx gets the main
+// column (the result, or the form with the error under the field); a plain post
+// gets the whole page.
 func (h *Handlers) HandleLootCalculate(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, MaxSessionBytes)
 	var v lootView
@@ -43,7 +44,13 @@ func (h *Handlers) HandleLootCalculate(w http.ResponseWriter, r *http.Request) {
 		}
 		v.Error = errTooLong
 	} else {
-		v = calculate(r.PostFormValue("session"))
+		var s *lootcalc.Session
+		v, s = calculate(r.PostFormValue("session"))
+		v.Uncounted = !countRequested(r)
+		if s != nil {
+			v.Result.Entry.Count = !v.Uncounted
+			v.Result.Stats = h.record(r, *s, !v.Uncounted)
+		}
 	}
 	v.From = startPage(r.PostFormValue("from"))
 
@@ -60,13 +67,33 @@ func (h *Handlers) nav(r *http.Request) web.Nav {
 	return n
 }
 
-func calculate(text string) lootView {
+// countRequested reads the "count in public stats" box. A form without the box
+// (count_field absent, e.g. an older page) counts, as the box is ticked by default.
+func countRequested(r *http.Request) bool {
+	return r.PostFormValue("count_field") == "" || r.PostFormValue("count") == "1"
+}
+
+// record counts the session in the stats, as the signed-in user's when there is one. A
+// failure is logged and noticed: the split itself is still right.
+func (h *Handlers) record(r *http.Request, s lootcalc.Session, count bool) statsNotice {
+	sub := s.Submission()
+	sub.SubmittedBy = h.D.SessionUserID(r.Context())
+	out, err := h.D.Loot.Record(r.Context(), sub, count)
+	if err != nil {
+		h.D.Log.Warnw("record loot session", "error", err)
+		return statsNotice{Status: statusFailed}
+	}
+	return newStatsNotice(out)
+}
+
+// calculate returns the parsed session too, nil when the text does not parse.
+func calculate(text string) (lootView, *lootcalc.Session) {
 	v := lootView{Text: text}
 	s, err := lootcalc.Parse(text)
 	if err != nil {
 		v.Error = err
-		return v
+		return v, nil
 	}
 	v.Result = newResultView(text, s, lootcalc.Split(s))
-	return v
+	return v, &s
 }

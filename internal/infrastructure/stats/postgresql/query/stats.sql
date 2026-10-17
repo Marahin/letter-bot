@@ -4,6 +4,8 @@
 -- lets the trigram index narrow a character filter before the exact unnest check.
 -- They share the ordering too: sort_key's figure (NULL = no data, last in both directions), then
 -- the name. lim 0 = every row; total_rows counts the rows before the limit.
+-- Every l CTE has one loot session per reservation (reservation_loot's key). A character filter
+-- counts the character's equal share, floored as the split pays it, and only sessions it was in.
 WITH r AS (
   SELECT r.id, r.spot_id, extract(epoch FROM r.end_at - r.start_at)::bigint AS secs
   FROM web_reservation r
@@ -21,26 +23,45 @@ WITH r AS (
   WHERE re.status = 'ok'
     AND (@character_key::text = '' OR re.character_key = @character_key::text)
   GROUP BY re.reservation_id
+), l AS (
+  SELECT rl.reservation_id, ls.duration_seconds::bigint AS secs,
+         CASE WHEN @character_key::text = '' THEN ls.balance ELSE floor(ls.balance::numeric / ls.members)::bigint END AS profit,
+         CASE WHEN @character_key::text = '' THEN ls.loot ELSE floor(ls.loot::numeric / ls.members)::bigint END AS loot,
+         CASE WHEN @character_key::text = '' THEN ls.supplies ELSE floor(ls.supplies::numeric / ls.members)::bigint END AS supplies
+  FROM reservation_loot rl
+  JOIN r ON r.id = rl.reservation_id
+  JOIN loot_sessions ls ON ls.id = rl.session_id
+  WHERE @character_key::text = '' OR EXISTS (SELECT 1 FROM loot_session_members lm
+        WHERE lm.session_id = ls.id AND lm.character_key = @character_key::text)
 ), g AS (
   SELECT s.id AS spot_id, s.name::text AS name, (s.archived_at IS NOT NULL)::boolean AS archived,
          count(*)::bigint AS reservations,
          coalesce(sum(r.secs), 0)::bigint AS seconds,
          count(e.reservation_id)::bigint AS exp_reservations,
          coalesce(sum(r.secs) FILTER (WHERE e.reservation_id IS NOT NULL), 0)::bigint AS exp_seconds,
-         coalesce(sum(e.gain), 0)::bigint AS exp
+         coalesce(sum(e.gain), 0)::bigint AS exp,
+         count(l.reservation_id)::bigint AS loot_reservations,
+         coalesce(sum(l.secs), 0)::bigint AS loot_seconds,
+         coalesce(sum(l.profit), 0)::bigint AS profit,
+         coalesce(sum(l.loot), 0)::bigint AS loot,
+         coalesce(sum(l.supplies), 0)::bigint AS supplies
   FROM r
   JOIN web_spot s ON s.id = r.spot_id
   LEFT JOIN e ON e.reservation_id = r.id
+  LEFT JOIN l ON l.reservation_id = r.id
   GROUP BY s.id, s.name, s.archived_at
 ), m AS (
   SELECT g.*, CASE @sort_key::text
          WHEN 'reservations' THEN g.reservations::float8
          WHEN 'exp' THEN CASE WHEN g.exp_reservations > 0 THEN g.exp::float8 END
          WHEN 'exp_h' THEN CASE WHEN g.exp_seconds > 0 THEN g.exp::float8 * 3600 / g.exp_seconds END
+         WHEN 'profit' THEN CASE WHEN g.loot_reservations > 0 THEN g.profit::float8 END
+         WHEN 'profit_h' THEN CASE WHEN g.loot_seconds > 0 THEN g.profit::float8 * 3600 / g.loot_seconds END
          WHEN 'name' THEN NULL
          ELSE g.seconds::float8
        END AS figure
   FROM g
+  WHERE @min_loot_seconds::bigint = 0 OR g.loot_seconds >= @min_loot_seconds::bigint
 )
 SELECT m.spot_id::bigint AS spot_id, m.name::text AS name, m.archived::boolean AS archived,
        m.reservations::bigint AS reservations,
@@ -48,6 +69,11 @@ SELECT m.spot_id::bigint AS spot_id, m.name::text AS name, m.archived::boolean A
        m.exp_reservations::bigint AS exp_reservations,
        m.exp_seconds::bigint AS exp_seconds,
        m.exp::bigint AS exp,
+       m.loot_reservations::bigint AS loot_reservations,
+       m.loot_seconds::bigint AS loot_seconds,
+       m.profit::bigint AS profit,
+       m.loot::bigint AS loot,
+       m.supplies::bigint AS supplies,
        count(*) OVER ()::bigint AS total_rows
 FROM m
 ORDER BY CASE WHEN @sort_key::text = 'name' AND @ascending::boolean THEN lower(m.name) END ASC,
@@ -79,6 +105,16 @@ WITH r AS (
   WHERE re.status = 'ok'
     AND (@character_key::text = '' OR re.character_key = @character_key::text)
   GROUP BY re.reservation_id
+), l AS (
+  SELECT rl.reservation_id, ls.duration_seconds::bigint AS secs,
+         CASE WHEN @character_key::text = '' THEN ls.balance ELSE floor(ls.balance::numeric / ls.members)::bigint END AS profit,
+         CASE WHEN @character_key::text = '' THEN ls.loot ELSE floor(ls.loot::numeric / ls.members)::bigint END AS loot,
+         CASE WHEN @character_key::text = '' THEN ls.supplies ELSE floor(ls.supplies::numeric / ls.members)::bigint END AS supplies
+  FROM reservation_loot rl
+  JOIN r ON r.id = rl.reservation_id
+  JOIN loot_sessions ls ON ls.id = rl.session_id
+  WHERE @character_key::text = '' OR EXISTS (SELECT 1 FROM loot_session_members lm
+        WHERE lm.session_id = ls.id AND lm.character_key = @character_key::text)
 ), g AS (
   SELECT r.author_discord_id AS user_id,
          CASE WHEN @sort_key::text = 'name' THEN (SELECT w.author FROM web_reservation w
@@ -88,15 +124,23 @@ WITH r AS (
          coalesce(sum(r.secs), 0)::bigint AS seconds,
          count(e.reservation_id)::bigint AS exp_reservations,
          coalesce(sum(r.secs) FILTER (WHERE e.reservation_id IS NOT NULL), 0)::bigint AS exp_seconds,
-         coalesce(sum(e.gain), 0)::bigint AS exp
+         coalesce(sum(e.gain), 0)::bigint AS exp,
+         count(l.reservation_id)::bigint AS loot_reservations,
+         coalesce(sum(l.secs), 0)::bigint AS loot_seconds,
+         coalesce(sum(l.profit), 0)::bigint AS profit,
+         coalesce(sum(l.loot), 0)::bigint AS loot,
+         coalesce(sum(l.supplies), 0)::bigint AS supplies
   FROM r
   LEFT JOIN e ON e.reservation_id = r.id
+  LEFT JOIN l ON l.reservation_id = r.id
   GROUP BY r.author_discord_id
 ), m AS (
   SELECT g.*, CASE @sort_key::text
          WHEN 'reservations' THEN g.reservations::float8
          WHEN 'exp' THEN CASE WHEN g.exp_reservations > 0 THEN g.exp::float8 END
          WHEN 'exp_h' THEN CASE WHEN g.exp_seconds > 0 THEN g.exp::float8 * 3600 / g.exp_seconds END
+         WHEN 'profit' THEN CASE WHEN g.loot_reservations > 0 THEN g.profit::float8 END
+         WHEN 'profit_h' THEN CASE WHEN g.loot_seconds > 0 THEN g.profit::float8 * 3600 / g.loot_seconds END
          WHEN 'name' THEN NULL
          ELSE g.seconds::float8
        END AS figure
@@ -111,6 +155,11 @@ SELECT m.user_id::text AS user_id,
        m.exp_reservations::bigint AS exp_reservations,
        m.exp_seconds::bigint AS exp_seconds,
        m.exp::bigint AS exp,
+       m.loot_reservations::bigint AS loot_reservations,
+       m.loot_seconds::bigint AS loot_seconds,
+       m.profit::bigint AS profit,
+       m.loot::bigint AS loot,
+       m.supplies::bigint AS supplies,
        count(*) OVER ()::bigint AS total_rows
 FROM m
 ORDER BY CASE WHEN @sort_key::text = 'name' AND @ascending::boolean THEN lower(m.name) END ASC,
@@ -147,6 +196,15 @@ WITH r AS (
   FROM reservation_experience re
   JOIN r ON r.id = re.reservation_id
   WHERE re.status = 'ok'
+), l AS (
+  SELECT rl.reservation_id, lm.character_key, ls.duration_seconds::bigint AS secs,
+         floor(ls.balance::numeric / ls.members)::bigint AS profit,
+         floor(ls.loot::numeric / ls.members)::bigint AS loot,
+         floor(ls.supplies::numeric / ls.members)::bigint AS supplies
+  FROM reservation_loot rl
+  JOIN r ON r.id = rl.reservation_id
+  JOIN loot_sessions ls ON ls.id = rl.session_id
+  JOIN loot_session_members lm ON lm.session_id = ls.id
 ), g AS (
   SELECT c.character_key,
          (max(ARRAY[extract(epoch FROM c.start_at)::bigint, c.id]))[2] AS last_id,
@@ -154,9 +212,15 @@ WITH r AS (
          coalesce(sum(c.secs), 0)::bigint AS seconds,
          count(e.gain)::bigint AS exp_reservations,
          coalesce(sum(c.secs) FILTER (WHERE e.gain IS NOT NULL), 0)::bigint AS exp_seconds,
-         coalesce(sum(e.gain), 0)::bigint AS exp
+         coalesce(sum(e.gain), 0)::bigint AS exp,
+         count(l.reservation_id)::bigint AS loot_reservations,
+         coalesce(sum(l.secs), 0)::bigint AS loot_seconds,
+         coalesce(sum(l.profit), 0)::bigint AS profit,
+         coalesce(sum(l.loot), 0)::bigint AS loot,
+         coalesce(sum(l.supplies), 0)::bigint AS supplies
   FROM c
   LEFT JOIN e ON e.reservation_id = c.id AND e.character_key = c.character_key
+  LEFT JOIN l ON l.reservation_id = c.id AND l.character_key = c.character_key
   GROUP BY c.character_key
 ), m AS (
   SELECT g.*,
@@ -166,6 +230,8 @@ WITH r AS (
          WHEN 'reservations' THEN g.reservations::float8
          WHEN 'exp' THEN CASE WHEN g.exp_reservations > 0 THEN g.exp::float8 END
          WHEN 'exp_h' THEN CASE WHEN g.exp_seconds > 0 THEN g.exp::float8 * 3600 / g.exp_seconds END
+         WHEN 'profit' THEN CASE WHEN g.loot_reservations > 0 THEN g.profit::float8 END
+         WHEN 'profit_h' THEN CASE WHEN g.loot_seconds > 0 THEN g.profit::float8 * 3600 / g.loot_seconds END
          WHEN 'name' THEN NULL
          ELSE g.seconds::float8
        END AS figure
@@ -179,6 +245,11 @@ SELECT m.character_key::text AS character_key,
        m.exp_reservations::bigint AS exp_reservations,
        m.exp_seconds::bigint AS exp_seconds,
        m.exp::bigint AS exp,
+       m.loot_reservations::bigint AS loot_reservations,
+       m.loot_seconds::bigint AS loot_seconds,
+       m.profit::bigint AS profit,
+       m.loot::bigint AS loot,
+       m.supplies::bigint AS supplies,
        count(*) OVER ()::bigint AS total_rows
 FROM m
 ORDER BY CASE WHEN @sort_key::text = 'name' AND @ascending::boolean THEN lower(m.name) END ASC,
@@ -189,8 +260,8 @@ ORDER BY CASE WHEN @sort_key::text = 'name' AND @ascending::boolean THEN lower(m
 LIMIT NULLIF(@lim::int, 0);
 
 -- name: CharacterLeaderboards :many
--- Both overview character leaderboards and the number of characters from one pass over the
--- reservations. The count row always comes back; board is NULL when neither leaderboard has a row.
+-- The overview character leaderboards and the number of characters from one pass over the
+-- reservations. The count row always comes back; board is NULL when no leaderboard has a row.
 WITH r AS (
   SELECT r.id, r.author, r.start_at, extract(epoch FROM r.end_at - r.start_at)::bigint AS secs
   FROM web_reservation r
@@ -214,6 +285,15 @@ WITH r AS (
   FROM reservation_experience re
   JOIN r ON r.id = re.reservation_id
   WHERE re.status = 'ok'
+), l AS (
+  SELECT rl.reservation_id, lm.character_key, ls.duration_seconds::bigint AS secs,
+         floor(ls.balance::numeric / ls.members)::bigint AS profit,
+         floor(ls.loot::numeric / ls.members)::bigint AS loot,
+         floor(ls.supplies::numeric / ls.members)::bigint AS supplies
+  FROM reservation_loot rl
+  JOIN r ON r.id = rl.reservation_id
+  JOIN loot_sessions ls ON ls.id = rl.session_id
+  JOIN loot_session_members lm ON lm.session_id = ls.id
 ), g AS (
   SELECT c.character_key,
          (max(ARRAY[extract(epoch FROM c.start_at)::bigint, c.id]))[2] AS last_id,
@@ -221,9 +301,15 @@ WITH r AS (
          coalesce(sum(c.secs), 0)::bigint AS seconds,
          count(e.gain)::bigint AS exp_reservations,
          coalesce(sum(c.secs) FILTER (WHERE e.gain IS NOT NULL), 0)::bigint AS exp_seconds,
-         coalesce(sum(e.gain), 0)::bigint AS exp
+         coalesce(sum(e.gain), 0)::bigint AS exp,
+         count(l.reservation_id)::bigint AS loot_reservations,
+         coalesce(sum(l.secs), 0)::bigint AS loot_seconds,
+         coalesce(sum(l.profit), 0)::bigint AS profit,
+         coalesce(sum(l.loot), 0)::bigint AS loot,
+         coalesce(sum(l.supplies), 0)::bigint AS supplies
   FROM c
   LEFT JOIN e ON e.reservation_id = c.id AND e.character_key = c.character_key
+  LEFT JOIN l ON l.reservation_id = c.id AND l.character_key = c.character_key
   GROUP BY c.character_key
 ), b AS (
   (SELECT 'exp'::text AS board, g.exp::float8 AS figure, g.*
@@ -233,6 +319,10 @@ WITH r AS (
   (SELECT 'exp_h'::text AS board, g.exp::float8 * 3600 / g.exp_seconds AS figure, g.*
    FROM g WHERE g.exp_seconds > 0 AND g.exp_seconds >= @min_exp_seconds::bigint
    ORDER BY g.exp::float8 / g.exp_seconds DESC, g.character_key LIMIT @lim::int)
+  UNION ALL
+  (SELECT 'profit'::text AS board, g.profit::float8 AS figure, g.*
+   FROM g WHERE g.loot_reservations > 0
+   ORDER BY g.profit DESC, g.character_key LIMIT @lim::int)
 )
 SELECT t.total_rows::bigint AS total_rows,
        b.board,
@@ -243,7 +333,12 @@ SELECT t.total_rows::bigint AS total_rows,
        b.seconds,
        b.exp_reservations,
        b.exp_seconds,
-       b.exp
+       b.exp,
+       b.loot_reservations,
+       b.loot_seconds,
+       b.profit,
+       b.loot,
+       b.supplies
 FROM (SELECT count(*) AS total_rows FROM g) AS t
 LEFT JOIN b ON true
 ORDER BY b.board, b.figure DESC, b.character_key;
@@ -266,15 +361,31 @@ WITH r AS (
   WHERE re.status = 'ok'
     AND (@character_key::text = '' OR re.character_key = @character_key::text)
   GROUP BY re.reservation_id
+), l AS (
+  SELECT rl.reservation_id, ls.duration_seconds::bigint AS secs,
+         CASE WHEN @character_key::text = '' THEN ls.balance ELSE floor(ls.balance::numeric / ls.members)::bigint END AS profit,
+         CASE WHEN @character_key::text = '' THEN ls.loot ELSE floor(ls.loot::numeric / ls.members)::bigint END AS loot,
+         CASE WHEN @character_key::text = '' THEN ls.supplies ELSE floor(ls.supplies::numeric / ls.members)::bigint END AS supplies
+  FROM reservation_loot rl
+  JOIN r ON r.id = rl.reservation_id
+  JOIN loot_sessions ls ON ls.id = rl.session_id
+  WHERE @character_key::text = '' OR EXISTS (SELECT 1 FROM loot_session_members lm
+        WHERE lm.session_id = ls.id AND lm.character_key = @character_key::text)
 )
 SELECT r.day::date AS day,
        count(*)::bigint AS reservations,
        coalesce(sum(r.secs), 0)::bigint AS seconds,
        count(e.reservation_id)::bigint AS exp_reservations,
        coalesce(sum(r.secs) FILTER (WHERE e.reservation_id IS NOT NULL), 0)::bigint AS exp_seconds,
-       coalesce(sum(e.gain), 0)::bigint AS exp
+       coalesce(sum(e.gain), 0)::bigint AS exp,
+       count(l.reservation_id)::bigint AS loot_reservations,
+       coalesce(sum(l.secs), 0)::bigint AS loot_seconds,
+       coalesce(sum(l.profit), 0)::bigint AS profit,
+       coalesce(sum(l.loot), 0)::bigint AS loot,
+       coalesce(sum(l.supplies), 0)::bigint AS supplies
 FROM r
 LEFT JOIN e ON e.reservation_id = r.id
+LEFT JOIN l ON l.reservation_id = r.id
 GROUP BY r.day
 ORDER BY r.day;
 

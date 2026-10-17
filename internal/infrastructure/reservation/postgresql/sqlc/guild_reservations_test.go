@@ -171,7 +171,8 @@ func TestUpdateReservation(t *testing.T) {
 	end := start.Add(2 * time.Hour)
 	r := reservation.Reservation{ID: 5, SpotID: 2, StartAt: start, EndAt: end, Author: "Nyx/Storm", AuthorDiscordID: "111"}
 	args := []any{int64(2), mocks.NewPgTimestamptzTime(start), mocks.NewPgTimestamptzTime(end), "Nyx/Storm", "111", int64(5), "guild-1"}
-	mock.ExpectExec("UPDATE web_reservation").WithArgs(args...).WillReturnResult(pgxmock.NewResult("UPDATE", 1))
+	// A changed reservation drops its loot pick in the same statement.
+	mock.ExpectExec(`(?s)DELETE FROM reservation_loot.*UPDATE web_reservation`).WithArgs(args...).WillReturnResult(pgxmock.NewResult("UPDATE", 1))
 	mock.ExpectExec("UPDATE web_reservation").WithArgs(args...).WillReturnResult(pgxmock.NewResult("UPDATE", 0))
 	mock.ExpectExec("UPDATE web_reservation").WithArgs(args...).WillReturnError(&pgconn.PgError{Code: "23P01"})
 	repo := NewReservationRepository(mock)

@@ -18,6 +18,9 @@ const (
 	PremiumGuildID = "700000000000000900"
 	// LockedGuildID is the seeded server without premium.
 	LockedGuildID = "700000000000000901"
+	// AlliesGuildID is a second premium server, on another world, that no mock user is in:
+	// the cross-server pages show it next to PremiumGuildID.
+	AlliesGuildID = "700000000000000902"
 	// ManageRoleID is the seeded manage rank of both servers.
 	ManageRoleID = "800000000000000001"
 )

@@ -46,9 +46,11 @@ templ RangePicker(p RangePickerProps) {
 					<button type="button" data-range-close class="cal-sheet-close" aria-label={ i18n.T(ctx, "range.picker.close") }>✕</button>
 				</div>
 				<div data-range-calendar></div>
-				<div class="mt-2 flex items-center gap-1.5 text-xs text-zone-400">
-					<span class="inline-block h-2 w-2 rounded-full bg-emerald-400" aria-hidden="true"></span> { p.DataLegend }
-				</div>
+				if p.DataLegend != "" {
+					<div class="mt-2 flex items-center gap-1.5 text-xs text-zone-400">
+						<span class="inline-block h-2 w-2 rounded-full bg-emerald-400" aria-hidden="true"></span> { p.DataLegend }
+					</div>
+				}
 			</div>
 			// The live region outlives the panel render. A region inserted with its
 			// own text is not announced.

@@ -40,6 +40,8 @@ type Deps struct {
 	Reservations ports.ReservationService
 	Stats        ports.StatsService
 	Characters   ports.CharacterProfileService
+	Loot         ports.LootSessionService
+	Worlds       ports.WorldStatsService
 	// Routes is nil in a Deps built without a server.
 	Routes *Router
 }

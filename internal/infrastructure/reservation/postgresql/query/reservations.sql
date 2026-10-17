@@ -117,14 +117,25 @@ WHERE web_reservation.id = @id
   AND web_reservation.guild_id = @guild_id::text
 LIMIT 1;
 -- name: UpdateReservation :execrows
+-- A loot session was matched to the old spot, times and author: a changed reservation drops it.
+-- The CTE reads the row before the update.
+WITH dropped_loot AS (
+  DELETE FROM reservation_loot
+  USING web_reservation old
+  WHERE (old.spot_id <> @spot_id OR old.start_at <> @start_at OR old.end_at <> @end_at
+      OR old.author <> @author OR old.author_discord_id <> @author_discord_id)
+    AND old.id = @id
+    AND old.guild_id = @guild_id::text
+    AND reservation_loot.reservation_id = old.id
+)
 UPDATE web_reservation
 SET spot_id = @spot_id,
   start_at = @start_at,
   end_at = @end_at,
   author = @author,
   author_discord_id = @author_discord_id
-WHERE id = @id
-  AND guild_id = @guild_id::text;
+WHERE web_reservation.id = @id
+  AND web_reservation.guild_id = @guild_id::text;
 -- name: DeleteGuildReservation :execrows
 DELETE FROM web_reservation
 WHERE id = @id

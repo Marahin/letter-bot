@@ -2,8 +2,8 @@
 
 The suite drives a running devauth stack with a headless system Chrome
 ([go-rod](https://github.com/go-rod/rod)): sign-in through `/dev/login`, the
-premium lock, the public stats and the support links. Every file has
-`//go:build e2e`, so `make test` does not run it.
+premium lock, the public stats, the world and spawn pages and the support links.
+Every file has `//go:build e2e`, so `make test` does not run it.
 
 ## Run
 
@@ -17,9 +17,11 @@ premium lock, the public stats and the support links. Every file has
   Docker: Postgres is a job service, and the script builds the devauth web, seeds
   and starts it.
 
-The seed (`cmd/seed`, `internal/infrastructure/devauth`) writes two servers:
-`700000000000000900` (premium, "Letter E2E", with respawns and 30 days of
-reservations) and `700000000000000901` (no premium). The mock users are listed on
+The seed (`cmd/seed`, `internal/infrastructure/devauth`) writes three servers:
+`700000000000000900` (premium, "Letter E2E", world Celesta, with respawns and 30
+days of reservations), `700000000000000901` (no premium) and `700000000000000902`
+(premium, "Letter E2E Allies", world Antica, which also books "Hero Cave"). The
+premium servers' reservations get loot sessions. The mock users are listed on
 `/dev/login`.
 
 ## Environment

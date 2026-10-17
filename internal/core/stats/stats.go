@@ -18,6 +18,8 @@ const (
 	BreakdownSize = 25
 	// MinExpPerHourHours keeps a single short lucky hunt off the experience-per-hour leaderboard.
 	MinExpPerHourHours = 3.0
+	// MinProfitPerHourHours does the same for profit per hour, in session time.
+	MinProfitPerHourHours = 3.0
 	// DataDaysWindow is how far back the range picker marks days with reservations.
 	DataDaysWindow = 2 * 365
 )
@@ -114,6 +116,13 @@ func (s *Service) Overview(ctx context.Context, guildID string, rng stats.Range)
 	if err != nil {
 		return nil, err
 	}
+	profitable, err := s.repo.SpotTotals(ctx, stats.Query{
+		Filter: f, Sort: stats.Sort{Key: stats.SortProfitPerHour}, Limit: LeaderboardSize,
+		MinLootSeconds: int64(MinProfitPerHourHours * 3600),
+	})
+	if err != nil {
+		return nil, err
+	}
 	return &stats.Overview{
 		Range:      rng,
 		Totals:     Sum(daily),
@@ -126,6 +135,8 @@ func (s *Service) Overview(ctx context.Context, guildID string, rng stats.Range)
 			PlayersByHours:         players.Rows,
 			CharactersByExp:        characters.ByExp,
 			CharactersByExpPerHour: characters.ByExpPerHour,
+			SpotsByProfitPerHour:   profitable.Rows,
+			CharactersByProfit:     characters.ByProfit,
 		},
 	}, nil
 }

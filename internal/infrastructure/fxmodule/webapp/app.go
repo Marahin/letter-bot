@@ -40,6 +40,8 @@ func wiring() fx.Option {
 			newReservationService,
 			newStatsService,
 			newCharacterService,
+			newLootSessionService,
+			newWorldStatsService,
 			newServer,
 			metricsAddr,
 			healthChecks,

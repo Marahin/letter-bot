@@ -675,14 +675,23 @@ func (q *Queries) SelectUpcomingMemberReservationsWithSpots(ctx context.Context,
 }
 
 const updateReservation = `-- name: UpdateReservation :execrows
+WITH dropped_loot AS (
+  DELETE FROM reservation_loot
+  USING web_reservation old
+  WHERE (old.spot_id <> $1 OR old.start_at <> $2 OR old.end_at <> $3
+      OR old.author <> $4 OR old.author_discord_id <> $5)
+    AND old.id = $6
+    AND old.guild_id = $7::text
+    AND reservation_loot.reservation_id = old.id
+)
 UPDATE web_reservation
 SET spot_id = $1,
   start_at = $2,
   end_at = $3,
   author = $4,
   author_discord_id = $5
-WHERE id = $6
-  AND guild_id = $7::text
+WHERE web_reservation.id = $6
+  AND web_reservation.guild_id = $7::text
 `
 
 type UpdateReservationParams struct {
@@ -695,6 +704,8 @@ type UpdateReservationParams struct {
 	GuildID         string
 }
 
+// A loot session was matched to the old spot, times and author: a changed reservation drops it.
+// The CTE reads the row before the update.
 func (q *Queries) UpdateReservation(ctx context.Context, arg UpdateReservationParams) (int64, error) {
 	result, err := q.db.Exec(ctx, updateReservation,
 		arg.SpotID,

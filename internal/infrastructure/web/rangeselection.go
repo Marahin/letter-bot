@@ -52,6 +52,10 @@ func isClearedRange(q url.Values) bool {
 // but not re-persisted); else neither, leaving the page to fall back to its own
 // default.
 func (d *Deps) resolveRangeSelection(r *http.Request) RangeSelection {
+	return resolveRangeSelectionFrom(r, d.RangeSelectionCookie(r))
+}
+
+func resolveRangeSelectionFrom(r *http.Request, stored string) RangeSelection {
 	q := r.URL.Query()
 	if isClearedRange(q) {
 		return RangeSelection{Query: url.Values{}, cleared: true}
@@ -59,7 +63,7 @@ func (d *Deps) resolveRangeSelection(r *http.Request) RangeSelection {
 	if hasExplicitRange(q) {
 		return RangeSelection{Query: q, Explicit: true, fromQuery: true}
 	}
-	if stored := d.RangeSelectionCookie(r); stored != "" {
+	if stored != "" {
 		return RangeSelection{Query: url.Values{"days": {stored}}, Explicit: true}
 	}
 	return RangeSelection{Query: url.Values{}}
@@ -72,6 +76,15 @@ func (d *Deps) resolveRangeSelection(r *http.Request) RangeSelection {
 func (d *Deps) WithRangeSelection(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		sel := d.resolveRangeSelection(r)
+		next(w, r.WithContext(context.WithValue(r.Context(), ctxRangeSelection, sel)))
+	}
+}
+
+// WithCrossRangeSelection is WithRangeSelection for the cross-server pages, which keep one
+// selection of their own; they persist it with PersistCrossRangeSelection.
+func (d *Deps) WithCrossRangeSelection(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		sel := resolveRangeSelectionFrom(r, crossRangeCookie(r))
 		next(w, r.WithContext(context.WithValue(r.Context(), ctxRangeSelection, sel)))
 	}
 }
@@ -99,6 +112,11 @@ func (d *Deps) PersistRangeSelection(w http.ResponseWriter, r *http.Request, gui
 	case sel.fromQuery:
 		d.SetRangeSelectionCookie(w, guildID, EncodeDays(days))
 	}
+}
+
+// PersistCrossRangeSelection is PersistRangeSelection for the cross-server pages' own cookie.
+func (d *Deps) PersistCrossRangeSelection(w http.ResponseWriter, r *http.Request, days []time.Time) {
+	d.PersistRangeSelection(w, r, crossRangeScope, days)
 }
 
 // EncodeDays joins days as a comma-separated YYYY-MM-DD list, the form of both
