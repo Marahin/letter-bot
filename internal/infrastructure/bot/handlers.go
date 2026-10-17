@@ -62,8 +62,10 @@ func (b *Bot) GuildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
 		return
 	}
 
-	go b.onlineCheckService.TryRefresh(gld.ID)
-	go b.TryUpdateGuildLetter(gld)
+	go func() {
+		b.onlineCheckService.TryRefresh(gld.ID)
+		b.RefreshGuildLetter(gld.ID)
+	}()
 	b.eventHandler.OnGuildCreate(MapGuild(g.Guild))
 }
 
@@ -111,6 +113,9 @@ func (b *Bot) ChannelUpdate(s *discordgo.Session, c *discordgo.ChannelUpdate) {
 
 func (b *Bot) ChannelDelete(s *discordgo.Session, c *discordgo.ChannelDelete) {
 	b.scheduleSync(c.GuildID)
+	if b.forgetLegacyChannel(c.GuildID, c.ID) {
+		b.RefreshGuildLetter(c.GuildID)
+	}
 }
 
 func (b *Bot) GuildRoleCreate(s *discordgo.Session, r *discordgo.GuildRoleCreate) {
@@ -162,28 +167,22 @@ func (b *Bot) markAbsentGuilds(r *discordgo.Ready, readyAt time.Time) {
 	}
 }
 
+// Tick refreshes the online players of each premium guild. The summary worker then
+// writes to Discord only when an online status that the summary shows changed.
 func (b *Bot) Tick() {
 	defer b.metrics.IncTicks()
 	defer b.eventHandler.OnTick()
 
 	ctx := context.Background()
 	b.log.Info("About to refresh online players")
-	guilds := b.GetGuilds()
-	ids := collections.PoorMansMap(guilds, func(g *guild.Guild) string { return g.ID })
-	cfgs, err := b.guildConfigsByID(ctx, ids)
+	ids, err := b.premiumGuildIDs(ctx)
 	if err != nil {
-		b.log.Errorf("could not load guild configs, skipping summaries: %s", err)
+		b.log.Errorf("could not load guild configs, skipping online players: %s", err)
 	}
-	for _, g := range guilds {
-		cfg, ok := cfgs[g.ID]
-		if !ok || !cfg.IsPremium() {
-			continue
-		}
-		go b.onlineCheckService.TryRefresh(g.ID)
+	for _, id := range ids {
 		go func() {
-			if err := b.updateGuildLetterWithConfig(g, cfg); err != nil {
-				b.log.Errorf("could not update guild letter: %s", err)
-			}
+			b.onlineCheckService.TryRefresh(id)
+			b.RefreshGuildLetter(id)
 		}()
 	}
 
@@ -267,7 +266,18 @@ func (b *Bot) Book(i *discordgo.InteractionCreate, cfg *guildconfig.Config) erro
 	if err != nil {
 		message = b.formatter.FormatBookError(response, err)
 	} else {
-		go b.TryUpdateGuildLetter(g)
+		b.RefreshGuildLetter(g.ID)
+		b.BookingMade(context.Background(), book.Booked{
+			GuildID:         g.ID,
+			SpotName:        request.Spot,
+			StartAt:         startAt,
+			EndAt:           endAt,
+			Author:          member.Nick,
+			AuthorDiscordID: member.ID,
+			ActorID:         member.ID,
+			Overbooked:      len(response.ConflictingReservations),
+			Source:          book.SourceSlash,
+		})
 		message = b.formatter.FormatBookResponse(response)
 	}
 
@@ -334,7 +344,7 @@ func (b *Bot) Unbook(i *discordgo.InteractionCreate) error {
 		return err
 	}
 
-	go b.TryUpdateGuildLetter(g)
+	b.RefreshGuildLetter(g.ID)
 
 	_, err = b.mgr.SessionForGuild(gID).FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
 		Content: b.formatter.FormatUnbookResponse(res),

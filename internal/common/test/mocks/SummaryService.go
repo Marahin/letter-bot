@@ -47,6 +47,59 @@ func (_m *MockSummaryService) EXPECT() *MockSummaryService_Expecter {
 	return &MockSummaryService_Expecter{mock: &_m.Mock}
 }
 
+// Ledger provides a mock function for the type MockSummaryService
+func (_mock *MockSummaryService) Ledger(reservations []*reservation.ReservationWithSpot) summary.Ledger {
+	ret := _mock.Called(reservations)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Ledger")
+	}
+
+	var r0 summary.Ledger
+	if returnFunc, ok := ret.Get(0).(func([]*reservation.ReservationWithSpot) summary.Ledger); ok {
+		r0 = returnFunc(reservations)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(summary.Ledger)
+		}
+	}
+	return r0
+}
+
+// MockSummaryService_Ledger_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Ledger'
+type MockSummaryService_Ledger_Call struct {
+	*mock.Call
+}
+
+// Ledger is a helper method to define mock.On call
+//   - reservations []*reservation.ReservationWithSpot
+func (_e *MockSummaryService_Expecter) Ledger(reservations any) *MockSummaryService_Ledger_Call {
+	return &MockSummaryService_Ledger_Call{Call: _e.mock.On("Ledger", reservations)}
+}
+
+func (_c *MockSummaryService_Ledger_Call) Run(run func(reservations []*reservation.ReservationWithSpot)) *MockSummaryService_Ledger_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 []*reservation.ReservationWithSpot
+		if args[0] != nil {
+			arg0 = args[0].([]*reservation.ReservationWithSpot)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSummaryService_Ledger_Call) Return(ledger summary.Ledger) *MockSummaryService_Ledger_Call {
+	_c.Call.Return(ledger)
+	return _c
+}
+
+func (_c *MockSummaryService_Ledger_Call) RunAndReturn(run func(reservations []*reservation.ReservationWithSpot) summary.Ledger) *MockSummaryService_Ledger_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // PrepareSummary provides a mock function for the type MockSummaryService
 func (_mock *MockSummaryService) PrepareSummary(reservations []*reservation.ReservationWithSpot) (*summary.Summary, error) {
 	ret := _mock.Called(reservations)

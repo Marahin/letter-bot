@@ -1,8 +1,11 @@
 package bot
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"io"
+	"slices"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -96,6 +99,28 @@ type InteractionGateway interface {
 	Guild(guildID string, options ...discordgo.RequestOption) (*discordgo.Guild, error)
 	// StateGuild reads the guild from the gateway cache of its shard.
 	StateGuild(guildID string) (*discordgo.Guild, error)
+	// StateChannels returns a copy of the guild's channels from the gateway cache of its shard.
+	StateChannels(guildID string) ([]*discordgo.Channel, error)
+}
+
+// SummaryChannelWriter is the part of the Discord REST API that maintains the
+// summaries and posts the announcements. *discordgo.Session implements it. The bot
+// uses one session for all of it, so discordgo tracks every rate limit bucket in
+// one place.
+type SummaryChannelWriter interface {
+	GuildChannels(guildID string, options ...discordgo.RequestOption) ([]*discordgo.Channel, error)
+	ChannelMessages(channelID string, limit int, beforeID, afterID, aroundID string, options ...discordgo.RequestOption) ([]*discordgo.Message, error)
+	ChannelMessagesBulkDelete(channelID string, messages []string, options ...discordgo.RequestOption) error
+	ChannelMessageDelete(channelID, messageID string, options ...discordgo.RequestOption) error
+	ChannelMessageSend(channelID string, content string, options ...discordgo.RequestOption) (*discordgo.Message, error)
+	ChannelMessageSendComplex(channelID string, data *discordgo.MessageSend, options ...discordgo.RequestOption) (*discordgo.Message, error)
+	ChannelMessageSendEmbed(channelID string, embed *discordgo.MessageEmbed, options ...discordgo.RequestOption) (*discordgo.Message, error)
+	ChannelFileSend(channelID, name string, r io.Reader, options ...discordgo.RequestOption) (*discordgo.Message, error)
+}
+
+// BookingFulfiller is told about every new booking, the /book command's too.
+type BookingFulfiller interface {
+	Fulfil(ctx context.Context, guildID, userID string, spotID int64) error
 }
 
 type shardGateway struct {
@@ -105,6 +130,29 @@ type shardGateway struct {
 }
 
 func (g shardGateway) StateGuild(guildID string) (*discordgo.Guild, error) {
+	state, err := g.state(guildID)
+	if err != nil {
+		return nil, err
+	}
+	return state.Guild(guildID)
+}
+
+func (g shardGateway) StateChannels(guildID string) ([]*discordgo.Channel, error) {
+	state, err := g.state(guildID)
+	if err != nil {
+		return nil, err
+	}
+	gld, err := state.Guild(guildID)
+	if err != nil {
+		return nil, err
+	}
+	// State.Guild returns the cached guild itself, which the gateway events change.
+	state.RLock()
+	defer state.RUnlock()
+	return slices.Clone(gld.Channels), nil
+}
+
+func (g shardGateway) state(guildID string) (*discordgo.State, error) {
 	id, err := strconv.ParseInt(guildID, 10, 64)
 	if err != nil {
 		return nil, fmt.Errorf("parse guild id: %w", err)
@@ -113,26 +161,32 @@ func (g shardGateway) StateGuild(guildID string) (*discordgo.Guild, error) {
 	if session == nil || session.State == nil {
 		return nil, discordgo.ErrStateNotFound
 	}
-	return session.State.Guild(guildID)
+	return session.State, nil
 }
 
 type Bot struct {
 	summarySrv         ports.SummaryService
 	reservationRepo    ports.ReservationRepository
+	spots              ports.SpotRepository
 	onlineCheckService ports.OnlineCheckService
 	guildConfigs       ports.GuildConfigRepository
 	syncer             *GuildSyncer
-	summaryRefresh     *debouncer
+	summaries          *summaryWorker
+	legacyHashes       cmap.ConcurrentMap[string, string]
+	pacer              *pacer
+	fulfiller          BookingFulfiller
 	eventHandler       ports.APIPort
 	forms              ports.ReservationFormService
 	metrics            ports.MetricsPort
 	mgr                *shards.Manager
 	gateway            InteractionGateway
+	writer             SummaryChannelWriter
 	webBaseURL         string
 	log                *zap.SugaredLogger
 	quit               chan struct{}
 	formatter          *formatter.DiscordFormatter
 	channelLocks       cmap.ConcurrentMap[string, *sync.RWMutex]
+	ticking            sync.Once
 	started            atomic.Bool
 	stopped            atomic.Bool
 	shutdown           sync.Once
@@ -145,14 +199,18 @@ func NewManager(mgr *shards.Manager, webBaseURL string, summarySrv ports.Summary
 	bot := &Bot{
 		mgr:                mgr,
 		gateway:            shardGateway{Session: mgr.Gateway, mgr: mgr},
+		writer:             mgr.Gateway,
 		webBaseURL:         webBaseURL,
 		quit:               make(chan struct{}),
 		channelLocks:       cmap.New[*sync.RWMutex](),
+		legacyHashes:       cmap.New[string](),
+		pacer:              newPacer(),
 		summarySrv:         summarySrv,
 		reservationRepo:    reservationRepo,
 		onlineCheckService: checkOnlineSrv,
-		summaryRefresh:     newDebouncer(summaryRefreshDelay),
+		log:                zap.NewNop().Sugar(),
 	}
+	bot.summaries = newSummaryWorker(bot.reconcileLegacy, summaryRefreshDelay)
 
 	bot.mgr.AddHandler(bot.GuildCreate)
 	bot.mgr.AddHandler(bot.GuildUpdate)
@@ -202,8 +260,21 @@ func (b *Bot) WithReservationForms(forms ports.ReservationFormService) *Bot {
 	return b
 }
 
+// WithSpots sets the spot store, for the names in the booking announcements.
+func (b *Bot) WithSpots(spots ports.SpotRepository) *Bot {
+	b.spots = spots
+	return b
+}
+
+// WithBookingFulfiller sets what is told about every new booking. It is optional.
+func (b *Bot) WithBookingFulfiller(f BookingFulfiller) *Bot {
+	b.fulfiller = f
+	return b
+}
+
 func (b *Bot) WithLogger(log *zap.SugaredLogger) *Bot {
 	b.log = log.With("layer", "infrastructure", "name", "bot")
+	b.summaries.log = log.With("layer", "infrastructure", "name", "summaryWorker")
 	if b.syncer != nil {
 		b.syncer.WithLogger(log)
 	}
@@ -230,6 +301,11 @@ func (b *Bot) Shutdown() error {
 		b.stopped.Store(true)
 	})
 	return b.shutdownErr
+}
+
+// RunSummaryWorker updates the summaries until ctx ends. It is the only writer of the summaries.
+func (b *Bot) RunSummaryWorker(ctx context.Context) {
+	b.summaries.Run(ctx)
 }
 
 // IsRunning indicates whether the bot started successfully and hasn't been stopped yet.

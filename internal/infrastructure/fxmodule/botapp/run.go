@@ -41,13 +41,16 @@ func run(lc fx.Lifecycle, p runParams) {
 type lifecycleBot interface {
 	Start() error
 	Shutdown() error
+	RunSummaryWorker(ctx context.Context)
 }
 
 // botHooks starts the NOTIFY listener before the gateway, as the web may signal
-// at any time. The stop ends the listener first, so no NOTIFY reaches a stopping
-// bot and the listener is done with the pool before the pool closes.
+// at any time, and the summary worker after it. The stop ends the listener first,
+// so no NOTIFY reaches a stopping bot and the listener is done with the pool
+// before the pool closes. The worker ends next, before the gateway closes.
 func botHooks(b lifecycleBot, listen func(ctx context.Context), log *zap.SugaredLogger) fx.Hook {
 	listener := fxmodule.NewLoop(listen)
+	worker := fxmodule.NewLoop(b.RunSummaryWorker)
 	return fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			listener.Start()
@@ -55,16 +58,21 @@ func botHooks(b lifecycleBot, listen func(ctx context.Context), log *zap.Sugared
 				_ = listener.Stop(ctx)
 				return fmt.Errorf("bot start failed: %w", err)
 			}
+			worker.Start()
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
 			log.Info("shutting down")
 			listenerErr := listener.Stop(ctx)
+			workerErr := worker.Stop(ctx)
 			if err := b.Shutdown(); err != nil {
 				log.Errorw("bot shutdown", "error", err)
 			}
 			if listenerErr != nil {
 				return fmt.Errorf("notify listener stop: %w", listenerErr)
+			}
+			if workerErr != nil {
+				return fmt.Errorf("summary worker stop: %w", workerErr)
 			}
 			return nil
 		},

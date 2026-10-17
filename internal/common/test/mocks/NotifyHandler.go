@@ -48,6 +48,52 @@ func (_m *MockNotifyHandler) EXPECT() *MockNotifyHandler_Expecter {
 	return &MockNotifyHandler_Expecter{mock: &_m.Mock}
 }
 
+// OnBooked provides a mock function for the type MockNotifyHandler
+func (_mock *MockNotifyHandler) OnBooked(ctx context.Context, event book.Booked) {
+	_mock.Called(ctx, event)
+	return
+}
+
+// MockNotifyHandler_OnBooked_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'OnBooked'
+type MockNotifyHandler_OnBooked_Call struct {
+	*mock.Call
+}
+
+// OnBooked is a helper method to define mock.On call
+//   - ctx context.Context
+//   - event book.Booked
+func (_e *MockNotifyHandler_Expecter) OnBooked(ctx any, event any) *MockNotifyHandler_OnBooked_Call {
+	return &MockNotifyHandler_OnBooked_Call{Call: _e.mock.On("OnBooked", ctx, event)}
+}
+
+func (_c *MockNotifyHandler_OnBooked_Call) Run(run func(ctx context.Context, event book.Booked)) *MockNotifyHandler_OnBooked_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 book.Booked
+		if args[1] != nil {
+			arg1 = args[1].(book.Booked)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNotifyHandler_OnBooked_Call) Return() *MockNotifyHandler_OnBooked_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockNotifyHandler_OnBooked_Call) RunAndReturn(run func(ctx context.Context, event book.Booked)) *MockNotifyHandler_OnBooked_Call {
+	_c.Run(run)
+	return _c
+}
+
 // OnGuildConfig provides a mock function for the type MockNotifyHandler
 func (_mock *MockNotifyHandler) OnGuildConfig(ctx context.Context, guildID string) {
 	_mock.Called(ctx, guildID)
@@ -136,6 +182,46 @@ func (_c *MockNotifyHandler_OnGuildResync_Call) Return() *MockNotifyHandler_OnGu
 }
 
 func (_c *MockNotifyHandler_OnGuildResync_Call) RunAndReturn(run func(ctx context.Context, guildID string)) *MockNotifyHandler_OnGuildResync_Call {
+	_c.Run(run)
+	return _c
+}
+
+// OnListenerConnected provides a mock function for the type MockNotifyHandler
+func (_mock *MockNotifyHandler) OnListenerConnected(ctx context.Context) {
+	_mock.Called(ctx)
+	return
+}
+
+// MockNotifyHandler_OnListenerConnected_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'OnListenerConnected'
+type MockNotifyHandler_OnListenerConnected_Call struct {
+	*mock.Call
+}
+
+// OnListenerConnected is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockNotifyHandler_Expecter) OnListenerConnected(ctx any) *MockNotifyHandler_OnListenerConnected_Call {
+	return &MockNotifyHandler_OnListenerConnected_Call{Call: _e.mock.On("OnListenerConnected", ctx)}
+}
+
+func (_c *MockNotifyHandler_OnListenerConnected_Call) Run(run func(ctx context.Context)) *MockNotifyHandler_OnListenerConnected_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockNotifyHandler_OnListenerConnected_Call) Return() *MockNotifyHandler_OnListenerConnected_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockNotifyHandler_OnListenerConnected_Call) RunAndReturn(run func(ctx context.Context)) *MockNotifyHandler_OnListenerConnected_Call {
 	_c.Run(run)
 	return _c
 }

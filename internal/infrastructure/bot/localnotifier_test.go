@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"spot-assistant/internal/common/test/mocks"
 	"spot-assistant/internal/core/dto/book"
@@ -37,4 +40,27 @@ func TestLocalNotifier_ForwardsToTheBot(t *testing.T) {
 	assert.ErrorIs(t, resyncErr, boom)
 	assert.NoError(t, configErr)
 	assert.NoError(t, overbookedErr)
+}
+
+func TestLocalNotifier_BookedAnnouncesInTheBackground(t *testing.T) {
+	// given
+	guilds := mocks.NewMockGuildActions(t)
+	n := NewLocalNotifier(guilds, mocks.NewMockCommunicationService(t))
+	announced := make(chan book.Booked, 1)
+	guilds.On("BookingMade", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+		event, _ := args.Get(1).(book.Booked)
+		announced <- event
+	}).Once()
+
+	// when
+	err := n.Booked(context.Background(), book.Booked{GuildID: "g1", SpotID: 4})
+
+	// then
+	require.NoError(t, err)
+	select {
+	case got := <-announced:
+		assert.Equal(t, book.Booked{GuildID: "g1", SpotID: 4, Source: book.SourceDiscord}, got)
+	case <-time.After(5 * time.Second):
+		t.Fatal("BookingMade was not called")
+	}
 }

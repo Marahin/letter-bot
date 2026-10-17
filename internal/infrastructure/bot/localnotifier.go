@@ -37,3 +37,10 @@ func (n *LocalNotifier) Overbooked(_ context.Context, request book.BookRequest, 
 	n.comm.NotifyOverbookedMember(request, res)
 	return nil
 }
+
+// Booked announces in the background, so the interaction that booked is not held up.
+func (n *LocalNotifier) Booked(_ context.Context, event book.Booked) error {
+	event.Source = book.SourceDiscord
+	go n.guilds.BookingMade(context.Background(), event)
+	return nil
+}

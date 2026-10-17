@@ -75,3 +75,21 @@ func TestNotifier_OverbookedSendsTheEncodedPayload(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, db.ExpectationsWereMet())
 }
+
+func TestNotifier_BookedSendsTheEncodedPayload(t *testing.T) {
+	// given
+	db, err := pgxmock.NewPool()
+	require.NoError(t, err)
+	defer db.Close()
+	event := book.Booked{GuildID: "g1", SpotID: 4, Author: "Knight"}
+	payload, err := NewBookedPayload(event).Encode()
+	require.NoError(t, err)
+	db.ExpectExec(`SELECT pg_notify`).WithArgs(ChannelBooked, string(payload)).WillReturnResult(pgxmock.NewResult("SELECT", 1))
+
+	// when
+	err = NewNotifier(db).Booked(context.Background(), event)
+
+	// then
+	assert.NoError(t, err)
+	assert.NoError(t, db.ExpectationsWereMet())
+}

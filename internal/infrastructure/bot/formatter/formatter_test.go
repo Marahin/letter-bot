@@ -304,3 +304,47 @@ func TestDiscordFormatter_WizardTexts(t *testing.T) {
 	// then
 	snaps.MatchSnapshot(t, strings.Join(texts, "\n---\n"))
 }
+
+func TestDiscordFormatter_FormatBookingAnnouncement(t *testing.T) {
+	berlin := time.FixedZone("CEST", 2*60*60)
+	start := time.Date(2026, 10, 19, 18, 30, 0, 0, berlin)
+	base := book.Booked{
+		SpotName:        "Hero Cave -2",
+		StartAt:         start,
+		EndAt:           start.Add(2 * time.Hour),
+		Author:          "Knight",
+		AuthorDiscordID: "123",
+		ActorID:         "123",
+		Source:          book.SourceDiscord,
+	}
+	cases := map[string]struct {
+		change   func(e *book.Booked)
+		expected string
+	}{
+		"own booking": {
+			func(*book.Booked) {},
+			"**Hero Cave -2** booked by **Knight** (<@123>), Mon 19 Oct 18:30 – 20:30 (CEST).",
+		},
+		"for somebody else, overbooking, on the web": {
+			func(e *book.Booked) { e.ActorID, e.Overbooked, e.Source = "9", 2, book.SourceWeb },
+			"**Hero Cave -2** booked by **Knight** (<@123>), Mon 19 Oct 18:30 – 20:30 (CEST). Booked for them by <@9>. Overbooked 2 reservations. Booked on TibiaLoot.com.",
+		},
+		"free-text author, one overbooked": {
+			func(e *book.Booked) { e.Author, e.AuthorDiscordID, e.ActorID, e.Overbooked = "Guest", "", "9", 1 },
+			"**Hero Cave -2** booked by **Guest**, Mon 19 Oct 18:30 – 20:30 (CEST). Booked for them by <@9>. Overbooked 1 reservation.",
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			// given
+			e := base
+			tc.change(&e)
+
+			// when
+			output := NewFormatter().FormatBookingAnnouncement(e)
+
+			// then
+			assert.Equal(t, tc.expected, output)
+		})
+	}
+}

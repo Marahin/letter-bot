@@ -126,6 +126,30 @@ func (f *DiscordFormatter) FormatWindow(startAt, endAt time.Time) string {
 	return startAt.Format(formDayFormat) + " – " + endAt.Format(formTimeFormat)
 }
 
+// FormatBookingAnnouncement is the public message about a new booking. It
+// mentions the author and the actor; the caller sends it without pinging them.
+func (f *DiscordFormatter) FormatBookingAnnouncement(e book.Booked) string {
+	var msg strings.Builder
+	fmt.Fprintf(&msg, "**%s** booked by **%s**", e.SpotName, e.Author)
+	if e.AuthorDiscordID != "" {
+		fmt.Fprintf(&msg, " (<@%s>)", e.AuthorDiscordID)
+	}
+	fmt.Fprintf(&msg, ", %s (%s).", f.FormatWindow(e.StartAt, e.EndAt), e.StartAt.Format("MST"))
+	if e.ActorID != "" && e.ActorID != e.AuthorDiscordID {
+		fmt.Fprintf(&msg, " Booked for them by <@%s>.", e.ActorID)
+	}
+	switch {
+	case e.Overbooked == 1:
+		msg.WriteString(" Overbooked 1 reservation.")
+	case e.Overbooked > 1:
+		fmt.Fprintf(&msg, " Overbooked %d reservations.", e.Overbooked)
+	}
+	if e.Source == book.SourceWeb {
+		msg.WriteString(" Booked on TibiaLoot.com.")
+	}
+	return msg.String()
+}
+
 // FormatReservationLine is one numbered line of the member's reservation list.
 func (f *DiscordFormatter) FormatReservationLine(n int, r *reservation.ReservationWithSpot, now time.Time) string {
 	line := fmt.Sprintf("%d. **%s** · %s", n, r.Spot.Name, f.FormatWindow(r.StartAt, r.EndAt))

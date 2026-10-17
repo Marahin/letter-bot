@@ -140,6 +140,7 @@ test-db: ## Run the database tests (needs LETTER_TEST_DATABASE_URL)
 		./internal/infrastructure/db/postgresql/... \
 		./internal/infrastructure/experience/... \
 		./internal/infrastructure/loot/... \
+		./internal/infrastructure/notify/... \
 		./internal/infrastructure/stats/...
 	@go test -race -count=1 -tags devauth ./internal/infrastructure/devauth/...
 

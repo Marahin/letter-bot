@@ -53,6 +53,7 @@ type botParams struct {
 	Cfg          bot.Config
 	Summary      *summary.Adapter
 	Reservations *reservationsqlc.ReservationRepository
+	Spots        *spotsqlc.SpotRepository
 	Online       *onlinecheck.Adapter
 	Configs      *guildsqlc.GuildConfigRepository
 	Channels     *guildsqlc.GuildChannelRepository
@@ -64,6 +65,7 @@ type botParams struct {
 func newBot(p botParams) *bot.Bot {
 	return bot.NewManager(p.Shards, p.Cfg.WebBaseURL, p.Summary, p.Reservations, p.Online).
 		WithGuildRepositories(p.Configs, p.Channels, p.Roles).
+		WithSpots(p.Spots).
 		WithFormatter(p.Formatter).
 		WithLogger(p.Log)
 }

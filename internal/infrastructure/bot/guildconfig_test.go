@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/servusdei2018/shards/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
 	"spot-assistant/internal/common/test/mocks"
@@ -149,29 +149,14 @@ func TestBot_GuildConfig(t *testing.T) {
 	assert.EqualError(t, err3, "db down")
 }
 
-func TestBot_GuildConfigsByID(t *testing.T) {
+func TestBot_PremiumGuildIDs_Error(t *testing.T) {
 	// given
 	b, configs := newConfigBot(t)
-	configs.On("ListByIDs", mocks.ContextMock, []string{"g1", "g2"}).
-		Return([]*guildconfig.Config{{GuildID: "g1", Premium: true}}, nil).Once()
+	b.mgr = &shards.Manager{}
+	configs.On("ListPresentByIDs", mocks.ContextMock, []string(nil)).Return(nil, errors.New("db down")).Once()
 
 	// when
-	got, err := b.guildConfigsByID(context.Background(), []string{"g1", "g2"})
-
-	// then
-	require.NoError(t, err)
-	assert.Len(t, got, 1)
-	assert.True(t, got["g1"].IsPremium())
-	assert.Nil(t, got["g2"])
-}
-
-func TestBot_GuildConfigsByID_Error(t *testing.T) {
-	// given
-	b, configs := newConfigBot(t)
-	configs.On("ListByIDs", mocks.ContextMock, []string{"g1"}).Return(nil, errors.New("db down")).Once()
-
-	// when
-	got, err := b.guildConfigsByID(context.Background(), []string{"g1"})
+	got, err := b.premiumGuildIDs(context.Background())
 
 	// then
 	assert.Error(t, err)

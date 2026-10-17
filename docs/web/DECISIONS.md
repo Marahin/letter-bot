@@ -69,8 +69,10 @@ These items of the request were unclear or had a cost. Each has a decision.
     and on the "Refresh server data" button.
 16. **The web signals the bot with Postgres NOTIFY:** `letter_summary_refresh`,
     `letter_guild_resync`, `letter_guild_config`, `letter_overbooked` (the bot
-    sends the overbook message on Discord). Each signal is best-effort. The
-    2-minute tick and the durable resync flag recover a miss.
+    sends the overbook message on Discord) and `letter_booked` (decision 88).
+    Each signal is best-effort. The durable resync flag recovers a missed
+    resync. When the listener connects again, the bot refreshes every summary,
+    which recovers a missed summary refresh (decision 90).
 17. **No locale-prefixed URLs.** Language resolution is `?lang=` > `letter_lang`
     cookie > Accept-Language > English. There is no sitemap or hreflang, because
     the panel sits behind sign-in.
@@ -250,7 +252,8 @@ These items of the request were unclear or had a cost. Each has a decision.
     guild summary gets the buttons "Book a respawn", "My reservations" and
     "Open panel" (only when `WEB_BASE_URL` is set). A DM summary has no buttons.
     A guild without upcoming hunts gets a "No upcoming hunts" message with the
-    same buttons, so the channel never shows an old summary. Rules:
+    same buttons, so the channel never shows an old summary. Each new booking
+    is announced in public (decision 87). Rules:
     - The member picks from lists (string selects) and does not type. Typed
       names and times caused too many errors. discordgo stays at v0.27.1 (see
       "Parity with scxmanager"), and a Discord form (modal) cannot hold a list,
@@ -483,6 +486,43 @@ https://claude.ai/artifact/BZV6jDiWcBeUHoZ384KKin).
     the character's latest reservation.
 86. **The spawn page sums its world rows in Go** from the per-server rows (at
     most 500), so it runs one aggregate query, not two.
+
+## Region summaries, queue and booking announcements
+
+The owner's request: every booking is announced to the whole server, as its
+record of bookings, and the summary changes only when there is a reason, gently,
+because Discord rate-limits the bot.
+
+87. **Each new booking is announced in the command channel** (the configured
+    one, else `#letter`), never in a summary channel, because the bot cleans
+    and replaces the summary. Bookings from the buttons, the wizard, an
+    overbook and the web are announced. Edits and cancels are not. `/book`
+    already replies in public, so it is not announced twice. The message
+    mentions the author but pings nobody.
+88. **A web booking reaches the bot through `letter_booked`**, with a JSON
+    payload with json tags. `letter_summary_refresh` keeps its guild id payload.
+89. **The online dot shows only for a reservation in progress**, in the summary
+    and in the DM summary. A dot on every reservation would change the summary
+    at each login or logout. So the start of a reservation also changes the
+    summary.
+90. **No polling of the summary.** It is refreshed on startup (`GuildCreate`),
+    after a booking, spot or settings change (in the bot or through NOTIFY), at
+    the next start or end of a listed reservation (one timer per server, at most
+    24 hours ahead) and when the NOTIFY listener connects again. The 3-second
+    debounce per server stays. A failed
+    refresh is retried after 30 seconds, then after twice as long each time, up
+    to 15 minutes.
+91. **The 2-minute tick still reads the online players** (TibiaData, not
+    Discord) and asks for a refresh. The bot posts only when the content of the
+    summary changed: it keeps a hash of the posted content per channel, in
+    memory. A restart posts each summary once.
+92. **One summary worker does all summary writes**, one server at a time, with
+    at least 1 second between the bot's own writes. It writes through one
+    Discord session, so discordgo tracks all rate limits in one place. discordgo
+    waits out a 429 by itself.
+93. **The summary cleanup deletes messages older than 13 days one by one.**
+    Discord refuses those in a bulk delete, and a quiet server can keep a
+    summary that long.
 
 ## Parity with scxmanager
 

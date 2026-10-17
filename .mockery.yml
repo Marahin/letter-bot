@@ -21,9 +21,11 @@ packages:
       LogEntry: {}
   spot-assistant/internal/infrastructure/bot:
     interfaces:
+      BookingFulfiller: {}
       DiscordGuildReader: {}
       GuildActions: {}
       InteractionGateway: {}
+      SummaryChannelWriter: {}
   spot-assistant/internal/infrastructure/notify/postgresql:
     interfaces:
       NotifyExecutor: {}

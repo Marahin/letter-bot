@@ -32,12 +32,14 @@ func TestDispatch_GuildSignals(t *testing.T) {
 	h.On("OnGuildConfig", ctx, "g3").Once()
 	h.On("OnOverbooked", ctx, book.BookRequest{Guild: &guild.Guild{ID: "g4"}, Member: &member.Member{}, Overbook: true},
 		&reservation.ClippedOrRemovedReservation{Original: &reservation.Reservation{ID: 1}}).Once()
+	h.On("OnBooked", ctx, book.Booked{GuildID: "g5", SpotID: 2, Author: "Knight", Source: book.SourceWeb}).Once()
 
 	// when
 	l.dispatch(ctx, h, ChannelSummaryRefresh, "g1")
 	l.dispatch(ctx, h, ChannelGuildResync, "g2")
 	l.dispatch(ctx, h, ChannelGuildConfig, "g3")
 	l.dispatch(ctx, h, ChannelOverbooked, `{"guild_id":"g4","original":{"ID":1}}`)
+	l.dispatch(ctx, h, ChannelBooked, `{"guild_id":"g5","spot_id":2,"author":"Knight"}`)
 
 	// then: expectations are asserted on cleanup
 }
@@ -51,6 +53,7 @@ func TestDispatch_IgnoresEmptyOrMalformedPayloadAndUnknownChannel(t *testing.T) 
 	l.dispatch(context.Background(), h, ChannelSummaryRefresh, "")
 	l.dispatch(context.Background(), h, "other_channel", "g1")
 	l.dispatch(context.Background(), h, ChannelOverbooked, "{not json")
+	l.dispatch(context.Background(), h, ChannelBooked, `{"guild_id":"g1"}`)
 
 	// then: the handler is not called
 }

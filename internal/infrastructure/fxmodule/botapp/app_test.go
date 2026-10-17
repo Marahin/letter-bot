@@ -3,7 +3,9 @@ package botapp
 import (
 	"context"
 	"errors"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -56,7 +58,17 @@ func TestWiring_Builds(t *testing.T) {
 type fakeBot struct {
 	startErr  error
 	started   bool
-	shutdowns int
+	shutdowns atomic.Int32
+	// workerRuns is closed when the summary worker starts.
+	workerRuns chan struct{}
+	// shutdownsSeenByWorker is the shutdown count when the worker returned.
+	shutdownsSeenByWorker atomic.Int32
+}
+
+func newFakeBot() *fakeBot {
+	b := &fakeBot{workerRuns: make(chan struct{})}
+	b.shutdownsSeenByWorker.Store(-1)
+	return b
 }
 
 func (b *fakeBot) Start() error {
@@ -64,14 +76,21 @@ func (b *fakeBot) Start() error {
 	return b.startErr
 }
 
+func (b *fakeBot) RunSummaryWorker(ctx context.Context) {
+	close(b.workerRuns)
+	<-ctx.Done()
+	b.shutdownsSeenByWorker.Store(b.shutdowns.Load())
+}
+
 func (b *fakeBot) Shutdown() error {
-	b.shutdowns++
+	b.shutdowns.Add(1)
 	return errors.New("already closed")
 }
 
 func TestBotHooks_StartFailureStopsTheListener(t *testing.T) {
 	// given
-	b := &fakeBot{startErr: errors.New("gateway refused")}
+	b := newFakeBot()
+	b.startErr = errors.New("gateway refused")
 	stopped := false
 	hook := botHooks(b, func(ctx context.Context) {
 		<-ctx.Done()
@@ -84,15 +103,20 @@ func TestBotHooks_StartFailureStopsTheListener(t *testing.T) {
 	// then
 	require.ErrorContains(t, err, "bot start failed")
 	assert.True(t, stopped, "a failed start waits for the listener to stop")
+	select {
+	case <-b.workerRuns:
+		t.Fatal("the summary worker started after a failed start")
+	default:
+	}
 }
 
 func TestBotHooks_StopEndsTheListenerBeforeTheShutdown(t *testing.T) {
 	// given
-	b := &fakeBot{}
+	b := newFakeBot()
 	shutdownsSeenByListener := -1
 	hook := botHooks(b, func(ctx context.Context) {
 		<-ctx.Done()
-		shutdownsSeenByListener = b.shutdowns
+		shutdownsSeenByListener = int(b.shutdowns.Load())
 	}, zap.NewNop().Sugar())
 	require.NoError(t, hook.OnStart(context.Background()))
 
@@ -102,13 +126,31 @@ func TestBotHooks_StopEndsTheListenerBeforeTheShutdown(t *testing.T) {
 	// then
 	assert.NoError(t, err, "a failed shutdown is logged, not returned")
 	assert.True(t, b.started)
-	assert.Equal(t, 1, b.shutdowns)
+	assert.Equal(t, int32(1), b.shutdowns.Load())
 	assert.Equal(t, 0, shutdownsSeenByListener, "the listener ends before the bot shuts down")
+	assert.Equal(t, int32(0), b.shutdownsSeenByWorker.Load(), "the summary worker ends before the bot shuts down")
+}
+
+func TestBotHooks_StartRunsTheSummaryWorker(t *testing.T) {
+	// given
+	b := newFakeBot()
+	hook := botHooks(b, func(ctx context.Context) { <-ctx.Done() }, zap.NewNop().Sugar())
+
+	// when
+	require.NoError(t, hook.OnStart(context.Background()))
+	defer func() { _ = hook.OnStop(context.Background()) }()
+
+	// then
+	select {
+	case <-b.workerRuns:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the summary worker did not start")
+	}
 }
 
 func TestBotHooks_StopShutsDownWhenTheListenerDoesNotEnd(t *testing.T) {
 	// given
-	b := &fakeBot{}
+	b := newFakeBot()
 	release := make(chan struct{})
 	defer close(release)
 	hook := botHooks(b, func(context.Context) { <-release }, zap.NewNop().Sugar())
@@ -121,7 +163,7 @@ func TestBotHooks_StopShutsDownWhenTheListenerDoesNotEnd(t *testing.T) {
 
 	// then
 	require.ErrorIs(t, err, context.Canceled)
-	assert.Equal(t, 1, b.shutdowns)
+	assert.Equal(t, int32(1), b.shutdowns.Load())
 }
 
 func TestMetricsAddr_IsTheBotMetricsAddr(t *testing.T) {

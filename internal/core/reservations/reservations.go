@@ -172,6 +172,16 @@ func (s *Service) Create(ctx context.Context, guildID string, actor reservation.
 		return res, err
 	}
 	s.summaryChanged(ctx, guildID)
+	s.booked(ctx, book.Booked{
+		GuildID:         guildID,
+		SpotID:          draft.SpotID,
+		StartAt:         draft.StartAt,
+		EndAt:           draft.EndAt,
+		Author:          author,
+		AuthorDiscordID: authorID,
+		ActorID:         actor.UserID,
+		Overbooked:      len(res),
+	})
 	return res, nil
 }
 
@@ -275,5 +285,11 @@ func isSnowflake(id string) bool {
 func (s *Service) summaryChanged(ctx context.Context, guildID string) {
 	if err := s.notifier.SummaryChanged(ctx, guildID); err != nil {
 		s.log.Warnw("notify summary refresh", "guild", guildID, "error", err)
+	}
+}
+
+func (s *Service) booked(ctx context.Context, event book.Booked) {
+	if err := s.notifier.Booked(ctx, event); err != nil {
+		s.log.Warnw("notify booking", "guild", event.GuildID, "error", err)
 	}
 }

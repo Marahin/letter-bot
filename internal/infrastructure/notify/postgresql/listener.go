@@ -69,6 +69,7 @@ func (l *Listener) listenOnce(ctx context.Context, handler ports.NotifyHandler) 
 		}
 	}
 	l.log.Infow("listening for web signals", "channels", Channels)
+	handler.OnListenerConnected(ctx)
 
 	for {
 		n, err := conn.WaitForNotification(ctx)
@@ -105,6 +106,13 @@ func (l *Listener) dispatch(ctx context.Context, handler ports.NotifyHandler, ch
 			return
 		}
 		handler.OnOverbooked(ctx, p.BookRequest(), p.Reservation())
+	case ChannelBooked:
+		p, err := DecodeBookedPayload([]byte(payload))
+		if err != nil {
+			l.log.Warnw("ignoring malformed booked payload", "error", err)
+			return
+		}
+		handler.OnBooked(ctx, p.Event())
 	default:
 		l.log.Warnw("ignoring notify on unknown channel", "channel", channel)
 	}

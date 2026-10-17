@@ -68,6 +68,8 @@ type BotNotifier interface {
 	ConfigChanged(ctx context.Context, guildID string) error
 	// Overbooked asks the bot to DM the author of res that request overbooked them.
 	Overbooked(ctx context.Context, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) error
+	// Booked asks the bot to announce a new reservation in the guild.
+	Booked(ctx context.Context, event book.Booked) error
 }
 
 // GuildSettingsService backs the admin Settings and Channels pages. It lists the

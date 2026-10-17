@@ -31,6 +31,8 @@ type CommunicationService interface {
 
 type SummaryService interface {
 	PrepareSummary(reservations []*reservation.ReservationWithSpot) (*summary.Summary, error)
+	// Ledger is the ledger of PrepareSummary, without rendering the chart.
+	Ledger(reservations []*reservation.ReservationWithSpot) summary.Ledger
 }
 
 type BookingService interface {
@@ -68,12 +70,16 @@ type OnlineCheckService interface {
 }
 
 // NotifyHandler reacts to the signals the web sends to the bot through Postgres NOTIFY.
-// Every signal is best-effort: the bot tick recovers a missed one.
+// Every signal is best-effort: OnListenerConnected refreshes every summary, which
+// recovers a summary refresh missed while the listener was disconnected.
 type NotifyHandler interface {
 	OnSummaryRefresh(ctx context.Context, guildID string)
 	OnGuildResync(ctx context.Context, guildID string)
 	OnGuildConfig(ctx context.Context, guildID string)
 	OnOverbooked(ctx context.Context, request book.BookRequest, res *reservation.ClippedOrRemovedReservation)
+	OnBooked(ctx context.Context, event book.Booked)
+	// OnListenerConnected runs each time the listener has (re)subscribed to every channel.
+	OnListenerConnected(ctx context.Context)
 }
 
 // ReservationFormService backs the bot's buttons and booking wizard. It applies the same

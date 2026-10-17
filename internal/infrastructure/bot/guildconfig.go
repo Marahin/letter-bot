@@ -25,18 +25,6 @@ func (b *Bot) guildConfig(ctx context.Context, guildID string) (*guildconfig.Con
 	return cfg, err
 }
 
-func (b *Bot) guildConfigsByID(ctx context.Context, guildIDs []string) (map[string]*guildconfig.Config, error) {
-	cfgs, err := b.guildConfigs.ListByIDs(ctx, guildIDs)
-	if err != nil {
-		return nil, err
-	}
-	byID := make(map[string]*guildconfig.Config, len(cfgs))
-	for _, cfg := range cfgs {
-		byID[cfg.GuildID] = cfg
-	}
-	return byID, nil
-}
-
 func notPremiumMessage(webBaseURL string) string {
 	msg := "Letter is not active on this server, because the server does not have premium."
 	if webBaseURL != "" {
@@ -107,16 +95,41 @@ func (b *Bot) setupPremiumGuild(g *guild.Guild, cfg *guildconfig.Config) error {
 	return nil
 }
 
-// RefreshGuildLetter updates the summary of the guild once the refresh requests for it stop for a few seconds.
+// RefreshGuildLetter queues the summary of the guild for the summary worker once
+// the refresh requests for it stop for a few seconds.
 func (b *Bot) RefreshGuildLetter(guildID string) {
-	b.summaryRefresh.Trigger(guildID, func() {
-		g, err := b.guildByID(guildID)
-		if err != nil {
-			b.log.With("guild.ID", guildID).Errorf("could not refresh guild letter: %s", err)
-			return
+	b.summaries.Trigger(guildID)
+}
+
+// RefreshAllGuildLetters refreshes the summary of every premium guild the bot is
+// in. Before the bot runs it does nothing, as each GuildCreate refreshes its guild.
+func (b *Bot) RefreshAllGuildLetters(ctx context.Context) {
+	if !b.IsRunning() {
+		return
+	}
+	ids, err := b.premiumGuildIDs(ctx)
+	if err != nil {
+		b.log.Errorf("could not list the premium guilds: %s", err)
+		return
+	}
+	for _, id := range ids {
+		b.RefreshGuildLetter(id)
+	}
+}
+
+// premiumGuildIDs returns the premium guilds of the gateway cache that the bot is in.
+func (b *Bot) premiumGuildIDs(ctx context.Context) ([]string, error) {
+	cfgs, err := b.guildConfigs.ListPresentByIDs(ctx, b.stateGuildIDs())
+	if err != nil {
+		return nil, err
+	}
+	var ids []string
+	for _, cfg := range cfgs {
+		if cfg.IsPremium() {
+			ids = append(ids, cfg.GuildID)
 		}
-		b.TryUpdateGuildLetter(g)
-	})
+	}
+	return ids, nil
 }
 
 // SyncGuild copies the channels and roles of the guild into the database.
