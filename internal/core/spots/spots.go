@@ -119,6 +119,17 @@ func (s *Service) Remove(ctx context.Context, guildID string, id int64) (spot.Re
 	return spot.RemoveArchived, nil
 }
 
+func (s *Service) Get(ctx context.Context, guildID string, id int64) (*spot.Spot, error) {
+	sp, err := s.spots.SelectGuildSpotByID(ctx, guildID, id)
+	if err != nil {
+		return nil, mapRepoError(err)
+	}
+	if sp.IsArchived() {
+		return nil, ErrNotFound
+	}
+	return sp, nil
+}
+
 // Restore returns ErrDuplicateName when an active spot took the name meanwhile.
 func (s *Service) Restore(ctx context.Context, guildID string, id int64) error {
 	if err := s.spots.RestoreSpot(ctx, guildID, id); err != nil {

@@ -46,6 +46,35 @@ func (h *Handlers) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	h.done(w, r, v)
 }
 
+// HandleEditForm answers the editor of an active spot, which a row loads when it
+// opens. Without htmx it goes back to the list.
+func (h *Handlers) HandleEditForm(w http.ResponseWriter, r *http.Request) {
+	id, ok := h.D.PathInt64(w, r, "spot")
+	if !ok {
+		return
+	}
+	current, ok := h.D.MustAccess(w, r)
+	if !ok {
+		return
+	}
+	q := r.URL.Query()
+	v := pageView{GuildID: current.Config.GuildID, CanManage: current.Caps.Manage, Filter: filterFrom(q.Get("tab"), q.Get("q"))}
+	if !web.IsHTMX(r) {
+		http.Redirect(w, r, listURL(v.GuildID, v.Filter), http.StatusSeeOther)
+		return
+	}
+	sp, err := h.D.Spots.Get(r.Context(), v.GuildID, id)
+	if errors.Is(err, spots.ErrNotFound) {
+		h.D.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		h.D.ServerError(w, r, "get spot", err)
+		return
+	}
+	h.D.Render(w, r, editForm(v, spot.Listed{Spot: *sp}))
+}
+
 // HandleUpdate saves the name, region and image of a spot.
 func (h *Handlers) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 	id, ok := h.D.PathInt64(w, r, "spot")

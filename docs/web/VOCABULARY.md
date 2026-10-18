@@ -18,6 +18,8 @@ Polish column is the settled wording of `pl.json` (see
 | Region channel | Kanał regionu | `summary_region_channels`, `letter-<key>` | The bot's channel with the summary of one region, in the category "Letter respawns". |
 | Respawn image | Obrazek respa | `web_spot.image_url` | An optional picture of a respawn, shown in its region channel. |
 | Booking announcement | Ogłoszenie rezerwacji (bot only, in English) | `letter_booked`, `BookingMade` | The bot's public message in the command channel about a new booking. |
+| Queue | Kolejka (bot only, in English) | `spot_queue_entries`, `/queue`, `SpotQueueService` | A member who waits for a taken respawn, with the length they want to hunt. |
+| Queue offer | Propozycja z kolejki (bot only, in English) | `offered_at`, `DueOffers` | The bot's DM that a queued respawn is free, with Book and Cancel for 10 minutes. |
 | Booking wizard | Kreator rezerwacji (bot only, in English) | `reservationforms`, `RespawnPicker`, `TimePicker` | The bot's private message with lists where a member picks the respawn, the start and the length to book or edit a reservation. |
 | My reservations | Moje rezerwacje (bot only, in English) | `actionMine`, `/reservations` | The bot's private list of the member's upcoming reservations, with Edit and Cancel buttons. |
 | Command channel | Kanał komend | `command_channel_id` | The only channel for `/book` and `/unbook` when set. |

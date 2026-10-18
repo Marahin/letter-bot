@@ -67,6 +67,14 @@ A started reservation cannot move to another respawn.
 /-/-/-/
 You cannot overbook your own reservation.
 /-/-/-/
+You can wait for at most 3 respawns at a time. Leave one with /queue-leave first.
+/-/-/-/
+Choose a length of 30 minutes to 3 hours.
+/-/-/-/
+This offer is for another member.
+/-/-/-/
+This offer has expired.
+/-/-/-/
 Other reservations overlap these times. Choose other times or another respawn.
 /-/-/-/
 Other reservations overlap these times. Choose other times or another respawn.
@@ -159,4 +167,27 @@ Keep (started 17:00) |
 /-/-/-/
 **Book a respawn in Ingol.** Pick it from a list, or search all respawns by name.
 This region has no respawns. Show all respawns with the button below.
+/-/-/-/
+**Library -1** — pick the start and the length. Times in UTC.
+It is taken now. Press Queue to get a DM when it is free.
+---
+
+[TestDiscordFormatter_QueueTexts - 1]
+You are in the queue for **Library -1** (1 h 30) until 18:00 tomorrow. When it is free for that long, you get a DM to book it. Leave with the button or /queue-leave.
+/-/-/-/
+**Library -1** is free now on **Celesta**. Book it from now for 1 h 30? The buttons work until 18:10 (CEST). The first member to book gets it.
+/-/-/-/
+**Library -1** is free now. Book it from now for 1 h 30? The buttons work until 18:10 (CEST). The first member to book gets it.
+/-/-/-/
+This offer for **Library -1** has expired. You stay in the queue until 18:00 tomorrow. Leave with /queue-leave.
+/-/-/-/
+You left the queue for **Library -1**.
+/-/-/-/
+You are not in this queue any more.
+/-/-/-/
+You are not in any queue.
+/-/-/-/
+You are not in the queue for this respawn. You wait for: **Library -1**, **Hero Cave**.
+/-/-/-/
+More respawns match "lib". Pick one from the list as you type.
 ---

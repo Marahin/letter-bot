@@ -94,6 +94,8 @@ type GuildSettingsService interface {
 // SpotService manages the respawn list of a guild. Every id is checked against the guild.
 type SpotService interface {
 	List(ctx context.Context, guildID string, filter spot.ListFilter) (*spot.List, error)
+	// Get returns an active spot, or spots.ErrNotFound.
+	Get(ctx context.Context, guildID string, id int64) (*spot.Spot, error)
 	Create(ctx context.Context, guildID string, f spot.Fields) (*spot.Spot, error)
 	// Update sets the name, region and image of a spot.
 	Update(ctx context.Context, guildID string, id int64, f spot.Fields) error

@@ -10,6 +10,7 @@ import (
 	"spot-assistant/internal/core/booking"
 	"spot-assistant/internal/core/communication"
 	"spot-assistant/internal/core/onlinecheck"
+	corequeue "spot-assistant/internal/core/queue"
 	"spot-assistant/internal/core/reservationforms"
 	"spot-assistant/internal/core/reservations"
 	"spot-assistant/internal/core/summary"
@@ -23,6 +24,7 @@ import (
 	healthadapter "spot-assistant/internal/infrastructure/health"
 	prommetrics "spot-assistant/internal/infrastructure/metrics/prometheus"
 	notifypg "spot-assistant/internal/infrastructure/notify/postgresql"
+	queuesqlc "spot-assistant/internal/infrastructure/queue/postgresql/sqlc"
 	reservationsqlc "spot-assistant/internal/infrastructure/reservation/postgresql/sqlc"
 	spotsqlc "spot-assistant/internal/infrastructure/spot/postgresql/sqlc"
 	summarylayoutsqlc "spot-assistant/internal/infrastructure/summarylayout/postgresql/sqlc"
@@ -97,6 +99,10 @@ func newReservationService(booker *booking.Adapter, reservationRepo *reservation
 
 func newReservationForms(service *reservations.Service, spotRepo *spotsqlc.SpotRepository) *reservationforms.Service {
 	return reservationforms.New(service, spotRepo)
+}
+
+func newSpotQueue(repo *queuesqlc.SpotQueueRepository, spotRepo *spotsqlc.SpotRepository, forms *reservationforms.Service) *corequeue.Service {
+	return corequeue.New(repo, spotRepo, forms)
 }
 
 func newMetrics(reg *prometheus.Registry) (*prommetrics.PromMetrics, error) {

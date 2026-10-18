@@ -51,11 +51,7 @@ func (b *Bot) reconcileSummaries(ctx context.Context, guildID string) reconcileR
 	if !cfg.BotPresent || !cfg.IsPremium() {
 		return reconcileResult{}
 	}
-	for _, hook := range b.passHooks {
-		if err := hook(ctx, guildID); err != nil {
-			b.log.With("guild.ID", guildID).Warnf("summary pass hook failed: %s", err)
-		}
-	}
+	b.runPassHooks(ctx, guildID)
 
 	p, err := b.newRegionPass(ctx, cfg)
 	if err != nil {
@@ -69,6 +65,14 @@ func (b *Bot) reconcileSummaries(ctx context.Context, guildID string) reconcileR
 	}
 	b.log.With("guild.ID", guildID, "writes", p.writes, "regions", len(p.desired)).Debug("summary reconciled")
 	return res
+}
+
+func (b *Bot) runPassHooks(ctx context.Context, guildID string) {
+	for _, hook := range b.passHooks {
+		if err := hook(ctx, guildID); err != nil {
+			b.log.With("guild.ID", guildID).Warnf("summary pass hook failed: %s", err)
+		}
+	}
 }
 
 // regionPass is the state of one summary pass of a guild.

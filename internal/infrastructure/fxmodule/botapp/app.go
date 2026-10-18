@@ -48,6 +48,7 @@ func wiring() fx.Option {
 			newLocalNotifier,
 			newReservationService,
 			newReservationForms,
+			newSpotQueue,
 			newMetrics,
 			newNotifyHandler,
 			newListener,

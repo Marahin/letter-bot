@@ -943,3 +943,80 @@ func (_c *MockSummaryChannelWriter_GuildChannels_Call) RunAndReturn(run func(gui
 	_c.Call.Return(run)
 	return _c
 }
+
+// UserChannelCreate provides a mock function for the type MockSummaryChannelWriter
+func (_mock *MockSummaryChannelWriter) UserChannelCreate(recipientID string, options ...discordgo.RequestOption) (*discordgo.Channel, error) {
+	var tmpRet mock.Arguments
+	if len(options) > 0 {
+		tmpRet = _mock.Called(recipientID, options)
+	} else {
+		tmpRet = _mock.Called(recipientID)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for UserChannelCreate")
+	}
+
+	var r0 *discordgo.Channel
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string, ...discordgo.RequestOption) (*discordgo.Channel, error)); ok {
+		return returnFunc(recipientID, options...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string, ...discordgo.RequestOption) *discordgo.Channel); ok {
+		r0 = returnFunc(recipientID, options...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*discordgo.Channel)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(string, ...discordgo.RequestOption) error); ok {
+		r1 = returnFunc(recipientID, options...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockSummaryChannelWriter_UserChannelCreate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UserChannelCreate'
+type MockSummaryChannelWriter_UserChannelCreate_Call struct {
+	*mock.Call
+}
+
+// UserChannelCreate is a helper method to define mock.On call
+//   - recipientID string
+//   - options ...discordgo.RequestOption
+func (_e *MockSummaryChannelWriter_Expecter) UserChannelCreate(recipientID any, options ...any) *MockSummaryChannelWriter_UserChannelCreate_Call {
+	return &MockSummaryChannelWriter_UserChannelCreate_Call{Call: _e.mock.On("UserChannelCreate",
+		append([]any{recipientID}, options...)...)}
+}
+
+func (_c *MockSummaryChannelWriter_UserChannelCreate_Call) Run(run func(recipientID string, options ...discordgo.RequestOption)) *MockSummaryChannelWriter_UserChannelCreate_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 []discordgo.RequestOption
+		var variadicArgs []discordgo.RequestOption
+		if len(args) > 1 {
+			variadicArgs = args[1].([]discordgo.RequestOption)
+		}
+		arg1 = variadicArgs
+		run(
+			arg0,
+			arg1...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSummaryChannelWriter_UserChannelCreate_Call) Return(channel *discordgo.Channel, err error) *MockSummaryChannelWriter_UserChannelCreate_Call {
+	_c.Call.Return(channel, err)
+	return _c
+}
+
+func (_c *MockSummaryChannelWriter_UserChannelCreate_Call) RunAndReturn(run func(recipientID string, options ...discordgo.RequestOption) (*discordgo.Channel, error)) *MockSummaryChannelWriter_UserChannelCreate_Call {
+	_c.Call.Return(run)
+	return _c
+}

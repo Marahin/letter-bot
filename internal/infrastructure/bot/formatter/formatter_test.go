@@ -14,7 +14,9 @@ import (
 	"spot-assistant/internal/core/dto/book"
 	"spot-assistant/internal/core/dto/guild"
 	"spot-assistant/internal/core/dto/member"
+	"spot-assistant/internal/core/dto/queue"
 	"spot-assistant/internal/core/dto/reservation"
+	corequeue "spot-assistant/internal/core/queue"
 	"spot-assistant/internal/core/reservationforms"
 	"spot-assistant/internal/core/reservations"
 	"spot-assistant/internal/ports"
@@ -217,6 +219,10 @@ func TestDiscordFormatter_FormatFormError(t *testing.T) {
 		booking.ErrInvalidRange,
 		booking.ErrSpotLocked,
 		booking.ErrSelfOverbook,
+		corequeue.ErrQueueFull,
+		corequeue.ErrInvalidLength,
+		corequeue.ErrOfferNotYours,
+		corequeue.ErrOfferExpired,
 		booking.ErrConflict,
 		booking.ErrInsufficientPermissions,
 		errors.New("db down"),
@@ -303,7 +309,33 @@ func TestDiscordFormatter_WizardTexts(t *testing.T) {
 	texts = append(texts,
 		f.FormatRespawnStep(false, false, "Port Hope & Tiquanda", ""),
 		f.FormatRespawnStep(false, true, "Ingol", ""),
+		f.FormatTimeStep(&reservation.TimePicker{Spot: spot, TakenNow: true}, "", now),
 	)
+
+	// then
+	snaps.MatchSnapshot(t, strings.Join(texts, "\n---\n"))
+}
+
+func TestDiscordFormatter_QueueTexts(t *testing.T) {
+	// given
+	f := NewFormatter()
+	berlin := time.FixedZone("CEST", 2*60*60)
+	now := time.Date(2026, 10, 18, 18, 0, 0, 0, berlin)
+	e := queue.Entry{SpotName: "Library -1", Length: 90 * time.Minute, ExpiresAt: now.Add(24 * time.Hour)}
+	cave := queue.Entry{SpotName: "Hero Cave", Length: time.Hour}
+
+	// when
+	texts := []string{
+		f.FormatQueueJoined(e, now),
+		f.FormatQueueOffer(e, "Celesta", now.Add(10*time.Minute)),
+		f.FormatQueueOffer(e, "", now.Add(10*time.Minute)),
+		f.FormatQueueOfferExpired(e, now),
+		f.FormatQueueLeft("Library -1"),
+		f.FormatQueueGone(),
+		f.FormatQueueNotQueued(nil),
+		f.FormatQueueNotQueued([]queue.Entry{e, cave}),
+		f.FormatQueueAmbiguous("lib"),
+	}
 
 	// then
 	snaps.MatchSnapshot(t, strings.Join(texts, "\n---\n"))

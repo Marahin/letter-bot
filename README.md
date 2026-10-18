@@ -83,6 +83,10 @@ member who clicked.
 - **My reservations** (or `/reservations`) lists your upcoming reservations
   with **Edit** and **Cancel** buttons. Edit opens step 2 with the current
   respawn, start and length chosen. An edit never overbooks.
+- **Queue** (in step 2 when the respawn is taken now, or `/queue`) waits for
+  the respawn. When it is free for your length, the bot sends you a DM with
+  **Book** and **Cancel**, which work for 10 minutes. The first member to book
+  gets it. `/queue-leave` stops waiting.
 
 The slash commands `/book`, `/unbook` and `/summary` work as before.
 

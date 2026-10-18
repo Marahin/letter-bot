@@ -13,6 +13,9 @@ import (
 
 const commandReservations = "reservations"
 
+// ephemeralCommands reply to the member only.
+var ephemeralCommands = map[string]bool{commandReservations: true, commandQueue: true, commandQueueLeave: true}
+
 func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 	name := i.ApplicationCommandData().Name
 	isAutocomplete := i.Type == discordgo.InteractionApplicationCommandAutocomplete
@@ -45,7 +48,7 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 	}
 
 	deferData := &discordgo.InteractionResponseData{}
-	if name == commandReservations {
+	if ephemeralCommands[name] {
 		deferData.Flags = discordgo.MessageFlagsEphemeral
 	}
 	if err := b.interactionRespond(i, deferData, discordgo.InteractionResponseDeferredChannelMessageWithSource); err != nil {
@@ -116,6 +119,10 @@ func (b *Bot) handleSlash(i *discordgo.InteractionCreate, cfg *guildconfig.Confi
 		return b.SetWorld(i)
 	case commandReservations:
 		return b.MyReservations(i)
+	case commandQueue:
+		return b.QueueJoin(i)
+	case commandQueueLeave:
+		return b.QueueLeave(i)
 	default:
 		return fmt.Errorf("missing handler for command: %s", i.ApplicationCommandData().Name)
 	}
@@ -131,6 +138,10 @@ func (b *Bot) handleAutocomplete(i *discordgo.InteractionCreate) error {
 		return b.SetWorldAutocomplete(i)
 	case "summary":
 		return b.SummaryAutocomplete(i)
+	case commandQueue:
+		return b.QueueAutocomplete(i)
+	case commandQueueLeave:
+		return b.QueueLeaveAutocomplete(i)
 	default:
 		return fmt.Errorf("missing handler for command: %s", i.ApplicationCommandData().Name)
 	}
@@ -206,6 +217,9 @@ func (b *Bot) getCommands() []*discordgo.ApplicationCommand {
 				},
 			},
 		},
+	}
+	if b.queue != nil {
+		commands = append(commands, b.queueCommands()...)
 	}
 	// it's intentionally not 'set-world' as it would appear alphabetically higher than summary and unbook - purely for UX - its only used once and only by owner
 	// only register world-set if onlineCheckService is configured

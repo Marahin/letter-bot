@@ -106,6 +106,11 @@ func (s *Service) TimePicker(ctx context.Context, guildID string, actor reservat
 		picker.Lengths = lengthOptions(choice.Length, currentLength, currentStart, now)
 		return picker, nil
 	}
+	if picker.Editing == nil {
+		if picker.TakenNow, err = s.takenNow(ctx, guildID, sp.ID, now, choice.Window, picker.Booked); err != nil {
+			return nil, err
+		}
+	}
 	if currentStart.Before(now) {
 		currentStart = time.Time{}
 	}
@@ -165,6 +170,17 @@ func (s *Service) booked(ctx context.Context, guildID string, spotID, excludeID 
 	}
 	slices.SortFunc(booked, func(a, b *reservation.Reservation) int { return a.StartAt.Compare(b.StartAt) })
 	return booked, nil
+}
+
+// takenNow reuses the reservations of the first window, which starts now.
+func (s *Service) takenNow(ctx context.Context, guildID string, spotID int64, now time.Time, window int, booked []*reservation.Reservation) (bool, error) {
+	if window != 0 {
+		var err error
+		if booked, err = s.booked(ctx, guildID, spotID, 0, now, now); err != nil {
+			return false, err
+		}
+	}
+	return holder(now, booked) != nil, nil
 }
 
 func (s *Service) BookChoice(ctx context.Context, guildID string, actor reservation.Actor, choice reservation.TimeChoice) (*reservation.FormOutcome, error) {

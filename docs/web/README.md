@@ -428,6 +428,10 @@ so about 2 minutes per server, one server at a time. A server whose bot lacks
 Manage Channels or Manage Roles keeps the single summary (decision 97); the
 "Re-invite bot" button in Settings fixes it.
 
+**The queue (migration `20261018120200`): any order.** It only adds the table
+`spot_queue_entries`, which only the new bot uses. The bot registers `/queue`
+and `/queue-leave` on each server when it starts.
+
 The notes below are for the first release of the web panel.
 
 **For this release, deploy the bot first.** Migration

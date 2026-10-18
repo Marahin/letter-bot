@@ -253,6 +253,9 @@ func (b *Bot) reconcileLegacy(ctx context.Context, guildID string) reconcileResu
 	if !cfg.BotPresent {
 		return reconcileResult{}
 	}
+	if cfg.IsPremium() {
+		b.runPassHooks(ctx, guildID)
+	}
 	next, err := b.PostLegacySummary(ctx, cfg)
 	return reconcileResult{Next: next, Err: err}
 }

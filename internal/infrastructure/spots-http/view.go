@@ -98,6 +98,23 @@ func spotPath(guildID string, id int64, action string) string {
 	return web.GuildPath(guildID, "/spots/"+strconv.FormatInt(id, 10)+"/"+action)
 }
 
+// editFormURL loads a spot's editor with the tab and search of the page, which
+// its form posts back.
+func editFormURL(v pageView, id int64) string {
+	q := url.Values{}
+	if v.Filter.Archived {
+		q.Set("tab", tabArchived)
+	}
+	if v.Filter.Query != "" {
+		q.Set("q", v.Filter.Query)
+	}
+	path := spotPath(v.GuildID, id, "edit")
+	if len(q) == 0 {
+		return path
+	}
+	return path + "?" + q.Encode()
+}
+
 func spotDOMID(id int64) string { return "spot-" + strconv.FormatInt(id, 10) }
 
 func formatCount(n int64) string { return strconv.FormatInt(n, 10) }

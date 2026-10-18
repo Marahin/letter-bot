@@ -10,6 +10,8 @@ import (
 
 	"spot-assistant/internal/core/booking"
 	"spot-assistant/internal/core/dto/guild"
+	"spot-assistant/internal/core/dto/guildconfig"
+	"spot-assistant/internal/core/dto/member"
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/permission"
 	"spot-assistant/internal/core/reservationforms"
@@ -42,15 +44,15 @@ func (b *Bot) formContext(ctx context.Context, i *discordgo.InteractionCreate) (
 		return nil, b.formatter.FormatGenericError(errors.New("could not load the server, please try again"))
 	}
 	gld := MapGuild(g)
-	m := MapMember(i.Member)
+	return &formRequest{guild: gld, actor: memberActor(cfg, gld, MapMember(i.Member))}, ""
+}
+
+func memberActor(cfg *guildconfig.Config, g *guild.Guild, m *member.Member) reservation.Actor {
 	name := m.Nick
 	if name == "" {
 		name = m.Username
 	}
-	return &formRequest{
-		guild: gld,
-		actor: reservation.Actor{UserID: m.ID, Name: name, Caps: permission.Resolve(*cfg, memberSubject(gld, m))},
-	}, ""
+	return reservation.Actor{UserID: m.ID, Name: name, Caps: permission.Resolve(*cfg, memberSubject(g, m))}
 }
 
 // formGuild prefers the gateway cache: a REST call before a modal opens eats into
@@ -116,6 +118,8 @@ func (b *Bot) runFormAction(i *discordgo.InteractionCreate, customID string, sel
 		b.deferred(ctx, i, openKind(i), func(req *formRequest) formView {
 			return b.respawnStep(ctx, req, formAction{Region: action.Region}, "")
 		})
+	case actionQueueBook, actionQueueCancel:
+		b.queueOfferClick(ctx, i, action)
 	default:
 		b.deferred(ctx, i, discordgo.InteractionResponseDeferredMessageUpdate, func(req *formRequest) formView {
 			return b.updateInPlace(ctx, req, action, selected, query)
@@ -216,6 +220,10 @@ func (b *Bot) updateInPlace(ctx context.Context, req *formRequest, action formAc
 		outcome, err := b.forms.EditChoice(ctx, guildID, req.actor, action.choice())
 		b.logFormError("edit", err)
 		return b.editOutcome(ctx, req, outcome, err, retryState(action))
+	case actionQueueJoin:
+		return b.joinQueue(ctx, req, action.SpotID, action.Length)
+	case actionQueueLeave:
+		return b.queueLeaveView(ctx, req.actor.UserID, action.QueueID)
 	default:
 		b.log.Errorf("no handler for form action %d", action.Kind)
 		return formView{content: b.formatter.FormatFormOutdated()}

@@ -62,6 +62,12 @@ const (
 	// The Book button of a region channel and its respawn pages.
 	actionBookRegion
 	actionRegionPage
+	// The respawn queue: join from the wizard, the offer's Book and Cancel,
+	// and Leave.
+	actionQueueJoin
+	actionQueueBook
+	actionQueueCancel
+	actionQueueLeave
 )
 
 // editTwin is the edit variant of each wizard action.
@@ -101,6 +107,8 @@ const (
 	fieldIndex
 	// fieldRegion is a regions key.
 	fieldRegion
+	// fieldQueue is a queue entry id.
+	fieldQueue
 )
 
 type actionLayout struct {
@@ -134,6 +142,10 @@ var actionLayouts = map[formActionKind]actionLayout{
 	actionEditSubmit:       {"eb", []idField{fieldReservation, fieldSpot, fieldChoice, fieldLength}},
 	actionBookRegion:       {"bookr", []idField{fieldRegion}},
 	actionRegionPage:       {"rrp", []idField{fieldRegion, fieldPage}},
+	actionQueueJoin:        {"qj", []idField{fieldSpot, fieldLength}},
+	actionQueueBook:        {"qb", []idField{fieldQueue, fieldStart}},
+	actionQueueCancel:      {"qc", []idField{fieldQueue, fieldStart}},
+	actionQueueLeave:       {"ql", []idField{fieldQueue}},
 }
 
 var actionsByName = func() map[string]formActionKind {
@@ -160,6 +172,8 @@ type formAction struct {
 	Index   int
 	// Region limits step 1 of a booking to one region.
 	Region string
+	// QueueID is a queue entry; StartAt is then the time of its offer.
+	QueueID int64
 }
 
 func (a formAction) editing() bool {
@@ -229,6 +243,8 @@ func (a formAction) field(field idField) string {
 		return strconv.Itoa(a.Index)
 	case fieldRegion:
 		return a.Region
+	case fieldQueue:
+		return strconv.FormatInt(a.QueueID, 10)
 	}
 	return ""
 }
@@ -301,6 +317,8 @@ func setField(a *formAction, field idField, value string) error {
 		a.Index, err = parseSmall(value, maxIndex)
 	case fieldRegion:
 		a.Region, err = parseRegion(value)
+	case fieldQueue:
+		a.QueueID, err = parsePositiveID(value)
 	}
 	return err
 }

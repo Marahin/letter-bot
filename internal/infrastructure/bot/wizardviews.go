@@ -117,6 +117,13 @@ func respawnNav(p *reservation.RespawnPicker, state formAction) []discordgo.Mess
 
 // timeStepView is step 2 of the wizard: the start, the length and the submit.
 func (b *Bot) timeStepView(p *reservation.TimePicker, status string, now time.Time) formView {
+	queueable := b.queueable(p)
+	// The text's Queue hint shows only with the button.
+	if p.TakenNow != queueable {
+		shown := *p
+		shown.TakenNow = queueable
+		p = &shown
+	}
 	state := choiceAction(p.Choice)
 	starts := make([]plainOption, 0, len(p.Starts))
 	for _, o := range p.Starts {
@@ -157,6 +164,9 @@ func (b *Bot) timeStepView(p *reservation.TimePicker, status string, now time.Ti
 		change := state.as(actionRespawnPage)
 		change.Page = 0
 		actions = append(actions, button("Change respawn", discordgo.SecondaryButton, change))
+	}
+	if queueable {
+		actions = append(actions, button("Queue", discordgo.SecondaryButton, formAction{Kind: actionQueueJoin, SpotID: p.Spot.ID, Length: p.Choice.Length}))
 	}
 	if p.Editing != nil {
 		actions = append(actions, button("Back", discordgo.SecondaryButton, formAction{Kind: actionList}))

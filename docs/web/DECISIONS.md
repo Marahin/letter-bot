@@ -254,7 +254,8 @@ These items of the request were unclear or had a cost. Each has a decision.
     A guild without upcoming hunts gets a "No upcoming hunts" message with the
     same buttons, so the channel never shows an old summary. Each new booking
     is announced in public (decision 87). A region channel has "Book in
-    <region>" instead of "Book a respawn" (decision 101). Rules:
+    <region>" instead of "Book a respawn" (decision 101). A member can wait
+    for a taken respawn (`/queue`, decisions 105-107). Rules:
     - The member picks from lists (string selects) and does not type. Typed
       names and times caused too many errors. discordgo stays at v0.27.1 (see
       "Parity with scxmanager"), and a Discord form (modal) cannot hold a list,
@@ -583,10 +584,52 @@ because Discord rate-limits the bot.
      web shows a small thumbnail with `referrerpolicy="no-referrer"`.
 103. **"Rename" becomes "Edit"** (name, region, image) on the Respawns page,
      at `/servers/{id}/spots/{spot}/edit`. The `/rename` route is removed; it
-     had no other users.
+     had no other users. A closed row loads its form on the first open
+     (`GET .../edit`, htmx), so the list does not carry a region picker per
+     row. A refused edit renders that row open, with its form.
 104. **The summary pass has hooks.** A hook runs at the start of each pass of
      a premium server, before any summary write. Its error is logged and the
-     pass goes on. The booking queue will send its due offers there.
+     pass goes on. The booking queue sends its due offers there.
+105. **The queue.** A member waits for a taken respawn with `/queue` (respawn,
+     length) or the "Queue" button of the wizard, which shows when the respawn
+     is taken now. `/queue-leave` stops it. The replies are private. The queue
+     lives in Discord only (`spot_queue_entries`); the web has no queue page.
+     - "Free" means that no reservation of the respawn overlaps [start,
+       start + length], edges included, as in booking. The start is the next
+       full minute, because booking counts the minute in which the previous
+       hunt ended as taken.
+     - The length is 30 minutes to 3 hours, in steps of 30 minutes, default
+       2 hours. An entry lasts 24 hours. A member waits for at most 3
+       respawns per server. Queueing the same respawn again replaces its
+       length and expiry.
+     - A respawn that is free when the member queues gives the offer at once,
+       in the reply.
+106. **Offers.** Each summary pass of a premium server deletes the expired
+     entries, clears the offer of an entry whose respawn was taken again, and
+     offers each free respawn to every member who waits for it, at the same
+     time. The first member to book gets it; the others get the normal booking
+     error. An entry gets a new offer only after its respawn was taken and
+     freed again. The bot sends the offer by DM, through the summary worker's
+     session and pacing (decision 92). When Discord refuses the DM (code
+     50007), the offer goes to the command channel with a mention that pings
+     only that member. An offer that could not be sent is cleared, so a later
+     pass tries again.
+     - A respawn becomes free only when a reservation ends or is deleted,
+       moved or shortened. The end of a listed reservation is a boundary
+       timer, and a change triggers a pass (decision 90). The 2-minute tick
+       triggers a pass too (decision 91). The queue needs no timer of its own.
+       An expired entry counts as gone in every query, so its deletion can
+       wait for the next pass.
+107. **Book and Cancel of an offer.** The buttons work for 10 minutes and only
+     for the member who queued; another member gets a private refusal. A
+     click in a DM has no server and no member, so the bot reads the server
+     from the entry and the member from the API (with the permissions of
+     their roles). Book books from the next full minute for the queued length
+     through the normal booking, so the booking is announced (decision 87) and
+     the summary changes. Any new booking of the respawn by the member removes
+     their entry. Cancel removes the entry. A newer offer replaces an older
+     one. When the respawn was taken meanwhile, Book shows the booking error
+     and keeps Cancel.
 
 ## Parity with scxmanager
 

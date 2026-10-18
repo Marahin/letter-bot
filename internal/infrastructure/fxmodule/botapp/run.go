@@ -7,6 +7,7 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 
+	corequeue "spot-assistant/internal/core/queue"
 	"spot-assistant/internal/core/reservationforms"
 	"spot-assistant/internal/infrastructure/bot"
 	"spot-assistant/internal/infrastructure/eventhandler"
@@ -16,10 +17,11 @@ import (
 )
 
 // wireBot closes the cycles between the bot and the services that need the bot
-// through the communication adapter: the event handler and the forms.
-func wireBot(b *bot.Bot, h *eventhandler.Handler, forms *reservationforms.Service, m *prommetrics.PromMetrics) {
+// through the communication adapter: the event handler, the forms and the queue.
+func wireBot(b *bot.Bot, h *eventhandler.Handler, forms *reservationforms.Service, q *corequeue.Service, m *prommetrics.PromMetrics) {
 	b.WithEventHandler(h)
 	b.WithReservationForms(forms)
+	b.WithSpotQueue(q)
 	b.WithMetrics(m)
 	h.WithMetrics(m)
 }

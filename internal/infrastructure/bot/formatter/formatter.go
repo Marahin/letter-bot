@@ -11,7 +11,9 @@ import (
 	"spot-assistant/internal/core/booking"
 	"spot-assistant/internal/core/dto/book"
 	"spot-assistant/internal/core/dto/member"
+	"spot-assistant/internal/core/dto/queue"
 	"spot-assistant/internal/core/dto/reservation"
+	corequeue "spot-assistant/internal/core/queue"
 	"spot-assistant/internal/core/reservationforms"
 	"spot-assistant/internal/core/reservations"
 	"spot-assistant/internal/ports"
@@ -297,6 +299,9 @@ func (f *DiscordFormatter) FormatTimeStep(p *reservation.TimePicker, status stri
 	default:
 		fmt.Fprintf(&msg, "**%s** — pick the start and the length. Times in %s.", p.Spot.Name, zone)
 	}
+	if p.TakenNow && p.Editing == nil {
+		msg.WriteString("\nIt is taken now. Press Queue to get a DM when it is free.")
+	}
 	if p.Choice.Complete() {
 		start, startText := p.Choice.StartAt, f.FormatClock(p.Choice.StartAt, now)
 		if p.Choice.Now {
@@ -410,6 +415,63 @@ func (f *DiscordFormatter) FormatFormError(err error) string {
 		return "You cannot overbook your own reservation."
 	case errors.Is(err, booking.ErrConflict), errors.Is(err, booking.ErrInsufficientPermissions):
 		return "Other reservations overlap these times. Choose other times or another respawn."
+	case errors.Is(err, corequeue.ErrQueueFull):
+		return fmt.Sprintf("You can wait for at most %d respawns at a time. Leave one with /queue-leave first.", corequeue.MaxEntriesPerUser)
+	case errors.Is(err, corequeue.ErrInvalidLength):
+		return "Choose a length of 30 minutes to 3 hours."
+	case errors.Is(err, corequeue.ErrOfferNotYours):
+		return "This offer is for another member."
+	case errors.Is(err, corequeue.ErrOfferExpired):
+		return "This offer has expired."
 	}
 	return f.FormatGenericError(err)
+}
+
+// FormatQueueJoined is the reply after a member queued for a taken respawn.
+func (f *DiscordFormatter) FormatQueueJoined(e queue.Entry, now time.Time) string {
+	return fmt.Sprintf("You are in the queue for **%s** (%s) until %s. When it is free for that long, you get a DM to book it. Leave with the button or /queue-leave.",
+		e.SpotName, f.FormatLength(e.Length), f.FormatClock(e.ExpiresAt, now))
+}
+
+// FormatQueueOffer offers a free respawn to a queued member. until is the end
+// of the offer's time gate, in the time zone to show.
+func (f *DiscordFormatter) FormatQueueOffer(e queue.Entry, guildName string, until time.Time) string {
+	var msg strings.Builder
+	fmt.Fprintf(&msg, "**%s** is free now", e.SpotName)
+	if guildName != "" {
+		fmt.Fprintf(&msg, " on **%s**", guildName)
+	}
+	fmt.Fprintf(&msg, ". Book it from now for %s? The buttons work until %s (%s). The first member to book gets it.",
+		f.FormatLength(e.Length), until.Format(formTimeFormat), until.Format("MST"))
+	return msg.String()
+}
+
+// FormatQueueOfferExpired replaces an offer whose time gate has passed.
+func (f *DiscordFormatter) FormatQueueOfferExpired(e queue.Entry, now time.Time) string {
+	return fmt.Sprintf("This offer for **%s** has expired. You stay in the queue until %s. Leave with /queue-leave.", e.SpotName, f.FormatClock(e.ExpiresAt, now))
+}
+
+// FormatQueueLeft is the reply after a member left a queue.
+func (f *DiscordFormatter) FormatQueueLeft(spotName string) string {
+	return fmt.Sprintf("You left the queue for **%s**.", spotName)
+}
+
+// FormatQueueGone is the reply to a button of a queue entry that no longer exists.
+func (f *DiscordFormatter) FormatQueueGone() string {
+	return "You are not in this queue any more."
+}
+
+// FormatQueueNotQueued is the reply to /queue-leave for a respawn the member
+// does not wait for. mine are the respawns they wait for.
+func (f *DiscordFormatter) FormatQueueNotQueued(mine []queue.Entry) string {
+	if len(mine) == 0 {
+		return "You are not in any queue."
+	}
+	names := collections.PoorMansMap(mine, func(e queue.Entry) string { return "**" + e.SpotName + "**" })
+	return "You are not in the queue for this respawn. You wait for: " + strings.Join(names, ", ") + "."
+}
+
+// FormatQueueAmbiguous is the reply to /queue with a name that more respawns contain.
+func (f *DiscordFormatter) FormatQueueAmbiguous(query string) string {
+	return fmt.Sprintf("More respawns match %q. Pick one from the list as you type.", query)
 }

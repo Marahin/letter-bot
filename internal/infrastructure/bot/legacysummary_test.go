@@ -138,6 +138,25 @@ func TestReconcileLegacy_SkipsWithoutDiscordCalls(t *testing.T) {
 	}
 }
 
+func TestReconcileLegacy_RunsThePassHooksOfAPremiumGuild(t *testing.T) {
+	// given
+	f := newDiscordFixture(t)
+	f.config(premiumConfig())
+	f.channels()
+	f.writer.On("GuildChannels", "g1").Return(nil, errors.New("discord down"))
+	var calls []string
+	f.b.WithSummaryPassHook(func(_ context.Context, guildID string) error {
+		calls = append(calls, guildID)
+		return nil
+	})
+
+	// when
+	f.b.reconcileLegacy(context.Background(), "g1")
+
+	// then
+	assert.Equal(t, []string{"g1"}, calls)
+}
+
 func TestReconcileLegacy_Errors(t *testing.T) {
 	cases := map[string]func(f *discordFixture){
 		"config": func(f *discordFixture) {

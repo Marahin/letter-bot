@@ -197,6 +197,17 @@ type ReservationLoot struct {
 	PickedAt       pgtype.Timestamptz
 }
 
+type SpotQueueEntry struct {
+	ID            int64
+	GuildID       string
+	SpotID        int64
+	UserID        string
+	LengthMinutes int32
+	CreatedAt     pgtype.Timestamptz
+	ExpiresAt     pgtype.Timestamptz
+	OfferedAt     pgtype.Timestamptz
+}
+
 type SummaryLayout struct {
 	GuildID        string
 	CategoryID     string

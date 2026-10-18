@@ -14,6 +14,7 @@ import (
 
 	"spot-assistant/internal/common/test/mocks"
 	"spot-assistant/internal/core/dto/guildconfig"
+	"spot-assistant/internal/core/dto/queue"
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/spot"
 	"spot-assistant/internal/core/dto/summary"
@@ -478,6 +479,25 @@ func TestReconcileSummaries_RunsThePassHooks(t *testing.T) {
 	// then
 	require.NoError(t, res.Err)
 	assert.Equal(t, []string{"g1"}, calls)
+}
+
+func TestReconcileSummaries_SendsTheDueQueueOffersPaced(t *testing.T) {
+	// given
+	f := newRegionFixture(t)
+	f.unchanged(f.hashOf(zao))
+	q := mocks.NewMockSpotQueueService(t)
+	f.b.WithSpotQueue(q)
+	offered := f.now
+	q.EXPECT().DueOffers(mock.Anything, "g1").Return([]queue.Entry{{ID: 9, GuildID: "g1", SpotName: "Lizard City", UserID: "u1", Length: time.Hour, OfferedAt: &offered}}, nil)
+	f.writer.On("UserChannelCreate", "u1").Return(&discordgo.Channel{ID: "dm1"}, nil)
+	f.writer.On("ChannelMessageSendComplex", "dm1", mock.Anything).Return(&discordgo.Message{}, nil)
+
+	// when
+	res := f.b.reconcileSummaries(context.Background(), "g1")
+
+	// then
+	require.NoError(t, res.Err)
+	assert.Equal(t, []time.Duration{messageOpGap}, f.sleeps, "the DM waits a gap after opening the DM channel")
 }
 
 func TestReconcileSummaries_StoreErrors(t *testing.T) {

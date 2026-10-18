@@ -101,6 +101,8 @@ type InteractionGateway interface {
 	StateGuild(guildID string) (*discordgo.Guild, error)
 	// StateChannels returns a copy of the guild's channels from the gateway cache of its shard.
 	StateChannels(guildID string) ([]*discordgo.Channel, error)
+	// GuildMember asks the REST API, e.g. for the member behind a click in a DM.
+	GuildMember(guildID, userID string, options ...discordgo.RequestOption) (*discordgo.Member, error)
 }
 
 // SummaryChannelWriter is the part of the Discord REST API that maintains the
@@ -119,6 +121,7 @@ type SummaryChannelWriter interface {
 	ChannelMessageSendComplex(channelID string, data *discordgo.MessageSend, options ...discordgo.RequestOption) (*discordgo.Message, error)
 	ChannelMessageSendEmbed(channelID string, embed *discordgo.MessageEmbed, options ...discordgo.RequestOption) (*discordgo.Message, error)
 	ChannelFileSend(channelID, name string, r io.Reader, options ...discordgo.RequestOption) (*discordgo.Message, error)
+	UserChannelCreate(recipientID string, options ...discordgo.RequestOption) (*discordgo.Channel, error)
 }
 
 // BookingFulfiller is told about every new booking, the /book command's too.
@@ -181,6 +184,7 @@ type Bot struct {
 	legacyHashes       cmap.ConcurrentMap[string, string]
 	pacer              *pacer
 	fulfiller          BookingFulfiller
+	queue              ports.SpotQueueService
 	eventHandler       ports.APIPort
 	forms              ports.ReservationFormService
 	metrics            ports.MetricsPort
@@ -296,6 +300,16 @@ func (b *Bot) clock() time.Time {
 // WithBookingFulfiller sets what is told about every new booking. It is optional.
 func (b *Bot) WithBookingFulfiller(f BookingFulfiller) *Bot {
 	b.fulfiller = f
+	return b
+}
+
+// WithSpotQueue turns on the respawn queue: the /queue commands, the Queue
+// button, the removal of a member's entry when they book the respawn, and the
+// offers, which each summary pass sends.
+func (b *Bot) WithSpotQueue(q ports.SpotQueueService) *Bot {
+	b.queue = q
+	b.fulfiller = q
+	b.passHooks = append(b.passHooks, b.sendQueueOffers)
 	return b
 }
 

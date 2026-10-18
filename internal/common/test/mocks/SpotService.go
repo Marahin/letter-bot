@@ -121,6 +121,80 @@ func (_c *MockSpotService_Create_Call) RunAndReturn(run func(ctx context.Context
 	return _c
 }
 
+// Get provides a mock function for the type MockSpotService
+func (_mock *MockSpotService) Get(ctx context.Context, guildID string, id int64) (*spot.Spot, error) {
+	ret := _mock.Called(ctx, guildID, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Get")
+	}
+
+	var r0 *spot.Spot
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int64) (*spot.Spot, error)); ok {
+		return returnFunc(ctx, guildID, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int64) *spot.Spot); ok {
+		r0 = returnFunc(ctx, guildID, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*spot.Spot)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, int64) error); ok {
+		r1 = returnFunc(ctx, guildID, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockSpotService_Get_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Get'
+type MockSpotService_Get_Call struct {
+	*mock.Call
+}
+
+// Get is a helper method to define mock.On call
+//   - ctx context.Context
+//   - guildID string
+//   - id int64
+func (_e *MockSpotService_Expecter) Get(ctx any, guildID any, id any) *MockSpotService_Get_Call {
+	return &MockSpotService_Get_Call{Call: _e.mock.On("Get", ctx, guildID, id)}
+}
+
+func (_c *MockSpotService_Get_Call) Run(run func(ctx context.Context, guildID string, id int64)) *MockSpotService_Get_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 int64
+		if args[2] != nil {
+			arg2 = args[2].(int64)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSpotService_Get_Call) Return(spot1 *spot.Spot, err error) *MockSpotService_Get_Call {
+	_c.Call.Return(spot1, err)
+	return _c
+}
+
+func (_c *MockSpotService_Get_Call) RunAndReturn(run func(ctx context.Context, guildID string, id int64) (*spot.Spot, error)) *MockSpotService_Get_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ImportDefaults provides a mock function for the type MockSpotService
 func (_mock *MockSpotService) ImportDefaults(ctx context.Context, guildID string) (int64, error) {
 	ret := _mock.Called(ctx, guildID)

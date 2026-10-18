@@ -77,7 +77,7 @@ func TestHandleList_ManagerSeesControls(t *testing.T) {
 		"Respawns", `id="spots-region"`, `id="spots-search"`,
 		"Dragon Lords", "New Spot", "02 Jan 2026",
 		`hx-post="/servers/g1/spots"`,
-		`hx-post="/servers/g1/spots/1/edit"`,
+		`hx-get="/servers/g1/spots/1/edit" hx-trigger="toggle once" hx-target="find [data-spot-editor]"`,
 		`hx-post="/servers/g1/spots/1/remove"`,
 		"Archive Dragon Lords? It has 12 reservations, so it is archived, not deleted",
 		"Its 2 upcoming reservations stay.",
@@ -85,12 +85,14 @@ func TestHandleList_ManagerSeesControls(t *testing.T) {
 		`class="letter-btn-danger`, `class="letter-btn-quiet`,
 		`href="/servers/g1/spots?tab=archived"`,
 		`<img src="https://img.test/dl.gif" alt="" loading="lazy" referrerpolicy="no-referrer" class="h-8 w-8 shrink-0 rounded bg-zone-950 object-contain p-0.5">`,
-		"Darama &amp; Krailos", "Other", `id="spot-new-region"`, `name="image_url"`, `id="spot-1-region"`,
+		"Darama &amp; Krailos", "Other", `id="spot-new-region"`, `name="image_url"`,
 		"/assets/alpine.js",
 	} {
 		assert.Contains(t, body, want)
 	}
 	assert.NotContains(t, body, "Import the default list")
+	assert.NotContains(t, body, `id="spot-1-region"`, "a closed editor loads its form on open")
+	assert.Equal(t, 1, strings.Count(body, `name="image_url"`), "only the add form carries the image field")
 }
 
 func TestHandleList_ViewerSeesNoControls(t *testing.T) {
@@ -232,6 +234,86 @@ func TestHandleList_PremiumRequired(t *testing.T) {
 	assert.Equal(t, http.StatusForbidden, rec.Code)
 }
 
+func TestHandleEditForm(t *testing.T) {
+	// given
+	h, m, cookie := signedIn(t, managerAccess())
+	m.Spots.EXPECT().Get(mock.Anything, guildID, int64(1)).Return(&activeList().Spots[0].Spot, nil)
+
+	// when
+	rec := webtest.Serve(h, htmx(webtest.Get("/servers/g1/spots/1/edit?tab=archived&q=dra", cookie)))
+
+	// then
+	require.Equal(t, http.StatusOK, rec.Code)
+	body := rec.Body.String()
+	for _, want := range []string{
+		`hx-post="/servers/g1/spots/1/edit"`, `hx-target="#spots-region"`,
+		`id="spot-1-name"`, `value="Dragon Lords"`,
+		`id="spot-1-region"`, `<input type="hidden" name="region" value="darama"`,
+		`id="spot-1-image"`, `value="https://img.test/dl.gif"`,
+		`<input type="hidden" name="tab" value="archived">`, `<input type="hidden" name="q" value="dra">`,
+	} {
+		assert.Contains(t, body, want)
+	}
+	assert.NotContains(t, body, "<html")
+	assert.NotContains(t, body, "<details")
+}
+
+func TestHandleEditForm_Refusals(t *testing.T) {
+	t.Run("unknown spot", func(t *testing.T) {
+		// given
+		h, m, cookie := signedIn(t, managerAccess())
+		m.Spots.EXPECT().Get(mock.Anything, guildID, int64(99)).Return(nil, spots.ErrNotFound)
+
+		// when
+		rec := webtest.Serve(h, htmx(webtest.Get("/servers/g1/spots/99/edit", cookie)))
+
+		// then
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+	})
+	t.Run("bad id", func(t *testing.T) {
+		// given
+		h, _, cookie := signedIn(t, managerAccess())
+
+		// when
+		rec := webtest.Serve(h, htmx(webtest.Get("/servers/g1/spots/abc/edit", cookie)))
+
+		// then
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+	t.Run("viewer", func(t *testing.T) {
+		// given
+		h, _, cookie := signedIn(t, viewerAccess())
+
+		// when
+		rec := webtest.Serve(h, htmx(webtest.Get("/servers/g1/spots/1/edit", cookie)))
+
+		// then
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+	})
+	t.Run("service", func(t *testing.T) {
+		// given
+		h, m, cookie := signedIn(t, managerAccess())
+		m.Spots.EXPECT().Get(mock.Anything, guildID, int64(1)).Return(nil, errors.New("db down"))
+
+		// when
+		rec := webtest.Serve(h, htmx(webtest.Get("/servers/g1/spots/1/edit", cookie)))
+
+		// then
+		assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	})
+	t.Run("without htmx", func(t *testing.T) {
+		// given
+		h, _, cookie := signedIn(t, managerAccess())
+
+		// when
+		rec := webtest.Serve(h, webtest.Get("/servers/g1/spots/1/edit?q=dra", cookie))
+
+		// then
+		assert.Equal(t, http.StatusSeeOther, rec.Code)
+		assert.Equal(t, "/servers/g1/spots?q=dra", rec.Header().Get("Location"))
+	})
+}
+
 func TestMutations_NeedManageTier(t *testing.T) {
 	for _, target := range []string{
 		"/servers/g1/spots", "/servers/g1/spots/import",
@@ -364,6 +446,8 @@ func TestHandleUpdate_RefusedFieldOpensTheEditor(t *testing.T) {
 	assert.Contains(t, body, `aria-describedby="spot-1-name-error"`)
 	assert.Contains(t, body, `<input type="hidden" name="region" value="edron"`)
 	assert.Equal(t, 1, strings.Count(body, " open>"), "only the refused row opens")
+	assert.Contains(t, body, `id="spot-1-region"`, "the refused editor renders its form inline")
+	assert.Contains(t, body, `hx-get="/servers/g1/spots/7/edit"`, "the other rows stay lazy")
 }
 
 func TestHandleUpdate_NotFound(t *testing.T) {

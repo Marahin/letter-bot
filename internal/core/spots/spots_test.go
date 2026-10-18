@@ -89,6 +89,30 @@ func TestService_List_Errors(t *testing.T) {
 	})
 }
 
+func TestService_Get(t *testing.T) {
+	// given
+	ctx := context.Background()
+	s, repo, _ := newService(t)
+	archivedAt := time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC)
+	repo.EXPECT().SelectGuildSpotByID(ctx, guildID, int64(1)).Return(&spot.Spot{ID: 1, Name: "Dragon Lords"}, nil)
+	repo.EXPECT().SelectGuildSpotByID(ctx, guildID, int64(2)).Return(&spot.Spot{ID: 2, ArchivedAt: &archivedAt}, nil)
+	repo.EXPECT().SelectGuildSpotByID(ctx, guildID, int64(3)).Return(nil, ports.ErrNotFound)
+	repo.EXPECT().SelectGuildSpotByID(ctx, guildID, int64(4)).Return(nil, errors.New("db down"))
+
+	// when
+	active, err := s.Get(ctx, guildID, 1)
+	_, archivedErr := s.Get(ctx, guildID, 2)
+	_, missingErr := s.Get(ctx, guildID, 3)
+	_, failErr := s.Get(ctx, guildID, 4)
+
+	// then
+	require.NoError(t, err)
+	assert.Equal(t, "Dragon Lords", active.Name)
+	assert.ErrorIs(t, archivedErr, ErrNotFound)
+	assert.ErrorIs(t, missingErr, ErrNotFound)
+	assert.EqualError(t, failErr, "db down")
+}
+
 func TestService_Create_TrimsAndNotifies(t *testing.T) {
 	// given
 	ctx := context.Background()

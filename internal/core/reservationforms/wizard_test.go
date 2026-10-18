@@ -219,6 +219,22 @@ func TestTimePicker_Booking(t *testing.T) {
 	assert.Equal(t, "Knight", picker.Booked[1].Author)
 	assert.Len(t, picker.Starts, SelectOptions)
 	assert.True(t, picker.Lengths[1].Selected)
+	assert.False(t, picker.TakenNow, "the hunt before ended at now")
+}
+
+func TestTimePicker_TakenNow(t *testing.T) {
+	// given
+	f := newFixture(t)
+	f.spots.On("SelectGuildSpotByID", ctx, guildID, int64(7)).Return(library(), nil)
+	f.reservations.On("Search", ctx, searching(7, now, at(6, 6, 30)), 1).
+		Return(searchPage(bookedBy(1, "Druid", at(5, 17, 30), at(5, 19, 0))), nil)
+
+	// when
+	picker, err := f.s.TimePicker(ctx, guildID, member(), reservation.TimeChoice{SpotID: 7, Window: 0})
+
+	// then
+	require.NoError(t, err)
+	assert.True(t, picker.TakenNow)
 }
 
 func TestTimePicker_WindowOfTheStart(t *testing.T) {
@@ -226,6 +242,7 @@ func TestTimePicker_WindowOfTheStart(t *testing.T) {
 	f := newFixture(t)
 	f.spots.On("SelectGuildSpotByID", ctx, guildID, int64(7)).Return(library(), nil)
 	f.reservations.On("Search", ctx, searching(7, at(6, 6, 30), at(6, 18, 30)), 1).Return(searchPage(), nil)
+	f.reservations.On("Search", ctx, searching(7, now, now), 1).Return(searchPage(bookedBy(1, "Druid", at(5, 17, 30), at(5, 19, 0))), nil)
 
 	// when
 	picker, err := f.s.TimePicker(ctx, guildID, member(), reservation.TimeChoice{SpotID: 7, Window: reservation.AutoWindow, StartAt: at(6, 10, 0)})
@@ -234,6 +251,7 @@ func TestTimePicker_WindowOfTheStart(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 1, picker.Choice.Window)
 	assert.Len(t, picker.Starts, WindowSlots)
+	assert.True(t, picker.TakenNow, "a later window asks for now")
 }
 
 func TestTimePicker_ClampsTheWindow(t *testing.T) {

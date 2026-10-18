@@ -22,6 +22,7 @@ func Register(r *web.Router, d *web.Deps) {
 	r.Get("/servers/{id}/spots", view(h.HandleList))
 	r.Post("/servers/{id}/spots", manage(h.HandleCreate))
 	r.Post("/servers/{id}/spots/import", manage(h.HandleImport))
+	r.Get("/servers/{id}/spots/{spot}/edit", manage(h.HandleEditForm))
 	r.Post("/servers/{id}/spots/{spot}/edit", manage(h.HandleUpdate))
 	r.Post("/servers/{id}/spots/{spot}/remove", manage(h.HandleRemove))
 	r.Post("/servers/{id}/spots/{spot}/restore", manage(h.HandleRestore))

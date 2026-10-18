@@ -293,53 +293,70 @@ templ row(v pageView, s spot.Listed) {
 }
 
 // editEditor is the name cell of a manager: the name opens an inline form for
-// the name, region and image. A refused field renders it open, with the message
-// under the form.
+// the name, region and image. A closed editor loads its form on the first open,
+// so the list does not carry a region picker per row. A refused field renders it
+// open, with the form and the message under it.
 templ editEditor(v pageView, s spot.Listed) {
+	if v.editOpen(s.ID) {
+		<details class="group" open>
+			@editSummary(s)
+			@editForm(v, s)
+		</details>
+	} else {
+		<details class="group" hx-get={ editFormURL(v, s.ID) } hx-trigger="toggle once" hx-target="find [data-spot-editor]" hx-swap="outerHTML">
+			@editSummary(s)
+			<div data-spot-editor class="mt-2 min-h-11 sm:min-h-9"></div>
+		</details>
+	}
+}
+
+templ editSummary(s spot.Listed) {
+	<summary class="flex cursor-pointer list-none items-center gap-2 font-medium text-zone-100 transition hover:text-signal-bright [&::-webkit-details-marker]:hidden">
+		{ s.Name }
+		<svg class="h-3.5 w-3.5 shrink-0 text-zone-500 group-open:text-signal" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M13.6 2.9a2 2 0 0 1 2.8 0l.7.7a2 2 0 0 1 0 2.8l-8.9 8.9-3.9 1 1-3.9 8.3-8.5z"></path></svg>
+		<span class="sr-only">{ i18n.T(ctx, "spots.edit.open") }</span>
+	</summary>
+}
+
+// editForm is the body of an open editor. GET .../edit answers it alone.
+templ editForm(v pageView, s spot.Listed) {
 	{{ f := v.editFields(s) }}
 	{{ errs := v.editErrors(s.ID) }}
 	{{ idPrefix := spotDOMID(s.ID) }}
-	<details class="group" open?={ v.editOpen(s.ID) }>
-		<summary class="flex cursor-pointer list-none items-center gap-2 font-medium text-zone-100 transition hover:text-signal-bright [&::-webkit-details-marker]:hidden">
-			{ s.Name }
-			<svg class="h-3.5 w-3.5 shrink-0 text-zone-500 group-open:text-signal" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M13.6 2.9a2 2 0 0 1 2.8 0l.7.7a2 2 0 0 1 0 2.8l-8.9 8.9-3.9 1 1-3.9 8.3-8.5z"></path></svg>
-			<span class="sr-only">{ i18n.T(ctx, "spots.edit.open") }</span>
-		</summary>
-		<form
-			method="post"
-			action={ templ.SafeURL(spotPath(v.GuildID, s.ID, "edit")) }
-			hx-post={ spotPath(v.GuildID, s.ID, "edit") }
-			hx-target={ "#" + regionID }
-			hx-swap="outerHTML"
-			class="mt-2 flex flex-wrap items-end gap-2"
-		>
-			@keepFilter(v)
-			<div class="flex min-w-[12rem] flex-1 flex-col gap-1.5">
-				<label for={ idPrefix + "-name" } class="sr-only">{ i18n.T(ctx, "spots.edit.label", s.Name) }</label>
-				<input
-					id={ idPrefix + "-name" }
-					name="name"
-					required
-					maxlength={ strconv.Itoa(spots.MaxNameLength) }
-					value={ f.Name }
-					autocomplete="off"
-					if errs.Name != "" {
-						aria-invalid="true"
-						aria-describedby={ idPrefix + "-name-error" }
-						autofocus
-					}
-					class={ "min-h-11 rounded-md border bg-zone-850 px-3 py-1.5 text-sm text-zone-100 focus:outline-none focus:ring-2 sm:min-h-9",
-						templ.KV("border-rose-500 focus:border-rose-500 focus:ring-rose-500/30", errs.Name != ""),
-						templ.KV("border-zone-700 focus:border-signal focus:ring-signal/30", errs.Name == "") }
-				/>
-			</div>
-			@regionField(idPrefix, f.Region)
-			@imageField(idPrefix, f.ImageURL, errs.Image != "")
-			<button class="letter-btn-quiet min-h-11 sm:min-h-9">{ i18n.T(ctx, "spots.edit.save") }</button>
-			<p id={ idPrefix + "-image-hint" } class="w-full text-xs text-zone-500">{ i18n.T(ctx, "spots.form.image_hint") }</p>
-			@fieldErrorLines(idPrefix, errs)
-		</form>
-	</details>
+	<form
+		method="post"
+		action={ templ.SafeURL(spotPath(v.GuildID, s.ID, "edit")) }
+		hx-post={ spotPath(v.GuildID, s.ID, "edit") }
+		hx-target={ "#" + regionID }
+		hx-swap="outerHTML"
+		class="mt-2 flex flex-wrap items-end gap-2"
+	>
+		@keepFilter(v)
+		<div class="flex min-w-[12rem] flex-1 flex-col gap-1.5">
+			<label for={ idPrefix + "-name" } class="sr-only">{ i18n.T(ctx, "spots.edit.label", s.Name) }</label>
+			<input
+				id={ idPrefix + "-name" }
+				name="name"
+				required
+				maxlength={ strconv.Itoa(spots.MaxNameLength) }
+				value={ f.Name }
+				autocomplete="off"
+				if errs.Name != "" {
+					aria-invalid="true"
+					aria-describedby={ idPrefix + "-name-error" }
+					autofocus
+				}
+				class={ "min-h-11 rounded-md border bg-zone-850 px-3 py-1.5 text-sm text-zone-100 focus:outline-none focus:ring-2 sm:min-h-9",
+					templ.KV("border-rose-500 focus:border-rose-500 focus:ring-rose-500/30", errs.Name != ""),
+					templ.KV("border-zone-700 focus:border-signal focus:ring-signal/30", errs.Name == "") }
+			/>
+		</div>
+		@regionField(idPrefix, f.Region)
+		@imageField(idPrefix, f.ImageURL, errs.Image != "")
+		<button class="letter-btn-quiet min-h-11 sm:min-h-9">{ i18n.T(ctx, "spots.edit.save") }</button>
+		<p id={ idPrefix + "-image-hint" } class="w-full text-xs text-zone-500">{ i18n.T(ctx, "spots.form.image_hint") }</p>
+		@fieldErrorLines(idPrefix, errs)
+	</form>
 }
 
 // actionButton is one row action as its own form, so it works without htmx. The
