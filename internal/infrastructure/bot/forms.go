@@ -10,6 +10,8 @@ import (
 
 	"spot-assistant/internal/core/booking"
 	"spot-assistant/internal/core/dto/guild"
+	"spot-assistant/internal/core/dto/guildconfig"
+	"spot-assistant/internal/core/dto/member"
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/permission"
 	"spot-assistant/internal/core/reservationforms"
@@ -42,15 +44,15 @@ func (b *Bot) formContext(ctx context.Context, i *discordgo.InteractionCreate) (
 		return nil, b.formatter.FormatGenericError(errors.New("could not load the server, please try again"))
 	}
 	gld := MapGuild(g)
-	m := MapMember(i.Member)
+	return &formRequest{guild: gld, actor: memberActor(cfg, gld, MapMember(i.Member))}, ""
+}
+
+func memberActor(cfg *guildconfig.Config, g *guild.Guild, m *member.Member) reservation.Actor {
 	name := m.Nick
 	if name == "" {
 		name = m.Username
 	}
-	return &formRequest{
-		guild: gld,
-		actor: reservation.Actor{UserID: m.ID, Name: name, Caps: permission.Resolve(*cfg, memberSubject(gld, m))},
-	}, ""
+	return reservation.Actor{UserID: m.ID, Name: name, Caps: permission.Resolve(*cfg, memberSubject(g, m))}
 }
 
 // formGuild prefers the gateway cache: a REST call before a modal opens eats into
@@ -112,6 +114,12 @@ func (b *Bot) runFormAction(i *discordgo.InteractionCreate, customID string, sel
 		b.deferred(ctx, i, openKind(i), func(req *formRequest) formView {
 			return b.respawnStep(ctx, req, formAction{}, "")
 		})
+	case actionBookRegion:
+		b.deferred(ctx, i, openKind(i), func(req *formRequest) formView {
+			return b.respawnStep(ctx, req, formAction{Region: action.Region}, "")
+		})
+	case actionQueueBook, actionQueueCancel:
+		b.queueOfferClick(ctx, i, action)
 	default:
 		b.deferred(ctx, i, discordgo.InteractionResponseDeferredMessageUpdate, func(req *formRequest) formView {
 			return b.updateInPlace(ctx, req, action, selected, query)
@@ -177,7 +185,7 @@ func (b *Bot) updateInPlace(ctx context.Context, req *formRequest, action formAc
 		return b.bookDraft(ctx, req, draft)
 	case actionEdit:
 		return b.timeStep(ctx, req, formAction{ReservationID: action.ReservationID, Window: reservation.AutoWindow})
-	case actionRespawnPage, actionEditRespawnPage:
+	case actionRespawnPage, actionEditRespawnPage, actionRegionPage:
 		return b.respawnStep(ctx, req, action, "")
 	case actionRespawnPick, actionEditRespawnPick:
 		spotID, ok := selectedID(selected)
@@ -212,6 +220,10 @@ func (b *Bot) updateInPlace(ctx context.Context, req *formRequest, action formAc
 		outcome, err := b.forms.EditChoice(ctx, guildID, req.actor, action.choice())
 		b.logFormError("edit", err)
 		return b.editOutcome(ctx, req, outcome, err, retryState(action))
+	case actionQueueJoin:
+		return b.joinQueue(ctx, req, action.SpotID, action.Length)
+	case actionQueueLeave:
+		return b.queueLeaveView(ctx, req.actor.UserID, action.QueueID)
 	default:
 		b.log.Errorf("no handler for form action %d", action.Kind)
 		return formView{content: b.formatter.FormatFormOutdated()}
@@ -221,7 +233,7 @@ func (b *Bot) updateInPlace(ctx context.Context, req *formRequest, action formAc
 // isBookingStep tells the wizard actions of a booking, which need the reserve right.
 func isBookingStep(kind formActionKind) bool {
 	_, ok := editTwin[kind]
-	return ok
+	return ok || kind == actionRegionPage
 }
 
 func retryState(action formAction) formAction {
@@ -233,7 +245,7 @@ func (b *Bot) respawnStep(ctx context.Context, req *formRequest, state formActio
 	if !state.editing() && !req.actor.Caps.Reserve {
 		return formView{content: b.formatter.FormatFormError(booking.ErrReserveNotAllowed)}
 	}
-	picker, err := b.forms.RespawnPicker(ctx, req.guild.ID, req.actor, state.Page)
+	picker, err := b.forms.RespawnPicker(ctx, req.guild.ID, req.actor, state.Region, state.Page)
 	if err != nil {
 		b.log.Errorf("could not list respawns: %s", err)
 		return formView{content: b.formatter.FormatGenericError(err)}

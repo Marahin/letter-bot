@@ -41,7 +41,7 @@ func newReservationThenSpotRows() *pgxmock.Rows {
 		// web_reservation
 		"id", "author", "created_at", "start_at", "end_at", "spot_id", "guild_id", "author_discord_id",
 		// web_spot
-		"id", "name", "created_at", "guild_id", "archived_at",
+		"id", "name", "created_at", "guild_id", "archived_at", "region", "image_url",
 	})
 }
 
@@ -53,7 +53,7 @@ func TestSearchReservationsWithSpot_EmptyFilterSearchesAll(t *testing.T) {
 		WithArgs("guild-1", pgtype.Int8{}, pgtype.Text{}, pgtype.Text{}, pgtype.Timestamptz{}, pgtype.Timestamptz{}, "all", int32(10), int32(20)).
 		WillReturnRows(newReservationThenSpotRows().
 			AddRow(int64(5), "Nyx", now, now, now.Add(time.Hour), int64(1), "guild-1", "111",
-				int64(1), "Dragon Lords", now, "guild-1", nil))
+				int64(1), "Dragon Lords", now, "guild-1", nil, nil, nil))
 	repo := NewReservationRepository(mock)
 
 	// when
@@ -146,7 +146,7 @@ func TestSelectGuildReservationWithSpot(t *testing.T) {
 		WithArgs(int64(5), "guild-1").
 		WillReturnRows(newReservationThenSpotRows().
 			AddRow(int64(5), "Nyx", now, now, now.Add(time.Hour), int64(1), "guild-1", "111",
-				int64(1), "Dragon Lords", now, "guild-1", nil))
+				int64(1), "Dragon Lords", now, "guild-1", nil, nil, nil))
 	mock.ExpectQuery("WHERE web_reservation.id = \\$1").
 		WithArgs(int64(6), "guild-1").
 		WillReturnError(pgx.ErrNoRows)

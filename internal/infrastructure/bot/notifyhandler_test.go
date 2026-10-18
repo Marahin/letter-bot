@@ -54,3 +54,29 @@ func TestNotifyHandler_OnOverbooked(t *testing.T) {
 
 	// then: expectations are asserted on cleanup
 }
+
+func TestNotifyHandler_OnBookedAnnouncesInTheBackground(t *testing.T) {
+	// given
+	guilds := mocks.NewMockGuildActions(t)
+	h := NewNotifyHandler(guilds, mocks.NewMockCommunicationService(t))
+	event := book.Booked{GuildID: "g1", SpotID: 4, Source: book.SourceWeb}
+	guilds.On("BookingMadeAsync", event).Once()
+
+	// when
+	h.OnBooked(context.Background(), event)
+
+	// then: expectations are asserted on cleanup
+}
+
+func TestNotifyHandler_OnListenerConnectedRefreshesEverySummary(t *testing.T) {
+	// given
+	guilds := mocks.NewMockGuildActions(t)
+	h := NewNotifyHandler(guilds, mocks.NewMockCommunicationService(t))
+	ctx := context.Background()
+	guilds.On("RefreshAllGuildLetters", ctx).Once()
+
+	// when
+	h.OnListenerConnected(ctx)
+
+	// then: expectations are asserted on cleanup
+}

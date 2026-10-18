@@ -34,6 +34,12 @@ templ Combobox(p ComboboxProps) {
 			@keydown.escape="if (open) { $event.preventDefault(); $event.stopPropagation(); open = false }"
 			placeholder={ i18n.T(ctx, "combobox.filter") }
 			aria-label={ p.Label }
+			if p.Invalid {
+				aria-invalid="true"
+			}
+			if p.DescribedBy != "" {
+				aria-describedby={ p.DescribedBy }
+			}
 			autocomplete="off"
 			spellcheck="false"
 		/>

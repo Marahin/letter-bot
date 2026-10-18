@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"spot-assistant/internal/core/dto/reservation"
+	"spot-assistant/internal/core/regions"
 )
 
 // The version prefix lets a later release refuse the buttons of older summaries.
@@ -58,6 +59,14 @@ const (
 	actionEditLengthPick
 	actionEditWindow
 	actionEditSubmit
+	// Region channels.
+	actionBookRegion
+	actionRegionPage
+	// The queue.
+	actionQueueJoin
+	actionQueueBook
+	actionQueueCancel
+	actionQueueLeave
 )
 
 // editTwin is the edit variant of each wizard action.
@@ -95,6 +104,10 @@ const (
 	fieldLength
 	// fieldIndex tells apart the selects of one message.
 	fieldIndex
+	// fieldRegion is a regions key.
+	fieldRegion
+	// fieldQueue is a queue entry id.
+	fieldQueue
 )
 
 type actionLayout struct {
@@ -126,6 +139,12 @@ var actionLayouts = map[formActionKind]actionLayout{
 	actionEditLengthPick:   {"el", []idField{fieldReservation, fieldSpot, fieldWindow, fieldChoice}},
 	actionEditWindow:       {"ew", []idField{fieldReservation, fieldSpot, fieldWindow, fieldChoice, fieldLength}},
 	actionEditSubmit:       {"eb", []idField{fieldReservation, fieldSpot, fieldChoice, fieldLength}},
+	actionBookRegion:       {"bookr", []idField{fieldRegion}},
+	actionRegionPage:       {"rrp", []idField{fieldRegion, fieldPage}},
+	actionQueueJoin:        {"qj", []idField{fieldSpot, fieldLength}},
+	actionQueueBook:        {"qb", []idField{fieldQueue, fieldStart}},
+	actionQueueCancel:      {"qc", []idField{fieldQueue, fieldStart}},
+	actionQueueLeave:       {"ql", []idField{fieldQueue}},
 }
 
 var actionsByName = func() map[string]formActionKind {
@@ -150,6 +169,10 @@ type formAction struct {
 	Window  int
 	Page    int
 	Index   int
+	// Region limits step 1 of a booking to one region.
+	Region string
+	// QueueID is a queue entry; StartAt is then the time of its offer.
+	QueueID int64
 }
 
 func (a formAction) editing() bool {
@@ -217,6 +240,10 @@ func (a formAction) field(field idField) string {
 		return strconv.Itoa(int(a.Length / time.Minute))
 	case fieldIndex:
 		return strconv.Itoa(a.Index)
+	case fieldRegion:
+		return a.Region
+	case fieldQueue:
+		return strconv.FormatInt(a.QueueID, 10)
 	}
 	return ""
 }
@@ -287,6 +314,10 @@ func setField(a *formAction, field idField, value string) error {
 		a.Length = time.Duration(minutes) * time.Minute
 	case fieldIndex:
 		a.Index, err = parseSmall(value, maxIndex)
+	case fieldRegion:
+		a.Region, err = parseRegion(value)
+	case fieldQueue:
+		a.QueueID, err = parsePositiveID(value)
 	}
 	return err
 }
@@ -300,6 +331,14 @@ func parseChoice(value string) (bool, time.Time, error) {
 	}
 	startAt, err := parseUnix(value)
 	return false, startAt, err
+}
+
+// parseRegion accepts the keys of a region channel: the catalog and Other.
+func parseRegion(value string) (string, error) {
+	if _, ok := regions.Lookup(value); !ok {
+		return "", fmt.Errorf("bad region %q", value)
+	}
+	return value, nil
 }
 
 func parsePositiveID(value string) (int64, error) {

@@ -72,3 +72,51 @@ func TestDecodeOverbookedPayload_Errors(t *testing.T) {
 		})
 	}
 }
+
+func TestBookedPayload_RoundTrip(t *testing.T) {
+	// given
+	start := time.Date(2026, 10, 19, 18, 30, 0, 0, time.UTC)
+	event := book.Booked{
+		GuildID:         "g1",
+		SpotID:          4,
+		SpotName:        "not sent",
+		StartAt:         start,
+		EndAt:           start.Add(2 * time.Hour),
+		Author:          "Knight",
+		AuthorDiscordID: "u1",
+		ActorID:         "m1",
+		Overbooked:      2,
+		Source:          book.SourceDiscord,
+	}
+
+	// when
+	data, err := NewBookedPayload(event).Encode()
+	require.NoError(t, err)
+	decoded, err := DecodeBookedPayload(data)
+	require.NoError(t, err)
+
+	// then
+	assert.JSONEq(t, `{"guild_id":"g1","spot_id":4,"start_at":"2026-10-19T18:30:00Z","end_at":"2026-10-19T20:30:00Z",
+		"author":"Knight","author_discord_id":"u1","actor_id":"m1","overbooked":2}`, string(data))
+	expected := event
+	expected.SpotName, expected.Source = "", book.SourceWeb
+	assert.Equal(t, expected, decoded.Event())
+}
+
+func TestDecodeBookedPayload_Errors(t *testing.T) {
+	tests := map[string]string{
+		"not json":      "{",
+		"missing guild": `{"spot_id":1}`,
+		"missing spot":  `{"guild_id":"g1"}`,
+	}
+
+	for name, data := range tests {
+		t.Run(name, func(t *testing.T) {
+			// given / when
+			_, err := DecodeBookedPayload([]byte(data))
+
+			// then
+			assert.Error(t, err)
+		})
+	}
+}

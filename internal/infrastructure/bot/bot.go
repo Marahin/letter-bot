@@ -1,8 +1,11 @@
 package bot
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"io"
+	"slices"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -96,6 +99,29 @@ type InteractionGateway interface {
 	Guild(guildID string, options ...discordgo.RequestOption) (*discordgo.Guild, error)
 	// StateGuild reads the guild from the gateway cache of its shard.
 	StateGuild(guildID string) (*discordgo.Guild, error)
+	// StateChannels returns a copy of the guild's channels from the gateway cache of its shard.
+	StateChannels(guildID string) ([]*discordgo.Channel, error)
+	// GuildMember asks the REST API, e.g. for the member behind a click in a DM.
+	GuildMember(guildID, userID string, options ...discordgo.RequestOption) (*discordgo.Member, error)
+}
+
+// SummaryChannelWriter is the part of the Discord REST API that maintains the
+// summaries and posts the announcements. *discordgo.Session implements it. The bot
+// uses one session for all of it, so discordgo tracks every rate limit bucket in
+// one place.
+type SummaryChannelWriter interface {
+	GuildChannels(guildID string, options ...discordgo.RequestOption) ([]*discordgo.Channel, error)
+	GuildChannelCreateComplex(guildID string, data discordgo.GuildChannelCreateData, options ...discordgo.RequestOption) (*discordgo.Channel, error)
+	ChannelDelete(channelID string, options ...discordgo.RequestOption) (*discordgo.Channel, error)
+	ChannelMessageEditComplex(m *discordgo.MessageEdit, options ...discordgo.RequestOption) (*discordgo.Message, error)
+	ChannelMessages(channelID string, limit int, beforeID, afterID, aroundID string, options ...discordgo.RequestOption) ([]*discordgo.Message, error)
+	ChannelMessagesBulkDelete(channelID string, messages []string, options ...discordgo.RequestOption) error
+	ChannelMessageDelete(channelID, messageID string, options ...discordgo.RequestOption) error
+	ChannelMessageSend(channelID string, content string, options ...discordgo.RequestOption) (*discordgo.Message, error)
+	ChannelMessageSendComplex(channelID string, data *discordgo.MessageSend, options ...discordgo.RequestOption) (*discordgo.Message, error)
+	ChannelMessageSendEmbed(channelID string, embed *discordgo.MessageEmbed, options ...discordgo.RequestOption) (*discordgo.Message, error)
+	ChannelFileSend(channelID, name string, r io.Reader, options ...discordgo.RequestOption) (*discordgo.Message, error)
+	UserChannelCreate(recipientID string, options ...discordgo.RequestOption) (*discordgo.Channel, error)
 }
 
 type shardGateway struct {
@@ -105,6 +131,29 @@ type shardGateway struct {
 }
 
 func (g shardGateway) StateGuild(guildID string) (*discordgo.Guild, error) {
+	state, err := g.state(guildID)
+	if err != nil {
+		return nil, err
+	}
+	return state.Guild(guildID)
+}
+
+func (g shardGateway) StateChannels(guildID string) ([]*discordgo.Channel, error) {
+	state, err := g.state(guildID)
+	if err != nil {
+		return nil, err
+	}
+	gld, err := state.Guild(guildID)
+	if err != nil {
+		return nil, err
+	}
+	// State.Guild returns the cached guild itself, which the gateway events change.
+	state.RLock()
+	defer state.RUnlock()
+	return slices.Clone(gld.Channels), nil
+}
+
+func (g shardGateway) state(guildID string) (*discordgo.State, error) {
 	id, err := strconv.ParseInt(guildID, 10, 64)
 	if err != nil {
 		return nil, fmt.Errorf("parse guild id: %w", err)
@@ -113,46 +162,73 @@ func (g shardGateway) StateGuild(guildID string) (*discordgo.Guild, error) {
 	if session == nil || session.State == nil {
 		return nil, discordgo.ErrStateNotFound
 	}
-	return session.State.Guild(guildID)
+	return session.State, nil
 }
 
 type Bot struct {
 	summarySrv         ports.SummaryService
 	reservationRepo    ports.ReservationRepository
+	spots              ports.SpotRepository
 	onlineCheckService ports.OnlineCheckService
 	guildConfigs       ports.GuildConfigRepository
+	layouts            ports.SummaryLayoutRepository
+	passHooks          []SummaryPassHook
+	now                func() time.Time
 	syncer             *GuildSyncer
-	summaryRefresh     *debouncer
+	summaries          *summaryWorker
+	legacyHashes       cmap.ConcurrentMap[string, string]
+	pacer              *pacer
+	queue              ports.SpotQueueService
 	eventHandler       ports.APIPort
 	forms              ports.ReservationFormService
 	metrics            ports.MetricsPort
 	mgr                *shards.Manager
 	gateway            InteractionGateway
+	writer             SummaryChannelWriter
 	webBaseURL         string
 	log                *zap.SugaredLogger
 	quit               chan struct{}
 	formatter          *formatter.DiscordFormatter
 	channelLocks       cmap.ConcurrentMap[string, *sync.RWMutex]
+	tracked            trackedMessages
+	ticking            sync.Once
 	started            atomic.Bool
 	stopped            atomic.Bool
 	shutdown           sync.Once
 	shutdownErr        error
+
+	// lifetime ends at Shutdown, which waits for the background work.
+	lifetime     context.Context
+	endLifetime  context.CancelFunc
+	backgroundMu sync.Mutex
+	background   sync.WaitGroup
 }
 
 // NewManager builds the bot over mgr. webBaseURL may be empty.
-func NewManager(mgr *shards.Manager, webBaseURL string, summarySrv ports.SummaryService, reservationRepo ports.ReservationRepository, checkOnlineSrv ports.OnlineCheckService) *Bot {
+func NewManager(mgr *shards.Manager, webBaseURL string, summarySrv ports.SummaryService, reservationRepo ports.ReservationRepository,
+	checkOnlineSrv ports.OnlineCheckService, layouts ports.SummaryLayoutRepository,
+) *Bot {
 	mgr.Intent = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages | discordgo.IntentsGuildVoiceStates
+	lifetime, endLifetime := context.WithCancel(context.Background())
 	bot := &Bot{
 		mgr:                mgr,
 		gateway:            shardGateway{Session: mgr.Gateway, mgr: mgr},
+		writer:             mgr.Gateway,
 		webBaseURL:         webBaseURL,
 		quit:               make(chan struct{}),
 		channelLocks:       cmap.New[*sync.RWMutex](),
+		legacyHashes:       cmap.New[string](),
+		pacer:              newPacer(),
+		now:                time.Now,
 		summarySrv:         summarySrv,
 		reservationRepo:    reservationRepo,
 		onlineCheckService: checkOnlineSrv,
-		summaryRefresh:     newDebouncer(summaryRefreshDelay),
+		layouts:            layouts,
+		lifetime:           lifetime,
+		endLifetime:        endLifetime,
+		log:                zap.NewNop().Sugar(),
 	}
+	bot.summaries = newSummaryWorker(bot.reconcileSummaries, summaryRefreshDelay)
 
 	bot.mgr.AddHandler(bot.GuildCreate)
 	bot.mgr.AddHandler(bot.GuildUpdate)
@@ -160,6 +236,8 @@ func NewManager(mgr *shards.Manager, webBaseURL string, summarySrv ports.Summary
 	bot.mgr.AddHandler(bot.ChannelCreate)
 	bot.mgr.AddHandler(bot.ChannelUpdate)
 	bot.mgr.AddHandler(bot.ChannelDelete)
+	bot.mgr.AddHandler(bot.MessageDelete)
+	bot.mgr.AddHandler(bot.MessageDeleteBulk)
 	bot.mgr.AddHandler(bot.GuildRoleCreate)
 	bot.mgr.AddHandler(bot.GuildRoleUpdate)
 	bot.mgr.AddHandler(bot.GuildRoleDelete)
@@ -202,8 +280,30 @@ func (b *Bot) WithReservationForms(forms ports.ReservationFormService) *Bot {
 	return b
 }
 
+// WithSpots sets the spot store, for the region summaries, the booking
+// announcements and the queue.
+func (b *Bot) WithSpots(spots ports.SpotRepository) *Bot {
+	b.spots = spots
+	return b
+}
+
+// WithSummaryPassHook adds a step to the start of each summary pass.
+func (b *Bot) WithSummaryPassHook(h SummaryPassHook) *Bot {
+	b.passHooks = append(b.passHooks, h)
+	return b
+}
+
+// WithSpotQueue turns on the respawn queue: the /queue commands, the Queue
+// button, and the offers, which each summary pass sends.
+func (b *Bot) WithSpotQueue(q ports.SpotQueueService) *Bot {
+	b.queue = q
+	b.passHooks = append(b.passHooks, b.sendQueueOffers)
+	return b
+}
+
 func (b *Bot) WithLogger(log *zap.SugaredLogger) *Bot {
 	b.log = log.With("layer", "infrastructure", "name", "bot")
+	b.summaries.log = log.With("layer", "infrastructure", "name", "summaryWorker")
 	if b.syncer != nil {
 		b.syncer.WithLogger(log)
 	}
@@ -222,14 +322,40 @@ func (b *Bot) Start() error {
 	return nil
 }
 
-// Shutdown stops the ticker and closes the gateway connections. Only the first call has an effect.
+// Shutdown stops the ticker, ends the background work and waits for it, then
+// closes the gateway connections. Only the first call has an effect.
 func (b *Bot) Shutdown() error {
 	b.shutdown.Do(func() {
 		close(b.quit)
+		b.backgroundMu.Lock()
+		b.endLifetime()
+		b.backgroundMu.Unlock()
+		b.background.Wait()
 		b.shutdownErr = b.mgr.Shutdown()
 		b.stopped.Store(true)
 	})
 	return b.shutdownErr
+}
+
+// goBackground runs f until it returns or Shutdown ends the bot's lifetime.
+// After Shutdown it does nothing.
+func (b *Bot) goBackground(f func(ctx context.Context)) {
+	b.backgroundMu.Lock()
+	defer b.backgroundMu.Unlock()
+	// The check under the lock keeps Add from racing the Wait in Shutdown.
+	if b.lifetime.Err() != nil {
+		return
+	}
+	b.background.Add(1)
+	go func() {
+		defer b.background.Done()
+		f(b.lifetime)
+	}()
+}
+
+// RunSummaryWorker updates the summaries until ctx ends. It is the only writer of the summaries.
+func (b *Bot) RunSummaryWorker(ctx context.Context) {
+	b.summaries.Run(ctx)
 }
 
 // IsRunning indicates whether the bot started successfully and hasn't been stopped yet.

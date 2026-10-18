@@ -15,6 +15,8 @@ import (
 	"spot-assistant/internal/core/dto/guildconfig"
 	"spot-assistant/internal/core/dto/guildsworld"
 	"spot-assistant/internal/core/dto/role"
+	"spot-assistant/internal/core/dto/spot"
+	"spot-assistant/internal/core/dto/summarylayout"
 	"spot-assistant/internal/ports"
 )
 
@@ -26,6 +28,8 @@ type fixture struct {
 	channels *mocks.MockGuildChannelRepository
 	roles    *mocks.MockGuildRoleRepository
 	worlds   *mocks.MockWorldNameRepository
+	spots    *mocks.MockSpotRepository
+	layouts  *mocks.MockSummaryLayoutRepository
 	notifier *mocks.MockBotNotifier
 }
 
@@ -35,9 +39,11 @@ func newFixture(t *testing.T) fixture {
 		channels: mocks.NewMockGuildChannelRepository(t),
 		roles:    mocks.NewMockGuildRoleRepository(t),
 		worlds:   mocks.NewMockWorldNameRepository(t),
+		spots:    mocks.NewMockSpotRepository(t),
+		layouts:  mocks.NewMockSummaryLayoutRepository(t),
 		notifier: mocks.NewMockBotNotifier(t),
 	}
-	f.svc = New(f.configs, f.channels, f.roles, f.worlds, f.notifier, nil)
+	f.svc = New(f.configs, f.channels, f.roles, f.worlds, f.spots, f.layouts, f.notifier, nil)
 	return f
 }
 
@@ -150,6 +156,104 @@ func TestSetChannels_StoresAndSignals(t *testing.T) {
 
 	// then
 	assert.NoError(t, err)
+}
+
+func TestSetRegionSummaries_StoresAndSignals(t *testing.T) {
+	// given
+	f := newFixture(t)
+	f.configs.EXPECT().SetRegionSummaries(mock.Anything, guildID, false).Return(nil)
+	f.notifier.EXPECT().SummaryChanged(mock.Anything, guildID).Return(errors.New("notify failed"))
+
+	// when
+	err := f.svc.SetRegionSummaries(context.Background(), guildID, false)
+
+	// then
+	assert.NoError(t, err)
+}
+
+func TestSetRegionSummaries_StoreError(t *testing.T) {
+	// given
+	f := newFixture(t)
+	f.configs.EXPECT().SetRegionSummaries(mock.Anything, guildID, true).Return(errors.New("db down"))
+
+	// when
+	err := f.svc.SetRegionSummaries(context.Background(), guildID, true)
+
+	// then
+	assert.ErrorContains(t, err, "db down")
+}
+
+func TestRegionSummaryStatus(t *testing.T) {
+	now := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
+	later, earlier := now.Add(time.Hour), now.Add(-time.Minute)
+	placed := []*spot.Spot{{Name: "Hero Cave"}, {Name: "Dragon Lords", Region: "darama"}}
+	unplaced := []*spot.Spot{{Name: "Hero Cave"}, {Name: "Old", Region: "gone"}}
+	cases := map[string]struct {
+		layout summarylayout.Layout
+		spots  []*spot.Spot
+		want   summarylayout.Status
+	}{
+		"blocked":               {layout: summarylayout.Layout{BlockedUntil: &later}, want: summarylayout.StatusBlocked},
+		"no respawn has region": {layout: summarylayout.Layout{}, spots: unplaced, want: summarylayout.StatusUnused},
+		"in use":                {layout: summarylayout.Layout{BlockedUntil: &earlier}, spots: placed, want: summarylayout.StatusInUse},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			// given
+			f := newFixture(t)
+			f.svc.now = func() time.Time { return now }
+			f.layouts.EXPECT().GetLayout(mock.Anything, guildID).Return(&tc.layout, nil)
+			if tc.spots != nil {
+				f.spots.EXPECT().SelectGuildSpots(mock.Anything, guildID, false).Return(tc.spots, nil)
+			}
+
+			// when
+			got, err := f.svc.RegionSummaryStatus(context.Background(), guildconfig.Config{GuildID: guildID, RegionSummaries: true})
+
+			// then
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestRegionSummaryStatus_OffReadsNothing(t *testing.T) {
+	// given
+	f := newFixture(t)
+
+	// when
+	got, err := f.svc.RegionSummaryStatus(context.Background(), guildconfig.Config{GuildID: guildID})
+
+	// then
+	require.NoError(t, err)
+	assert.Equal(t, summarylayout.StatusOff, got)
+}
+
+func TestRegionSummaryStatus_Errors(t *testing.T) {
+	on := guildconfig.Config{GuildID: guildID, RegionSummaries: true}
+	t.Run("layout", func(t *testing.T) {
+		// given
+		f := newFixture(t)
+		f.layouts.EXPECT().GetLayout(mock.Anything, guildID).Return(nil, errors.New("db down"))
+
+		// when
+		_, err := f.svc.RegionSummaryStatus(context.Background(), on)
+
+		// then
+		assert.ErrorContains(t, err, "db down")
+	})
+	t.Run("spots", func(t *testing.T) {
+		// given
+		f := newFixture(t)
+		f.layouts.EXPECT().GetLayout(mock.Anything, guildID).Return(&summarylayout.Layout{}, nil)
+		f.spots.EXPECT().SelectGuildSpots(mock.Anything, guildID, false).Return(nil, errors.New("db down"))
+
+		// when
+		_, err := f.svc.RegionSummaryStatus(context.Background(), on)
+
+		// then
+		assert.ErrorContains(t, err, "db down")
+	})
 }
 
 func TestSetChannels_RefusesUnsyncedChannel(t *testing.T) {

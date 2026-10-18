@@ -6,6 +6,7 @@ package mocks
 
 import (
 	"context"
+	"spot-assistant/internal/core/dto/book"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -88,6 +89,86 @@ func (_c *MockGuildActions_ApplyGuildConfig_Call) Return() *MockGuildActions_App
 }
 
 func (_c *MockGuildActions_ApplyGuildConfig_Call) RunAndReturn(run func(ctx context.Context, guildID string)) *MockGuildActions_ApplyGuildConfig_Call {
+	_c.Run(run)
+	return _c
+}
+
+// BookingMadeAsync provides a mock function for the type MockGuildActions
+func (_mock *MockGuildActions) BookingMadeAsync(event book.Booked) {
+	_mock.Called(event)
+	return
+}
+
+// MockGuildActions_BookingMadeAsync_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BookingMadeAsync'
+type MockGuildActions_BookingMadeAsync_Call struct {
+	*mock.Call
+}
+
+// BookingMadeAsync is a helper method to define mock.On call
+//   - event book.Booked
+func (_e *MockGuildActions_Expecter) BookingMadeAsync(event any) *MockGuildActions_BookingMadeAsync_Call {
+	return &MockGuildActions_BookingMadeAsync_Call{Call: _e.mock.On("BookingMadeAsync", event)}
+}
+
+func (_c *MockGuildActions_BookingMadeAsync_Call) Run(run func(event book.Booked)) *MockGuildActions_BookingMadeAsync_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 book.Booked
+		if args[0] != nil {
+			arg0 = args[0].(book.Booked)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockGuildActions_BookingMadeAsync_Call) Return() *MockGuildActions_BookingMadeAsync_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockGuildActions_BookingMadeAsync_Call) RunAndReturn(run func(event book.Booked)) *MockGuildActions_BookingMadeAsync_Call {
+	_c.Run(run)
+	return _c
+}
+
+// RefreshAllGuildLetters provides a mock function for the type MockGuildActions
+func (_mock *MockGuildActions) RefreshAllGuildLetters(ctx context.Context) {
+	_mock.Called(ctx)
+	return
+}
+
+// MockGuildActions_RefreshAllGuildLetters_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RefreshAllGuildLetters'
+type MockGuildActions_RefreshAllGuildLetters_Call struct {
+	*mock.Call
+}
+
+// RefreshAllGuildLetters is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockGuildActions_Expecter) RefreshAllGuildLetters(ctx any) *MockGuildActions_RefreshAllGuildLetters_Call {
+	return &MockGuildActions_RefreshAllGuildLetters_Call{Call: _e.mock.On("RefreshAllGuildLetters", ctx)}
+}
+
+func (_c *MockGuildActions_RefreshAllGuildLetters_Call) Run(run func(ctx context.Context)) *MockGuildActions_RefreshAllGuildLetters_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockGuildActions_RefreshAllGuildLetters_Call) Return() *MockGuildActions_RefreshAllGuildLetters_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockGuildActions_RefreshAllGuildLetters_Call) RunAndReturn(run func(ctx context.Context)) *MockGuildActions_RefreshAllGuildLetters_Call {
 	_c.Run(run)
 	return _c
 }

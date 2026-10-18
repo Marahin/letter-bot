@@ -25,15 +25,17 @@ func (k RoleKind) Valid() bool {
 
 // Config is the stored, per-guild configuration shared by the bot and the web.
 type Config struct {
-	GuildID           string
-	Name              string
-	Icon              string
-	OwnerID           string
-	BotPresent        bool
-	Premium           bool
-	PremiumForever    bool
-	CommandChannelID  string
-	SummaryChannelID  string
+	GuildID          string
+	Name             string
+	Icon             string
+	OwnerID          string
+	BotPresent       bool
+	Premium          bool
+	PremiumForever   bool
+	CommandChannelID string
+	SummaryChannelID string
+	// RegionSummaries posts one summary channel per region instead of one summary.
+	RegionSummaries   bool
 	ManageRoleIDs     []string
 	ViewRoleIDs       []string
 	ReserveRoleIDs    []string

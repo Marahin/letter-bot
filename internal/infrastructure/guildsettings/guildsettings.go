@@ -19,6 +19,9 @@ import (
 	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/guildconfig"
 	"spot-assistant/internal/core/dto/role"
+	"spot-assistant/internal/core/dto/spot"
+	"spot-assistant/internal/core/dto/summarylayout"
+	"spot-assistant/internal/core/regions"
 	"spot-assistant/internal/core/worlds"
 	"spot-assistant/internal/ports"
 )
@@ -34,6 +37,8 @@ type Service struct {
 	channels ports.GuildChannelRepository
 	roles    ports.GuildRoleRepository
 	worlds   ports.WorldNameRepository
+	spots    ports.SpotRepository
+	layouts  ports.SummaryLayoutRepository
 	notifier ports.BotNotifier
 	log      *zap.SugaredLogger
 	now      func() time.Time
@@ -43,7 +48,8 @@ type Service struct {
 }
 
 func New(configs ports.GuildConfigRepository, channels ports.GuildChannelRepository, roles ports.GuildRoleRepository,
-	worldNames ports.WorldNameRepository, notifier ports.BotNotifier, log *zap.SugaredLogger) *Service {
+	worldNames ports.WorldNameRepository, spots ports.SpotRepository, layouts ports.SummaryLayoutRepository,
+	notifier ports.BotNotifier, log *zap.SugaredLogger) *Service {
 	if log == nil {
 		log = zap.NewNop().Sugar()
 	}
@@ -52,6 +58,8 @@ func New(configs ports.GuildConfigRepository, channels ports.GuildChannelReposit
 		channels:    channels,
 		roles:       roles,
 		worlds:      worldNames,
+		spots:       spots,
+		layouts:     layouts,
 		notifier:    notifier,
 		log:         log,
 		now:         time.Now,
@@ -105,6 +113,39 @@ func (s *Service) SetChannels(ctx context.Context, guildID, commandChannelID, su
 	s.signal(guildID, "config", s.notifier.ConfigChanged(ctx, guildID))
 	s.signal(guildID, "summary", s.notifier.SummaryChanged(ctx, guildID))
 	return nil
+}
+
+// SetRegionSummaries stores the choice and asks the bot for a summary pass,
+// which reads the config and moves the summaries.
+func (s *Service) SetRegionSummaries(ctx context.Context, guildID string, enabled bool) error {
+	if err := s.configs.SetRegionSummaries(ctx, guildID, enabled); err != nil {
+		return fmt.Errorf("set region summaries: %w", err)
+	}
+	s.signal(guildID, "summary", s.notifier.SummaryChanged(ctx, guildID))
+	return nil
+}
+
+// RegionSummaryStatus follows the bot's summary pass: the setting, the block
+// after a Discord refusal, then decision 97.
+func (s *Service) RegionSummaryStatus(ctx context.Context, cfg guildconfig.Config) (summarylayout.Status, error) {
+	if !cfg.RegionSummaries {
+		return summarylayout.StatusOff, nil
+	}
+	layout, err := s.layouts.GetLayout(ctx, cfg.GuildID)
+	if err != nil {
+		return "", fmt.Errorf("get summary layout: %w", err)
+	}
+	if layout.Blocked(s.now()) {
+		return summarylayout.StatusBlocked, nil
+	}
+	active, err := s.spots.SelectGuildSpots(ctx, cfg.GuildID, false)
+	if err != nil {
+		return "", fmt.Errorf("select spots: %w", err)
+	}
+	if slices.ContainsFunc(active, func(sp *spot.Spot) bool { return regions.Valid(sp.Region) }) {
+		return summarylayout.StatusInUse, nil
+	}
+	return summarylayout.StatusUnused, nil
 }
 
 // SetRoleIDs validates the ids against the synced roles and stores the rank list.

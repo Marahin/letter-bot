@@ -69,8 +69,10 @@ These items of the request were unclear or had a cost. Each has a decision.
     and on the "Refresh server data" button.
 16. **The web signals the bot with Postgres NOTIFY:** `letter_summary_refresh`,
     `letter_guild_resync`, `letter_guild_config`, `letter_overbooked` (the bot
-    sends the overbook message on Discord). Each signal is best-effort. The
-    2-minute tick and the durable resync flag recover a miss.
+    sends the overbook message on Discord) and `letter_booked` (decision 88).
+    Each signal is best-effort. The durable resync flag recovers a missed
+    resync. When the listener connects again, the bot refreshes every summary,
+    which recovers a missed summary refresh (decision 90).
 17. **No locale-prefixed URLs.** Language resolution is `?lang=` > `letter_lang`
     cookie > Accept-Language > English. There is no sitemap or hreflang, because
     the panel sits behind sign-in.
@@ -250,7 +252,10 @@ These items of the request were unclear or had a cost. Each has a decision.
     guild summary gets the buttons "Book a respawn", "My reservations" and
     "Open panel" (only when `WEB_BASE_URL` is set). A DM summary has no buttons.
     A guild without upcoming hunts gets a "No upcoming hunts" message with the
-    same buttons, so the channel never shows an old summary. Rules:
+    same buttons, so the channel never shows an old summary. Each new booking
+    is announced in public (decision 87). A region channel has "Book in
+    <region>" instead of "Book a respawn" (decision 101). A member can wait
+    for a taken respawn (`/queue`, decisions 105-107). Rules:
     - The member picks from lists (string selects) and does not type. Typed
       names and times caused too many errors. discordgo stays at v0.27.1 (see
       "Parity with scxmanager"), and a Discord form (modal) cannot hold a list,
@@ -483,6 +488,204 @@ https://claude.ai/artifact/BZV6jDiWcBeUHoZ384KKin).
     the character's latest reservation.
 86. **The spawn page sums its world rows in Go** from the per-server rows (at
     most 500), so it runs one aggregate query, not two.
+
+## Region summaries, queue and booking announcements
+
+The owner's request: every booking is announced to the whole server, as its
+record of bookings, and the summary changes only when there is a reason, gently,
+because Discord rate-limits the bot.
+
+87. **Each new booking is announced in the command channel** (the configured
+    one, else `#letter`), never in a summary channel, because the bot cleans
+    and replaces the summary. Bookings from the buttons, the wizard, an
+    overbook and the web are announced. Edits and cancels are not. `/book`
+    already replies in public, so it is not announced twice. The message
+    mentions the author but pings nobody. The bot announces in the
+    background. At shutdown it stops the announcements and waits for them.
+88. **A web booking reaches the bot through `letter_booked`**, with a JSON
+    payload with json tags. `letter_summary_refresh` keeps its guild id payload.
+89. **The online dot shows only for a reservation in progress**, in the summary
+    and in the DM summary. A dot on every reservation would change the summary
+    at each login or logout. So the start of a reservation also changes the
+    summary.
+90. **No polling of the summary.** It is refreshed on startup (`GuildCreate`),
+    after a booking, spot or settings change (in the bot or through NOTIFY), at
+    the next start or end of a listed reservation (one timer per server, at most
+    24 hours ahead), when the NOTIFY listener connects again, and when someone
+    deletes a summary message (decision 98). The 3-second
+    debounce per server stays. A failed
+    refresh is retried after 30 seconds, then after twice as long each time, up
+    to 15 minutes.
+91. **The 2-minute tick still reads the online players** (TibiaData, not
+    Discord) and asks for a refresh. The bot posts only when the content of the
+    summary changed: it keeps a hash of the posted content per channel, in
+    memory. A restart posts each summary once.
+92. **One summary worker does all summary writes**, one server at a time, with
+    at least 1 second between the bot's own writes. It writes through one
+    Discord session, so discordgo tracks all rate limits in one place. discordgo
+    waits out a 429 by itself.
+93. **The summary cleanup deletes messages older than 13 days one by one.**
+    Discord refuses those in a bulk delete, and a quiet server can keep a
+    summary that long.
+94. **A respawn has an optional region from a fixed catalog**
+    (`internal/core/regions`), stored as a key in `web_spot.region`. No region,
+    or an unknown key, means "Other". Region names are proper nouns and are not
+    translated. The migration and the default list import give the default
+    respawns their regions (`regions.DefaultSpotRegion`; a test keeps the two
+    equal). The default list makes 18 regions by Tibia geography. Places with
+    few respawns share a region (e.g. "Darama & Krailos"), and the big quest
+    areas make two regions ("POI, Inquisition & Ferumbras", "Endgame Quests").
+    32 names that we could not place stay in Other. The owner should review the
+    mapping; a manager can change a region in the web.
+95. **The region summaries are on by default** (`guilds.region_summaries`).
+    An admin switches them on the Settings page, with scxmanager's checkbox,
+    Save and status pattern. Saving sends `letter_summary_refresh`: the summary
+    pass reads the setting. The UI calls the feature "Region summaries"
+    ("Podsumowania regionów").
+    - The web reads whether the region summaries are in use
+      (`GuildSettingsService.RegionSummaryStatus`, from `summary_layouts` and
+      the active respawns). "In use" means: the setting is on, the server is
+      not blocked (decision 97), and at least one active respawn has a
+      catalog region. The Channels page notes that the summary channel links
+      to the region channels only then.
+    - While the server is blocked, Settings shows a warning with a re-invite
+      link, as scxmanager's `SessionEventsSettings`. The checkbox stays
+      enabled, because switching off is still valid. When no active respawn
+      has a region, Settings says that the bot posts one summary.
+96. **Layout.** The category "Letter respawns" holds one text channel per
+    region with respawns, `letter-<key>` (e.g. `letter-port-hope`,
+    `letter-other`), made in catalog order. The bot never renames, moves or
+    edits a channel after it made it, because Discord limits channel edits
+    hard. The channels deny Send Messages and Add Reactions to @everyone and
+    allow the bot. When Discord refuses the overwrites, the bot makes the
+    channel without them. The summary channel (configured or `#letter-summary`)
+    becomes an index: a link to each region channel with its number of
+    upcoming hunts, and the buttons of the whole server. When the summary
+    channel setting changes, the bot deletes the index in the old channel.
+97. **The summary per region needs at least one active respawn with a region.**
+    Otherwise the server keeps the single summary. When Discord refuses a
+    channel (missing permissions, or the limit of 500 channels), the server
+    keeps the single summary for an hour, then the bot tries again. During
+    this hour the region channels show the notice, and the bot deletes no
+    channel (decision 99). A notice that fails waits for the end of the hour
+    too. The web shows these two cases on the Settings page (decision 95).
+98. **The bot changes Discord gently.** Each region channel stores a hash of
+    the content the bot wrote there (`summary_region_channels.content_hash`).
+    A pass writes only to the regions whose content changed, also after a
+    restart. A failed region does not stop the other regions. A pass makes
+    at most one channel create or delete, 5 seconds after the previous write,
+    and asks for another pass after 5 seconds, so servers take turns. Message
+    writes keep 1 second apart. All writes go through the summary worker's one
+    session (decision 92). Before the bot makes a channel, it adopts one of
+    the same name in the category, and it asks the API before it decides a
+    channel is missing: the gateway cache can lag behind a channel the bot
+    just made.
+    - The bot keeps the ids of its summary messages in memory. When someone
+      deletes one of them (one message or a purge), the bot forgets the hash
+      of that channel and refreshes the server. This applies to the single
+      summary, the index and the region channels. Deletes in other channels
+      cost no database query. The bot's own deletes do not count.
+99. **Cleanup.** A region channel that is no longer needed (no active respawns
+    in the region, or the setting is off) gets a notice, and the bot deletes
+    it 24 hours later. Switched back on within 24 hours, the region gets its
+    channel back. The region stays retired until a pass writes its summary, so
+    a pass that stops early does not restart the 24 hours. While Discord
+    refuses channels (decision 97), the bot does not delete region channels or
+    the category, also after 24 hours: a region that is still needed keeps its
+    channel when the hour ends. The cleanup runs also when the summary or the
+    index write fails. The bot deletes the category only when it is empty. A
+    category with the server's own channels in it is left to the server. A
+    region channel that someone deletes by hand comes back while it is needed
+    (scxmanager parity). Without premium, or without the bot, nothing is
+    touched.
+100. **A region channel shows a header and one embed per booked respawn**,
+     packed into messages of at most 10 embeds and about 5800 characters. The
+     last message has "Book in <region>", "My reservations" and "Open panel".
+     There is no chart; the single summary keeps its chart.
+101. **"Book in <region>" limits only step 1 of the wizard** to the respawns
+     and the usual respawns of the region, with an "All respawns" button.
+     Search and "Change respawn" stay for the whole server. The new custom ids
+     (`bookr`, `rrp`) leave the old ones unchanged, so old buttons keep working.
+102. **A respawn has an optional image** (`web_spot.image_url`, http or https,
+     at most 2048 characters). It shows as the embed thumbnail of the respawn
+     in its region channel only, because the single summary uses fields. When
+     Discord refuses the message (code 50035), the bot writes the region again
+     without images. The images come back when the content changes. The
+     web shows a small thumbnail with `referrerpolicy="no-referrer"`.
+103. **"Rename" becomes "Edit"** (name, region, image) on the Respawns page,
+     at `/servers/{id}/spots/{spot}/edit`. The `/rename` route is removed; it
+     had no other users. A closed row loads its form on the first open
+     (`GET .../edit`, htmx), so the list does not carry a region picker per
+     row. A refused edit renders that row open, with its form.
+     - The row asks for its form on each open until the form is there, so a
+       failed load tries again on the next open. For a respawn that is gone,
+       the answer is the same as for a save of it: the refreshed list with
+       the flash "does not exist any more" (`HX-Retarget` to the list).
+104. **The summary pass has hooks.** A hook runs at the start of each pass of
+     a premium server, before any summary write. Its error is logged and the
+     pass goes on. The booking queue sends its due offers there.
+105. **The queue.** A member waits for a taken respawn with `/queue` (respawn,
+     length) or the "Queue" button of the wizard, which shows when another
+     member holds the respawn now. `/queue-leave` stops it. The replies are private. The queue
+     lives in Discord only (`spot_queue_entries`); the web has no queue page.
+     - "Free" means that no reservation of the respawn overlaps [start,
+       start + length], edges included, as in booking. The start is the next
+       full minute, because booking counts the minute in which the previous
+       hunt ended as taken. One SQL function (`spot_queue_free`) holds this
+       rule for all queue queries.
+     - The length is 30 minutes to 3 hours, in steps of 30 minutes, default
+       2 hours. The rule is in core; the database checks only that the
+       length is positive. An entry lasts 24 hours. A member waits for at
+       most 3 active respawns per server. Queueing the same respawn again
+       replaces its length and expiry.
+     - A respawn that is free when the member queues gives the offer at once,
+       in the reply.
+106. **Offers.** Each summary pass of a premium server deletes the expired
+     entries of all servers, clears the offer of an entry whose respawn was
+     taken again, and offers each free respawn to every member who waits for
+     it, in the same pass. The clear is one statement that checks the overlap
+     again, so it keeps an offer that `/queue` made meanwhile. The first
+     member to book gets it; the others get the normal booking error. An
+     entry gets a new offer only after its respawn was taken and freed again.
+     The bot sends the offer by DM, through the summary worker's session and
+     pacing (decision 92). It claims each offer just before it sends it, and
+     only when the respawn is still free, so each member gets the full 10
+     minutes. When Discord refuses the DM (code 50007), the offer goes to the
+     command channel with a mention that pings only that member.
+     - A send that fails for a reason that can pass (the network, a Discord
+       error 5xx, a rate limit, or the end of the pass at shutdown) clears the
+       offer, so a later pass tries again. discordgo waits out a 429 and sends
+       again by itself; when that is off, a rate limit fails the send. A 502
+       that discordgo already retried returns a plain error and keeps the
+       offer. The
+       clear applies only to the offer time that the bot claimed, so it keeps
+       a newer offer that `/queue` made meanwhile. Any other refusal (closed
+       DMs and no command channel, a member who left) keeps the offer, so the
+       bot does not try again until the respawn was taken and freed again.
+     - A respawn becomes free only when a reservation ends or is deleted,
+       moved or shortened. The end of a listed reservation is a boundary
+       timer, and a change triggers a pass (decision 90). The 2-minute tick
+       triggers a pass too (decision 91). The queue needs no timer of its own.
+       An expired entry counts as gone in every query, so its deletion can
+       wait for the next pass.
+107. **Book and Cancel of an offer.** The buttons work for 10 minutes and only
+     for the member who queued; another member gets a private refusal. A
+     click in a DM has no server and no member, so the bot reads the server
+     from the entry and the member from the API (with the permissions of
+     their roles). Book books from the next full minute for the queued length
+     through the normal booking, so the booking is announced (decision 87) and
+     the summary changes. Cancel removes the entry. A newer offer replaces an
+     older one. When the respawn was taken meanwhile, Book shows the booking
+     error and keeps Cancel.
+     - Cancel has no 10-minute limit: a member can always leave the queue.
+     - A click on an offer in the command channel gets a private reply, as
+       the other queue replies (decision 105). A booking from it, or Cancel,
+       removes the buttons of the public offer.
+     - Any new booking of the respawn by the member removes their entry: a
+       button, the wizard, `/book` or the web. An edit that moves a
+       reservation to the respawn, or gives it to the member, removes it too.
+       The booking service of each binary does it, so it does not depend on
+       the NOTIFY signal.
 
 ## Parity with scxmanager
 

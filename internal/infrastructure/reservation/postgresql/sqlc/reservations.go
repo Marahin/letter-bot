@@ -429,8 +429,10 @@ func mapWebReservation(res WebReservation) reservation.Reservation {
 
 func mapWebSpot(spot WebSpot) reservation.Spot {
 	return reservation.Spot{
-		ID:   spot.ID,
-		Name: spot.Name,
+		ID:       spot.ID,
+		Name:     spot.Name,
+		Region:   spot.Region.String,
+		ImageURL: spot.ImageUrl.String,
 	}
 }
 

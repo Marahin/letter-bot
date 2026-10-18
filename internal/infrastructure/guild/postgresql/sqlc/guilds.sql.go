@@ -77,7 +77,7 @@ func (q *Queries) RequestGuildResync(ctx context.Context, guildID string) (int64
 }
 
 const selectAllGuilds = `-- name: SelectAllGuilds :many
-SELECT guild_id, name, icon, owner_id, bot_present, premium, premium_forever, command_channel_id, summary_channel_id, manage_role_ids, view_role_ids, reserve_role_ids, overbook_role_ids, resync_requested_at, synced_at, created_at, updated_at
+SELECT guild_id, name, icon, owner_id, bot_present, premium, premium_forever, command_channel_id, summary_channel_id, manage_role_ids, view_role_ids, reserve_role_ids, overbook_role_ids, resync_requested_at, synced_at, created_at, updated_at, region_summaries
 FROM guilds
 ORDER BY bot_present DESC, lower(name), guild_id
 `
@@ -109,6 +109,7 @@ func (q *Queries) SelectAllGuilds(ctx context.Context) ([]Guild, error) {
 			&i.SyncedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.RegionSummaries,
 		); err != nil {
 			return nil, err
 		}
@@ -121,7 +122,7 @@ func (q *Queries) SelectAllGuilds(ctx context.Context) ([]Guild, error) {
 }
 
 const selectGuild = `-- name: SelectGuild :one
-SELECT guild_id, name, icon, owner_id, bot_present, premium, premium_forever, command_channel_id, summary_channel_id, manage_role_ids, view_role_ids, reserve_role_ids, overbook_role_ids, resync_requested_at, synced_at, created_at, updated_at
+SELECT guild_id, name, icon, owner_id, bot_present, premium, premium_forever, command_channel_id, summary_channel_id, manage_role_ids, view_role_ids, reserve_role_ids, overbook_role_ids, resync_requested_at, synced_at, created_at, updated_at, region_summaries
 FROM guilds
 WHERE guild_id = $1
 `
@@ -147,12 +148,13 @@ func (q *Queries) SelectGuild(ctx context.Context, guildID string) (Guild, error
 		&i.SyncedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RegionSummaries,
 	)
 	return i, err
 }
 
 const selectGuildsByIDs = `-- name: SelectGuildsByIDs :many
-SELECT guild_id, name, icon, owner_id, bot_present, premium, premium_forever, command_channel_id, summary_channel_id, manage_role_ids, view_role_ids, reserve_role_ids, overbook_role_ids, resync_requested_at, synced_at, created_at, updated_at
+SELECT guild_id, name, icon, owner_id, bot_present, premium, premium_forever, command_channel_id, summary_channel_id, manage_role_ids, view_role_ids, reserve_role_ids, overbook_role_ids, resync_requested_at, synced_at, created_at, updated_at, region_summaries
 FROM guilds
 WHERE guild_id = ANY($1::text[])
 ORDER BY lower(name), guild_id
@@ -185,6 +187,7 @@ func (q *Queries) SelectGuildsByIDs(ctx context.Context, guildIds []string) ([]G
 			&i.SyncedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.RegionSummaries,
 		); err != nil {
 			return nil, err
 		}
@@ -197,7 +200,7 @@ func (q *Queries) SelectGuildsByIDs(ctx context.Context, guildIds []string) ([]G
 }
 
 const selectPresentGuildsByIDs = `-- name: SelectPresentGuildsByIDs :many
-SELECT guild_id, name, icon, owner_id, bot_present, premium, premium_forever, command_channel_id, summary_channel_id, manage_role_ids, view_role_ids, reserve_role_ids, overbook_role_ids, resync_requested_at, synced_at, created_at, updated_at
+SELECT guild_id, name, icon, owner_id, bot_present, premium, premium_forever, command_channel_id, summary_channel_id, manage_role_ids, view_role_ids, reserve_role_ids, overbook_role_ids, resync_requested_at, synced_at, created_at, updated_at, region_summaries
 FROM guilds
 WHERE guild_id = ANY($1::text[])
   AND bot_present
@@ -231,6 +234,7 @@ func (q *Queries) SelectPresentGuildsByIDs(ctx context.Context, guildIds []strin
 			&i.SyncedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.RegionSummaries,
 		); err != nil {
 			return nil, err
 		}
@@ -368,6 +372,25 @@ func (q *Queries) SetGuildPremium(ctx context.Context, arg SetGuildPremiumParams
 	return result.RowsAffected(), nil
 }
 
+const setGuildRegionSummaries = `-- name: SetGuildRegionSummaries :execrows
+UPDATE guilds
+SET region_summaries = $1, updated_at = now()
+WHERE guild_id = $2
+`
+
+type SetGuildRegionSummariesParams struct {
+	RegionSummaries bool
+	GuildID         string
+}
+
+func (q *Queries) SetGuildRegionSummaries(ctx context.Context, arg SetGuildRegionSummariesParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setGuildRegionSummaries, arg.RegionSummaries, arg.GuildID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const setGuildReserveRoleIDs = `-- name: SetGuildReserveRoleIDs :execrows
 UPDATE guilds
 SET reserve_role_ids = $1::text[], updated_at = now()
@@ -415,7 +438,7 @@ SET name = EXCLUDED.name,
     owner_id = EXCLUDED.owner_id,
     bot_present = true,
     updated_at = now()
-RETURNING guild_id, name, icon, owner_id, bot_present, premium, premium_forever, command_channel_id, summary_channel_id, manage_role_ids, view_role_ids, reserve_role_ids, overbook_role_ids, resync_requested_at, synced_at, created_at, updated_at
+RETURNING guild_id, name, icon, owner_id, bot_present, premium, premium_forever, command_channel_id, summary_channel_id, manage_role_ids, view_role_ids, reserve_role_ids, overbook_role_ids, resync_requested_at, synced_at, created_at, updated_at, region_summaries
 `
 
 type UpsertGuildPresenceParams struct {
@@ -452,6 +475,7 @@ func (q *Queries) UpsertGuildPresence(ctx context.Context, arg UpsertGuildPresen
 		&i.SyncedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RegionSummaries,
 	)
 	return i, err
 }

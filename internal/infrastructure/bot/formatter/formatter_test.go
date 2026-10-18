@@ -14,7 +14,9 @@ import (
 	"spot-assistant/internal/core/dto/book"
 	"spot-assistant/internal/core/dto/guild"
 	"spot-assistant/internal/core/dto/member"
+	"spot-assistant/internal/core/dto/queue"
 	"spot-assistant/internal/core/dto/reservation"
+	corequeue "spot-assistant/internal/core/queue"
 	"spot-assistant/internal/core/reservationforms"
 	"spot-assistant/internal/core/reservations"
 	"spot-assistant/internal/ports"
@@ -217,6 +219,10 @@ func TestDiscordFormatter_FormatFormError(t *testing.T) {
 		booking.ErrInvalidRange,
 		booking.ErrSpotLocked,
 		booking.ErrSelfOverbook,
+		corequeue.ErrQueueFull,
+		corequeue.ErrInvalidLength,
+		corequeue.ErrOfferNotYours,
+		corequeue.ErrOfferExpired,
 		booking.ErrConflict,
 		booking.ErrInsufficientPermissions,
 		errors.New("db down"),
@@ -273,17 +279,17 @@ func TestDiscordFormatter_WizardTexts(t *testing.T) {
 	// when
 	texts := make([]string, 0, 21)
 	texts = append(texts,
-		f.FormatRespawnStep(false, false, ""),
-		f.FormatRespawnStep(true, true, "No respawn has this name."),
+		f.FormatRespawnStep(false, false, "", ""),
+		f.FormatRespawnStep(true, true, "", "No respawn has this name."),
 		f.FormatRespawnMatches("lib", false),
 		f.FormatRespawnMatches("lib", true),
 		f.FormatUsualRespawn(reservation.UsualRespawn{}),
 		f.FormatUsualRespawn(reservation.UsualRespawn{Bookings: 1}),
 		f.FormatUsualRespawn(reservation.UsualRespawn{Bookings: 7}),
-		f.FormatTimeStep(&reservation.TimePicker{Spot: spot}, "", now),
-		f.FormatTimeStep(&reservation.TimePicker{Spot: spot, Choice: reservation.TimeChoice{StartAt: now.Add(30 * time.Hour), Length: 90 * time.Minute}, Booked: []*reservation.Reservation{booked}}, "", now),
-		f.FormatTimeStep(&reservation.TimePicker{Spot: spot, Editing: editing, Choice: reservation.TimeChoice{Now: true, Length: time.Hour}, Booked: many}, "Status.", now),
-		f.FormatTimeStep(&reservation.TimePicker{Spot: spot, Editing: editing, Ongoing: true}, "", now),
+		f.FormatTimeStep(&reservation.TimePicker{Spot: spot}, "", false, now),
+		f.FormatTimeStep(&reservation.TimePicker{Spot: spot, Choice: reservation.TimeChoice{StartAt: now.Add(30 * time.Hour), Length: 90 * time.Minute}, Booked: []*reservation.Reservation{booked}}, "", false, now),
+		f.FormatTimeStep(&reservation.TimePicker{Spot: spot, Editing: editing, Choice: reservation.TimeChoice{Now: true, Length: time.Hour}, Booked: many}, "Status.", false, now),
+		f.FormatTimeStep(&reservation.TimePicker{Spot: spot, Editing: editing, Ongoing: true}, "", false, now),
 		f.FormatClock(now.Add(time.Hour), now),
 		f.FormatClock(now.Add(7*time.Hour), now),
 		f.FormatClock(now.Add(31*time.Hour), now),
@@ -300,7 +306,81 @@ func TestDiscordFormatter_WizardTexts(t *testing.T) {
 		label, description := f.FormatStartOption(o, now)
 		texts = append(texts, label+" | "+description)
 	}
+	texts = append(texts,
+		f.FormatRespawnStep(false, false, "Port Hope & Tiquanda", ""),
+		f.FormatRespawnStep(false, true, "Ingol", ""),
+		f.FormatTimeStep(&reservation.TimePicker{Spot: spot, TakenNow: true}, "", true, now),
+	)
 
 	// then
 	snaps.MatchSnapshot(t, strings.Join(texts, "\n---\n"))
+}
+
+func TestDiscordFormatter_QueueTexts(t *testing.T) {
+	// given
+	f := NewFormatter()
+	berlin := time.FixedZone("CEST", 2*60*60)
+	now := time.Date(2026, 10, 18, 18, 0, 0, 0, berlin)
+	e := queue.Entry{SpotName: "Library -1", Length: 90 * time.Minute, ExpiresAt: now.Add(24 * time.Hour)}
+	cave := queue.Entry{SpotName: "Hero Cave", Length: time.Hour}
+
+	// when
+	texts := []string{
+		f.FormatQueueJoined(e, now),
+		f.FormatQueueOffer(e, "Celesta", now.Add(10*time.Minute)),
+		f.FormatQueueOffer(e, "", now.Add(10*time.Minute)),
+		f.FormatQueueOfferExpired(e, now),
+		f.FormatQueueLeft("Library -1"),
+		f.FormatQueueGone(),
+		f.FormatQueueNotQueued(nil),
+		f.FormatQueueNotQueued([]queue.Entry{e, cave}),
+		f.FormatQueueAmbiguous("lib"),
+	}
+
+	// then
+	snaps.MatchSnapshot(t, strings.Join(texts, "\n---\n"))
+}
+
+func TestDiscordFormatter_FormatBookingAnnouncement(t *testing.T) {
+	berlin := time.FixedZone("CEST", 2*60*60)
+	start := time.Date(2026, 10, 19, 18, 30, 0, 0, berlin)
+	base := book.Booked{
+		SpotName:        "Hero Cave -2",
+		StartAt:         start,
+		EndAt:           start.Add(2 * time.Hour),
+		Author:          "Knight",
+		AuthorDiscordID: "123",
+		ActorID:         "123",
+		Source:          book.SourceDiscord,
+	}
+	cases := map[string]struct {
+		change   func(e *book.Booked)
+		expected string
+	}{
+		"own booking": {
+			func(*book.Booked) {},
+			"**Hero Cave -2** booked by **Knight** (<@123>), Mon 19 Oct 18:30 – 20:30 (CEST).",
+		},
+		"for somebody else, overbooking, on the web": {
+			func(e *book.Booked) { e.ActorID, e.Overbooked, e.Source = "9", 2, book.SourceWeb },
+			"**Hero Cave -2** booked by **Knight** (<@123>), Mon 19 Oct 18:30 – 20:30 (CEST). Booked for them by <@9>. Overbooked 2 reservations. Booked on TibiaLoot.com.",
+		},
+		"free-text author, one overbooked": {
+			func(e *book.Booked) { e.Author, e.AuthorDiscordID, e.ActorID, e.Overbooked = "Guest", "", "9", 1 },
+			"**Hero Cave -2** booked by **Guest**, Mon 19 Oct 18:30 – 20:30 (CEST). Booked for them by <@9>. Overbooked 1 reservation.",
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			// given
+			e := base
+			tc.change(&e)
+
+			// when
+			output := NewFormatter().FormatBookingAnnouncement(e)
+
+			// then
+			assert.Equal(t, tc.expected, output)
+		})
+	}
 }

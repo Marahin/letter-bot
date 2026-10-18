@@ -144,6 +144,7 @@ func (a *Adapter) Book(request book.BookRequest) ([]*reservation.ClippedOrRemove
 		}
 		go a.commSrv.NotifyOverbookedMember(request, res)
 	}
+	a.fulfilQueue(context.Background(), g.ID, m.ID, sp.ID)
 
 	return res, nil
 }

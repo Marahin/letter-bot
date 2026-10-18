@@ -40,6 +40,8 @@ func CheckNewWindow(startAt, endAt, now time.Time) error {
 // Edit applies the bot's booking rules (maximum length, per-author quota) to a
 // changed reservation and refuses any overlap. On ErrConflict it returns the
 // overlapping reservations. Returns ports.ErrNotFound for a reservation of another guild.
+// A reservation that moves to another respawn or author fulfils that author's
+// queue entry, as a new booking does.
 func (a *Adapter) Edit(ctx context.Context, req book.EditRequest) ([]*reservation.Reservation, error) {
 	existing, err := a.reservationRepo.SelectGuildReservationWithSpot(ctx, req.GuildID, req.ReservationID)
 	if err != nil {
@@ -90,7 +92,13 @@ func (a *Adapter) Edit(ctx context.Context, req book.EditRequest) ([]*reservatio
 	if errors.Is(err, ports.ErrConflict) || errors.Is(err, ports.ErrDuplicate) {
 		return nil, ErrConflict
 	}
-	return nil, err
+	if err != nil {
+		return nil, err
+	}
+	if req.SpotID != existing.SpotID || req.AuthorDiscordID != existing.AuthorDiscordID {
+		a.fulfilQueue(ctx, req.GuildID, req.AuthorDiscordID, req.SpotID)
+	}
+	return nil, nil
 }
 
 func checkEditWindow(req book.EditRequest, existing reservation.Reservation, now time.Time) error {

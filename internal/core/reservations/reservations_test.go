@@ -244,6 +244,15 @@ func TestCreate_MemberBooksAsThemselves(t *testing.T) {
 		Overbook: true,
 	}).Return(nil, nil)
 	f.notifier.EXPECT().SummaryChanged(ctx, guildID).Return(errors.New("notify is best effort"))
+	f.notifier.EXPECT().Booked(ctx, book.Booked{
+		GuildID:         guildID,
+		SpotID:          1,
+		StartAt:         d.StartAt,
+		EndAt:           d.EndAt,
+		Author:          "Quiet Nyx",
+		AuthorDiscordID: "u1",
+		ActorID:         "u1",
+	}).Return(errors.New("notify is best effort"))
 
 	// when
 	_, err := f.s.Create(ctx, guildID, member1(), d)
@@ -274,6 +283,16 @@ func TestCreate_ManagerBooksForAnotherAuthor(t *testing.T) {
 				return r.Member.ID == tc.wantMember && r.Member.Nick == tc.wantNick && r.HasPermissions && r.SpotID == 1
 			})).Return(overbooked, nil)
 			f.notifier.EXPECT().SummaryChanged(ctx, guildID).Return(nil)
+			f.notifier.EXPECT().Booked(ctx, book.Booked{
+				GuildID:         guildID,
+				SpotID:          1,
+				StartAt:         d.StartAt,
+				EndAt:           d.EndAt,
+				Author:          tc.wantNick,
+				AuthorDiscordID: tc.wantMember,
+				ActorID:         "m1",
+				Overbooked:      1,
+			}).Return(nil)
 
 			// when
 			res, err := f.s.Create(ctx, guildID, manager(), d)

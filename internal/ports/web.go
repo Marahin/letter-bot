@@ -11,6 +11,7 @@ import (
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/role"
 	"spot-assistant/internal/core/dto/spot"
+	"spot-assistant/internal/core/dto/summarylayout"
 	"spot-assistant/internal/core/dto/webuser"
 )
 
@@ -68,6 +69,8 @@ type BotNotifier interface {
 	ConfigChanged(ctx context.Context, guildID string) error
 	// Overbooked asks the bot to DM the author of res that request overbooked them.
 	Overbooked(ctx context.Context, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) error
+	// Booked asks the bot to announce a new reservation in the guild.
+	Booked(ctx context.Context, event book.Booked) error
 }
 
 // GuildSettingsService backs the admin Settings and Channels pages. It lists the
@@ -82,6 +85,12 @@ type GuildSettingsService interface {
 	SetChannels(ctx context.Context, guildID, commandChannelID, summaryChannelID string) error
 	SetRoleIDs(ctx context.Context, guildID string, kind guildconfig.RoleKind, roleIDs []string) error
 	SetWorld(ctx context.Context, guildID, world string) error
+	// SetRegionSummaries switches between one summary per region and one summary.
+	SetRegionSummaries(ctx context.Context, guildID string, enabled bool) error
+	// RegionSummaryStatus tells whether the bot uses the region summaries of the
+	// guild: the setting is on, Discord did not block them, and at least one
+	// active respawn has a region.
+	RegionSummaryStatus(ctx context.Context, cfg guildconfig.Config) (summarylayout.Status, error)
 	// RequestResync asks the bot to sync channels and roles again. During the
 	// cooldown it does nothing and returns the time left.
 	RequestResync(ctx context.Context, guildID string) (retryAfter time.Duration, err error)
@@ -90,8 +99,11 @@ type GuildSettingsService interface {
 // SpotService manages the respawn list of a guild. Every id is checked against the guild.
 type SpotService interface {
 	List(ctx context.Context, guildID string, filter spot.ListFilter) (*spot.List, error)
-	Create(ctx context.Context, guildID, name string) (*spot.Spot, error)
-	Rename(ctx context.Context, guildID string, id int64, name string) error
+	// Get returns an active spot, or spots.ErrNotFound.
+	Get(ctx context.Context, guildID string, id int64) (*spot.Spot, error)
+	Create(ctx context.Context, guildID string, f spot.Fields) (*spot.Spot, error)
+	// Update sets the name, region and image of a spot.
+	Update(ctx context.Context, guildID string, id int64, f spot.Fields) error
 	// Remove deletes a spot without reservations and archives any other, so history and stats stay.
 	Remove(ctx context.Context, guildID string, id int64) (spot.RemoveOutcome, error)
 	Restore(ctx context.Context, guildID string, id int64) error

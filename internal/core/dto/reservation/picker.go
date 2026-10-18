@@ -1,6 +1,10 @@
 package reservation
 
-import "time"
+import (
+	"time"
+
+	"spot-assistant/internal/core/dto/region"
+)
 
 // AutoWindow asks for the start window that holds the chosen start.
 const AutoWindow = -1
@@ -8,6 +12,8 @@ const AutoWindow = -1
 // RespawnPicker is step 1 of the bot's booking wizard: the member's usual
 // respawns and one page of the active respawns, in groups by name.
 type RespawnPicker struct {
+	// Region limits the picker to one region; the zero value shows all.
+	Region region.Region
 	Usual  []UsualRespawn
 	Groups []RespawnGroup
 	Page   int
@@ -64,6 +70,9 @@ type TimePicker struct {
 	Lengths []LengthOption
 	// Booked are the respawn's reservations in the shown window, by start.
 	Booked []*Reservation
+	// TakenNow means another member's reservation of the respawn is in
+	// progress. It is set for a booking only.
+	TakenNow bool
 }
 
 // StartOption is one start in the list. Now, Keep and Current are special

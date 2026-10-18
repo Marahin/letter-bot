@@ -247,8 +247,8 @@ func (_c *MockSpotRepository_DeleteSpot_Call) RunAndReturn(run func(ctx context.
 }
 
 // InsertSpot provides a mock function for the type MockSpotRepository
-func (_mock *MockSpotRepository) InsertSpot(ctx context.Context, guildID string, name string) (*spot.Spot, error) {
-	ret := _mock.Called(ctx, guildID, name)
+func (_mock *MockSpotRepository) InsertSpot(ctx context.Context, guildID string, f spot.Fields) (*spot.Spot, error) {
+	ret := _mock.Called(ctx, guildID, f)
 
 	if len(ret) == 0 {
 		panic("no return value specified for InsertSpot")
@@ -256,18 +256,18 @@ func (_mock *MockSpotRepository) InsertSpot(ctx context.Context, guildID string,
 
 	var r0 *spot.Spot
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) (*spot.Spot, error)); ok {
-		return returnFunc(ctx, guildID, name)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, spot.Fields) (*spot.Spot, error)); ok {
+		return returnFunc(ctx, guildID, f)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) *spot.Spot); ok {
-		r0 = returnFunc(ctx, guildID, name)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, spot.Fields) *spot.Spot); ok {
+		r0 = returnFunc(ctx, guildID, f)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*spot.Spot)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
-		r1 = returnFunc(ctx, guildID, name)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, spot.Fields) error); ok {
+		r1 = returnFunc(ctx, guildID, f)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -282,12 +282,12 @@ type MockSpotRepository_InsertSpot_Call struct {
 // InsertSpot is a helper method to define mock.On call
 //   - ctx context.Context
 //   - guildID string
-//   - name string
-func (_e *MockSpotRepository_Expecter) InsertSpot(ctx any, guildID any, name any) *MockSpotRepository_InsertSpot_Call {
-	return &MockSpotRepository_InsertSpot_Call{Call: _e.mock.On("InsertSpot", ctx, guildID, name)}
+//   - f spot.Fields
+func (_e *MockSpotRepository_Expecter) InsertSpot(ctx any, guildID any, f any) *MockSpotRepository_InsertSpot_Call {
+	return &MockSpotRepository_InsertSpot_Call{Call: _e.mock.On("InsertSpot", ctx, guildID, f)}
 }
 
-func (_c *MockSpotRepository_InsertSpot_Call) Run(run func(ctx context.Context, guildID string, name string)) *MockSpotRepository_InsertSpot_Call {
+func (_c *MockSpotRepository_InsertSpot_Call) Run(run func(ctx context.Context, guildID string, f spot.Fields)) *MockSpotRepository_InsertSpot_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -297,9 +297,9 @@ func (_c *MockSpotRepository_InsertSpot_Call) Run(run func(ctx context.Context, 
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 string
+		var arg2 spot.Fields
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(spot.Fields)
 		}
 		run(
 			arg0,
@@ -315,14 +315,14 @@ func (_c *MockSpotRepository_InsertSpot_Call) Return(spot1 *spot.Spot, err error
 	return _c
 }
 
-func (_c *MockSpotRepository_InsertSpot_Call) RunAndReturn(run func(ctx context.Context, guildID string, name string) (*spot.Spot, error)) *MockSpotRepository_InsertSpot_Call {
+func (_c *MockSpotRepository_InsertSpot_Call) RunAndReturn(run func(ctx context.Context, guildID string, f spot.Fields) (*spot.Spot, error)) *MockSpotRepository_InsertSpot_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // InsertSpotsIgnoreDuplicates provides a mock function for the type MockSpotRepository
-func (_mock *MockSpotRepository) InsertSpotsIgnoreDuplicates(ctx context.Context, guildID string, names []string) (int64, error) {
-	ret := _mock.Called(ctx, guildID, names)
+func (_mock *MockSpotRepository) InsertSpotsIgnoreDuplicates(ctx context.Context, guildID string, spots []spot.Fields) (int64, error) {
+	ret := _mock.Called(ctx, guildID, spots)
 
 	if len(ret) == 0 {
 		panic("no return value specified for InsertSpotsIgnoreDuplicates")
@@ -330,16 +330,16 @@ func (_mock *MockSpotRepository) InsertSpotsIgnoreDuplicates(ctx context.Context
 
 	var r0 int64
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []string) (int64, error)); ok {
-		return returnFunc(ctx, guildID, names)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []spot.Fields) (int64, error)); ok {
+		return returnFunc(ctx, guildID, spots)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []string) int64); ok {
-		r0 = returnFunc(ctx, guildID, names)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []spot.Fields) int64); ok {
+		r0 = returnFunc(ctx, guildID, spots)
 	} else {
 		r0 = ret.Get(0).(int64)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, []string) error); ok {
-		r1 = returnFunc(ctx, guildID, names)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, []spot.Fields) error); ok {
+		r1 = returnFunc(ctx, guildID, spots)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -354,12 +354,12 @@ type MockSpotRepository_InsertSpotsIgnoreDuplicates_Call struct {
 // InsertSpotsIgnoreDuplicates is a helper method to define mock.On call
 //   - ctx context.Context
 //   - guildID string
-//   - names []string
-func (_e *MockSpotRepository_Expecter) InsertSpotsIgnoreDuplicates(ctx any, guildID any, names any) *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call {
-	return &MockSpotRepository_InsertSpotsIgnoreDuplicates_Call{Call: _e.mock.On("InsertSpotsIgnoreDuplicates", ctx, guildID, names)}
+//   - spots []spot.Fields
+func (_e *MockSpotRepository_Expecter) InsertSpotsIgnoreDuplicates(ctx any, guildID any, spots any) *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call {
+	return &MockSpotRepository_InsertSpotsIgnoreDuplicates_Call{Call: _e.mock.On("InsertSpotsIgnoreDuplicates", ctx, guildID, spots)}
 }
 
-func (_c *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call) Run(run func(ctx context.Context, guildID string, names []string)) *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call {
+func (_c *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call) Run(run func(ctx context.Context, guildID string, spots []spot.Fields)) *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -369,9 +369,9 @@ func (_c *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call) Run(run func(ctx 
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 []string
+		var arg2 []spot.Fields
 		if args[2] != nil {
-			arg2 = args[2].([]string)
+			arg2 = args[2].([]spot.Fields)
 		}
 		run(
 			arg0,
@@ -387,76 +387,7 @@ func (_c *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call) Return(n int64, e
 	return _c
 }
 
-func (_c *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call) RunAndReturn(run func(ctx context.Context, guildID string, names []string) (int64, error)) *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// RenameSpot provides a mock function for the type MockSpotRepository
-func (_mock *MockSpotRepository) RenameSpot(ctx context.Context, guildID string, id int64, name string) error {
-	ret := _mock.Called(ctx, guildID, id, name)
-
-	if len(ret) == 0 {
-		panic("no return value specified for RenameSpot")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int64, string) error); ok {
-		r0 = returnFunc(ctx, guildID, id, name)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// MockSpotRepository_RenameSpot_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RenameSpot'
-type MockSpotRepository_RenameSpot_Call struct {
-	*mock.Call
-}
-
-// RenameSpot is a helper method to define mock.On call
-//   - ctx context.Context
-//   - guildID string
-//   - id int64
-//   - name string
-func (_e *MockSpotRepository_Expecter) RenameSpot(ctx any, guildID any, id any, name any) *MockSpotRepository_RenameSpot_Call {
-	return &MockSpotRepository_RenameSpot_Call{Call: _e.mock.On("RenameSpot", ctx, guildID, id, name)}
-}
-
-func (_c *MockSpotRepository_RenameSpot_Call) Run(run func(ctx context.Context, guildID string, id int64, name string)) *MockSpotRepository_RenameSpot_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 int64
-		if args[2] != nil {
-			arg2 = args[2].(int64)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
-	})
-	return _c
-}
-
-func (_c *MockSpotRepository_RenameSpot_Call) Return(err error) *MockSpotRepository_RenameSpot_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *MockSpotRepository_RenameSpot_Call) RunAndReturn(run func(ctx context.Context, guildID string, id int64, name string) error) *MockSpotRepository_RenameSpot_Call {
+func (_c *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call) RunAndReturn(run func(ctx context.Context, guildID string, spots []spot.Fields) (int64, error)) *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1048,6 +979,75 @@ func (_c *MockSpotRepository_SelectTopGuildSpots_Call) Return(rankeds []spot.Ran
 }
 
 func (_c *MockSpotRepository_SelectTopGuildSpots_Call) RunAndReturn(run func(ctx context.Context, guildID string, authorDiscordID string, since time.Time, limit int) ([]spot.Ranked, error)) *MockSpotRepository_SelectTopGuildSpots_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateSpot provides a mock function for the type MockSpotRepository
+func (_mock *MockSpotRepository) UpdateSpot(ctx context.Context, guildID string, id int64, f spot.Fields) error {
+	ret := _mock.Called(ctx, guildID, id, f)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateSpot")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int64, spot.Fields) error); ok {
+		r0 = returnFunc(ctx, guildID, id, f)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockSpotRepository_UpdateSpot_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateSpot'
+type MockSpotRepository_UpdateSpot_Call struct {
+	*mock.Call
+}
+
+// UpdateSpot is a helper method to define mock.On call
+//   - ctx context.Context
+//   - guildID string
+//   - id int64
+//   - f spot.Fields
+func (_e *MockSpotRepository_Expecter) UpdateSpot(ctx any, guildID any, id any, f any) *MockSpotRepository_UpdateSpot_Call {
+	return &MockSpotRepository_UpdateSpot_Call{Call: _e.mock.On("UpdateSpot", ctx, guildID, id, f)}
+}
+
+func (_c *MockSpotRepository_UpdateSpot_Call) Run(run func(ctx context.Context, guildID string, id int64, f spot.Fields)) *MockSpotRepository_UpdateSpot_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 int64
+		if args[2] != nil {
+			arg2 = args[2].(int64)
+		}
+		var arg3 spot.Fields
+		if args[3] != nil {
+			arg3 = args[3].(spot.Fields)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSpotRepository_UpdateSpot_Call) Return(err error) *MockSpotRepository_UpdateSpot_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockSpotRepository_UpdateSpot_Call) RunAndReturn(run func(ctx context.Context, guildID string, id int64, f spot.Fields) error) *MockSpotRepository_UpdateSpot_Call {
 	_c.Call.Return(run)
 	return _c
 }

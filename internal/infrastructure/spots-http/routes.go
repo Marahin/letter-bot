@@ -1,5 +1,5 @@
 // Package spotshttp is the Respawns page: the guild's respawn list, with add,
-// rename, remove (delete or archive), restore and the default list import for
+// edit (name, region, image), remove (delete or archive), restore and the default list import for
 // managers.
 package spotshttp
 
@@ -22,7 +22,8 @@ func Register(r *web.Router, d *web.Deps) {
 	r.Get("/servers/{id}/spots", view(h.HandleList))
 	r.Post("/servers/{id}/spots", manage(h.HandleCreate))
 	r.Post("/servers/{id}/spots/import", manage(h.HandleImport))
-	r.Post("/servers/{id}/spots/{spot}/rename", manage(h.HandleRename))
+	r.Get("/servers/{id}/spots/{spot}/edit", manage(h.HandleEditForm))
+	r.Post("/servers/{id}/spots/{spot}/edit", manage(h.HandleUpdate))
 	r.Post("/servers/{id}/spots/{spot}/remove", manage(h.HandleRemove))
 	r.Post("/servers/{id}/spots/{spot}/restore", manage(h.HandleRestore))
 }

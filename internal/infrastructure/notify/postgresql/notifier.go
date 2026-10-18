@@ -45,6 +45,14 @@ func (n *Notifier) Overbooked(ctx context.Context, request book.BookRequest, res
 	return n.notify(ctx, ChannelOverbooked, string(payload))
 }
 
+func (n *Notifier) Booked(ctx context.Context, event book.Booked) error {
+	payload, err := NewBookedPayload(event).Encode()
+	if err != nil {
+		return fmt.Errorf("encode booked payload: %w", err)
+	}
+	return n.notify(ctx, ChannelBooked, string(payload))
+}
+
 func (n *Notifier) notify(ctx context.Context, channel, payload string) error {
 	if _, err := n.db.Exec(ctx, "SELECT pg_notify($1, $2)", channel, payload); err != nil {
 		return fmt.Errorf("notify %s: %w", channel, err)

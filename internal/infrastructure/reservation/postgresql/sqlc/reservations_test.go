@@ -321,7 +321,7 @@ func TestCreateAndDeleteConflictingWithTwoConflictingButSecondOneFromTheSameAuth
 func newReservationWithSpotRows() *pgxmock.Rows {
 	return pgxmock.NewRows([]string{
 		// web_spot
-		"id", "name", "created_at", "guild_id", "archived_at",
+		"id", "name", "created_at", "guild_id", "archived_at", "region", "image_url",
 		// web_reservation
 		"id", "author", "created_at", "start_at", "end_at", "spot_id", "guild_id", "author_discord_id",
 	})
@@ -340,11 +340,11 @@ func TestSelectUpcomingReservationsWithSpotForSpot_FiltersBySpotAndGuild(t *test
 		WithArgs("guild-1", "Flimsy").
 		WillReturnRows(newReservationWithSpotRows().
 			AddRow(
-				int64(10), "Flimsy", time.Now(), "guild-1", nil,
+				int64(10), "Flimsy", time.Now(), "guild-1", nil, "port-hope", "https://img.test/f.png",
 				int64(101), "Mariysz", time.Now(), time.Now(), time.Now().Add(time.Hour), int64(10), "guild-1", "mariysz#1",
 			).
 			AddRow(
-				int64(10), "Flimsy", time.Now(), "guild-1", nil,
+				int64(10), "Flimsy", time.Now(), "guild-1", nil, "port-hope", "https://img.test/f.png",
 				int64(102), "Asar", time.Now(), time.Now().Add(time.Hour), time.Now().Add(2*time.Hour), int64(10), "guild-1", "asar#1",
 			))
 
@@ -355,6 +355,8 @@ func TestSelectUpcomingReservationsWithSpotForSpot_FiltersBySpotAndGuild(t *test
 	is.Len(res, 2)
 	for _, r := range res {
 		is.Equal("Flimsy", r.Spot.Name)
+		is.Equal("port-hope", r.Spot.Region)
+		is.Equal("https://img.test/f.png", r.Spot.ImageURL)
 		is.Equal("guild-1", r.GuildID)
 	}
 	is.NoError(mock.ExpectationsWereMet())

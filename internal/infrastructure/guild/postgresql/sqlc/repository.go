@@ -108,6 +108,10 @@ func (r *GuildConfigRepository) SetPremium(ctx context.Context, guildID string, 
 	return postgresql.RowsAffected(r.q.SetGuildPremium(ctx, SetGuildPremiumParams{Premium: premium, GuildID: guildID}))
 }
 
+func (r *GuildConfigRepository) SetRegionSummaries(ctx context.Context, guildID string, enabled bool) error {
+	return postgresql.RowsAffected(r.q.SetGuildRegionSummaries(ctx, SetGuildRegionSummariesParams{RegionSummaries: enabled, GuildID: guildID}))
+}
+
 func (r *GuildConfigRepository) SetChannels(ctx context.Context, guildID, commandChannelID, summaryChannelID string) error {
 	return postgresql.RowsAffected(r.q.SetGuildChannels(ctx, SetGuildChannelsParams{
 		CommandChannelID: commandChannelID,
@@ -289,6 +293,7 @@ func mapGuild(g Guild) *guildconfig.Config {
 		PremiumForever:    g.PremiumForever,
 		CommandChannelID:  g.CommandChannelID,
 		SummaryChannelID:  g.SummaryChannelID,
+		RegionSummaries:   g.RegionSummaries,
 		ManageRoleIDs:     nonNil(g.ManageRoleIds),
 		ViewRoleIDs:       nonNil(g.ViewRoleIds),
 		ReserveRoleIDs:    nonNil(g.ReserveRoleIds),

@@ -1,28 +1,38 @@
-// Package spots manages the respawn list of a guild: add, rename, remove
-// (delete or archive), restore and the default list import.
+// Package spots manages the respawn list of a guild: add, edit (name, region,
+// image), remove (delete or archive), restore and the default list import.
 package spots
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"go.uber.org/zap"
 
 	"spot-assistant/internal/core/dto/spot"
+	"spot-assistant/internal/core/regions"
 	"spot-assistant/internal/ports"
 )
 
-// MaxNameLength is the web_spot.name column limit, in characters.
-const MaxNameLength = 120
+const (
+	// MaxNameLength is the web_spot.name column limit, in characters.
+	MaxNameLength = 120
+	// MaxImageURLLength is the web_spot.image_url check constraint.
+	MaxImageURLLength = 2048
+)
 
 var (
-	ErrNameEmpty     = errors.New("spot name is empty")
-	ErrNameTooLong   = errors.New("spot name is too long")
-	ErrDuplicateName = errors.New("an active spot has this name")
-	ErrNotFound      = errors.New("spot not found")
+	ErrNameEmpty       = errors.New("spot name is empty")
+	ErrNameTooLong     = errors.New("spot name is too long")
+	ErrDuplicateName   = errors.New("an active spot has this name")
+	ErrNotFound        = errors.New("spot not found")
+	ErrUnknownRegion   = errors.New("unknown region")
+	ErrImageURLTooLong = errors.New("image link is too long")
+	ErrImageURLInvalid = errors.New("image link is not an http or https URL")
 )
 
 // Service implements ports.SpotService.
@@ -56,12 +66,12 @@ func (s *Service) List(ctx context.Context, guildID string, filter spot.ListFilt
 	return &spot.List{Spots: spots, ActiveCount: active, ArchivedCount: archived}, nil
 }
 
-func (s *Service) Create(ctx context.Context, guildID, name string) (*spot.Spot, error) {
-	name, err := normalizeName(name)
+func (s *Service) Create(ctx context.Context, guildID string, f spot.Fields) (*spot.Spot, error) {
+	f, err := normalizeFields(f)
 	if err != nil {
 		return nil, err
 	}
-	created, err := s.spots.InsertSpot(ctx, guildID, name)
+	created, err := s.spots.InsertSpot(ctx, guildID, f)
 	if err != nil {
 		return nil, mapRepoError(err)
 	}
@@ -69,12 +79,12 @@ func (s *Service) Create(ctx context.Context, guildID, name string) (*spot.Spot,
 	return created, nil
 }
 
-func (s *Service) Rename(ctx context.Context, guildID string, id int64, name string) error {
-	name, err := normalizeName(name)
+func (s *Service) Update(ctx context.Context, guildID string, id int64, f spot.Fields) error {
+	f, err := normalizeFields(f)
 	if err != nil {
 		return err
 	}
-	if err := s.spots.RenameSpot(ctx, guildID, id, name); err != nil {
+	if err := s.spots.UpdateSpot(ctx, guildID, id, f); err != nil {
 		return mapRepoError(err)
 	}
 	s.summaryChanged(ctx, guildID)
@@ -109,6 +119,17 @@ func (s *Service) Remove(ctx context.Context, guildID string, id int64) (spot.Re
 	return spot.RemoveArchived, nil
 }
 
+func (s *Service) Get(ctx context.Context, guildID string, id int64) (*spot.Spot, error) {
+	sp, err := s.spots.SelectGuildSpotByID(ctx, guildID, id)
+	if err != nil {
+		return nil, mapRepoError(err)
+	}
+	if sp.IsArchived() {
+		return nil, ErrNotFound
+	}
+	return sp, nil
+}
+
 // Restore returns ErrDuplicateName when an active spot took the name meanwhile.
 func (s *Service) Restore(ctx context.Context, guildID string, id int64) error {
 	if err := s.spots.RestoreSpot(ctx, guildID, id); err != nil {
@@ -119,7 +140,11 @@ func (s *Service) Restore(ctx context.Context, guildID string, id int64) error {
 }
 
 func (s *Service) ImportDefaults(ctx context.Context, guildID string) (int64, error) {
-	added, err := s.spots.InsertSpotsIgnoreDuplicates(ctx, guildID, DefaultNames)
+	defaults := make([]spot.Fields, len(DefaultNames))
+	for i, name := range DefaultNames {
+		defaults[i] = spot.Fields{Name: name, Region: regions.DefaultSpotRegion[name]}
+	}
+	added, err := s.spots.InsertSpotsIgnoreDuplicates(ctx, guildID, defaults)
 	if err != nil {
 		return 0, fmt.Errorf("import default spots: %w", err)
 	}
@@ -129,11 +154,46 @@ func (s *Service) ImportDefaults(ctx context.Context, guildID string) (int64, er
 	return added, nil
 }
 
-// summaryChanged is best-effort: the bot refreshes the summary on its next tick anyway.
+// summaryChanged is best-effort: the bot refreshes every summary when its listener connects again.
 func (s *Service) summaryChanged(ctx context.Context, guildID string) {
 	if err := s.notifier.SummaryChanged(ctx, guildID); err != nil {
 		s.log.Warnw("notify bot of spot change", "guild_id", guildID, "error", err)
 	}
+}
+
+func normalizeFields(f spot.Fields) (spot.Fields, error) {
+	name, err := normalizeName(f.Name)
+	if err != nil {
+		return spot.Fields{}, err
+	}
+	regionKey := strings.TrimSpace(f.Region)
+	if regionKey != "" && !regions.Valid(regionKey) {
+		return spot.Fields{}, ErrUnknownRegion
+	}
+	image, err := normalizeImageURL(f.ImageURL)
+	if err != nil {
+		return spot.Fields{}, err
+	}
+	return spot.Fields{Name: name, Region: regionKey, ImageURL: image}, nil
+}
+
+// normalizeImageURL trims the link and accepts "" or an absolute http or https URL.
+func normalizeImageURL(raw string) (string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", nil
+	}
+	if utf8.RuneCountInString(raw) > MaxImageURLLength {
+		return "", ErrImageURLTooLong
+	}
+	if strings.IndexFunc(raw, unicode.IsSpace) >= 0 {
+		return "", ErrImageURLInvalid
+	}
+	u, err := url.Parse(raw)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return "", ErrImageURLInvalid
+	}
+	return raw, nil
 }
 
 func normalizeName(name string) (string, error) {

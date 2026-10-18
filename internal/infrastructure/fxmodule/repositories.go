@@ -8,9 +8,11 @@ import (
 	experiencesqlc "spot-assistant/internal/infrastructure/experience/postgresql/sqlc"
 	guildsqlc "spot-assistant/internal/infrastructure/guild/postgresql/sqlc"
 	lootsqlc "spot-assistant/internal/infrastructure/loot/postgresql/sqlc"
+	queuesqlc "spot-assistant/internal/infrastructure/queue/postgresql/sqlc"
 	reservationsqlc "spot-assistant/internal/infrastructure/reservation/postgresql/sqlc"
 	spotsqlc "spot-assistant/internal/infrastructure/spot/postgresql/sqlc"
 	statssqlc "spot-assistant/internal/infrastructure/stats/postgresql/sqlc"
+	summarylayoutsqlc "spot-assistant/internal/infrastructure/summarylayout/postgresql/sqlc"
 	webusersqlc "spot-assistant/internal/infrastructure/webuser/postgresql/sqlc"
 	worldnamesqlc "spot-assistant/internal/infrastructure/worldname/postgresql/sqlc"
 )
@@ -28,6 +30,8 @@ var Repositories = fx.Provide(
 	reservationRepository,
 	lootRepository,
 	worldStatsRepository,
+	summaryLayoutRepository,
+	spotQueueRepository,
 )
 
 func guildConfigRepository(pool *pgxpool.Pool) *guildsqlc.GuildConfigRepository {
@@ -68,4 +72,12 @@ func lootRepository(pool *pgxpool.Pool) *lootsqlc.LootRepository {
 
 func worldStatsRepository(pool *pgxpool.Pool) *statssqlc.WorldStatsRepository {
 	return statssqlc.NewWorldStatsRepository(pool)
+}
+
+func summaryLayoutRepository(pool *pgxpool.Pool) *summarylayoutsqlc.SummaryLayoutRepository {
+	return summarylayoutsqlc.NewSummaryLayoutRepository(pool)
+}
+
+func spotQueueRepository(pool *pgxpool.Pool) *queuesqlc.SpotQueueRepository {
+	return queuesqlc.NewSpotQueueRepository(pool)
 }

@@ -31,9 +31,14 @@ func (h *Handlers) HandleSettings(w http.ResponseWriter, r *http.Request) {
 		h.D.ServerError(w, r, "load world", err)
 		return
 	}
+	regionStatus, err := h.D.Settings.RegionSummaryStatus(r.Context(), current.Config)
+	if err != nil {
+		h.D.ServerError(w, r, "load region summary status", err)
+		return
+	}
 	nav := h.D.Nav(r, guildID)
 	nav.Active = "settings"
-	h.D.Render(w, r, Settings(h.D.Cfg.BaseURL, current.Config, roles, world, h.D.InviteURL(guildID), nav))
+	h.D.Render(w, r, Settings(h.D.Cfg.BaseURL, current.Config, roles, world, regionStatus, h.D.InviteURL(guildID), nav))
 }
 
 // HandleSetRanks stores one rank list. Unchecked boxes are absent from the form,
@@ -72,6 +77,19 @@ func (h *Handlers) HandleSetWorld(w http.ResponseWriter, r *http.Request) {
 	default:
 		h.D.Render(w, r, WorldStatus())
 	}
+}
+
+// HandleSetRegionSummaries stores the toggle. An unchecked box is absent from the form.
+func (h *Handlers) HandleSetRegionSummaries(w http.ResponseWriter, r *http.Request) {
+	if !web.ParseForm(w, r) {
+		return
+	}
+	enabled := r.PostFormValue("enabled") == "1"
+	if err := h.D.Settings.SetRegionSummaries(r.Context(), r.PathValue("id"), enabled); err != nil {
+		h.D.ServerError(w, r, "set region summaries", err)
+		return
+	}
+	h.D.Render(w, r, RegionSummariesStatus(enabled))
 }
 
 // HandleRefresh backs the "Refresh server data" button: it asks the bot to sync

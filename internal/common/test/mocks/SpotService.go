@@ -48,8 +48,8 @@ func (_m *MockSpotService) EXPECT() *MockSpotService_Expecter {
 }
 
 // Create provides a mock function for the type MockSpotService
-func (_mock *MockSpotService) Create(ctx context.Context, guildID string, name string) (*spot.Spot, error) {
-	ret := _mock.Called(ctx, guildID, name)
+func (_mock *MockSpotService) Create(ctx context.Context, guildID string, f spot.Fields) (*spot.Spot, error) {
+	ret := _mock.Called(ctx, guildID, f)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
@@ -57,18 +57,18 @@ func (_mock *MockSpotService) Create(ctx context.Context, guildID string, name s
 
 	var r0 *spot.Spot
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) (*spot.Spot, error)); ok {
-		return returnFunc(ctx, guildID, name)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, spot.Fields) (*spot.Spot, error)); ok {
+		return returnFunc(ctx, guildID, f)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) *spot.Spot); ok {
-		r0 = returnFunc(ctx, guildID, name)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, spot.Fields) *spot.Spot); ok {
+		r0 = returnFunc(ctx, guildID, f)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*spot.Spot)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
-		r1 = returnFunc(ctx, guildID, name)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, spot.Fields) error); ok {
+		r1 = returnFunc(ctx, guildID, f)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -83,12 +83,12 @@ type MockSpotService_Create_Call struct {
 // Create is a helper method to define mock.On call
 //   - ctx context.Context
 //   - guildID string
-//   - name string
-func (_e *MockSpotService_Expecter) Create(ctx any, guildID any, name any) *MockSpotService_Create_Call {
-	return &MockSpotService_Create_Call{Call: _e.mock.On("Create", ctx, guildID, name)}
+//   - f spot.Fields
+func (_e *MockSpotService_Expecter) Create(ctx any, guildID any, f any) *MockSpotService_Create_Call {
+	return &MockSpotService_Create_Call{Call: _e.mock.On("Create", ctx, guildID, f)}
 }
 
-func (_c *MockSpotService_Create_Call) Run(run func(ctx context.Context, guildID string, name string)) *MockSpotService_Create_Call {
+func (_c *MockSpotService_Create_Call) Run(run func(ctx context.Context, guildID string, f spot.Fields)) *MockSpotService_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -98,9 +98,9 @@ func (_c *MockSpotService_Create_Call) Run(run func(ctx context.Context, guildID
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 string
+		var arg2 spot.Fields
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(spot.Fields)
 		}
 		run(
 			arg0,
@@ -116,7 +116,81 @@ func (_c *MockSpotService_Create_Call) Return(spot1 *spot.Spot, err error) *Mock
 	return _c
 }
 
-func (_c *MockSpotService_Create_Call) RunAndReturn(run func(ctx context.Context, guildID string, name string) (*spot.Spot, error)) *MockSpotService_Create_Call {
+func (_c *MockSpotService_Create_Call) RunAndReturn(run func(ctx context.Context, guildID string, f spot.Fields) (*spot.Spot, error)) *MockSpotService_Create_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Get provides a mock function for the type MockSpotService
+func (_mock *MockSpotService) Get(ctx context.Context, guildID string, id int64) (*spot.Spot, error) {
+	ret := _mock.Called(ctx, guildID, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Get")
+	}
+
+	var r0 *spot.Spot
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int64) (*spot.Spot, error)); ok {
+		return returnFunc(ctx, guildID, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int64) *spot.Spot); ok {
+		r0 = returnFunc(ctx, guildID, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*spot.Spot)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, int64) error); ok {
+		r1 = returnFunc(ctx, guildID, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockSpotService_Get_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Get'
+type MockSpotService_Get_Call struct {
+	*mock.Call
+}
+
+// Get is a helper method to define mock.On call
+//   - ctx context.Context
+//   - guildID string
+//   - id int64
+func (_e *MockSpotService_Expecter) Get(ctx any, guildID any, id any) *MockSpotService_Get_Call {
+	return &MockSpotService_Get_Call{Call: _e.mock.On("Get", ctx, guildID, id)}
+}
+
+func (_c *MockSpotService_Get_Call) Run(run func(ctx context.Context, guildID string, id int64)) *MockSpotService_Get_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 int64
+		if args[2] != nil {
+			arg2 = args[2].(int64)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSpotService_Get_Call) Return(spot1 *spot.Spot, err error) *MockSpotService_Get_Call {
+	_c.Call.Return(spot1, err)
+	return _c
+}
+
+func (_c *MockSpotService_Get_Call) RunAndReturn(run func(ctx context.Context, guildID string, id int64) (*spot.Spot, error)) *MockSpotService_Get_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -333,75 +407,6 @@ func (_c *MockSpotService_Remove_Call) RunAndReturn(run func(ctx context.Context
 	return _c
 }
 
-// Rename provides a mock function for the type MockSpotService
-func (_mock *MockSpotService) Rename(ctx context.Context, guildID string, id int64, name string) error {
-	ret := _mock.Called(ctx, guildID, id, name)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Rename")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int64, string) error); ok {
-		r0 = returnFunc(ctx, guildID, id, name)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// MockSpotService_Rename_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Rename'
-type MockSpotService_Rename_Call struct {
-	*mock.Call
-}
-
-// Rename is a helper method to define mock.On call
-//   - ctx context.Context
-//   - guildID string
-//   - id int64
-//   - name string
-func (_e *MockSpotService_Expecter) Rename(ctx any, guildID any, id any, name any) *MockSpotService_Rename_Call {
-	return &MockSpotService_Rename_Call{Call: _e.mock.On("Rename", ctx, guildID, id, name)}
-}
-
-func (_c *MockSpotService_Rename_Call) Run(run func(ctx context.Context, guildID string, id int64, name string)) *MockSpotService_Rename_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 int64
-		if args[2] != nil {
-			arg2 = args[2].(int64)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
-	})
-	return _c
-}
-
-func (_c *MockSpotService_Rename_Call) Return(err error) *MockSpotService_Rename_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *MockSpotService_Rename_Call) RunAndReturn(run func(ctx context.Context, guildID string, id int64, name string) error) *MockSpotService_Rename_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Restore provides a mock function for the type MockSpotService
 func (_mock *MockSpotService) Restore(ctx context.Context, guildID string, id int64) error {
 	ret := _mock.Called(ctx, guildID, id)
@@ -461,6 +466,75 @@ func (_c *MockSpotService_Restore_Call) Return(err error) *MockSpotService_Resto
 }
 
 func (_c *MockSpotService_Restore_Call) RunAndReturn(run func(ctx context.Context, guildID string, id int64) error) *MockSpotService_Restore_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Update provides a mock function for the type MockSpotService
+func (_mock *MockSpotService) Update(ctx context.Context, guildID string, id int64, f spot.Fields) error {
+	ret := _mock.Called(ctx, guildID, id, f)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Update")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int64, spot.Fields) error); ok {
+		r0 = returnFunc(ctx, guildID, id, f)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockSpotService_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
+type MockSpotService_Update_Call struct {
+	*mock.Call
+}
+
+// Update is a helper method to define mock.On call
+//   - ctx context.Context
+//   - guildID string
+//   - id int64
+//   - f spot.Fields
+func (_e *MockSpotService_Expecter) Update(ctx any, guildID any, id any, f any) *MockSpotService_Update_Call {
+	return &MockSpotService_Update_Call{Call: _e.mock.On("Update", ctx, guildID, id, f)}
+}
+
+func (_c *MockSpotService_Update_Call) Run(run func(ctx context.Context, guildID string, id int64, f spot.Fields)) *MockSpotService_Update_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 int64
+		if args[2] != nil {
+			arg2 = args[2].(int64)
+		}
+		var arg3 spot.Fields
+		if args[3] != nil {
+			arg3 = args[3].(spot.Fields)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSpotService_Update_Call) Return(err error) *MockSpotService_Update_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockSpotService_Update_Call) RunAndReturn(run func(ctx context.Context, guildID string, id int64, f spot.Fields) error) *MockSpotService_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }

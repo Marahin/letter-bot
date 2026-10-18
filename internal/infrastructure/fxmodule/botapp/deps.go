@@ -10,6 +10,7 @@ import (
 	"spot-assistant/internal/core/booking"
 	"spot-assistant/internal/core/communication"
 	"spot-assistant/internal/core/onlinecheck"
+	corequeue "spot-assistant/internal/core/queue"
 	"spot-assistant/internal/core/reservationforms"
 	"spot-assistant/internal/core/reservations"
 	"spot-assistant/internal/core/summary"
@@ -23,8 +24,10 @@ import (
 	healthadapter "spot-assistant/internal/infrastructure/health"
 	prommetrics "spot-assistant/internal/infrastructure/metrics/prometheus"
 	notifypg "spot-assistant/internal/infrastructure/notify/postgresql"
+	queuesqlc "spot-assistant/internal/infrastructure/queue/postgresql/sqlc"
 	reservationsqlc "spot-assistant/internal/infrastructure/reservation/postgresql/sqlc"
 	spotsqlc "spot-assistant/internal/infrastructure/spot/postgresql/sqlc"
+	summarylayoutsqlc "spot-assistant/internal/infrastructure/summarylayout/postgresql/sqlc"
 	"spot-assistant/internal/infrastructure/worldapi"
 	worldnamesqlc "spot-assistant/internal/infrastructure/worldname/postgresql/sqlc"
 )
@@ -53,8 +56,10 @@ type botParams struct {
 	Cfg          bot.Config
 	Summary      *summary.Adapter
 	Reservations *reservationsqlc.ReservationRepository
+	Spots        *spotsqlc.SpotRepository
 	Online       *onlinecheck.Adapter
 	Configs      *guildsqlc.GuildConfigRepository
+	Layouts      *summarylayoutsqlc.SummaryLayoutRepository
 	Channels     *guildsqlc.GuildChannelRepository
 	Roles        *guildsqlc.GuildRoleRepository
 	Formatter    *formatter.DiscordFormatter
@@ -62,8 +67,9 @@ type botParams struct {
 }
 
 func newBot(p botParams) *bot.Bot {
-	return bot.NewManager(p.Shards, p.Cfg.WebBaseURL, p.Summary, p.Reservations, p.Online).
+	return bot.NewManager(p.Shards, p.Cfg.WebBaseURL, p.Summary, p.Reservations, p.Online, p.Layouts).
 		WithGuildRepositories(p.Configs, p.Channels, p.Roles).
+		WithSpots(p.Spots).
 		WithFormatter(p.Formatter).
 		WithLogger(p.Log)
 }
@@ -72,8 +78,10 @@ func newCommunication(b *bot.Bot, log *zap.SugaredLogger) *communication.Adapter
 	return communication.NewAdapter(b, b).WithLogger(log)
 }
 
-func newBooking(spots *spotsqlc.SpotRepository, reservationRepo *reservationsqlc.ReservationRepository, comm *communication.Adapter, log *zap.SugaredLogger) *booking.Adapter {
-	return booking.NewAdapter(spots, reservationRepo, comm).WithLogger(log)
+func newBooking(spots *spotsqlc.SpotRepository, reservationRepo *reservationsqlc.ReservationRepository, comm *communication.Adapter,
+	queue *queuesqlc.SpotQueueRepository, log *zap.SugaredLogger,
+) *booking.Adapter {
+	return booking.NewAdapter(spots, reservationRepo, comm, queue).WithLogger(log)
 }
 
 func newEventHandler(booker *booking.Adapter, reservationRepo *reservationsqlc.ReservationRepository, comm *communication.Adapter, summaries *summary.Adapter) *eventhandler.Handler {
@@ -92,6 +100,10 @@ func newReservationService(booker *booking.Adapter, reservationRepo *reservation
 
 func newReservationForms(service *reservations.Service, spotRepo *spotsqlc.SpotRepository) *reservationforms.Service {
 	return reservationforms.New(service, spotRepo)
+}
+
+func newSpotQueue(repo *queuesqlc.SpotQueueRepository, spotRepo *spotsqlc.SpotRepository, forms *reservationforms.Service) *corequeue.Service {
+	return corequeue.New(repo, spotRepo, forms)
 }
 
 func newMetrics(reg *prometheus.Registry) (*prommetrics.PromMetrics, error) {

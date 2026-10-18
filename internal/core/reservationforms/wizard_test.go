@@ -26,7 +26,7 @@ func TestRespawnPicker(t *testing.T) {
 		Return([]spot.Ranked{ranked(1, "Banuta", 9, now), ranked(2, "Asura", 3, now)}, nil)
 
 	// when
-	picker, err := f.s.RespawnPicker(ctx, guildID, member(), 0)
+	picker, err := f.s.RespawnPicker(ctx, guildID, member(), "", 0)
 
 	// then
 	require.NoError(t, err)
@@ -38,6 +38,34 @@ func TestRespawnPicker(t *testing.T) {
 	assert.Equal(t, "Asura", picker.Groups[0].Spots[0].Name)
 }
 
+func TestRespawnPicker_RegionLimitsTheRespawnsAndTheUsual(t *testing.T) {
+	// given
+	f := newFixture(t)
+	inRegion := func(id int64, name, key string) *spot.Spot { return &spot.Spot{ID: id, Name: name, Region: key} }
+	f.spots.On("SelectGuildSpots", ctx, guildID, false).Return([]*spot.Spot{
+		inRegion(1, "Banuta", "port-hope"), inRegion(2, "Asura", "port-hope"), inRegion(3, "Hero Cave", "edron"), inRegion(4, "Mystery", ""),
+	}, nil)
+	edronRanked := ranked(3, "Hero Cave", 8, now)
+	edronRanked.Region = "edron"
+	banutaRanked := ranked(1, "Banuta", 4, now)
+	banutaRanked.Region = "port-hope"
+	f.spots.On("SelectTopGuildSpots", ctx, guildID, "u1", now.Add(-UsualPeriod), SelectOptions).Return([]spot.Ranked{edronRanked, banutaRanked}, nil)
+	f.spots.On("SelectTopGuildSpots", ctx, guildID, "", now.Add(-PopularPeriod), SelectOptions).Return([]spot.Ranked{edronRanked}, nil)
+
+	// when
+	portHope, err := f.s.RespawnPicker(ctx, guildID, member(), "port-hope", 0)
+	other, otherErr := f.s.RespawnPicker(ctx, guildID, member(), "other", 0)
+
+	// then
+	require.NoError(t, errors.Join(err, otherErr))
+	assert.Equal(t, "Port Hope & Tiquanda", portHope.Region.Name)
+	assert.Equal(t, []reservation.UsualRespawn{{Spot: reservation.Spot{ID: 1, Name: "Banuta"}, Bookings: 4}}, portHope.Usual)
+	require.Len(t, portHope.Groups, 1)
+	assert.Equal(t, []reservation.Spot{{ID: 2, Name: "Asura"}, {ID: 1, Name: "Banuta"}}, portHope.Groups[0].Spots)
+	assert.Empty(t, other.Usual)
+	assert.Equal(t, []reservation.Spot{{ID: 4, Name: "Mystery"}}, other.Groups[0].Spots)
+}
+
 func TestRespawnPicker_WithoutAUserAsksOnlyForPopular(t *testing.T) {
 	// given
 	f := newFixture(t)
@@ -45,7 +73,7 @@ func TestRespawnPicker_WithoutAUserAsksOnlyForPopular(t *testing.T) {
 	f.spots.On("SelectTopGuildSpots", ctx, guildID, "", mock.Anything, SelectOptions).Return(nil, nil)
 
 	// when
-	picker, err := f.s.RespawnPicker(ctx, guildID, reservation.Actor{}, 3)
+	picker, err := f.s.RespawnPicker(ctx, guildID, reservation.Actor{}, "", 3)
 
 	// then
 	require.NoError(t, err)
@@ -79,7 +107,7 @@ func TestRespawnPicker_Errors(t *testing.T) {
 			tt.setup(f)
 
 			// when
-			_, err := f.s.RespawnPicker(ctx, guildID, member(), 0)
+			_, err := f.s.RespawnPicker(ctx, guildID, member(), "", 0)
 
 			// then
 			assert.ErrorIs(t, err, boom)
@@ -191,6 +219,38 @@ func TestTimePicker_Booking(t *testing.T) {
 	assert.Equal(t, "Knight", picker.Booked[1].Author)
 	assert.Len(t, picker.Starts, SelectOptions)
 	assert.True(t, picker.Lengths[1].Selected)
+	assert.False(t, picker.TakenNow, "the hunt before ended at now")
+}
+
+func TestTimePicker_TakenNow(t *testing.T) {
+	// given
+	f := newFixture(t)
+	f.spots.On("SelectGuildSpotByID", ctx, guildID, int64(7)).Return(library(), nil)
+	f.reservations.On("Search", ctx, searching(7, now, at(6, 6, 30)), 1).
+		Return(searchPage(bookedBy(1, "Druid", at(5, 17, 30), at(5, 19, 0))), nil)
+
+	// when
+	picker, err := f.s.TimePicker(ctx, guildID, member(), reservation.TimeChoice{SpotID: 7, Window: 0})
+
+	// then
+	require.NoError(t, err)
+	assert.True(t, picker.TakenNow)
+}
+
+func TestTimePicker_OwnHuntIsNotTaken(t *testing.T) {
+	// given
+	f := newFixture(t)
+	f.spots.On("SelectGuildSpotByID", ctx, guildID, int64(7)).Return(library(), nil)
+	mine := bookedBy(1, "Knight", at(5, 17, 30), at(5, 19, 0))
+	mine.AuthorDiscordID = member().UserID
+	f.reservations.On("Search", ctx, searching(7, now, at(6, 6, 30)), 1).Return(searchPage(mine), nil)
+
+	// when
+	picker, err := f.s.TimePicker(ctx, guildID, member(), reservation.TimeChoice{SpotID: 7, Window: 0})
+
+	// then
+	require.NoError(t, err)
+	assert.False(t, picker.TakenNow, "the member does not queue behind their own hunt")
 }
 
 func TestTimePicker_WindowOfTheStart(t *testing.T) {
@@ -198,6 +258,7 @@ func TestTimePicker_WindowOfTheStart(t *testing.T) {
 	f := newFixture(t)
 	f.spots.On("SelectGuildSpotByID", ctx, guildID, int64(7)).Return(library(), nil)
 	f.reservations.On("Search", ctx, searching(7, at(6, 6, 30), at(6, 18, 30)), 1).Return(searchPage(), nil)
+	f.reservations.On("Search", ctx, searching(7, now, now), 1).Return(searchPage(bookedBy(1, "Druid", at(5, 17, 30), at(5, 19, 0))), nil)
 
 	// when
 	picker, err := f.s.TimePicker(ctx, guildID, member(), reservation.TimeChoice{SpotID: 7, Window: reservation.AutoWindow, StartAt: at(6, 10, 0)})
@@ -206,6 +267,7 @@ func TestTimePicker_WindowOfTheStart(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 1, picker.Choice.Window)
 	assert.Len(t, picker.Starts, WindowSlots)
+	assert.True(t, picker.TakenNow, "a later window asks for now")
 }
 
 func TestTimePicker_ClampsTheWindow(t *testing.T) {

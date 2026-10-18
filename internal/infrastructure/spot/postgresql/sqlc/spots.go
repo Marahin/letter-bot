@@ -59,8 +59,8 @@ func (repo *SpotRepository) SelectGuildSpotByID(ctx context.Context, guildID str
 	return mapWebSpot(res), nil
 }
 
-func (repo *SpotRepository) InsertSpot(ctx context.Context, guildID string, name string) (*spot.Spot, error) {
-	res, err := repo.q.InsertSpot(ctx, InsertSpotParams{Name: name, GuildID: guildID})
+func (repo *SpotRepository) InsertSpot(ctx context.Context, guildID string, f spot.Fields) (*spot.Spot, error) {
+	res, err := repo.q.InsertSpot(ctx, InsertSpotParams{Name: f.Name, GuildID: guildID, Region: f.Region, ImageUrl: f.ImageURL})
 	if err != nil {
 		return nil, postgresql.MapError(err)
 	}
@@ -68,8 +68,8 @@ func (repo *SpotRepository) InsertSpot(ctx context.Context, guildID string, name
 	return mapWebSpot(res), nil
 }
 
-func (repo *SpotRepository) RenameSpot(ctx context.Context, guildID string, id int64, name string) error {
-	return postgresql.RowsAffected(repo.q.RenameSpot(ctx, RenameSpotParams{Name: name, ID: id, GuildID: guildID}))
+func (repo *SpotRepository) UpdateSpot(ctx context.Context, guildID string, id int64, f spot.Fields) error {
+	return postgresql.RowsAffected(repo.q.UpdateSpot(ctx, UpdateSpotParams{Name: f.Name, Region: f.Region, ImageUrl: f.ImageURL, ID: id, GuildID: guildID}))
 }
 
 func (repo *SpotRepository) ArchiveSpot(ctx context.Context, guildID string, id int64) error {
@@ -96,7 +96,7 @@ func (repo *SpotRepository) SelectGuildSpotList(ctx context.Context, guildID str
 
 	out := make([]spot.Listed, 0, len(rows))
 	for _, r := range rows {
-		sp := mapWebSpot(WebSpot{ID: r.ID, Name: r.Name, CreatedAt: r.CreatedAt, GuildID: r.GuildID, ArchivedAt: r.ArchivedAt})
+		sp := mapWebSpot(WebSpot{ID: r.ID, Name: r.Name, CreatedAt: r.CreatedAt, GuildID: r.GuildID, ArchivedAt: r.ArchivedAt, Region: r.Region, ImageUrl: r.ImageUrl})
 		out = append(out, spot.Listed{Spot: *sp, Reservations: spot.ReservationCounts{Total: r.Total, Upcoming: r.Upcoming}})
 	}
 	return out, nil
@@ -118,12 +118,20 @@ func (repo *SpotRepository) SelectSpotReservationCounts(ctx context.Context, gui
 	return spot.ReservationCounts{Total: row.Total, Upcoming: row.Upcoming}, nil
 }
 
-func (repo *SpotRepository) InsertSpotsIgnoreDuplicates(ctx context.Context, guildID string, names []string) (int64, error) {
-	if len(names) == 0 {
+func (repo *SpotRepository) InsertSpotsIgnoreDuplicates(ctx context.Context, guildID string, spots []spot.Fields) (int64, error) {
+	if len(spots) == 0 {
 		return 0, nil
 	}
-
-	return repo.q.InsertSpotsIgnoreDuplicates(ctx, InsertSpotsIgnoreDuplicatesParams{GuildID: guildID, Names: names})
+	p := InsertSpotsIgnoreDuplicatesParams{
+		GuildID:   guildID,
+		Names:     make([]string, len(spots)),
+		Regions:   make([]string, len(spots)),
+		ImageUrls: make([]string, len(spots)),
+	}
+	for i, f := range spots {
+		p.Names[i], p.Regions[i], p.ImageUrls[i] = f.Name, f.Region, f.ImageURL
+	}
+	return repo.q.InsertSpotsIgnoreDuplicates(ctx, p)
 }
 
 func (repo *SpotRepository) SelectTopGuildSpots(ctx context.Context, guildID, authorDiscordID string, since time.Time, limit int) ([]spot.Ranked, error) {
@@ -139,7 +147,7 @@ func (repo *SpotRepository) SelectTopGuildSpots(ctx context.Context, guildID, au
 
 	out := make([]spot.Ranked, 0, len(rows))
 	for _, r := range rows {
-		sp := mapWebSpot(WebSpot{ID: r.ID, Name: r.Name, CreatedAt: r.CreatedAt, GuildID: r.GuildID, ArchivedAt: r.ArchivedAt})
+		sp := mapWebSpot(WebSpot{ID: r.ID, Name: r.Name, CreatedAt: r.CreatedAt, GuildID: r.GuildID, ArchivedAt: r.ArchivedAt, Region: r.Region, ImageUrl: r.ImageUrl})
 		out = append(out, spot.Ranked{Spot: *sp, Bookings: r.Bookings, LastStartAt: r.LastStartAt.Time})
 	}
 	return out, nil
@@ -152,6 +160,8 @@ func mapWebSpot(s WebSpot) *spot.Spot {
 		CreatedAt:  s.CreatedAt.Time,
 		GuildID:    s.GuildID.String,
 		ArchivedAt: timePtr(s.ArchivedAt),
+		Region:     s.Region.String,
+		ImageURL:   s.ImageUrl.String,
 	}
 }
 

@@ -100,3 +100,8 @@ WHERE bot_present
     THEN (guild_id::bigint >> 22) % @shard_count::bigint = @shard_id::bigint
     ELSE false
   END;
+
+-- name: SetGuildRegionSummaries :execrows
+UPDATE guilds
+SET region_summaries = @region_summaries, updated_at = now()
+WHERE guild_id = @guild_id;

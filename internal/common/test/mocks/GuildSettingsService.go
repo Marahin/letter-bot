@@ -9,6 +9,7 @@ import (
 	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/guildconfig"
 	"spot-assistant/internal/core/dto/role"
+	"spot-assistant/internal/core/dto/summarylayout"
 	"time"
 
 	mock "github.com/stretchr/testify/mock"
@@ -114,6 +115,72 @@ func (_c *MockGuildSettingsService_Channels_Call) Return(channels []*discord.Cha
 }
 
 func (_c *MockGuildSettingsService_Channels_Call) RunAndReturn(run func(ctx context.Context, guildID string) ([]*discord.Channel, error)) *MockGuildSettingsService_Channels_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RegionSummaryStatus provides a mock function for the type MockGuildSettingsService
+func (_mock *MockGuildSettingsService) RegionSummaryStatus(ctx context.Context, cfg guildconfig.Config) (summarylayout.Status, error) {
+	ret := _mock.Called(ctx, cfg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RegionSummaryStatus")
+	}
+
+	var r0 summarylayout.Status
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, guildconfig.Config) (summarylayout.Status, error)); ok {
+		return returnFunc(ctx, cfg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, guildconfig.Config) summarylayout.Status); ok {
+		r0 = returnFunc(ctx, cfg)
+	} else {
+		r0 = ret.Get(0).(summarylayout.Status)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, guildconfig.Config) error); ok {
+		r1 = returnFunc(ctx, cfg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockGuildSettingsService_RegionSummaryStatus_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RegionSummaryStatus'
+type MockGuildSettingsService_RegionSummaryStatus_Call struct {
+	*mock.Call
+}
+
+// RegionSummaryStatus is a helper method to define mock.On call
+//   - ctx context.Context
+//   - cfg guildconfig.Config
+func (_e *MockGuildSettingsService_Expecter) RegionSummaryStatus(ctx any, cfg any) *MockGuildSettingsService_RegionSummaryStatus_Call {
+	return &MockGuildSettingsService_RegionSummaryStatus_Call{Call: _e.mock.On("RegionSummaryStatus", ctx, cfg)}
+}
+
+func (_c *MockGuildSettingsService_RegionSummaryStatus_Call) Run(run func(ctx context.Context, cfg guildconfig.Config)) *MockGuildSettingsService_RegionSummaryStatus_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 guildconfig.Config
+		if args[1] != nil {
+			arg1 = args[1].(guildconfig.Config)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockGuildSettingsService_RegionSummaryStatus_Call) Return(status summarylayout.Status, err error) *MockGuildSettingsService_RegionSummaryStatus_Call {
+	_c.Call.Return(status, err)
+	return _c
+}
+
+func (_c *MockGuildSettingsService_RegionSummaryStatus_Call) RunAndReturn(run func(ctx context.Context, cfg guildconfig.Config) (summarylayout.Status, error)) *MockGuildSettingsService_RegionSummaryStatus_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -317,6 +384,69 @@ func (_c *MockGuildSettingsService_SetChannels_Call) Return(err error) *MockGuil
 }
 
 func (_c *MockGuildSettingsService_SetChannels_Call) RunAndReturn(run func(ctx context.Context, guildID string, commandChannelID string, summaryChannelID string) error) *MockGuildSettingsService_SetChannels_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetRegionSummaries provides a mock function for the type MockGuildSettingsService
+func (_mock *MockGuildSettingsService) SetRegionSummaries(ctx context.Context, guildID string, enabled bool) error {
+	ret := _mock.Called(ctx, guildID, enabled)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetRegionSummaries")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, bool) error); ok {
+		r0 = returnFunc(ctx, guildID, enabled)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockGuildSettingsService_SetRegionSummaries_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetRegionSummaries'
+type MockGuildSettingsService_SetRegionSummaries_Call struct {
+	*mock.Call
+}
+
+// SetRegionSummaries is a helper method to define mock.On call
+//   - ctx context.Context
+//   - guildID string
+//   - enabled bool
+func (_e *MockGuildSettingsService_Expecter) SetRegionSummaries(ctx any, guildID any, enabled any) *MockGuildSettingsService_SetRegionSummaries_Call {
+	return &MockGuildSettingsService_SetRegionSummaries_Call{Call: _e.mock.On("SetRegionSummaries", ctx, guildID, enabled)}
+}
+
+func (_c *MockGuildSettingsService_SetRegionSummaries_Call) Run(run func(ctx context.Context, guildID string, enabled bool)) *MockGuildSettingsService_SetRegionSummaries_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 bool
+		if args[2] != nil {
+			arg2 = args[2].(bool)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockGuildSettingsService_SetRegionSummaries_Call) Return(err error) *MockGuildSettingsService_SetRegionSummaries_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockGuildSettingsService_SetRegionSummaries_Call) RunAndReturn(run func(ctx context.Context, guildID string, enabled bool) error) *MockGuildSettingsService_SetRegionSummaries_Call {
 	_c.Call.Return(run)
 	return _c
 }

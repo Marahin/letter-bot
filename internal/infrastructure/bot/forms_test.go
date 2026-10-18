@@ -19,6 +19,7 @@ import (
 	"spot-assistant/internal/core/dto/guildconfig"
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/spot"
+	"spot-assistant/internal/core/regions"
 	"spot-assistant/internal/core/reservationforms"
 	"spot-assistant/internal/core/reservations"
 	"spot-assistant/internal/infrastructure/bot/formatter"
@@ -174,7 +175,7 @@ func TestBookButton_OpensTheWizard(t *testing.T) {
 	// given
 	f := newFormFixture(t)
 	f.premium(guildconfig.Config{})
-	f.forms.On("RespawnPicker", mock.Anything, "g1", isActor("u1", "Knight", true), 0).Return(respawnPicker(30), nil)
+	f.forms.On("RespawnPicker", mock.Anything, "g1", isActor("u1", "Knight", true), "", 0).Return(respawnPicker(30), nil)
 	i := component("lf1:book")
 	got := f.expectRespond(i)
 	f.expectEdit(i)
@@ -195,7 +196,7 @@ func TestBookAndListButtons_InAnEphemeralMessageUpdateInPlace(t *testing.T) {
 			// given
 			f := newFormFixture(t)
 			f.premium(guildconfig.Config{})
-			f.forms.On("RespawnPicker", mock.Anything, "g1", isActor("u1", "Knight", true), 0).Return(respawnPicker(3), nil).Maybe()
+			f.forms.On("RespawnPicker", mock.Anything, "g1", isActor("u1", "Knight", true), "", 0).Return(respawnPicker(3), nil).Maybe()
 			f.forms.On("Mine", mock.Anything, "g1", isActor("u1", "Knight", true), listLimit).Return(&reservation.Page{}, nil).Maybe()
 			i := component(customID)
 			i.Message = &discordgo.Message{Flags: discordgo.MessageFlagsEphemeral}
@@ -231,7 +232,7 @@ func TestBookButton_ListFailure(t *testing.T) {
 	// given
 	f := newFormFixture(t)
 	f.premium(guildconfig.Config{})
-	f.forms.On("RespawnPicker", mock.Anything, "g1", mock.Anything, 0).Return(nil, errors.New("db down"))
+	f.forms.On("RespawnPicker", mock.Anything, "g1", mock.Anything, "", 0).Return(nil, errors.New("db down"))
 	i := component("lf1:book")
 	f.expectRespond(i)
 	f.expectEdit(i)
@@ -244,7 +245,7 @@ func TestBookButton_ListFailure(t *testing.T) {
 }
 
 func TestWizardSteps_RefuseAMemberWithoutTheReserveRank(t *testing.T) {
-	for _, id := range []string{"lf1:rp:1", "lf1:rs:1", "lf1:ws:7:0:60", "lf1:wl:7:0:now", "lf1:ww:7:1::0", "lf1:wb:7:now:60", "lf1:rqm"} {
+	for _, id := range []string{"lf1:rp:1", "lf1:rrp:zao:1", "lf1:rs:1", "lf1:ws:7:0:60", "lf1:wl:7:0:now", "lf1:ww:7:1::0", "lf1:wb:7:now:60", "lf1:rqm"} {
 		t.Run(id, func(t *testing.T) {
 			// given
 			f := newFormFixture(t)
@@ -267,7 +268,7 @@ func TestRespawnPage_UpdatesInPlace(t *testing.T) {
 	f := newFormFixture(t)
 	f.premium(guildconfig.Config{})
 	picker := reservationforms.PageRespawns(spotsNamed(200), 1)
-	f.forms.On("RespawnPicker", mock.Anything, "g1", mock.Anything, 1).Return(&picker, nil)
+	f.forms.On("RespawnPicker", mock.Anything, "g1", mock.Anything, "", 1).Return(&picker, nil)
 	i := component("lf1:rp:1")
 	got := f.expectRespond(i)
 	f.expectEdit(i)
@@ -278,6 +279,45 @@ func TestRespawnPage_UpdatesInPlace(t *testing.T) {
 	// then
 	assert.Equal(t, discordgo.InteractionResponseDeferredMessageUpdate, got.Type)
 	assert.Equal(t, []string{"lf1:rs:1", "lf1:rs:2", "lf1:rs:3", "lf1:rp:0", "lf1:rp:2", "lf1:rq"}, f.editedCustomIDs(t))
+}
+
+func TestRegionBookButton_OpensTheWizardOfTheRegion(t *testing.T) {
+	// given
+	f := newFormFixture(t)
+	f.premium(guildconfig.Config{})
+	picker := reservationforms.PageRespawns(spotsNamed(200), 0)
+	picker.Region = regions.Of("port-hope")
+	f.forms.On("RespawnPicker", mock.Anything, "g1", isActor("u1", "Knight", true), "port-hope", 0).Return(&picker, nil)
+	i := component("lf1:bookr:port-hope")
+	got := f.expectRespond(i)
+	f.expectEdit(i)
+
+	// when
+	f.b.InteractionCreate(nil, i)
+
+	// then
+	assert.Equal(t, discordgo.InteractionResponseDeferredChannelMessageWithSource, got.Type)
+	assert.Contains(t, f.editedContent(t), "**Book a respawn in Port Hope & Tiquanda.**")
+	assert.Equal(t, []string{"lf1:rs:1", "lf1:rs:2", "lf1:rs:3", "lf1:rrp:port-hope:0", "lf1:rrp:port-hope:1", "lf1:rq", "lf1:rp:0"}, f.editedCustomIDs(t))
+}
+
+func TestRegionPage_UpdatesInPlace(t *testing.T) {
+	// given
+	f := newFormFixture(t)
+	f.premium(guildconfig.Config{})
+	picker := reservationforms.PageRespawns(spotsNamed(200), 1)
+	picker.Region = regions.Of("zao")
+	f.forms.On("RespawnPicker", mock.Anything, "g1", mock.Anything, "zao", 1).Return(&picker, nil)
+	i := component("lf1:rrp:zao:1")
+	got := f.expectRespond(i)
+	f.expectEdit(i)
+
+	// when
+	f.b.InteractionCreate(nil, i)
+
+	// then
+	assert.Equal(t, discordgo.InteractionResponseDeferredMessageUpdate, got.Type)
+	assert.Equal(t, []string{"lf1:rs:1", "lf1:rs:2", "lf1:rs:3", "lf1:rrp:zao:0", "lf1:rrp:zao:2", "lf1:rq", "lf1:rp:0"}, f.editedCustomIDs(t))
 }
 
 func TestRespawnPick_ShowsTheTimes(t *testing.T) {
@@ -515,7 +555,7 @@ func TestSearchSubmit_NoMatchShowsTheLists(t *testing.T) {
 	f := newFormFixture(t)
 	f.premium(guildconfig.Config{})
 	f.forms.On("FindRespawn", mock.Anything, "g1", "nowhere").Return(nil, booking.ErrSpotNotFound)
-	f.forms.On("RespawnPicker", mock.Anything, "g1", mock.Anything, 0).Return(respawnPicker(3), nil)
+	f.forms.On("RespawnPicker", mock.Anything, "g1", mock.Anything, "", 0).Return(respawnPicker(3), nil)
 	i := modalSubmit(t, "lf1:rqm", "nowhere")
 	f.expectRespond(i)
 	f.expectEdit(i)

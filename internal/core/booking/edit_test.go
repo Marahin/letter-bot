@@ -24,7 +24,7 @@ var editNow = time.Date(2026, 9, 26, 12, 0, 0, 0, time.UTC)
 func newEditAdapter(t *testing.T) (*Adapter, *mocks.MockReservationRepository, *mocks.MockSpotRepository) {
 	spots := mocks.NewMockSpotRepository(t)
 	res := mocks.NewMockReservationRepository(t)
-	a := NewAdapter(spots, res, mocks.NewMockCommunicationService(t))
+	a := NewAdapter(spots, res, mocks.NewMockCommunicationService(t), mocks.NewMockSpotQueueFulfiller(t))
 	a.now = func() time.Time { return editNow }
 	return a, res, spots
 }
@@ -235,11 +235,52 @@ func TestEdit_MovesToActiveSpot(t *testing.T) {
 	res.EXPECT().SelectUpcomingMemberReservationsWithSpots(ctx, mock.Anything, mock.Anything, int64(7)).Return(nil, nil)
 	res.EXPECT().SelectOverlappingReservationsBySpotID(ctx, "g1", int64(2), req.StartAt, req.EndAt, int64(7)).Return(nil, nil)
 	res.EXPECT().UpdateReservation(ctx, "g1", mock.MatchedBy(func(r reservation.Reservation) bool { return r.SpotID == 2 })).Return(nil)
+	q := mocks.NewMockSpotQueueFulfiller(t)
+	a.queue = q
+	q.EXPECT().DeleteUserSpotEntry(ctx, "g1", "u1", int64(2)).Return(true, nil)
 
 	// when
 	_, err := a.Edit(ctx, req)
 
 	// then
+	assert.NoError(t, err)
+}
+
+func TestEdit_FulfilsTheQueueOfANewAuthor(t *testing.T) {
+	// given
+	ctx := context.Background()
+	a, res, _ := newEditAdapter(t)
+	req := editRequest()
+	req.Author, req.AuthorDiscordID = "Druid", "u2"
+	res.EXPECT().SelectGuildReservationWithSpot(ctx, "g1", int64(7)).Return(existingReservation(), nil)
+	res.EXPECT().SelectUpcomingMemberReservationsWithSpots(ctx, mock.Anything, &member.Member{ID: "u2"}, int64(7)).Return(nil, nil)
+	res.EXPECT().SelectOverlappingReservationsBySpotID(ctx, "g1", int64(1), req.StartAt, req.EndAt, int64(7)).Return(nil, nil)
+	res.EXPECT().UpdateReservation(ctx, "g1", mock.Anything).Return(nil)
+	q := mocks.NewMockSpotQueueFulfiller(t)
+	a.queue = q
+	q.EXPECT().DeleteUserSpotEntry(ctx, "g1", "u2", int64(1)).Return(false, errors.New("db down"))
+
+	// when
+	_, err := a.Edit(ctx, req)
+
+	// then: a failed removal does not fail the edit
+	assert.NoError(t, err)
+}
+
+func TestEdit_FreeTextAuthorHasNoQueue(t *testing.T) {
+	// given
+	ctx := context.Background()
+	a, res, _ := newEditAdapter(t)
+	req := editRequest()
+	req.Author, req.AuthorDiscordID = "Someone", ""
+	res.EXPECT().SelectGuildReservationWithSpot(ctx, "g1", int64(7)).Return(existingReservation(), nil)
+	res.EXPECT().SelectOverlappingReservationsBySpotID(ctx, "g1", int64(1), req.StartAt, req.EndAt, int64(7)).Return(nil, nil)
+	res.EXPECT().UpdateReservation(ctx, "g1", mock.Anything).Return(nil)
+
+	// when
+	_, err := a.Edit(ctx, req)
+
+	// then: the queue mock fails on any call
 	assert.NoError(t, err)
 }
 
@@ -417,7 +458,7 @@ func TestBook_BySpotIDNotifiesOverbookedDiscordAuthorsOnly(t *testing.T) {
 	spots := mocks.NewMockSpotRepository(t)
 	res := mocks.NewMockReservationRepository(t)
 	comm := mocks.NewMockCommunicationService(t)
-	a := NewAdapter(spots, res, comm)
+	a := NewAdapter(spots, res, comm, mocks.NewMockSpotQueueFulfiller(t))
 	g := &guild.Guild{ID: "g1"}
 	m := &member.Member{Nick: "Boss"}
 	start, end := editNow.Add(time.Hour), editNow.Add(2*time.Hour)

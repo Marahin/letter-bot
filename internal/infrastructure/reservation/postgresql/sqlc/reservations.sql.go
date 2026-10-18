@@ -148,7 +148,7 @@ func (q *Queries) DeleteReservation(ctx context.Context, id int64) error {
 
 const searchReservationsWithSpot = `-- name: SearchReservationsWithSpot :many
 SELECT web_reservation.id, web_reservation.author, web_reservation.created_at, web_reservation.start_at, web_reservation.end_at, web_reservation.spot_id, web_reservation.guild_id, web_reservation.author_discord_id,
-  web_spot.id, web_spot.name, web_spot.created_at, web_spot.guild_id, web_spot.archived_at
+  web_spot.id, web_spot.name, web_spot.created_at, web_spot.guild_id, web_spot.archived_at, web_spot.region, web_spot.image_url
 FROM web_reservation
   INNER JOIN web_spot ON web_spot.id = web_reservation.spot_id
 WHERE web_reservation.guild_id = $1::text
@@ -218,6 +218,8 @@ func (q *Queries) SearchReservationsWithSpot(ctx context.Context, arg SearchRese
 			&i.WebSpot.CreatedAt,
 			&i.WebSpot.GuildID,
 			&i.WebSpot.ArchivedAt,
+			&i.WebSpot.Region,
+			&i.WebSpot.ImageUrl,
 		); err != nil {
 			return nil, err
 		}
@@ -231,7 +233,7 @@ func (q *Queries) SearchReservationsWithSpot(ctx context.Context, arg SearchRese
 
 const selectGuildReservationWithSpot = `-- name: SelectGuildReservationWithSpot :one
 SELECT web_reservation.id, web_reservation.author, web_reservation.created_at, web_reservation.start_at, web_reservation.end_at, web_reservation.spot_id, web_reservation.guild_id, web_reservation.author_discord_id,
-  web_spot.id, web_spot.name, web_spot.created_at, web_spot.guild_id, web_spot.archived_at
+  web_spot.id, web_spot.name, web_spot.created_at, web_spot.guild_id, web_spot.archived_at, web_spot.region, web_spot.image_url
 FROM web_reservation
   INNER JOIN web_spot ON web_spot.id = web_reservation.spot_id
 WHERE web_reservation.id = $1
@@ -266,6 +268,8 @@ func (q *Queries) SelectGuildReservationWithSpot(ctx context.Context, arg Select
 		&i.WebSpot.CreatedAt,
 		&i.WebSpot.GuildID,
 		&i.WebSpot.ArchivedAt,
+		&i.WebSpot.Region,
+		&i.WebSpot.ImageUrl,
 	)
 	return i, err
 }
@@ -474,7 +478,7 @@ func (q *Queries) SelectReservation(ctx context.Context, id int64) (WebReservati
 
 const selectReservationWithSpot = `-- name: SelectReservationWithSpot :one
 SELECT reservations.id, reservations.author, reservations.created_at, reservations.start_at, reservations.end_at, reservations.spot_id, reservations.guild_id, reservations.author_discord_id,
-  spots.id, spots.name, spots.created_at, spots.guild_id, spots.archived_at
+  spots.id, spots.name, spots.created_at, spots.guild_id, spots.archived_at, spots.region, spots.image_url
 FROM web_reservation reservations
   JOIN web_spot spots ON spots.id = reservations.spot_id
 WHERE reservations.id = $1
@@ -511,12 +515,14 @@ func (q *Queries) SelectReservationWithSpot(ctx context.Context, arg SelectReser
 		&i.WebSpot.CreatedAt,
 		&i.WebSpot.GuildID,
 		&i.WebSpot.ArchivedAt,
+		&i.WebSpot.Region,
+		&i.WebSpot.ImageUrl,
 	)
 	return i, err
 }
 
 const selectReservationsWithSpots = `-- name: SelectReservationsWithSpots :many
-select web_spot.id, web_spot.name, web_spot.created_at, web_spot.guild_id, web_spot.archived_at,
+select web_spot.id, web_spot.name, web_spot.created_at, web_spot.guild_id, web_spot.archived_at, web_spot.region, web_spot.image_url,
   web_reservation.id, web_reservation.author, web_reservation.created_at, web_reservation.start_at, web_reservation.end_at, web_reservation.spot_id, web_reservation.guild_id, web_reservation.author_discord_id
 from web_reservation
   inner join web_spot on web_reservation.spot_id = web_spot.id
@@ -544,6 +550,8 @@ func (q *Queries) SelectReservationsWithSpots(ctx context.Context, guildID strin
 			&i.WebSpot.CreatedAt,
 			&i.WebSpot.GuildID,
 			&i.WebSpot.ArchivedAt,
+			&i.WebSpot.Region,
+			&i.WebSpot.ImageUrl,
 			&i.WebReservation.ID,
 			&i.WebReservation.Author,
 			&i.WebReservation.CreatedAt,
@@ -564,7 +572,7 @@ func (q *Queries) SelectReservationsWithSpots(ctx context.Context, guildID strin
 }
 
 const selectReservationsWithSpotsForSpot = `-- name: SelectReservationsWithSpotsForSpot :many
-select web_spot.id, web_spot.name, web_spot.created_at, web_spot.guild_id, web_spot.archived_at,
+select web_spot.id, web_spot.name, web_spot.created_at, web_spot.guild_id, web_spot.archived_at, web_spot.region, web_spot.image_url,
   web_reservation.id, web_reservation.author, web_reservation.created_at, web_reservation.start_at, web_reservation.end_at, web_reservation.spot_id, web_reservation.guild_id, web_reservation.author_discord_id
 from web_reservation
   inner join web_spot on web_reservation.spot_id = web_spot.id
@@ -598,6 +606,8 @@ func (q *Queries) SelectReservationsWithSpotsForSpot(ctx context.Context, arg Se
 			&i.WebSpot.CreatedAt,
 			&i.WebSpot.GuildID,
 			&i.WebSpot.ArchivedAt,
+			&i.WebSpot.Region,
+			&i.WebSpot.ImageUrl,
 			&i.WebReservation.ID,
 			&i.WebReservation.Author,
 			&i.WebReservation.CreatedAt,
@@ -618,7 +628,7 @@ func (q *Queries) SelectReservationsWithSpotsForSpot(ctx context.Context, arg Se
 }
 
 const selectUpcomingMemberReservationsWithSpots = `-- name: SelectUpcomingMemberReservationsWithSpots :many
-select web_spot.id, web_spot.name, web_spot.created_at, web_spot.guild_id, web_spot.archived_at,
+select web_spot.id, web_spot.name, web_spot.created_at, web_spot.guild_id, web_spot.archived_at, web_spot.region, web_spot.image_url,
   web_reservation.id, web_reservation.author, web_reservation.created_at, web_reservation.start_at, web_reservation.end_at, web_reservation.spot_id, web_reservation.guild_id, web_reservation.author_discord_id
 from web_reservation
   inner join web_spot on web_reservation.spot_id = web_spot.id
@@ -655,6 +665,8 @@ func (q *Queries) SelectUpcomingMemberReservationsWithSpots(ctx context.Context,
 			&i.WebSpot.CreatedAt,
 			&i.WebSpot.GuildID,
 			&i.WebSpot.ArchivedAt,
+			&i.WebSpot.Region,
+			&i.WebSpot.ImageUrl,
 			&i.WebReservation.ID,
 			&i.WebReservation.Author,
 			&i.WebReservation.CreatedAt,

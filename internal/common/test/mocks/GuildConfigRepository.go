@@ -766,6 +766,69 @@ func (_c *MockGuildConfigRepository_SetPremium_Call) RunAndReturn(run func(ctx c
 	return _c
 }
 
+// SetRegionSummaries provides a mock function for the type MockGuildConfigRepository
+func (_mock *MockGuildConfigRepository) SetRegionSummaries(ctx context.Context, guildID string, enabled bool) error {
+	ret := _mock.Called(ctx, guildID, enabled)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetRegionSummaries")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, bool) error); ok {
+		r0 = returnFunc(ctx, guildID, enabled)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockGuildConfigRepository_SetRegionSummaries_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetRegionSummaries'
+type MockGuildConfigRepository_SetRegionSummaries_Call struct {
+	*mock.Call
+}
+
+// SetRegionSummaries is a helper method to define mock.On call
+//   - ctx context.Context
+//   - guildID string
+//   - enabled bool
+func (_e *MockGuildConfigRepository_Expecter) SetRegionSummaries(ctx any, guildID any, enabled any) *MockGuildConfigRepository_SetRegionSummaries_Call {
+	return &MockGuildConfigRepository_SetRegionSummaries_Call{Call: _e.mock.On("SetRegionSummaries", ctx, guildID, enabled)}
+}
+
+func (_c *MockGuildConfigRepository_SetRegionSummaries_Call) Run(run func(ctx context.Context, guildID string, enabled bool)) *MockGuildConfigRepository_SetRegionSummaries_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 bool
+		if args[2] != nil {
+			arg2 = args[2].(bool)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockGuildConfigRepository_SetRegionSummaries_Call) Return(err error) *MockGuildConfigRepository_SetRegionSummaries_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockGuildConfigRepository_SetRegionSummaries_Call) RunAndReturn(run func(ctx context.Context, guildID string, enabled bool) error) *MockGuildConfigRepository_SetRegionSummaries_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetRoleIDs provides a mock function for the type MockGuildConfigRepository
 func (_mock *MockGuildConfigRepository) SetRoleIDs(ctx context.Context, guildID string, kind guildconfig.RoleKind, roleIDs []string) error {
 	ret := _mock.Called(ctx, guildID, kind, roleIDs)

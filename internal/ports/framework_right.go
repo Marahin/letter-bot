@@ -16,6 +16,7 @@ import (
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/spot"
 	"spot-assistant/internal/core/dto/summary"
+	"spot-assistant/internal/core/dto/summarylayout"
 )
 
 type ReservationRepository interface {
@@ -78,10 +79,11 @@ type SpotRepository interface {
 	SelectGuildSpotByID(ctx context.Context, guildID string, id int64) (*spot.Spot, error)
 
 	// InsertSpot returns ports.ErrDuplicate when an active spot has the same name.
-	InsertSpot(ctx context.Context, guildID string, name string) (*spot.Spot, error)
+	// An empty region or image is stored as none.
+	InsertSpot(ctx context.Context, guildID string, f spot.Fields) (*spot.Spot, error)
 
-	// RenameSpot returns ports.ErrNotFound or ports.ErrDuplicate.
-	RenameSpot(ctx context.Context, guildID string, id int64, name string) error
+	// UpdateSpot writes the name, region and image. Returns ports.ErrNotFound or ports.ErrDuplicate.
+	UpdateSpot(ctx context.Context, guildID string, id int64, f spot.Fields) error
 
 	// ArchiveSpot returns ports.ErrNotFound when no active spot has the id.
 	ArchiveSpot(ctx context.Context, guildID string, id int64) error
@@ -111,9 +113,9 @@ type SpotRepository interface {
 	// booked first, then the latest booked.
 	SelectTopGuildSpots(ctx context.Context, guildID, authorDiscordID string, since time.Time, limit int) ([]spot.Ranked, error)
 
-	// InsertSpotsIgnoreDuplicates adds the names that are not active in the guild yet.
-	// Returns the number of spots added.
-	InsertSpotsIgnoreDuplicates(ctx context.Context, guildID string, names []string) (int64, error)
+	// InsertSpotsIgnoreDuplicates adds the spots whose name is not active in the guild yet.
+	// An empty region or image is stored as none. Returns the number of spots added.
+	InsertSpotsIgnoreDuplicates(ctx context.Context, guildID string, spots []spot.Fields) (int64, error)
 }
 
 type BotPort interface {
@@ -153,6 +155,7 @@ type GuildConfigRepository interface {
 	MarkAbsentExcept(ctx context.Context, shardID, shardCount int, presentIDs []string, readyAt time.Time) error
 	SetPremium(ctx context.Context, guildID string, premium bool) error
 	SetChannels(ctx context.Context, guildID, commandChannelID, summaryChannelID string) error
+	SetRegionSummaries(ctx context.Context, guildID string, enabled bool) error
 	SetRoleIDs(ctx context.Context, guildID string, kind guildconfig.RoleKind, roleIDs []string) error
 
 	RequestResync(ctx context.Context, guildID string) error
@@ -160,6 +163,19 @@ type GuildConfigRepository interface {
 	ListResyncRequested(ctx context.Context) ([]string, error)
 	// MarkSynced sets synced_at and clears the resync request unless it was made after startedAt.
 	MarkSynced(ctx context.Context, guildID string, startedAt time.Time) error
+}
+
+// SummaryLayoutRepository stores the Discord category, channels and messages the
+// bot made for the region summaries of a guild.
+type SummaryLayoutRepository interface {
+	// GetLayout returns an empty layout for a guild without one.
+	GetLayout(ctx context.Context, guildID string) (*summarylayout.Layout, error)
+	SaveLayout(ctx context.Context, l summarylayout.Layout) error
+	// ListRegionChannels orders the channels by region key.
+	ListRegionChannels(ctx context.Context, guildID string) ([]summarylayout.RegionChannel, error)
+	// SaveRegionChannel inserts or replaces the channel of c.Region.
+	SaveRegionChannel(ctx context.Context, c summarylayout.RegionChannel) error
+	DeleteRegionChannel(ctx context.Context, guildID, region string) error
 }
 
 // GuildChannelRepository stores the channels the bot synced from Discord.
