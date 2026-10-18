@@ -545,16 +545,16 @@ func (_c *MockSpotQueueRepository_ListUserEntries_Call) RunAndReturn(run func(ct
 }
 
 // ResetOffer provides a mock function for the type MockSpotQueueRepository
-func (_mock *MockSpotQueueRepository) ResetOffer(ctx context.Context, id int64) error {
-	ret := _mock.Called(ctx, id)
+func (_mock *MockSpotQueueRepository) ResetOffer(ctx context.Context, id int64, offeredAt time.Time) error {
+	ret := _mock.Called(ctx, id, offeredAt)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ResetOffer")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, int64) error); ok {
-		r0 = returnFunc(ctx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int64, time.Time) error); ok {
+		r0 = returnFunc(ctx, id, offeredAt)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -569,11 +569,12 @@ type MockSpotQueueRepository_ResetOffer_Call struct {
 // ResetOffer is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id int64
-func (_e *MockSpotQueueRepository_Expecter) ResetOffer(ctx any, id any) *MockSpotQueueRepository_ResetOffer_Call {
-	return &MockSpotQueueRepository_ResetOffer_Call{Call: _e.mock.On("ResetOffer", ctx, id)}
+//   - offeredAt time.Time
+func (_e *MockSpotQueueRepository_Expecter) ResetOffer(ctx any, id any, offeredAt any) *MockSpotQueueRepository_ResetOffer_Call {
+	return &MockSpotQueueRepository_ResetOffer_Call{Call: _e.mock.On("ResetOffer", ctx, id, offeredAt)}
 }
 
-func (_c *MockSpotQueueRepository_ResetOffer_Call) Run(run func(ctx context.Context, id int64)) *MockSpotQueueRepository_ResetOffer_Call {
+func (_c *MockSpotQueueRepository_ResetOffer_Call) Run(run func(ctx context.Context, id int64, offeredAt time.Time)) *MockSpotQueueRepository_ResetOffer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -583,9 +584,14 @@ func (_c *MockSpotQueueRepository_ResetOffer_Call) Run(run func(ctx context.Cont
 		if args[1] != nil {
 			arg1 = args[1].(int64)
 		}
+		var arg2 time.Time
+		if args[2] != nil {
+			arg2 = args[2].(time.Time)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -596,7 +602,7 @@ func (_c *MockSpotQueueRepository_ResetOffer_Call) Return(err error) *MockSpotQu
 	return _c
 }
 
-func (_c *MockSpotQueueRepository_ResetOffer_Call) RunAndReturn(run func(ctx context.Context, id int64) error) *MockSpotQueueRepository_ResetOffer_Call {
+func (_c *MockSpotQueueRepository_ResetOffer_Call) RunAndReturn(run func(ctx context.Context, id int64, offeredAt time.Time) error) *MockSpotQueueRepository_ResetOffer_Call {
 	_c.Call.Return(run)
 	return _c
 }

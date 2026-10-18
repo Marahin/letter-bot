@@ -668,10 +668,96 @@ func TestReconcileSummaries_ABlockedPassKeepsTheFirstRetirement(t *testing.T) {
 	// when
 	res := f.b.reconcileSummaries(context.Background(), "g1")
 
-	// then: no new notice and no new RetiredAt, so the delete stays due
+	// then: no new notice and no new RetiredAt
 	require.NoError(t, res.Err)
 	assert.Empty(t, f.savedRows)
 	assert.Equal(t, blockedRetry, res.Again)
+}
+
+// blockedGuild is a guild on the single summary for another 30 minutes, with
+// the given region channels.
+func (f *regionFixture) blockedGuild(rows ...summarylayout.RegionChannel) {
+	until := f.now.Add(30 * time.Minute)
+	f.guild(regionConfig(), summarylayout.Layout{CategoryID: "cat", BlockedUntil: &until}, rows...)
+	f.channels(category(), regionChannel("c-ph", "port-hope"), regionChannel("c-zao", "zao"), summaryChannelOf())
+	f.reservations.On("SelectUpcomingReservationsWithSpot", mock.Anything, "g1").Return([]*reservation.ReservationWithSpot{}, nil)
+	f.summaries.On("Ledger", mock.Anything).Return(summary.Ledger{})
+	f.b.legacyHashes.Set("g1/c-sum", summary.Ledger{}.Hash())
+}
+
+func TestReconcileSummaries_ABlockedGuildDeletesNoChannel(t *testing.T) {
+	// given: a region retired two days ago, and a live one
+	f := newRegionFixture(t)
+	twoDaysAgo := f.now.Add(-2 * retiredChannelTTL)
+	f.blockedGuild(
+		summarylayout.RegionChannel{GuildID: "g1", Region: "port-hope", ChannelID: "c-ph", MessageIDs: []string{"m1"}, RetiredAt: &twoDaysAgo},
+		summarylayout.RegionChannel{GuildID: "g1", Region: "zao", ChannelID: "c-zao", MessageIDs: []string{"m2"}, ContentHash: "x"})
+	f.writer.On("ChannelMessageEditComplex", mock.MatchedBy(func(m *discordgo.MessageEdit) bool { return m.ID == "m2" })).
+		Return(&discordgo.Message{}, nil).Once()
+
+	// when
+	blocked := f.b.reconcileSummaries(context.Background(), "g1")
+
+	// then: the strict writer mock fails on a ChannelDelete
+	require.NoError(t, blocked.Err)
+	assert.Equal(t, 30*time.Minute, blocked.Again, "the block timer, not the TTL")
+	retiredZao := f.lastRow(t)
+	assert.Equal(t, "zao", retiredZao.Region)
+	require.NotNil(t, retiredZao.RetiredAt)
+
+	// given: the block ended and port-hope is needed again
+	f.now = f.now.Add(time.Hour)
+	f.savedRows = nil
+	f.layouts.On("ListRegionChannels", mock.Anything, "g1").Unset()
+	f.layouts.On("ListRegionChannels", mock.Anything, "g1").Return([]summarylayout.RegionChannel{
+		{GuildID: "g1", Region: "port-hope", ChannelID: "c-ph", MessageIDs: []string{"m1"}, RetiredAt: &twoDaysAgo},
+		retiredZao,
+	}, nil)
+	f.desired(portHope)
+	f.writer.On("ChannelMessageEditComplex", mock.MatchedBy(func(m *discordgo.MessageEdit) bool { return m.ID == "m1" })).
+		Return(&discordgo.Message{}, nil).Once()
+	f.writer.On("ChannelMessages", "c-sum", 100, "", "", "").Return([]*discordgo.Message{}, nil).Once()
+	f.writer.On("ChannelMessageSendComplex", "c-sum", mock.Anything).Return(&discordgo.Message{ID: "idx"}, nil).Once()
+
+	// when
+	unblocked := f.b.reconcileSummaries(context.Background(), "g1")
+
+	// then: port-hope is written again, zao waits for the rest of its 24 hours
+	require.NoError(t, unblocked.Err)
+	require.Len(t, f.savedRows, 1)
+	assert.Equal(t, "port-hope", f.savedRows[0].Region)
+	assert.Nil(t, f.savedRows[0].RetiredAt)
+	assert.Equal(t, f.hashOf(portHope), f.savedRows[0].ContentHash)
+	assert.Equal(t, retiredChannelTTL-time.Hour, unblocked.Again)
+}
+
+func TestReconcileSummaries_ABlockedGuildRetriesAFailedNoticeAfterTheBlock(t *testing.T) {
+	// given
+	f := newRegionFixture(t)
+	f.blockedGuild(summarylayout.RegionChannel{GuildID: "g1", Region: "zao", ChannelID: "c-zao", MessageIDs: []string{"m2"}, ContentHash: "x"})
+	f.writer.On("ChannelMessageEditComplex", mock.Anything).Return(nil, discordErr(discordgo.ErrCodeMissingPermissions)).Once()
+
+	// when
+	res := f.b.reconcileSummaries(context.Background(), "g1")
+
+	// then: no error, so the worker does not back off
+	require.NoError(t, res.Err)
+	assert.Equal(t, 30*time.Minute, res.Again)
+	assert.Nil(t, f.lastRow(t).RetiredAt)
+}
+
+func TestReconcileSummaries_ABlockedGuildKeepsItsEmptyCategory(t *testing.T) {
+	// given
+	f := newRegionFixture(t)
+	f.blockedGuild()
+
+	// when
+	res := f.b.reconcileSummaries(context.Background(), "g1")
+
+	// then: the strict writer mock fails on GuildChannels and ChannelDelete
+	require.NoError(t, res.Err)
+	assert.Empty(t, f.savedLayout)
+	assert.Equal(t, 30*time.Minute, res.Again)
 }
 
 func TestReconcileSummaries_AFailedRegionDoesNotStopTheOthers(t *testing.T) {

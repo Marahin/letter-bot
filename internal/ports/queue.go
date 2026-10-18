@@ -40,8 +40,8 @@ type SpotQueueRepository interface {
 	// ResetTakenOffers clears the offer time of the guild's entries whose
 	// respawn is not free from startAt.
 	ResetTakenOffers(ctx context.Context, guildID string, startAt time.Time) error
-	// ResetOffer clears the offer time of the entry.
-	ResetOffer(ctx context.Context, id int64) error
+	// ResetOffer clears the offer time of the entry while it is still offeredAt.
+	ResetOffer(ctx context.Context, id int64, offeredAt time.Time) error
 }
 
 // SpotQueueService is the respawn queue of the bot: a member waits for a taken
@@ -65,9 +65,9 @@ type SpotQueueService interface {
 	// offer and its respawn is still free. It returns the offer time and
 	// whether it claimed the offer.
 	ClaimOffer(ctx context.Context, entryID int64) (time.Time, bool, error)
-	// Unclaim clears the offer of an entry whose offer could not be sent, so a
-	// later pass tries again.
-	Unclaim(ctx context.Context, entryID int64) error
+	// Unclaim clears the offer claimed at offeredAt of an entry whose offer
+	// could not be sent, so a later pass tries again. A newer claim stays.
+	Unclaim(ctx context.Context, entryID int64, offeredAt time.Time) error
 	// OfferUsable tells whether the offer made at offeredAt can still book:
 	// nil or queue.ErrOfferExpired. It does not check the member.
 	OfferUsable(e *queue.Entry, offeredAt time.Time) error

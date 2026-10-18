@@ -71,7 +71,7 @@ func (b *Bot) offer(ctx context.Context, cfg *guildconfig.Config, e queue.Entry)
 	// The pass may end at shutdown; the claim must still go.
 	unclaimCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), unclaimTimeout)
 	defer cancel()
-	if unclaimErr := b.queue.Unclaim(unclaimCtx, e.ID); unclaimErr != nil {
+	if unclaimErr := b.queue.Unclaim(unclaimCtx, e.ID, at); unclaimErr != nil {
 		return errors.Join(err, fmt.Errorf("unclaim: %w", unclaimErr))
 	}
 	return err
@@ -88,12 +88,17 @@ func retryableSend(err error) bool {
 	if errors.As(err, &netErr) {
 		return true
 	}
+	// discordgo waits out a 429 itself; with that off, the 429 comes as a
+	// RateLimitError, never as a RESTError.
+	var rateErr *discordgo.RateLimitError
+	if errors.As(err, &rateErr) {
+		return true
+	}
 	var restErr *discordgo.RESTError
 	if !errors.As(err, &restErr) {
 		return false
 	}
-	return restErr.Response == nil || restErr.Response.StatusCode >= http.StatusInternalServerError ||
-		restErr.Response.StatusCode == http.StatusTooManyRequests
+	return restErr.Response == nil || restErr.Response.StatusCode >= http.StatusInternalServerError
 }
 
 // sendQueueOffer sends the offer by DM. A member who does not take DMs from

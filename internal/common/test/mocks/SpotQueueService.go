@@ -600,16 +600,16 @@ func (_c *MockSpotQueueService_OfferUsable_Call) RunAndReturn(run func(e *queue.
 }
 
 // Unclaim provides a mock function for the type MockSpotQueueService
-func (_mock *MockSpotQueueService) Unclaim(ctx context.Context, entryID int64) error {
-	ret := _mock.Called(ctx, entryID)
+func (_mock *MockSpotQueueService) Unclaim(ctx context.Context, entryID int64, offeredAt time.Time) error {
+	ret := _mock.Called(ctx, entryID, offeredAt)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Unclaim")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, int64) error); ok {
-		r0 = returnFunc(ctx, entryID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int64, time.Time) error); ok {
+		r0 = returnFunc(ctx, entryID, offeredAt)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -624,11 +624,12 @@ type MockSpotQueueService_Unclaim_Call struct {
 // Unclaim is a helper method to define mock.On call
 //   - ctx context.Context
 //   - entryID int64
-func (_e *MockSpotQueueService_Expecter) Unclaim(ctx any, entryID any) *MockSpotQueueService_Unclaim_Call {
-	return &MockSpotQueueService_Unclaim_Call{Call: _e.mock.On("Unclaim", ctx, entryID)}
+//   - offeredAt time.Time
+func (_e *MockSpotQueueService_Expecter) Unclaim(ctx any, entryID any, offeredAt any) *MockSpotQueueService_Unclaim_Call {
+	return &MockSpotQueueService_Unclaim_Call{Call: _e.mock.On("Unclaim", ctx, entryID, offeredAt)}
 }
 
-func (_c *MockSpotQueueService_Unclaim_Call) Run(run func(ctx context.Context, entryID int64)) *MockSpotQueueService_Unclaim_Call {
+func (_c *MockSpotQueueService_Unclaim_Call) Run(run func(ctx context.Context, entryID int64, offeredAt time.Time)) *MockSpotQueueService_Unclaim_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -638,9 +639,14 @@ func (_c *MockSpotQueueService_Unclaim_Call) Run(run func(ctx context.Context, e
 		if args[1] != nil {
 			arg1 = args[1].(int64)
 		}
+		var arg2 time.Time
+		if args[2] != nil {
+			arg2 = args[2].(time.Time)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -651,7 +657,7 @@ func (_c *MockSpotQueueService_Unclaim_Call) Return(err error) *MockSpotQueueSer
 	return _c
 }
 
-func (_c *MockSpotQueueService_Unclaim_Call) RunAndReturn(run func(ctx context.Context, entryID int64) error) *MockSpotQueueService_Unclaim_Call {
+func (_c *MockSpotQueueService_Unclaim_Call) RunAndReturn(run func(ctx context.Context, entryID int64, offeredAt time.Time) error) *MockSpotQueueService_Unclaim_Call {
 	_c.Call.Return(run)
 	return _c
 }

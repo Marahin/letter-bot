@@ -165,8 +165,8 @@ func (s *Service) claim(ctx context.Context, entryID int64, now time.Time) (time
 	return at, true, nil
 }
 
-func (s *Service) Unclaim(ctx context.Context, entryID int64) error {
-	return s.repo.ResetOffer(ctx, entryID)
+func (s *Service) Unclaim(ctx context.Context, entryID int64, offeredAt time.Time) error {
+	return s.repo.ResetOffer(ctx, entryID, offeredAt)
 }
 
 // OfferUsable does not need the entry's offer to be current: after the respawn

@@ -76,6 +76,8 @@ WHERE guild_id = @guild_id
   AND NOT spot_queue_free(guild_id, spot_id, length_minutes, sqlc.arg(start_at)::timestamptz);
 
 -- name: ResetQueueOffer :exec
+-- Only the caller's own claim: /queue may have made a newer one meanwhile.
 UPDATE spot_queue_entries
 SET offered_at = NULL
-WHERE id = @id;
+WHERE id = @id
+  AND offered_at = @offered_at;

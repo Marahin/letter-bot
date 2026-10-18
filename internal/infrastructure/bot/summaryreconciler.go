@@ -145,7 +145,8 @@ func (p *regionPass) trackStored() {
 }
 
 // legacy posts the single summary and retires the region channels. A failed
-// post does not stop the retirement.
+// post does not stop the retirement. A blocked guild comes back when the block
+// ends, also after a failed notice.
 func (p *regionPass) legacy() reconcileResult {
 	next, postErr := p.b.PostLegacySummary(p.ctx, p.cfg)
 	var layoutErr error
@@ -155,7 +156,11 @@ func (p *regionPass) legacy() reconcileResult {
 		layoutErr = p.saveLayout()
 	}
 	again, retireErr := p.retire(nil)
-	if p.cfg.RegionSummaries && p.layout.Blocked(p.now) {
+	if p.blocked() {
+		if retireErr != nil {
+			p.b.log.With("guild.ID", p.cfg.GuildID).Warnf("could not retire a region channel of a blocked guild: %s", retireErr)
+			retireErr = nil
+		}
 		again = minPositive(again, p.layout.BlockedUntil.Sub(p.now))
 	}
 	return reconcileResult{Next: next, Again: again, Err: errors.Join(postErr, layoutErr, retireErr)}
@@ -217,7 +222,9 @@ func (p *regionPass) ensureCategory() *reconcileResult {
 // ensureChannels gives every desired region a channel: its stored one, one of
 // its name under the category, or a new one. It makes at most one per pass. A
 // result means the pass ends here. A retired region keeps its retirement until
-// writeRegions, so a pass that ends here does not restart the 24 hours.
+// writeRegions, so a pass that ends here does not restart the 24 hours. A
+// blocked guild deletes no channel, so a needed one is still there after the
+// block.
 func (p *regionPass) ensureChannels() *reconcileResult {
 	for _, rs := range p.desired {
 		key := rs.Region.Key
@@ -448,7 +455,8 @@ func (p *regionPass) dropMovedIndex(channelID string) error {
 
 // retire handles the stored channels of regions not in keep: first a notice,
 // then, a day later, the delete. The category goes when it is empty and no
-// region channel is left. It returns when to look again.
+// region channel is left. A blocked guild gets only the notices: the pass does
+// not know which regions it needs. It returns when to look again.
 func (p *regionPass) retire(keep map[string]bool) (time.Duration, error) {
 	var again time.Duration
 	keys := make([]string, 0, len(p.rows))
@@ -465,7 +473,7 @@ func (p *regionPass) retire(keep map[string]bool) (time.Duration, error) {
 				return again, err
 			}
 		}
-		if row.RetiredAt == nil {
+		if row.RetiredAt == nil || p.blocked() {
 			continue
 		}
 		if left := retiredChannelTTL - p.now.Sub(*row.RetiredAt); left > 0 {
@@ -477,7 +485,7 @@ func (p *regionPass) retire(keep map[string]bool) (time.Duration, error) {
 		}
 		return channelOpGap, p.deleteRow(row)
 	}
-	if len(keep) > 0 || len(p.rows) > 0 || p.layout.CategoryID == "" {
+	if len(keep) > 0 || len(p.rows) > 0 || p.layout.CategoryID == "" || p.blocked() {
 		return again, nil
 	}
 	return again, p.deleteCategory()
@@ -551,6 +559,12 @@ func (p *regionPass) deleteChannel(channelID string) error {
 		return err
 	}
 	return nil
+}
+
+// blocked tells whether the guild waits on the single summary after Discord
+// refused a channel. With the region summaries off, the block does not count.
+func (p *regionPass) blocked() bool {
+	return p.cfg.RegionSummaries && p.layout.Blocked(p.now)
 }
 
 // block keeps the guild on the single summary for a while.

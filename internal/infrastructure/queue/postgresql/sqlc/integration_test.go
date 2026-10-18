@@ -132,7 +132,7 @@ func TestSpotQueueRepository_Queries(t *testing.T) {
 	// when: an offer is claimed and unclaimed, then queued again with another length
 	again, err := repo.ClaimOffer(ctx, queue.Claim{EntryID: halfHour.ID, OfferedAt: now, StartAt: at(12, 1)})
 	require.NoError(t, err)
-	require.NoError(t, repo.ResetOffer(ctx, halfHour.ID))
+	require.NoError(t, repo.ResetOffer(ctx, halfHour.ID, now))
 	unclaimed := offeredAt(halfHour.ID)
 	_, err = repo.ClaimOffer(ctx, queue.Claim{EntryID: halfHour.ID, OfferedAt: now, StartAt: at(12, 1)})
 	require.NoError(t, err)
@@ -144,6 +144,19 @@ func TestSpotQueueRepository_Queries(t *testing.T) {
 	assert.Equal(t, halfHour.ID, requeued.ID)
 	assert.Nil(t, requeued.OfferedAt)
 	assert.Equal(t, 90*time.Minute, requeued.Length)
+
+	// when: a pass claims, /queue queues again and claims meanwhile, then the pass unclaims
+	stale, err1 := repo.ClaimOffer(ctx, queue.Claim{EntryID: halfHour.ID, OfferedAt: now, StartAt: at(15, 1)})
+	upsert(itSpot, "u2", 90*time.Minute, tomorrow)
+	newer, err2 := repo.ClaimOffer(ctx, queue.Claim{EntryID: halfHour.ID, OfferedAt: now.Add(time.Minute), StartAt: at(15, 1)})
+	err3 = repo.ResetOffer(ctx, halfHour.ID, now)
+
+	// then: the newer claim stays
+	require.NoError(t, errors.Join(err1, err2, err3))
+	assert.True(t, stale)
+	assert.True(t, newer)
+	require.NotNil(t, offeredAt(halfHour.ID))
+	assert.True(t, now.Add(time.Minute).Equal(*offeredAt(halfHour.ID)))
 
 	// when: the member's entries are counted and listed
 	others, err1 := repo.CountUserEntries(ctx, queue.UserCount{GuildID: itGuild, UserID: "u1", ExceptSpotID: itSpot, Now: now})

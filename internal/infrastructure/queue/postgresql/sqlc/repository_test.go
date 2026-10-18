@@ -151,12 +151,12 @@ func TestClaimAndResetOffers(t *testing.T) {
 	start := t0.Add(time.Minute)
 	mock.ExpectExec("SET offered_at = \\$1").WithArgs(tsz(t0), int64(1), tsz(start)).WillReturnResult(pgxmock.NewResult("UPDATE", 1))
 	mock.ExpectExec("NOT spot_queue_free").WithArgs("g1", tsz(start)).WillReturnResult(pgxmock.NewResult("UPDATE", 2))
-	mock.ExpectExec("SET offered_at = NULL").WithArgs(int64(1)).WillReturnResult(pgxmock.NewResult("UPDATE", 1))
+	mock.ExpectExec("AND offered_at = \\$2").WithArgs(int64(1), tsz(t0)).WillReturnResult(pgxmock.NewResult("UPDATE", 1))
 
 	// when
 	claimed, claimErr := repo.ClaimOffer(ctx, queue.Claim{EntryID: 1, OfferedAt: t0, StartAt: start})
 	resetTakenErr := repo.ResetTakenOffers(ctx, "g1", start)
-	resetErr := repo.ResetOffer(ctx, 1)
+	resetErr := repo.ResetOffer(ctx, 1, t0)
 
 	// then
 	require.NoError(t, errors.Join(claimErr, resetTakenErr, resetErr))

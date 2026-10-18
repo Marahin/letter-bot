@@ -187,7 +187,9 @@ func TestSendQueueOffers_ATransientFailureIsUnclaimed(t *testing.T) {
 			f.writer.On("ChannelMessageSendComplex", "dm1", mock.Anything).Return(nil, discordStatusErr(http.StatusBadGateway))
 		}},
 		{name: "rate limited", setup: func(f *queueFixture) {
-			f.writer.On("UserChannelCreate", "u1").Return(nil, discordStatusErr(http.StatusTooManyRequests))
+			f.writer.On("UserChannelCreate", "u1").Return(nil, &discordgo.RateLimitError{RateLimit: &discordgo.RateLimit{
+				TooManyRequests: &discordgo.TooManyRequests{RetryAfter: time.Second}, URL: "users/@me/channels",
+			}})
 		}},
 		{name: "network fails", setup: func(f *queueFixture) {
 			f.writer.On("UserChannelCreate", "u1").Return(nil, &net.OpError{Op: "dial", Err: errors.New("refused")})
@@ -206,7 +208,7 @@ func TestSendQueueOffers_ATransientFailureIsUnclaimed(t *testing.T) {
 			f.due(waiting(nil))
 			f.claims(9)
 			tt.setup(f)
-			f.queue.EXPECT().Unclaim(mock.Anything, int64(9)).Return(nil)
+			f.queue.EXPECT().Unclaim(mock.Anything, int64(9), offeredAt).Return(nil)
 
 			// when
 			err := f.b.sendQueueOffers(context.Background(), "g1")
@@ -265,7 +267,7 @@ func TestSendQueueOffers_UnclaimOutlivesTheCancelledPass(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	f.writer.On("UserChannelCreate", "u1").Run(func(mock.Arguments) { cancel() }).Return(&discordgo.Channel{ID: "dm1"}, nil)
 	var unclaimErr error
-	f.queue.EXPECT().Unclaim(mock.Anything, int64(9)).Run(func(ctx context.Context, _ int64) { unclaimErr = ctx.Err() }).Return(nil)
+	f.queue.EXPECT().Unclaim(mock.Anything, int64(9), offeredAt).Run(func(ctx context.Context, _ int64, _ time.Time) { unclaimErr = ctx.Err() }).Return(nil)
 
 	// when
 	err := f.b.sendQueueOffers(ctx, "g1")
@@ -282,7 +284,7 @@ func TestSendQueueOffers_UnclaimFails(t *testing.T) {
 	f.due(waiting(nil))
 	f.claims(9)
 	f.writer.On("UserChannelCreate", "u1").Return(nil, discordStatusErr(http.StatusBadGateway))
-	f.queue.EXPECT().Unclaim(mock.Anything, int64(9)).Return(errors.New("db down"))
+	f.queue.EXPECT().Unclaim(mock.Anything, int64(9), offeredAt).Return(errors.New("db down"))
 
 	// when
 	err := f.b.sendQueueOffers(context.Background(), "g1")

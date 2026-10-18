@@ -294,10 +294,10 @@ func TestClaimOffer(t *testing.T) {
 func TestUnclaim(t *testing.T) {
 	// given
 	f := newFixture(t)
-	f.repo.EXPECT().ResetOffer(ctx, int64(4)).Return(nil)
+	f.repo.EXPECT().ResetOffer(ctx, int64(4), nowSec).Return(nil)
 
 	// when
-	err := f.s.Unclaim(ctx, 4)
+	err := f.s.Unclaim(ctx, 4, nowSec)
 
 	// then
 	assert.NoError(t, err)

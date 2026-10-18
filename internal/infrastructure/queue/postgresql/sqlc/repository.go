@@ -114,8 +114,8 @@ func (r *SpotQueueRepository) ResetTakenOffers(ctx context.Context, guildID stri
 	return err
 }
 
-func (r *SpotQueueRepository) ResetOffer(ctx context.Context, id int64) error {
-	return r.q.ResetQueueOffer(ctx, id)
+func (r *SpotQueueRepository) ResetOffer(ctx context.Context, id int64, offeredAt time.Time) error {
+	return r.q.ResetQueueOffer(ctx, ResetQueueOfferParams{ID: id, OfferedAt: timestamptz(offeredAt)})
 }
 
 func entry(row SpotQueueEntry, spotName string) queue.Entry {

@@ -565,8 +565,10 @@ because Discord rate-limits the bot.
 97. **The summary per region needs at least one active respawn with a region.**
     Otherwise the server keeps the single summary. When Discord refuses a
     channel (missing permissions, or the limit of 500 channels), the server
-    keeps the single summary for an hour, then the bot tries again. The web
-    shows these two cases on the Settings page (decision 95).
+    keeps the single summary for an hour, then the bot tries again. During
+    this hour the region channels show the notice, and the bot deletes no
+    channel (decision 99). A notice that fails waits for the end of the hour
+    too. The web shows these two cases on the Settings page (decision 95).
 98. **The bot changes Discord gently.** Each region channel stores a hash of
     the content the bot wrote there (`summary_region_channels.content_hash`).
     A pass writes only to the regions whose content changed, also after a
@@ -586,10 +588,12 @@ because Discord rate-limits the bot.
 99. **Cleanup.** A region channel that is no longer needed (no active respawns
     in the region, or the setting is off) gets a notice, and the bot deletes
     it 24 hours later. Switched back on within 24 hours, the region gets its
-    channel back. The region stays retired until a pass writes its summary,
-    so a pass that stops early (e.g. at the channel limit) does not restart
-    the 24 hours. The cleanup runs also when the summary or the index write
-    fails. The bot deletes the category only when it is empty. A
+    channel back. The region stays retired until a pass writes its summary, so
+    a pass that stops early does not restart the 24 hours. While Discord
+    refuses channels (decision 97), the bot does not delete region channels or
+    the category, also after 24 hours: a region that is still needed keeps its
+    channel when the hour ends. The cleanup runs also when the summary or the
+    index write fails. The bot deletes the category only when it is empty. A
     category with the server's own channels in it is left to the server. A
     region channel that someone deletes by hand comes back while it is needed
     (scxmanager parity). Without premium, or without the bot, nothing is
@@ -649,10 +653,15 @@ because Discord rate-limits the bot.
      minutes. When Discord refuses the DM (code 50007), the offer goes to the
      command channel with a mention that pings only that member.
      - A send that fails for a reason that can pass (the network, a Discord
-       error 5xx or 429, or the end of the pass at shutdown) clears the
-       offer, so a later pass tries again. Any other refusal (closed DMs and
-       no command channel, a member who left) keeps the offer, so the bot
-       does not try again until the respawn was taken and freed again.
+       error 5xx, a rate limit, or the end of the pass at shutdown) clears the
+       offer, so a later pass tries again. discordgo waits out a 429 and sends
+       again by itself; when that is off, a rate limit fails the send. A 502
+       that discordgo already retried returns a plain error and keeps the
+       offer. The
+       clear applies only to the offer time that the bot claimed, so it keeps
+       a newer offer that `/queue` made meanwhile. Any other refusal (closed
+       DMs and no command channel, a member who left) keeps the offer, so the
+       bot does not try again until the respawn was taken and freed again.
      - A respawn becomes free only when a reservation ends or is deleted,
        moved or shortened. The end of a listed reservation is a boundary
        timer, and a change triggers a pass (decision 90). The 2-minute tick

@@ -122,10 +122,17 @@ const resetQueueOffer = `-- name: ResetQueueOffer :exec
 UPDATE spot_queue_entries
 SET offered_at = NULL
 WHERE id = $1
+  AND offered_at = $2
 `
 
-func (q *Queries) ResetQueueOffer(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, resetQueueOffer, id)
+type ResetQueueOfferParams struct {
+	ID        int64
+	OfferedAt pgtype.Timestamptz
+}
+
+// Only the caller's own claim: /queue may have made a newer one meanwhile.
+func (q *Queries) ResetQueueOffer(ctx context.Context, arg ResetQueueOfferParams) error {
+	_, err := q.db.Exec(ctx, resetQueueOffer, arg.ID, arg.OfferedAt)
 	return err
 }
 
