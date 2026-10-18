@@ -1,3 +1,4 @@
+-- +goose Up
 -- Enable trigram extension for efficient text search
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 

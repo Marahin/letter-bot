@@ -20,8 +20,9 @@ const (
 
 // Request for autocompletion during Booking process
 type BookAutocompleteRequest struct {
-	Field BookAutocompleteFocus
-	Value string
+	GuildID string
+	Field   BookAutocompleteFocus
+	Value   string
 }
 
 // Response for autocompletion during booking process
@@ -32,7 +33,10 @@ type BookRequest struct {
 	*guild.Guild
 	*member.Member
 
-	Spot           string
+	Spot string
+	// SpotID, when set, picks the spot by id instead of by the Spot name.
+	SpotID int64
+
 	StartAt        time.Time
 	EndAt          time.Time
 	Overbook       bool

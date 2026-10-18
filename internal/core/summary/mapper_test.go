@@ -1,76 +1,88 @@
 package summary
 
 import (
-	"spot-assistant/internal/common/test/mocks"
-	"spot-assistant/internal/core/dto/reservation"
 	"testing"
 	"time"
 
-	dto "spot-assistant/internal/core/dto/summary"
-
 	"github.com/stretchr/testify/assert"
+
+	"spot-assistant/internal/common/test/mocks"
+	"spot-assistant/internal/core/dto/reservation"
+	dto "spot-assistant/internal/core/dto/summary"
 )
 
-func TestMapReservation(t *testing.T) {
-	// Given
-	assert := assert.New(t)
-	chartSrvMock := new(mocks.MockChartAdapter)
-	mockOnlineCheckService := new(mocks.MockOnlineCheckService)
-	adapter := NewAdapter(chartSrvMock, mockOnlineCheckService)
+var mapperNow = time.Date(2026, 10, 18, 18, 0, 0, 0, time.UTC)
+
+func newMapperAdapter(t *testing.T) (*Adapter, *mocks.MockOnlineCheckService) {
+	online := mocks.NewMockOnlineCheckService(t)
+	adapter := NewAdapter(mocks.NewMockChartAdapter(t), online)
+	adapter.now = func() time.Time { return mapperNow }
+	return adapter, online
+}
+
+func TestMapReservation_ShowsTheStatusOfAnOngoingReservation(t *testing.T) {
+	// given
+	adapter, online := newMapperAdapter(t)
 	input := &reservation.Reservation{
-		Author:  "test author",
-		StartAt: time.Now(),
-		EndAt:   time.Now().Add(2 * time.Hour),
-		GuildID: "guild1",
+		Author:          "test author",
+		AuthorDiscordID: "u1",
+		StartAt:         mapperNow,
+		EndAt:           mapperNow.Add(2 * time.Hour),
+		GuildID:         "guild1",
 	}
-	// mock PlayerStatus to return Online for this author
-	mockOnlineCheckService.On("PlayerStatus", input.GuildID, input.Author).Return(dto.Online)
+	online.EXPECT().PlayerStatus("guild1", "test author").Return(dto.Online)
 
 	// when
 	res := adapter.MapReservation(input)
 
-	// assert
-	assert.NotNil(res)
-	assert.Equal(input.Author, res.Author)
-	assert.Equal(input.StartAt, res.StartAt)
-	assert.Equal(input.EndAt, res.EndAt)
-	assert.Equal(dto.Online, res.Status)
+	// then
+	assert.Equal(t, &dto.Booking{
+		Author:          "test author",
+		AuthorDiscordID: "u1",
+		Status:          dto.Online,
+		StartAt:         input.StartAt,
+		EndAt:           input.EndAt,
+	}, res)
+}
+
+func TestMapReservation_HidesTheStatusOutsideTheReservation(t *testing.T) {
+	cases := map[string]struct{ start, end time.Time }{
+		"upcoming": {mapperNow.Add(time.Minute), mapperNow.Add(time.Hour)},
+		"ended":    {mapperNow.Add(-time.Hour), mapperNow},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			// given
+			adapter, _ := newMapperAdapter(t)
+
+			// when
+			res := adapter.MapReservation(&reservation.Reservation{Author: "a", StartAt: tc.start, EndAt: tc.end, GuildID: "guild1"})
+
+			// then
+			assert.Equal(t, dto.Unknown, res.Status)
+		})
+	}
 }
 
 func TestMapReservations(t *testing.T) {
-	// Given
-	assert := assert.New(t)
-	chartSrvMock := new(mocks.MockChartAdapter)
-	mockOnlineCheckService := new(mocks.MockOnlineCheckService)
-	adapter := NewAdapter(chartSrvMock, mockOnlineCheckService)
+	// given
+	adapter, online := newMapperAdapter(t)
 	input := []*reservation.Reservation{
-		{
-			Author:  "test author",
-			StartAt: time.Now(),
-			EndAt:   time.Now().Add(2 * time.Hour),
-			GuildID: "guild1",
-		},
-		{
-			Author:  "test author 2",
-			StartAt: time.Now().Add(5 * time.Minute),
-			EndAt:   time.Now().Add(3 * time.Hour),
-			GuildID: "guild1",
-		},
+		{Author: "test author", StartAt: mapperNow.Add(-time.Hour), EndAt: mapperNow.Add(time.Hour), GuildID: "guild1"},
+		{Author: "test author 2", StartAt: mapperNow.Add(5 * time.Minute), EndAt: mapperNow.Add(3 * time.Hour), GuildID: "guild1"},
 	}
-	// mock PlayerStatus for both authors
-	mockOnlineCheckService.On("PlayerStatus", input[0].GuildID, input[0].Author).Return(dto.Online)
-	mockOnlineCheckService.On("PlayerStatus", input[1].GuildID, input[1].Author).Return(dto.Offline)
+	online.EXPECT().PlayerStatus("guild1", "test author").Return(dto.Offline)
 
 	// when
 	res := adapter.MapReservations(input)
 
-	// assert
-	assert.Len(res, 2)
+	// then
+	assert.Len(t, res, 2)
 	for i, booking := range res {
-		assert.Equal(input[i].Author, booking.Author)
-		assert.Equal(input[i].StartAt, booking.StartAt)
-		assert.Equal(input[i].EndAt, booking.EndAt)
+		assert.Equal(t, input[i].Author, booking.Author)
+		assert.Equal(t, input[i].StartAt, booking.StartAt)
+		assert.Equal(t, input[i].EndAt, booking.EndAt)
 	}
-	assert.Equal(dto.Online, res[0].Status)
-	assert.Equal(dto.Offline, res[1].Status)
+	assert.Equal(t, dto.Offline, res[0].Status)
+	assert.Equal(t, dto.Unknown, res[1].Status)
 }

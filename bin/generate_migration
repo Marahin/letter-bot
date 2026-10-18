@@ -1,4 +1,0 @@
-atlas migrate diff $1 \
-  --dev-url "docker://postgres/12/dev" \
-  --dir "file://internal/infrastructure/db/postgresql/migrations" \
-  --to "file://internal/infrastructure/db/postgresql/schema.sql"

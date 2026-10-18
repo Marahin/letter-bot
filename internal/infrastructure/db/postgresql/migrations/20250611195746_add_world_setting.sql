@@ -1,3 +1,4 @@
+-- +goose Up
 
 -- Create "guilds_world" table
 CREATE TABLE "public"."guilds_world" (

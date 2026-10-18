@@ -2,6 +2,7 @@ package summary
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
@@ -16,7 +17,7 @@ import (
 
 func TestBaseSummary(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	mockChartAdapter := new(mocks.MockChartAdapter)
 	mockOnlineCheckService := new(mocks.MockOnlineCheckService)
 	adapter := NewAdapter(mockChartAdapter, mockOnlineCheckService)
@@ -25,16 +26,16 @@ func TestBaseSummary(t *testing.T) {
 	summary := adapter.BaseSummary()
 
 	// assert
-	assert.NotNil(summary)
-	assert.Equal(summary.URL, "https://tibialoot.com")
-	assert.Equal(summary.Title, "TibiaLoot.com - Spot Assistant")
-	assert.Equal(summary.Description, "Current and upcoming hunts. Times are in **Europe/Berlin**.")
-	assert.Contains(summary.Footer, "powered by TibiaLoot.com")
+	is.NotNil(summary)
+	is.Equal(summary.URL, "https://tibialoot.com")
+	is.Equal(summary.Title, "TibiaLoot.com - Spot Assistant")
+	is.Equal(summary.Description, "Current and upcoming hunts. Times are in **Europe/Berlin**.")
+	is.Contains(summary.Footer, "powered by TibiaLoot.com")
 }
 
 func TestPrepareSummary(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	mockChartAdapter := new(mocks.MockChartAdapter)
 	mockOnlineCheckService := new(mocks.MockOnlineCheckService)
 	adapter := NewAdapter(mockChartAdapter, mockOnlineCheckService)
@@ -95,47 +96,47 @@ func TestPrepareSummary(t *testing.T) {
 	summary, err := adapter.PrepareSummary(input)
 
 	// assert
-	assert.Nil(err)
-	assert.NotNil(summary)
-	assert.Equal(summary.URL, "https://tibialoot.com")
-	assert.Equal(summary.Title, "TibiaLoot.com - Spot Assistant")
-	assert.Equal(summary.Description, "Current and upcoming hunts. Times are in **Europe/Berlin**.")
-	assert.Contains(summary.Footer, "powered by TibiaLoot.com")
-	assert.Len(summary.Ledger, 2)
+	is.Nil(err)
+	is.NotNil(summary)
+	is.Equal(summary.URL, "https://tibialoot.com")
+	is.Equal(summary.Title, "TibiaLoot.com - Spot Assistant")
+	is.Equal(summary.Description, "Current and upcoming hunts. Times are in **Europe/Berlin**.")
+	is.Contains(summary.Footer, "powered by TibiaLoot.com")
+	is.Len(summary.Ledger, 2)
 
 	firstEntry := summary.Ledger[0]
 	secondEntry := summary.Ledger[1]
 
-	assert.Equal(firstEntry.Spot, "test-1")
-	assert.Len(firstEntry.Bookings, 2)
+	is.Equal(firstEntry.Spot, "test-1")
+	is.Len(firstEntry.Bookings, 2)
 	for _, entry := range firstEntry.Bookings {
-		assert.NotNil(entry)
-		assert.NotEmpty(entry.Author)
-		assert.NotEmpty(entry.StartAt)
-		assert.NotEmpty(entry.EndAt)
-		assert.Equal(dto.Online, entry.Status)
+		is.NotNil(entry)
+		is.NotEmpty(entry.Author)
+		is.NotEmpty(entry.StartAt)
+		is.NotEmpty(entry.EndAt)
+		is.Equal(dto.Online, entry.Status)
 	}
 
-	assert.Equal(secondEntry.Spot, "test-2")
-	assert.Len(secondEntry.Bookings, 1)
+	is.Equal(secondEntry.Spot, "test-2")
+	is.Len(secondEntry.Bookings, 1)
 	for _, entry := range secondEntry.Bookings {
-		assert.NotNil(entry)
-		assert.NotEmpty(entry.Author)
-		assert.NotEmpty(entry.StartAt)
-		assert.NotEmpty(entry.EndAt)
-		assert.Equal(dto.Offline, entry.Status)
+		is.NotNil(entry)
+		is.NotEmpty(entry.Author)
+		is.NotEmpty(entry.StartAt)
+		is.NotEmpty(entry.EndAt)
+		is.Equal(dto.Offline, entry.Status)
 	}
 }
 
 func TestPrepareSummaryTruncated(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	mockChartAdapter := new(mocks.MockChartAdapter)
 	mockOnlineCheckService := new(mocks.MockOnlineCheckService)
 	adapter := NewAdapter(mockChartAdapter, mockOnlineCheckService)
 
 	input := []*reservation.ReservationWithSpot{}
-	for ind := 0; ind < 2*MAX_CHART_RESPAWNS; ind++ {
+	for ind := 0; ind < 2*maxChartRespawns; ind++ {
 		input = append(input, &reservation.ReservationWithSpot{
 			Reservation: reservation.Reservation{
 				Author:  fmt.Sprintf("test author %d", ind),
@@ -144,7 +145,7 @@ func TestPrepareSummaryTruncated(t *testing.T) {
 				GuildID: "guild1",
 			},
 			Spot: reservation.Spot{
-				Name: fmt.Sprintf("%d", ind%(MAX_CHART_RESPAWNS)),
+				Name: strconv.Itoa(ind % maxChartRespawns),
 			},
 		})
 	}
@@ -170,22 +171,22 @@ func TestPrepareSummaryTruncated(t *testing.T) {
 	summary, err := adapter.PrepareSummary(input)
 
 	// assert
-	assert.Nil(err)
-	assert.NotNil(summary)
+	is.Nil(err)
+	is.NotNil(summary)
 	legendValuePtrs := collections.PoorMansMap(summary.LegendValues, func(lv dto.LegendValue) *dto.LegendValue {
 		return &lv
 	})
 	otherEntry, index := collections.PoorMansFind(legendValuePtrs, func(lv *dto.LegendValue) bool {
 		return lv.Legend == "Other"
 	})
-	assert.NotNil(otherEntry)
-	assert.NotEqual(-1, index)
-	assert.NotZero(otherEntry.Value)
+	is.NotNil(otherEntry)
+	is.NotEqual(-1, index)
+	is.NotZero(otherEntry.Value)
 
 	// check that all bookings have the correct status
 	for _, ledgerEntry := range summary.Ledger {
 		for _, booking := range ledgerEntry.Bookings {
-			assert.Equal(dto.Offline, booking.Status)
+			is.Equal(dto.Offline, booking.Status)
 		}
 	}
 }

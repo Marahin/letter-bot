@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	"context"
 	"spot-assistant/internal/core/dto/book"
 	"spot-assistant/internal/core/dto/guild"
 	"spot-assistant/internal/core/dto/member"
@@ -20,10 +21,19 @@ func NewMockBookingService(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockBookingService {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockBookingService{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -76,7 +86,7 @@ type MockBookingService_Book_Call struct {
 
 // Book is a helper method to define mock.On call
 //   - request book.BookRequest
-func (_e *MockBookingService_Expecter) Book(request interface{}) *MockBookingService_Book_Call {
+func (_e *MockBookingService_Expecter) Book(request any) *MockBookingService_Book_Call {
 	return &MockBookingService_Book_Call{Call: _e.mock.On("Book", request)}
 }
 
@@ -103,9 +113,140 @@ func (_c *MockBookingService_Book_Call) RunAndReturn(run func(request book.BookR
 	return _c
 }
 
+// DeleteForGuild provides a mock function for the type MockBookingService
+func (_mock *MockBookingService) DeleteForGuild(ctx context.Context, guildID string, id int64) error {
+	ret := _mock.Called(ctx, guildID, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteForGuild")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, int64) error); ok {
+		r0 = returnFunc(ctx, guildID, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockBookingService_DeleteForGuild_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteForGuild'
+type MockBookingService_DeleteForGuild_Call struct {
+	*mock.Call
+}
+
+// DeleteForGuild is a helper method to define mock.On call
+//   - ctx context.Context
+//   - guildID string
+//   - id int64
+func (_e *MockBookingService_Expecter) DeleteForGuild(ctx any, guildID any, id any) *MockBookingService_DeleteForGuild_Call {
+	return &MockBookingService_DeleteForGuild_Call{Call: _e.mock.On("DeleteForGuild", ctx, guildID, id)}
+}
+
+func (_c *MockBookingService_DeleteForGuild_Call) Run(run func(ctx context.Context, guildID string, id int64)) *MockBookingService_DeleteForGuild_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 int64
+		if args[2] != nil {
+			arg2 = args[2].(int64)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockBookingService_DeleteForGuild_Call) Return(err error) *MockBookingService_DeleteForGuild_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockBookingService_DeleteForGuild_Call) RunAndReturn(run func(ctx context.Context, guildID string, id int64) error) *MockBookingService_DeleteForGuild_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Edit provides a mock function for the type MockBookingService
+func (_mock *MockBookingService) Edit(ctx context.Context, req book.EditRequest) ([]*reservation.Reservation, error) {
+	ret := _mock.Called(ctx, req)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Edit")
+	}
+
+	var r0 []*reservation.Reservation
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, book.EditRequest) ([]*reservation.Reservation, error)); ok {
+		return returnFunc(ctx, req)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, book.EditRequest) []*reservation.Reservation); ok {
+		r0 = returnFunc(ctx, req)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*reservation.Reservation)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, book.EditRequest) error); ok {
+		r1 = returnFunc(ctx, req)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockBookingService_Edit_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Edit'
+type MockBookingService_Edit_Call struct {
+	*mock.Call
+}
+
+// Edit is a helper method to define mock.On call
+//   - ctx context.Context
+//   - req book.EditRequest
+func (_e *MockBookingService_Expecter) Edit(ctx any, req any) *MockBookingService_Edit_Call {
+	return &MockBookingService_Edit_Call{Call: _e.mock.On("Edit", ctx, req)}
+}
+
+func (_c *MockBookingService_Edit_Call) Run(run func(ctx context.Context, req book.EditRequest)) *MockBookingService_Edit_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 book.EditRequest
+		if args[1] != nil {
+			arg1 = args[1].(book.EditRequest)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockBookingService_Edit_Call) Return(reservations []*reservation.Reservation, err error) *MockBookingService_Edit_Call {
+	_c.Call.Return(reservations, err)
+	return _c
+}
+
+func (_c *MockBookingService_Edit_Call) RunAndReturn(run func(ctx context.Context, req book.EditRequest) ([]*reservation.Reservation, error)) *MockBookingService_Edit_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindAvailableSpots provides a mock function for the type MockBookingService
-func (_mock *MockBookingService) FindAvailableSpots(filter string) ([]string, error) {
-	ret := _mock.Called(filter)
+func (_mock *MockBookingService) FindAvailableSpots(guildID string, filter string) ([]string, error) {
+	ret := _mock.Called(guildID, filter)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindAvailableSpots")
@@ -113,18 +254,18 @@ func (_mock *MockBookingService) FindAvailableSpots(filter string) ([]string, er
 
 	var r0 []string
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string) ([]string, error)); ok {
-		return returnFunc(filter)
+	if returnFunc, ok := ret.Get(0).(func(string, string) ([]string, error)); ok {
+		return returnFunc(guildID, filter)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string) []string); ok {
-		r0 = returnFunc(filter)
+	if returnFunc, ok := ret.Get(0).(func(string, string) []string); ok {
+		r0 = returnFunc(guildID, filter)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]string)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
-		r1 = returnFunc(filter)
+	if returnFunc, ok := ret.Get(1).(func(string, string) error); ok {
+		r1 = returnFunc(guildID, filter)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -137,19 +278,25 @@ type MockBookingService_FindAvailableSpots_Call struct {
 }
 
 // FindAvailableSpots is a helper method to define mock.On call
+//   - guildID string
 //   - filter string
-func (_e *MockBookingService_Expecter) FindAvailableSpots(filter interface{}) *MockBookingService_FindAvailableSpots_Call {
-	return &MockBookingService_FindAvailableSpots_Call{Call: _e.mock.On("FindAvailableSpots", filter)}
+func (_e *MockBookingService_Expecter) FindAvailableSpots(guildID any, filter any) *MockBookingService_FindAvailableSpots_Call {
+	return &MockBookingService_FindAvailableSpots_Call{Call: _e.mock.On("FindAvailableSpots", guildID, filter)}
 }
 
-func (_c *MockBookingService_FindAvailableSpots_Call) Run(run func(filter string)) *MockBookingService_FindAvailableSpots_Call {
+func (_c *MockBookingService_FindAvailableSpots_Call) Run(run func(guildID string, filter string)) *MockBookingService_FindAvailableSpots_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
 			arg0 = args[0].(string)
 		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -160,7 +307,7 @@ func (_c *MockBookingService_FindAvailableSpots_Call) Return(strings []string, e
 	return _c
 }
 
-func (_c *MockBookingService_FindAvailableSpots_Call) RunAndReturn(run func(filter string) ([]string, error)) *MockBookingService_FindAvailableSpots_Call {
+func (_c *MockBookingService_FindAvailableSpots_Call) RunAndReturn(run func(guildID string, filter string) ([]string, error)) *MockBookingService_FindAvailableSpots_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -192,7 +339,7 @@ type MockBookingService_GetSuggestedHours_Call struct {
 // GetSuggestedHours is a helper method to define mock.On call
 //   - time1 time.Time
 //   - s string
-func (_e *MockBookingService_Expecter) GetSuggestedHours(time1 interface{}, s interface{}) *MockBookingService_GetSuggestedHours_Call {
+func (_e *MockBookingService_Expecter) GetSuggestedHours(time1 any, s any) *MockBookingService_GetSuggestedHours_Call {
 	return &MockBookingService_GetSuggestedHours_Call{Call: _e.mock.On("GetSuggestedHours", time1, s)}
 }
 
@@ -225,8 +372,8 @@ func (_c *MockBookingService_GetSuggestedHours_Call) RunAndReturn(run func(time1
 }
 
 // Unbook provides a mock function for the type MockBookingService
-func (_mock *MockBookingService) Unbook(g *guild.Guild, m *member.Member, reservationId int64) (*reservation.ReservationWithSpot, error) {
-	ret := _mock.Called(g, m, reservationId)
+func (_mock *MockBookingService) Unbook(g *guild.Guild, m *member.Member, reservationID int64) (*reservation.ReservationWithSpot, error) {
+	ret := _mock.Called(g, m, reservationID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Unbook")
@@ -235,17 +382,17 @@ func (_mock *MockBookingService) Unbook(g *guild.Guild, m *member.Member, reserv
 	var r0 *reservation.ReservationWithSpot
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(*guild.Guild, *member.Member, int64) (*reservation.ReservationWithSpot, error)); ok {
-		return returnFunc(g, m, reservationId)
+		return returnFunc(g, m, reservationID)
 	}
 	if returnFunc, ok := ret.Get(0).(func(*guild.Guild, *member.Member, int64) *reservation.ReservationWithSpot); ok {
-		r0 = returnFunc(g, m, reservationId)
+		r0 = returnFunc(g, m, reservationID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*reservation.ReservationWithSpot)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(*guild.Guild, *member.Member, int64) error); ok {
-		r1 = returnFunc(g, m, reservationId)
+		r1 = returnFunc(g, m, reservationID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -260,12 +407,12 @@ type MockBookingService_Unbook_Call struct {
 // Unbook is a helper method to define mock.On call
 //   - g *guild.Guild
 //   - m *member.Member
-//   - reservationId int64
-func (_e *MockBookingService_Expecter) Unbook(g interface{}, m interface{}, reservationId interface{}) *MockBookingService_Unbook_Call {
-	return &MockBookingService_Unbook_Call{Call: _e.mock.On("Unbook", g, m, reservationId)}
+//   - reservationID int64
+func (_e *MockBookingService_Expecter) Unbook(g any, m any, reservationID any) *MockBookingService_Unbook_Call {
+	return &MockBookingService_Unbook_Call{Call: _e.mock.On("Unbook", g, m, reservationID)}
 }
 
-func (_c *MockBookingService_Unbook_Call) Run(run func(g *guild.Guild, m *member.Member, reservationId int64)) *MockBookingService_Unbook_Call {
+func (_c *MockBookingService_Unbook_Call) Run(run func(g *guild.Guild, m *member.Member, reservationID int64)) *MockBookingService_Unbook_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 *guild.Guild
 		if args[0] != nil {
@@ -293,7 +440,7 @@ func (_c *MockBookingService_Unbook_Call) Return(reservationWithSpot *reservatio
 	return _c
 }
 
-func (_c *MockBookingService_Unbook_Call) RunAndReturn(run func(g *guild.Guild, m *member.Member, reservationId int64) (*reservation.ReservationWithSpot, error)) *MockBookingService_Unbook_Call {
+func (_c *MockBookingService_Unbook_Call) RunAndReturn(run func(g *guild.Guild, m *member.Member, reservationID int64) (*reservation.ReservationWithSpot, error)) *MockBookingService_Unbook_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -335,7 +482,7 @@ type MockBookingService_UnbookAutocomplete_Call struct {
 //   - g *guild.Guild
 //   - m *member.Member
 //   - filter string
-func (_e *MockBookingService_Expecter) UnbookAutocomplete(g interface{}, m interface{}, filter interface{}) *MockBookingService_UnbookAutocomplete_Call {
+func (_e *MockBookingService_Expecter) UnbookAutocomplete(g any, m any, filter any) *MockBookingService_UnbookAutocomplete_Call {
 	return &MockBookingService_UnbookAutocomplete_Call{Call: _e.mock.On("UnbookAutocomplete", g, m, filter)}
 }
 

@@ -7,7 +7,7 @@ import (
 )
 
 type LogEntry interface {
-	Error(args ...interface{})
+	Error(args ...any)
 }
 
 // LogErrors allows for error handling in defer calls:
@@ -38,6 +38,6 @@ func IgnoreError(err error) {
 // but still have `defer tx.Rollback(ctx)` (which does nothing if the transaction succeeded)
 // we can't run `defer IgnoreError(tx.Rollback(ctx))` because the `tx.Rollback` part is evaluated
 // the very moment. And so it cancels transaction at the moment of calling defer.
-func ExecuteAndIgnoreErrorF(f func(context.Context) error, ctx context.Context) {
+func ExecuteAndIgnoreErrorF(ctx context.Context, f func(context.Context) error) {
 	IgnoreError(f(ctx))
 }

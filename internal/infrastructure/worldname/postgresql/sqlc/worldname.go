@@ -2,7 +2,9 @@ package sqlc
 
 import (
 	"context"
+
 	"spot-assistant/internal/core/dto/guildsworld"
+	"spot-assistant/internal/infrastructure/db/postgresql"
 )
 
 type WorldNameRepository struct {
@@ -25,7 +27,7 @@ func (repo *WorldNameRepository) UpsertGuildWorld(ctx context.Context, guildID s
 func (repo *WorldNameRepository) SelectGuildWorld(ctx context.Context, guildID string) (*guildsworld.GuildsWorld, error) {
 	res, err := repo.q.SelectGuildWorld(ctx, guildID)
 	if err != nil {
-		return nil, err
+		return nil, postgresql.MapError(err)
 	}
 	return &guildsworld.GuildsWorld{
 		ID:        res.ID,

@@ -8,26 +8,26 @@ import (
 
 func TestPoorMansContains(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	input := []int{1, 2, 3}
 
 	// when
 	res := PoorMansContains(input, 2)
 
 	// assert
-	assert.True(res)
+	is.True(res)
 }
 
 func TestPoorMansContainsWithFalsyValues(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	input := []int{1, 2, 3}
 
 	// when
 	res := PoorMansContains(input, 15)
 
 	// assert
-	assert.False(res)
+	is.False(res)
 }
 
 func TestPoorMansSum(t *testing.T) {
@@ -35,7 +35,7 @@ func TestPoorMansSum(t *testing.T) {
 	type testStruct struct {
 		V int
 	}
-	assert := assert.New(t)
+	is := assert.New(t)
 	input := make([]*testStruct, 4)
 	for x := 0; x < 4; x++ {
 		input[x] = &testStruct{V: x}
@@ -47,7 +47,7 @@ func TestPoorMansSum(t *testing.T) {
 	})
 
 	// assert
-	assert.Equal(int64(6), res)
+	is.Equal(int64(6), res)
 }
 
 func TestPoorMansFindWithNoMatch(t *testing.T) {
@@ -55,7 +55,7 @@ func TestPoorMansFindWithNoMatch(t *testing.T) {
 	type testStruct struct {
 		V int
 	}
-	assert := assert.New(t)
+	is := assert.New(t)
 	input := make([]*testStruct, 4)
 	for x := 0; x < 4; x++ {
 		input[x] = &testStruct{V: x}
@@ -67,13 +67,13 @@ func TestPoorMansFindWithNoMatch(t *testing.T) {
 	})
 
 	// assert
-	assert.Equal(index, -1)
-	assert.Nil(res)
+	is.Equal(index, -1)
+	is.Nil(res)
 }
 
 func TestTruncate(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	input := make([]int, 10)
 	for x := 0; x < 10; x++ {
 		input[x] = x
@@ -83,13 +83,13 @@ func TestTruncate(t *testing.T) {
 	res := Truncate(input, 3)
 
 	// assert
-	assert.Len(res, 3)
-	assert.Contains(res, 0, 1, 2)
+	is.Len(res, 3)
+	is.Contains(res, 0, 1, 2)
 }
 
 func TestPoorMansMap(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	input := make([]int, 10)
 	for x := 0; x < 10; x++ {
 		input[x] = x
@@ -101,13 +101,13 @@ func TestPoorMansMap(t *testing.T) {
 	})
 
 	for i, el := range res {
-		assert.Equal(el, input[i]*2)
+		is.Equal(el, input[i]*2)
 	}
 }
 
 func TestPoorMansFilter(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	input := make([]int, 10)
 	for x := 0; x < 10; x++ {
 		input[x] = x
@@ -119,13 +119,13 @@ func TestPoorMansFilter(t *testing.T) {
 	})
 
 	for i, el := range res {
-		assert.Equal(el, input[i*2])
+		is.Equal(el, input[i*2])
 	}
 }
 
 func TestPoorMansPartition(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	input := make([]int, 4)
 	for x := 0; x < 4; x++ {
 		input[x] = x
@@ -135,15 +135,15 @@ func TestPoorMansPartition(t *testing.T) {
 	res := PoorMansPartition(input, 2)
 
 	// assert
-	assert.Len(res, 2)
+	is.Len(res, 2)
 	for _, element := range res {
-		assert.Len(element, 2)
+		is.Len(element, 2)
 	}
 }
 
 func TestPoorMansPartitionWithSmallSlice(t *testing.T) {
 	// given
-	assert := assert.New(t)
+	is := assert.New(t)
 	input := make([]int, 4)
 	for x := 0; x < 4; x++ {
 		input[x] = x
@@ -153,9 +153,9 @@ func TestPoorMansPartitionWithSmallSlice(t *testing.T) {
 	res := PoorMansPartition(input, 5)
 
 	// assert
-	assert.Len(res, 1)
+	is.Len(res, 1)
 	for _, element := range res {
-		assert.Len(element, 4)
+		is.Len(element, 4)
 	}
 }
 
@@ -164,7 +164,7 @@ func TestPoorMansFind(t *testing.T) {
 	type testStruct struct {
 		V int
 	}
-	assert := assert.New(t)
+	is := assert.New(t)
 	input := make([]testStruct, 4)
 	for x := 0; x < 4; x++ {
 		input[x] = testStruct{V: x}
@@ -176,7 +176,7 @@ func TestPoorMansFind(t *testing.T) {
 	})
 
 	// assert
-	assert.Equal(index, len(input)-1)
-	assert.NotEmpty(res)
-	assert.Equal(res.V, 3)
+	is.Equal(index, len(input)-1)
+	is.NotEmpty(res)
+	is.Equal(res.V, 3)
 }

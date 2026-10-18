@@ -18,10 +18,19 @@ func NewMockTextFormatter(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockTextFormatter {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockTextFormatter{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -64,7 +73,7 @@ type MockTextFormatter_FormatBookError_Call struct {
 // FormatBookError is a helper method to define mock.On call
 //   - response book.BookResponse
 //   - err error
-func (_e *MockTextFormatter_Expecter) FormatBookError(response interface{}, err interface{}) *MockTextFormatter_FormatBookError_Call {
+func (_e *MockTextFormatter_Expecter) FormatBookError(response any, err any) *MockTextFormatter_FormatBookError_Call {
 	return &MockTextFormatter_FormatBookError_Call{Call: _e.mock.On("FormatBookError", response, err)}
 }
 
@@ -120,7 +129,7 @@ type MockTextFormatter_FormatBookResponse_Call struct {
 
 // FormatBookResponse is a helper method to define mock.On call
 //   - response book.BookResponse
-func (_e *MockTextFormatter_Expecter) FormatBookResponse(response interface{}) *MockTextFormatter_FormatBookResponse_Call {
+func (_e *MockTextFormatter_Expecter) FormatBookResponse(response any) *MockTextFormatter_FormatBookResponse_Call {
 	return &MockTextFormatter_FormatBookResponse_Call{Call: _e.mock.On("FormatBookResponse", response)}
 }
 
@@ -171,7 +180,7 @@ type MockTextFormatter_FormatGenericError_Call struct {
 
 // FormatGenericError is a helper method to define mock.On call
 //   - err error
-func (_e *MockTextFormatter_Expecter) FormatGenericError(err interface{}) *MockTextFormatter_FormatGenericError_Call {
+func (_e *MockTextFormatter_Expecter) FormatGenericError(err any) *MockTextFormatter_FormatGenericError_Call {
 	return &MockTextFormatter_FormatGenericError_Call{Call: _e.mock.On("FormatGenericError", err)}
 }
 
@@ -199,8 +208,8 @@ func (_c *MockTextFormatter_FormatGenericError_Call) RunAndReturn(run func(err e
 }
 
 // FormatOverbookedMemberNotification provides a mock function for the type MockTextFormatter
-func (_mock *MockTextFormatter) FormatOverbookedMemberNotification(member1 *member.Member, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) string {
-	ret := _mock.Called(member1, request, res)
+func (_mock *MockTextFormatter) FormatOverbookedMemberNotification(m *member.Member, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) string {
+	ret := _mock.Called(m, request, res)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FormatOverbookedMemberNotification")
@@ -208,7 +217,7 @@ func (_mock *MockTextFormatter) FormatOverbookedMemberNotification(member1 *memb
 
 	var r0 string
 	if returnFunc, ok := ret.Get(0).(func(*member.Member, book.BookRequest, *reservation.ClippedOrRemovedReservation) string); ok {
-		r0 = returnFunc(member1, request, res)
+		r0 = returnFunc(m, request, res)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
@@ -221,14 +230,14 @@ type MockTextFormatter_FormatOverbookedMemberNotification_Call struct {
 }
 
 // FormatOverbookedMemberNotification is a helper method to define mock.On call
-//   - member1 *member.Member
+//   - m *member.Member
 //   - request book.BookRequest
 //   - res *reservation.ClippedOrRemovedReservation
-func (_e *MockTextFormatter_Expecter) FormatOverbookedMemberNotification(member1 interface{}, request interface{}, res interface{}) *MockTextFormatter_FormatOverbookedMemberNotification_Call {
-	return &MockTextFormatter_FormatOverbookedMemberNotification_Call{Call: _e.mock.On("FormatOverbookedMemberNotification", member1, request, res)}
+func (_e *MockTextFormatter_Expecter) FormatOverbookedMemberNotification(m any, request any, res any) *MockTextFormatter_FormatOverbookedMemberNotification_Call {
+	return &MockTextFormatter_FormatOverbookedMemberNotification_Call{Call: _e.mock.On("FormatOverbookedMemberNotification", m, request, res)}
 }
 
-func (_c *MockTextFormatter_FormatOverbookedMemberNotification_Call) Run(run func(member1 *member.Member, request book.BookRequest, res *reservation.ClippedOrRemovedReservation)) *MockTextFormatter_FormatOverbookedMemberNotification_Call {
+func (_c *MockTextFormatter_FormatOverbookedMemberNotification_Call) Run(run func(m *member.Member, request book.BookRequest, res *reservation.ClippedOrRemovedReservation)) *MockTextFormatter_FormatOverbookedMemberNotification_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 *member.Member
 		if args[0] != nil {
@@ -256,7 +265,7 @@ func (_c *MockTextFormatter_FormatOverbookedMemberNotification_Call) Return(s st
 	return _c
 }
 
-func (_c *MockTextFormatter_FormatOverbookedMemberNotification_Call) RunAndReturn(run func(member1 *member.Member, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) string) *MockTextFormatter_FormatOverbookedMemberNotification_Call {
+func (_c *MockTextFormatter_FormatOverbookedMemberNotification_Call) RunAndReturn(run func(m *member.Member, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) string) *MockTextFormatter_FormatOverbookedMemberNotification_Call {
 	_c.Call.Return(run)
 	return _c
 }

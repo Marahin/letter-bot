@@ -5,7 +5,9 @@ import (
 )
 
 type Guild struct {
-	ID    string
-	Name  string
-	Roles []*role.Role
+	ID      string
+	Name    string
+	Icon    string
+	OwnerID string
+	Roles   []*role.Role
 }

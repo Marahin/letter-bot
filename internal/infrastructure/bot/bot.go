@@ -1,13 +1,14 @@
 package bot
 
 import (
+	"context"
+	"errors"
 	"fmt"
-	"net/http"
-	"os"
-	"os/signal"
+	"io"
+	"slices"
+	"strconv"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -21,15 +22,14 @@ import (
 )
 
 const (
+	summaryRefreshDelay  = 3 * time.Second
 	shardConnectAttempts = 5
 	shardBackoffBase     = 2 * time.Second
 	shardBackoffCap      = 30 * time.Second
 )
 
 // newShardManager is a seam so tests can stub shards.New.
-var newShardManager = func(token string) (*shards.Manager, error) {
-	return shards.New(token)
-}
+var newShardManager = shards.New
 
 func shardBackoff(attempt int) time.Duration {
 	delay := shardBackoffBase << attempt
@@ -56,63 +56,210 @@ func connectManager(create func(string) (*shards.Manager, error), token string, 
 	return nil, err
 }
 
-type cfg struct {
-	Token           string
-	CharactersLimit int `default:"5000"`
+// Config is read from BOT_*. A field with an envconfig tag falls back to the
+// unprefixed name, so WEB_BASE_URL and METRICS_ADDR also work.
+type Config struct {
+	Token string
+	// WebBaseURL is optional.
+	WebBaseURL  string `envconfig:"WEB_BASE_URL"`
+	MetricsAddr string `envconfig:"METRICS_ADDR" default:":2112"`
+}
+
+// LoadConfig reads BOT_* from the environment.
+func LoadConfig() (Config, error) {
+	var cfg Config
+	if err := envconfig.Process("bot", &cfg); err != nil {
+		return Config{}, err
+	}
+	if cfg.Token == "" {
+		return Config{}, errors.New("BOT_TOKEN must be set")
+	}
+	return cfg, nil
+}
+
+// ConnectShards creates the shard manager. It asks Discord for the gateway, with retries.
+func ConnectShards(token string) (*shards.Manager, error) {
+	return connectShardsWith(token, shardBackoff)
+}
+
+func connectShardsWith(token string, delay func(attempt int) time.Duration) (*shards.Manager, error) {
+	mgr, err := connectManager(newShardManager, "Bot "+token, shardConnectAttempts, delay)
+	if err != nil {
+		return nil, fmt.Errorf("could not create shards manager after %d attempts: %w", shardConnectAttempts, err)
+	}
+	return mgr, nil
+}
+
+// InteractionGateway is the part of the Discord client that answers
+// interactions. shardGateway implements it.
+type InteractionGateway interface {
+	InteractionRespond(interaction *discordgo.Interaction, resp *discordgo.InteractionResponse, options ...discordgo.RequestOption) error
+	InteractionResponseEdit(interaction *discordgo.Interaction, newresp *discordgo.WebhookEdit, options ...discordgo.RequestOption) (*discordgo.Message, error)
+	// Guild asks the REST API.
+	Guild(guildID string, options ...discordgo.RequestOption) (*discordgo.Guild, error)
+	// StateGuild reads the guild from the gateway cache of its shard.
+	StateGuild(guildID string) (*discordgo.Guild, error)
+	// StateChannels returns a copy of the guild's channels from the gateway cache of its shard.
+	StateChannels(guildID string) ([]*discordgo.Channel, error)
+	// GuildMember asks the REST API, e.g. for the member behind a click in a DM.
+	GuildMember(guildID, userID string, options ...discordgo.RequestOption) (*discordgo.Member, error)
+}
+
+// SummaryChannelWriter is the part of the Discord REST API that maintains the
+// summaries and posts the announcements. *discordgo.Session implements it. The bot
+// uses one session for all of it, so discordgo tracks every rate limit bucket in
+// one place.
+type SummaryChannelWriter interface {
+	GuildChannels(guildID string, options ...discordgo.RequestOption) ([]*discordgo.Channel, error)
+	GuildChannelCreateComplex(guildID string, data discordgo.GuildChannelCreateData, options ...discordgo.RequestOption) (*discordgo.Channel, error)
+	ChannelDelete(channelID string, options ...discordgo.RequestOption) (*discordgo.Channel, error)
+	ChannelMessageEditComplex(m *discordgo.MessageEdit, options ...discordgo.RequestOption) (*discordgo.Message, error)
+	ChannelMessages(channelID string, limit int, beforeID, afterID, aroundID string, options ...discordgo.RequestOption) ([]*discordgo.Message, error)
+	ChannelMessagesBulkDelete(channelID string, messages []string, options ...discordgo.RequestOption) error
+	ChannelMessageDelete(channelID, messageID string, options ...discordgo.RequestOption) error
+	ChannelMessageSend(channelID string, content string, options ...discordgo.RequestOption) (*discordgo.Message, error)
+	ChannelMessageSendComplex(channelID string, data *discordgo.MessageSend, options ...discordgo.RequestOption) (*discordgo.Message, error)
+	ChannelMessageSendEmbed(channelID string, embed *discordgo.MessageEmbed, options ...discordgo.RequestOption) (*discordgo.Message, error)
+	ChannelFileSend(channelID, name string, r io.Reader, options ...discordgo.RequestOption) (*discordgo.Message, error)
+	UserChannelCreate(recipientID string, options ...discordgo.RequestOption) (*discordgo.Channel, error)
+}
+
+type shardGateway struct {
+	*discordgo.Session
+
+	mgr *shards.Manager
+}
+
+func (g shardGateway) StateGuild(guildID string) (*discordgo.Guild, error) {
+	state, err := g.state(guildID)
+	if err != nil {
+		return nil, err
+	}
+	return state.Guild(guildID)
+}
+
+func (g shardGateway) StateChannels(guildID string) ([]*discordgo.Channel, error) {
+	state, err := g.state(guildID)
+	if err != nil {
+		return nil, err
+	}
+	gld, err := state.Guild(guildID)
+	if err != nil {
+		return nil, err
+	}
+	// State.Guild returns the cached guild itself, which the gateway events change.
+	state.RLock()
+	defer state.RUnlock()
+	return slices.Clone(gld.Channels), nil
+}
+
+func (g shardGateway) state(guildID string) (*discordgo.State, error) {
+	id, err := strconv.ParseInt(guildID, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("parse guild id: %w", err)
+	}
+	session := g.mgr.SessionForGuild(id)
+	if session == nil || session.State == nil {
+		return nil, discordgo.ErrStateNotFound
+	}
+	return session.State, nil
 }
 
 type Bot struct {
 	summarySrv         ports.SummaryService
 	reservationRepo    ports.ReservationRepository
+	spots              ports.SpotRepository
 	onlineCheckService ports.OnlineCheckService
+	guildConfigs       ports.GuildConfigRepository
+	layouts            ports.SummaryLayoutRepository
+	passHooks          []SummaryPassHook
+	now                func() time.Time
+	syncer             *GuildSyncer
+	summaries          *summaryWorker
+	legacyHashes       cmap.ConcurrentMap[string, string]
+	pacer              *pacer
+	queue              ports.SpotQueueService
 	eventHandler       ports.APIPort
+	forms              ports.ReservationFormService
 	metrics            ports.MetricsPort
 	mgr                *shards.Manager
+	gateway            InteractionGateway
+	writer             SummaryChannelWriter
+	webBaseURL         string
 	log                *zap.SugaredLogger
 	quit               chan struct{}
 	formatter          *formatter.DiscordFormatter
 	channelLocks       cmap.ConcurrentMap[string, *sync.RWMutex]
+	tracked            trackedMessages
+	ticking            sync.Once
 	started            atomic.Bool
 	stopped            atomic.Bool
+	shutdown           sync.Once
+	shutdownErr        error
+
+	// lifetime ends at Shutdown, which waits for the background work.
+	lifetime     context.Context
+	endLifetime  context.CancelFunc
+	backgroundMu sync.Mutex
+	background   sync.WaitGroup
 }
 
-var (
-	Config cfg
-)
-
-func init() {
-	envconfig.MustProcess("bot", &Config)
-}
-
-func NewManager(summarySrv ports.SummaryService, reservationRepo ports.ReservationRepository, checkOnlineSrv ports.OnlineCheckService) *Bot {
-	mgr, err := connectManager(newShardManager, "Bot "+Config.Token, shardConnectAttempts, shardBackoff)
-	if err != nil {
-		panic(fmt.Errorf("could not create shards manager after %d attempts: %w", shardConnectAttempts, err))
-	}
-
+// NewManager builds the bot over mgr. webBaseURL may be empty.
+func NewManager(mgr *shards.Manager, webBaseURL string, summarySrv ports.SummaryService, reservationRepo ports.ReservationRepository,
+	checkOnlineSrv ports.OnlineCheckService, layouts ports.SummaryLayoutRepository,
+) *Bot {
 	mgr.Intent = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages | discordgo.IntentsGuildVoiceStates
+	lifetime, endLifetime := context.WithCancel(context.Background())
 	bot := &Bot{
 		mgr:                mgr,
+		gateway:            shardGateway{Session: mgr.Gateway, mgr: mgr},
+		writer:             mgr.Gateway,
+		webBaseURL:         webBaseURL,
 		quit:               make(chan struct{}),
 		channelLocks:       cmap.New[*sync.RWMutex](),
+		legacyHashes:       cmap.New[string](),
+		pacer:              newPacer(),
+		now:                time.Now,
 		summarySrv:         summarySrv,
 		reservationRepo:    reservationRepo,
 		onlineCheckService: checkOnlineSrv,
+		layouts:            layouts,
+		lifetime:           lifetime,
+		endLifetime:        endLifetime,
+		log:                zap.NewNop().Sugar(),
 	}
+	bot.summaries = newSummaryWorker(bot.reconcileSummaries, summaryRefreshDelay)
 
 	bot.mgr.AddHandler(bot.GuildCreate)
+	bot.mgr.AddHandler(bot.GuildUpdate)
+	bot.mgr.AddHandler(bot.GuildDelete)
+	bot.mgr.AddHandler(bot.ChannelCreate)
+	bot.mgr.AddHandler(bot.ChannelUpdate)
+	bot.mgr.AddHandler(bot.ChannelDelete)
+	bot.mgr.AddHandler(bot.MessageDelete)
+	bot.mgr.AddHandler(bot.MessageDeleteBulk)
+	bot.mgr.AddHandler(bot.GuildRoleCreate)
+	bot.mgr.AddHandler(bot.GuildRoleUpdate)
+	bot.mgr.AddHandler(bot.GuildRoleDelete)
 	bot.mgr.AddHandler(bot.Ready)
 	bot.mgr.AddHandler(bot.InteractionCreate)
 
 	return bot
 }
 
-func (b *Bot) WithHttpClient(client *http.Client) {
+func (b *Bot) WithFormatter(f *formatter.DiscordFormatter) *Bot {
+	b.formatter = f
+
+	return b
 }
 
-func (b *Bot) WithFormatter(formatter *formatter.DiscordFormatter) *Bot {
-	b.formatter = formatter
-
+// WithGuildRepositories sets the guild configuration store and the channel and role sync.
+func (b *Bot) WithGuildRepositories(configs ports.GuildConfigRepository, channels ports.GuildChannelRepository, roles ports.GuildRoleRepository) *Bot {
+	b.guildConfigs = configs
+	b.syncer = NewGuildSyncer(b.mgr.Gateway, channels, roles, configs)
+	if b.log != nil {
+		b.syncer.WithLogger(b.log)
+	}
 	return b
 }
 
@@ -122,47 +269,93 @@ func (b *Bot) WithMetrics(m ports.MetricsPort) *Bot {
 	return b
 }
 
-// WithEVentHandler sets bot's event handler to the provided port
-func (b *Bot) WithEventHandler(port ports.APIPort) ports.BotPort {
+// WithEventHandler sets the bot's event handler.
+func (b *Bot) WithEventHandler(port ports.APIPort) *Bot {
 	b.eventHandler = port
+	return b
+}
+
+func (b *Bot) WithReservationForms(forms ports.ReservationFormService) *Bot {
+	b.forms = forms
+	return b
+}
+
+// WithSpots sets the spot store, for the region summaries, the booking
+// announcements and the queue.
+func (b *Bot) WithSpots(spots ports.SpotRepository) *Bot {
+	b.spots = spots
+	return b
+}
+
+// WithSummaryPassHook adds a step to the start of each summary pass.
+func (b *Bot) WithSummaryPassHook(h SummaryPassHook) *Bot {
+	b.passHooks = append(b.passHooks, h)
+	return b
+}
+
+// WithSpotQueue turns on the respawn queue: the /queue commands, the Queue
+// button, and the offers, which each summary pass sends.
+func (b *Bot) WithSpotQueue(q ports.SpotQueueService) *Bot {
+	b.queue = q
+	b.passHooks = append(b.passHooks, b.sendQueueOffers)
 	return b
 }
 
 func (b *Bot) WithLogger(log *zap.SugaredLogger) *Bot {
 	b.log = log.With("layer", "infrastructure", "name", "bot")
+	b.summaries.log = log.With("layer", "infrastructure", "name", "summaryWorker")
+	if b.syncer != nil {
+		b.syncer.WithLogger(log)
+	}
 
 	return b
 }
 
-func (b *Bot) Run() error {
+// Start opens the gateway connections.
+func (b *Bot) Start() error {
 	b.log.Info("Starting bot...")
-	err := b.mgr.Start()
-	if err != nil {
+	if err := b.mgr.Start(); err != nil {
 		return err
 	}
 	b.started.Store(true)
-
-	// Wait here until CTRL-C or other term signal is received.
 	b.log.Info("bot is now running")
-	sc := make(chan os.Signal, 1)
-	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
-	<-sc
-
-	// Cleanly close down the Manager.
-	b.log.Warn("stopping shard manager...")
-	err = b.mgr.Shutdown()
-	if err != nil {
-		return err
-	}
-	b.stopped.Store(true)
-
-	b.log.Info("shard manager stopped. Bot is shut down.")
 	return nil
 }
 
+// Shutdown stops the ticker, ends the background work and waits for it, then
+// closes the gateway connections. Only the first call has an effect.
 func (b *Bot) Shutdown() error {
-	close(b.quit) // Tell other goroutines, such as ticker, to shut down
-	return b.mgr.Shutdown()
+	b.shutdown.Do(func() {
+		close(b.quit)
+		b.backgroundMu.Lock()
+		b.endLifetime()
+		b.backgroundMu.Unlock()
+		b.background.Wait()
+		b.shutdownErr = b.mgr.Shutdown()
+		b.stopped.Store(true)
+	})
+	return b.shutdownErr
+}
+
+// goBackground runs f until it returns or Shutdown ends the bot's lifetime.
+// After Shutdown it does nothing.
+func (b *Bot) goBackground(f func(ctx context.Context)) {
+	b.backgroundMu.Lock()
+	defer b.backgroundMu.Unlock()
+	// The check under the lock keeps Add from racing the Wait in Shutdown.
+	if b.lifetime.Err() != nil {
+		return
+	}
+	b.background.Add(1)
+	go func() {
+		defer b.background.Done()
+		f(b.lifetime)
+	}()
+}
+
+// RunSummaryWorker updates the summaries until ctx ends. It is the only writer of the summaries.
+func (b *Bot) RunSummaryWorker(ctx context.Context) {
+	b.summaries.Run(ctx)
 }
 
 // IsRunning indicates whether the bot started successfully and hasn't been stopped yet.
@@ -171,7 +364,7 @@ func (b *Bot) IsRunning() bool {
 }
 
 func (b *Bot) interactionRespond(i *discordgo.InteractionCreate, responseData *discordgo.InteractionResponseData, responseType discordgo.InteractionResponseType) error {
-	return b.mgr.Gateway.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+	return b.gateway.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: responseType,
 		Data: responseData,
 	})

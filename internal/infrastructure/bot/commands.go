@@ -1,56 +1,75 @@
 package bot
 
 import (
+	"context"
+	"errors"
 	"fmt"
 
 	"spot-assistant/internal/common/strings"
+	"spot-assistant/internal/core/dto/guildconfig"
 
 	"github.com/bwmarrin/discordgo"
 )
+
+const commandReservations = "reservations"
+
+// ephemeralCommand tells a command that replies to the member only.
+func ephemeralCommand(name string) bool {
+	switch name {
+	case commandReservations, commandQueue, commandQueueLeave:
+		return true
+	}
+	return false
+}
 
 func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 	name := i.ApplicationCommandData().Name
 	isAutocomplete := i.Type == discordgo.InteractionApplicationCommandAutocomplete
 	log := b.log.With("interaction_name", name, "isAutocomplete", isAutocomplete)
 
+	cfg, err := b.guildConfig(context.Background(), i.GuildID)
+	if err != nil {
+		log.Errorf("could not load guild config: %s", err)
+		if !isAutocomplete {
+			b.respondEphemeral(i, b.formatter.FormatGenericError(errors.New("could not load the server settings, please try again")))
+		}
+		return
+	}
+
 	if isAutocomplete {
-		if err := b.handleAutocomplete(i); err != nil {
+		if err := b.respondAutocomplete(i, cfg); err != nil {
 			log.Error(err)
 		}
 		return
 	}
 
-	// metrics: count non-autocomplete slash command invocations
-	if b.metrics != nil {
-		var guildName string
-		if gID, convErr := strings.StrToInt64(i.GuildID); convErr == nil {
-			if g, err := b.GetGuild(gID); err == nil && g != nil {
-				guildName = g.Name
-			}
-		}
-		b.metrics.IncSlashCommand(i.GuildID, guildName, name)
+	if reply := commandGateReply(cfg, name, i.ChannelID, b.webBaseURL); reply != "" {
+		b.respondEphemeral(i, reply)
+		return
 	}
 
-	// Send deferred response for slash commands
-	if err := b.interactionRespond(i, &discordgo.InteractionResponseData{}, discordgo.InteractionResponseDeferredChannelMessageWithSource); err != nil {
+	// metrics: count non-autocomplete slash command invocations
+	if b.metrics != nil {
+		b.metrics.IncSlashCommand(i.GuildID, b.guildName(i.GuildID), name)
+	}
+
+	deferData := &discordgo.InteractionResponseData{}
+	if ephemeralCommand(name) {
+		deferData.Flags = discordgo.MessageFlagsEphemeral
+	}
+	if err := b.interactionRespond(i, deferData, discordgo.InteractionResponseDeferredChannelMessageWithSource); err != nil {
 		b.log.Error(fmt.Errorf("could not send a deferred response: %w", err))
 		return
 	}
 
-	err := b.handleSlash(i)
+	err = b.handleSlash(i, cfg)
 
 	if err != nil {
 		log.Error(err)
 		if b.metrics != nil {
-			var guildName string
-			if gID, convErr := strings.StrToInt64(i.GuildID); convErr == nil {
-				if g, err := b.GetGuild(gID); err == nil && g != nil {
-					guildName = g.Name
-				}
-			}
-			b.metrics.IncCommandError(i.GuildID, guildName, name)
+			b.metrics.IncCommandError(i.GuildID, b.guildName(i.GuildID), name)
 		}
-		webhookParams := &discordgo.WebhookParams{Content: b.formatter.FormatGenericError(err)}
+		webhookParams := &discordgo.WebhookParams{Content: b.formatter.FormatGenericError(err), Flags: deferData.Flags}
 		gID, convErr := strings.StrToInt64(i.GuildID)
 		if convErr != nil {
 			b.log.Errorf("could not translate guildID: %s", convErr)
@@ -63,18 +82,53 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 	}
 }
 
+func (b *Bot) guildName(guildID string) string {
+	gID, err := strings.StrToInt64(guildID)
+	if err != nil {
+		return ""
+	}
+	g, err := b.GetGuild(gID)
+	if err != nil || g == nil {
+		return ""
+	}
+	return g.Name
+}
+
+func (b *Bot) respondAutocomplete(i *discordgo.InteractionCreate, cfg *guildconfig.Config) error {
+	if !cfg.IsPremium() {
+		return b.interactionRespond(i, &discordgo.InteractionResponseData{Choices: []*discordgo.ApplicationCommandOptionChoice{}}, discordgo.InteractionApplicationCommandAutocompleteResult)
+	}
+	return b.handleAutocomplete(i)
+}
+
 // duplicate helpers removed
 
-func (b *Bot) handleSlash(i *discordgo.InteractionCreate) error {
+func (b *Bot) respondEphemeral(i *discordgo.InteractionCreate, content string) {
+	err := b.interactionRespond(i, &discordgo.InteractionResponseData{
+		Content: content,
+		Flags:   discordgo.MessageFlagsEphemeral,
+	}, discordgo.InteractionResponseChannelMessageWithSource)
+	if err != nil {
+		b.log.Errorf("could not send an ephemeral response: %s", err)
+	}
+}
+
+func (b *Bot) handleSlash(i *discordgo.InteractionCreate, cfg *guildconfig.Config) error {
 	switch i.ApplicationCommandData().Name {
 	case "book":
-		return b.Book(i)
+		return b.Book(i, cfg)
 	case "unbook":
 		return b.Unbook(i)
 	case "summary":
 		return b.PrivateSummary(i)
 	case "world-set":
 		return b.SetWorld(i)
+	case commandReservations:
+		return b.MyReservations(i)
+	case commandQueue:
+		return b.QueueJoin(i)
+	case commandQueueLeave:
+		return b.QueueLeave(i)
 	default:
 		return fmt.Errorf("missing handler for command: %s", i.ApplicationCommandData().Name)
 	}
@@ -90,6 +144,10 @@ func (b *Bot) handleAutocomplete(i *discordgo.InteractionCreate) error {
 		return b.SetWorldAutocomplete(i)
 	case "summary":
 		return b.SummaryAutocomplete(i)
+	case commandQueue:
+		return b.QueueAutocomplete(i)
+	case commandQueueLeave:
+		return b.QueueLeaveAutocomplete(i)
 	default:
 		return fmt.Errorf("missing handler for command: %s", i.ApplicationCommandData().Name)
 	}
@@ -147,6 +205,11 @@ func (b *Bot) getCommands() []*discordgo.ApplicationCommand {
 			},
 		},
 		{
+			Name:        commandReservations,
+			Description: "Show, edit and cancel your upcoming reservations",
+			Type:        discordgo.ChatApplicationCommand,
+		},
+		{
 			Name:        "summary",
 			Description: "Request a summary snapshot (optionally for a specific respawn)",
 			Type:        discordgo.ChatApplicationCommand,
@@ -160,6 +223,9 @@ func (b *Bot) getCommands() []*discordgo.ApplicationCommand {
 				},
 			},
 		},
+	}
+	if b.queue != nil {
+		commands = append(commands, b.queueCommands()...)
 	}
 	// it's intentionally not 'set-world' as it would appear alphabetically higher than summary and unbook - purely for UX - its only used once and only by owner
 	// only register world-set if onlineCheckService is configured

@@ -5,8 +5,8 @@ import (
 	"spot-assistant/internal/core/dto/reservation"
 )
 
-func (a *Handler) OnUnbookAutocomplete(request book.UnbookAutocompleteRequest) (book.UnbookAutocompleteResponse, error) {
-	reservations, err := a.bookingSrv.UnbookAutocomplete(request.Guild, request.Member, request.Value)
+func (h *Handler) OnUnbookAutocomplete(request book.UnbookAutocompleteRequest) (book.UnbookAutocompleteResponse, error) {
+	reservations, err := h.bookingSrv.UnbookAutocomplete(request.Guild, request.Member, request.Value)
 	if err != nil {
 		return book.UnbookAutocompleteResponse{}, err
 	}
@@ -16,6 +16,6 @@ func (a *Handler) OnUnbookAutocomplete(request book.UnbookAutocompleteRequest) (
 	}, nil
 }
 
-func (a *Handler) OnUnbook(request book.UnbookRequest) (*reservation.ReservationWithSpot, error) {
-	return a.bookingSrv.Unbook(request.Guild, request.Member, request.ReservationID)
+func (h *Handler) OnUnbook(request book.UnbookRequest) (*reservation.ReservationWithSpot, error) {
+	return h.bookingSrv.Unbook(request.Guild, request.Member, request.ReservationID)
 }

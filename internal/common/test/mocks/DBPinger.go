@@ -16,10 +16,19 @@ func NewMockDBPinger(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockDBPinger {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockDBPinger{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -61,7 +70,7 @@ type MockDBPinger_Ping_Call struct {
 
 // Ping is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockDBPinger_Expecter) Ping(ctx interface{}) *MockDBPinger_Ping_Call {
+func (_e *MockDBPinger_Expecter) Ping(ctx any) *MockDBPinger_Ping_Call {
 	return &MockDBPinger_Ping_Call{Call: _e.mock.On("Ping", ctx)}
 }
 

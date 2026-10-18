@@ -12,18 +12,18 @@ import (
 
 func TestAdapter_NotifyOverbookedMember(t *testing.T) {
 	// given
-	member := &member.Member{
+	m := &member.Member{
 		ID:       "conflicting-author-id",
 		Username: "sample-member",
 		Nick:     "sample-nickname",
 	}
-	guild := &guild.Guild{
+	g := &guild.Guild{
 		ID:   "123",
 		Name: "sample-guild",
 	}
 	request := book.BookRequest{
-		Guild:  guild,
-		Member: member,
+		Guild:  g,
+		Member: m,
 	}
 	res := &reservation.ClippedOrRemovedReservation{
 		Original: &reservation.Reservation{
@@ -31,9 +31,9 @@ func TestAdapter_NotifyOverbookedMember(t *testing.T) {
 		},
 	}
 	memberOperations := mocks.NewMockMemberRepository(t)
-	memberOperations.On("GetMemberByGuildAndId", guild, res.Original.AuthorDiscordID).Return(member, nil).Once()
+	memberOperations.On("GetMemberByGuildAndID", g, res.Original.AuthorDiscordID).Return(m, nil).Once()
 	botOperations := mocks.NewMockBotPort(t)
-	botOperations.On("SendDMOverbookedNotification", member, request, res).Return(nil).Once()
+	botOperations.On("SendDMOverbookedNotification", m, request, res).Return(nil).Once()
 	adapter := NewAdapter(botOperations, memberOperations)
 
 	// when

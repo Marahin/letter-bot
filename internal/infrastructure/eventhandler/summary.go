@@ -9,7 +9,7 @@ import (
 	"spot-assistant/internal/core/dto/summary"
 )
 
-func (a *Handler) OnPrivateSummary(request summary.PrivateSummaryRequest) error {
+func (h *Handler) OnPrivateSummary(request summary.PrivateSummaryRequest) error {
 	ctx, cancel := context.WithTimeout(context.Background(), DefaultInteractionTimeout)
 	defer cancel()
 
@@ -21,7 +21,7 @@ func (a *Handler) OnPrivateSummary(request summary.PrivateSummaryRequest) error 
 	)
 
 	if request.SpotName != "" {
-		res, err = a.db.SelectUpcomingReservationsWithSpotForSpot(ctx, guildIDStr, request.SpotName)
+		res, err = h.db.SelectUpcomingReservationsWithSpotForSpot(ctx, guildIDStr, request.SpotName)
 		if err != nil {
 			return err
 		}
@@ -29,7 +29,7 @@ func (a *Handler) OnPrivateSummary(request summary.PrivateSummaryRequest) error 
 			return fmt.Errorf("no reservations for %s", request.SpotName)
 		}
 	} else {
-		res, err = a.db.SelectUpcomingReservationsWithSpot(ctx, guildIDStr)
+		res, err = h.db.SelectUpcomingReservationsWithSpot(ctx, guildIDStr)
 		if err != nil {
 			return err
 		}
@@ -38,15 +38,15 @@ func (a *Handler) OnPrivateSummary(request summary.PrivateSummaryRequest) error 
 		}
 	}
 	// metrics: update gauge for upcoming reservations in this guild
-	if a.metrics != nil {
+	if h.metrics != nil {
 		// Guild name is not available in this handler; pass empty string
-		a.metrics.SetUpcomingReservations(strconv.FormatInt(request.GuildID, 10), "", len(res))
+		h.metrics.SetUpcomingReservations(strconv.FormatInt(request.GuildID, 10), "", len(res))
 	}
 
-	summ, err := a.summarySrv.PrepareSummary(res)
+	summ, err := h.summarySrv.PrepareSummary(res)
 	if err != nil {
 		return err
 	}
 
-	return a.commSrv.SendPrivateSummary(request, summ)
+	return h.commSrv.SendPrivateSummary(request, summ)
 }
