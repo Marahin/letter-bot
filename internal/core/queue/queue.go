@@ -58,17 +58,18 @@ func BookingStart(now time.Time) time.Time {
 	return start
 }
 
-func (s *Service) Join(ctx context.Context, guildID string, actor reservation.Actor, spotID int64, length time.Duration) (*queue.JoinOutcome, error) {
-	if !actor.Caps.Reserve {
+func (s *Service) Join(ctx context.Context, req queue.JoinRequest) (*queue.JoinOutcome, error) {
+	if !req.Actor.Caps.Reserve {
 		return nil, booking.ErrReserveNotAllowed
 	}
+	length := req.Length
 	if length == 0 {
 		length = DefaultLength
 	}
 	if length < MinLength || length > MaxLength || length%LengthStep != 0 {
 		return nil, ErrInvalidLength
 	}
-	sp, err := s.spots.SelectGuildSpotByID(ctx, guildID, spotID)
+	sp, err := s.spots.SelectGuildSpotByID(ctx, req.GuildID, req.SpotID)
 	if errors.Is(err, ports.ErrNotFound) {
 		return nil, booking.ErrSpotNotFound
 	}
@@ -80,7 +81,7 @@ func (s *Service) Join(ctx context.Context, guildID string, actor reservation.Ac
 	}
 
 	now := s.now()
-	others, err := s.repo.CountUserEntries(ctx, guildID, actor.UserID, spotID, now)
+	others, err := s.repo.CountUserEntries(ctx, queue.UserCount{GuildID: req.GuildID, UserID: req.Actor.UserID, ExceptSpotID: req.SpotID, Now: now})
 	if err != nil {
 		return nil, fmt.Errorf("count queue entries: %w", err)
 	}
@@ -88,10 +89,10 @@ func (s *Service) Join(ctx context.Context, guildID string, actor reservation.Ac
 		return nil, ErrQueueFull
 	}
 	e, err := s.repo.UpsertEntry(ctx, queue.Entry{
-		GuildID:   guildID,
-		SpotID:    spotID,
+		GuildID:   req.GuildID,
+		SpotID:    req.SpotID,
 		SpotName:  sp.Name,
-		UserID:    actor.UserID,
+		UserID:    req.Actor.UserID,
 		Length:    length,
 		ExpiresAt: now.Add(EntryTTL),
 	})
@@ -99,38 +100,17 @@ func (s *Service) Join(ctx context.Context, guildID string, actor reservation.Ac
 		return nil, fmt.Errorf("upsert queue entry: %w", err)
 	}
 
-	free, err := s.isFree(ctx, guildID, e.ID, now)
+	// The upsert cleared the offer, so the claim succeeds exactly when the respawn is free.
+	at, claimed, err := s.claim(ctx, e.ID, now)
 	if err != nil {
 		return nil, err
 	}
 	outcome := &queue.JoinOutcome{Entry: *e}
-	if !free {
-		return outcome, nil
-	}
-	at := now.Truncate(time.Second)
-	claimed, err := s.repo.ClaimOffer(ctx, e.ID, at)
-	if err != nil {
-		return nil, fmt.Errorf("claim offer: %w", err)
-	}
 	if claimed {
 		outcome.Entry.OfferedAt = &at
 		outcome.FreeNow = true
 	}
 	return outcome, nil
-}
-
-// isFree asks the same query as DueOffers, so the two agree on "free".
-func (s *Service) isFree(ctx context.Context, guildID string, entryID int64, now time.Time) (bool, error) {
-	candidates, err := s.repo.SelectGuildCandidates(ctx, guildID, now, BookingStart(now))
-	if err != nil {
-		return false, fmt.Errorf("select queue candidates: %w", err)
-	}
-	for _, c := range candidates {
-		if c.ID == entryID {
-			return c.Free, nil
-		}
-	}
-	return false, nil
 }
 
 func (s *Service) Leave(ctx context.Context, userID string, entryID int64) error {
@@ -154,52 +134,45 @@ func (s *Service) Entry(ctx context.Context, id int64) (*queue.Entry, error) {
 
 func (s *Service) DueOffers(ctx context.Context, guildID string) ([]queue.Entry, error) {
 	now := s.now()
-	if _, err := s.repo.DeleteExpired(ctx, guildID, now); err != nil {
+	if _, err := s.repo.DeleteExpired(ctx, now); err != nil {
 		return nil, fmt.Errorf("delete expired queue entries: %w", err)
 	}
-	candidates, err := s.repo.SelectGuildCandidates(ctx, guildID, now, BookingStart(now))
+	start := BookingStart(now)
+	if err := s.repo.ResetTakenOffers(ctx, guildID, start); err != nil {
+		return nil, fmt.Errorf("reset queue offers: %w", err)
+	}
+	due, err := s.repo.SelectDueEntries(ctx, queue.DueQuery{GuildID: guildID, Now: now, StartAt: start})
 	if err != nil {
-		return nil, fmt.Errorf("select queue candidates: %w", err)
-	}
-	var taken []int64
-	var due []queue.Entry
-	at := now.Truncate(time.Second)
-	for _, c := range candidates {
-		switch {
-		case c.OfferedAt != nil && !c.Free:
-			taken = append(taken, c.ID)
-		case c.OfferedAt == nil && c.Free:
-			claimed, err := s.repo.ClaimOffer(ctx, c.ID, at)
-			if err != nil {
-				return due, fmt.Errorf("claim offer %d: %w", c.ID, err)
-			}
-			if claimed {
-				e := c.Entry
-				e.OfferedAt = &at
-				due = append(due, e)
-			}
-		}
-	}
-	if len(taken) == 0 {
-		return due, nil
-	}
-	if err := s.repo.ResetOffers(ctx, taken); err != nil {
-		return due, fmt.Errorf("reset queue offers: %w", err)
+		return nil, fmt.Errorf("select due queue entries: %w", err)
 	}
 	return due, nil
 }
 
-func (s *Service) Unclaim(ctx context.Context, entryID int64) error {
-	return s.repo.ResetOffers(ctx, []int64{entryID})
+func (s *Service) ClaimOffer(ctx context.Context, entryID int64) (time.Time, bool, error) {
+	return s.claim(ctx, entryID, s.now())
 }
 
-// CheckOffer does not need the entry's offer to be current: after the respawn
+// claim stamps the offer to the second: the offer's buttons carry it in Unix seconds.
+func (s *Service) claim(ctx context.Context, entryID int64, now time.Time) (time.Time, bool, error) {
+	at := now.Truncate(time.Second)
+	claimed, err := s.repo.ClaimOffer(ctx, queue.Claim{EntryID: entryID, OfferedAt: at, StartAt: BookingStart(now)})
+	if err != nil {
+		return time.Time{}, false, fmt.Errorf("claim offer: %w", err)
+	}
+	if !claimed {
+		return time.Time{}, false, nil
+	}
+	return at, true, nil
+}
+
+func (s *Service) Unclaim(ctx context.Context, entryID int64) error {
+	return s.repo.ResetOffer(ctx, entryID)
+}
+
+// OfferUsable does not need the entry's offer to be current: after the respawn
 // was taken again the offer is cleared, and the member gets the booking's own
 // error. Only a newer offer replaces an older one.
-func (s *Service) CheckOffer(e *queue.Entry, userID string, offeredAt time.Time) error {
-	if e.UserID != userID {
-		return ErrOfferNotYours
-	}
+func (s *Service) OfferUsable(e *queue.Entry, offeredAt time.Time) error {
 	now := s.now()
 	if offeredAt.After(now) || now.Sub(offeredAt) > OfferTTL {
 		return ErrOfferExpired
@@ -215,23 +188,12 @@ func (s *Service) Book(ctx context.Context, actor reservation.Actor, entryID int
 	if err != nil {
 		return nil, err
 	}
-	if err := s.CheckOffer(e, actor.UserID, offeredAt); err != nil {
+	if e.UserID != actor.UserID {
+		return nil, ErrOfferNotYours
+	}
+	if err := s.OfferUsable(e, offeredAt); err != nil {
 		return nil, err
 	}
 	start := BookingStart(s.now())
-	outcome, err := s.forms.Book(ctx, e.GuildID, actor, reservation.Draft{SpotID: e.SpotID, StartAt: start, EndAt: start.Add(e.Length)})
-	if err != nil {
-		return outcome, err
-	}
-	// The booking removes the entry in the background too (Fulfil), so a
-	// failure here only delays it and must not report the booking as failed.
-	_, _ = s.repo.DeleteEntry(ctx, e.ID, actor.UserID)
-	return outcome, nil
-}
-
-func (s *Service) Fulfil(ctx context.Context, guildID, userID string, spotID int64) error {
-	if _, err := s.repo.DeleteUserSpotEntry(ctx, guildID, userID, spotID); err != nil {
-		return fmt.Errorf("delete queue entry: %w", err)
-	}
-	return nil
+	return s.forms.Book(ctx, e.GuildID, actor, reservation.Draft{SpotID: e.SpotID, StartAt: start, EndAt: start.Add(e.Length)})
 }

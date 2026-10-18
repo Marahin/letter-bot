@@ -70,8 +70,8 @@ type TimePicker struct {
 	Lengths []LengthOption
 	// Booked are the respawn's reservations in the shown window, by start.
 	Booked []*Reservation
-	// TakenNow means a reservation of the respawn is in progress. It is set
-	// for a booking only.
+	// TakenNow means another member's reservation of the respawn is in
+	// progress. It is set for a booking only.
 	TakenNow bool
 }
 

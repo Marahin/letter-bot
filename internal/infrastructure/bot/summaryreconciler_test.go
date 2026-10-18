@@ -491,8 +491,8 @@ func TestReconcileSummaries_SendsTheDueQueueOffersPaced(t *testing.T) {
 	f.unchanged(f.hashOf(zao))
 	q := mocks.NewMockSpotQueueService(t)
 	f.b.WithSpotQueue(q)
-	offered := f.now
-	q.EXPECT().DueOffers(mock.Anything, "g1").Return([]queue.Entry{{ID: 9, GuildID: "g1", SpotName: "Lizard City", UserID: "u1", Length: time.Hour, OfferedAt: &offered}}, nil)
+	q.EXPECT().DueOffers(mock.Anything, "g1").Return([]queue.Entry{{ID: 9, GuildID: "g1", SpotName: "Lizard City", UserID: "u1", Length: time.Hour}}, nil)
+	q.EXPECT().ClaimOffer(mock.Anything, int64(9)).Return(f.now, true, nil)
 	f.writer.On("UserChannelCreate", "u1").Return(&discordgo.Channel{ID: "dm1"}, nil)
 	f.writer.On("ChannelMessageSendComplex", "dm1", mock.Anything).Return(&discordgo.Message{}, nil)
 

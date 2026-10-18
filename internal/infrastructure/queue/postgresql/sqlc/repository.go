@@ -32,17 +32,16 @@ func (r *SpotQueueRepository) UpsertEntry(ctx context.Context, e queue.Entry) (*
 	if err != nil {
 		return nil, err
 	}
-	out := entry(row.ID, row.GuildID, row.SpotID, row.UserID, "", row.LengthMinutes, row.CreatedAt, row.ExpiresAt, row.OfferedAt)
-	out.SpotName = e.SpotName
+	out := entry(row, e.SpotName)
 	return &out, nil
 }
 
-func (r *SpotQueueRepository) CountUserEntries(ctx context.Context, guildID, userID string, exceptSpotID int64, now time.Time) (int, error) {
+func (r *SpotQueueRepository) CountUserEntries(ctx context.Context, c queue.UserCount) (int, error) {
 	n, err := r.q.CountUserQueueEntries(ctx, CountUserQueueEntriesParams{
-		GuildID:      guildID,
-		UserID:       userID,
-		ExceptSpotID: exceptSpotID,
-		Now:          timestamptz(now),
+		GuildID:      c.GuildID,
+		UserID:       c.UserID,
+		ExceptSpotID: c.ExceptSpotID,
+		Now:          timestamptz(c.Now),
 	})
 	return int(n), err
 }
@@ -55,7 +54,7 @@ func (r *SpotQueueRepository) GetEntry(ctx context.Context, id int64) (*queue.En
 	if err != nil {
 		return nil, err
 	}
-	out := entry(row.ID, row.GuildID, row.SpotID, row.UserID, row.SpotName, row.LengthMinutes, row.CreatedAt, row.ExpiresAt, row.OfferedAt)
+	out := entry(row.SpotQueueEntry, row.SpotName)
 	return &out, nil
 }
 
@@ -66,7 +65,7 @@ func (r *SpotQueueRepository) ListUserEntries(ctx context.Context, guildID, user
 	}
 	out := make([]queue.Entry, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, entry(row.ID, row.GuildID, row.SpotID, row.UserID, row.SpotName, row.LengthMinutes, row.CreatedAt, row.ExpiresAt, row.OfferedAt))
+		out = append(out, entry(row.SpotQueueEntry, row.SpotName))
 	}
 	return out, nil
 }
@@ -81,54 +80,57 @@ func (r *SpotQueueRepository) DeleteUserSpotEntry(ctx context.Context, guildID, 
 	return n > 0, err
 }
 
-func (r *SpotQueueRepository) DeleteExpired(ctx context.Context, guildID string, now time.Time) (int64, error) {
-	return r.q.DeleteExpiredQueueEntries(ctx, DeleteExpiredQueueEntriesParams{GuildID: guildID, Now: timestamptz(now)})
+func (r *SpotQueueRepository) DeleteExpired(ctx context.Context, now time.Time) (int64, error) {
+	return r.q.DeleteExpiredQueueEntries(ctx, timestamptz(now))
 }
 
-func (r *SpotQueueRepository) SelectGuildCandidates(ctx context.Context, guildID string, now, startAt time.Time) ([]queue.Candidate, error) {
-	rows, err := r.q.SelectGuildQueueCandidates(ctx, SelectGuildQueueCandidatesParams{
-		StartAt: timestamptz(startAt),
-		GuildID: guildID,
-		Now:     timestamptz(now),
+func (r *SpotQueueRepository) SelectDueEntries(ctx context.Context, q queue.DueQuery) ([]queue.Entry, error) {
+	rows, err := r.q.SelectDueQueueEntries(ctx, SelectDueQueueEntriesParams{
+		GuildID: q.GuildID,
+		Now:     timestamptz(q.Now),
+		StartAt: timestamptz(q.StartAt),
 	})
 	if err != nil {
 		return nil, err
 	}
-	out := make([]queue.Candidate, 0, len(rows))
+	out := make([]queue.Entry, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, queue.Candidate{
-			Entry: entry(row.ID, row.GuildID, row.SpotID, row.UserID, row.SpotName, row.LengthMinutes, row.CreatedAt, row.ExpiresAt, row.OfferedAt),
-			Free:  row.Free,
-		})
+		out = append(out, entry(row.SpotQueueEntry, row.SpotName))
 	}
 	return out, nil
 }
 
-func (r *SpotQueueRepository) ClaimOffer(ctx context.Context, id int64, at time.Time) (bool, error) {
-	n, err := r.q.ClaimQueueOffer(ctx, ClaimQueueOfferParams{OfferedAt: timestamptz(at), ID: id})
+func (r *SpotQueueRepository) ClaimOffer(ctx context.Context, c queue.Claim) (bool, error) {
+	n, err := r.q.ClaimQueueOffer(ctx, ClaimQueueOfferParams{
+		OfferedAt: timestamptz(c.OfferedAt),
+		ID:        c.EntryID,
+		StartAt:   timestamptz(c.StartAt),
+	})
 	return n > 0, err
 }
 
-func (r *SpotQueueRepository) ResetOffers(ctx context.Context, ids []int64) error {
-	if len(ids) == 0 {
-		return nil
-	}
-	return r.q.ResetQueueOffers(ctx, ids)
+func (r *SpotQueueRepository) ResetTakenOffers(ctx context.Context, guildID string, startAt time.Time) error {
+	_, err := r.q.ResetTakenQueueOffers(ctx, ResetTakenQueueOffersParams{GuildID: guildID, StartAt: timestamptz(startAt)})
+	return err
 }
 
-func entry(id int64, guildID string, spotID int64, userID, spotName string, lengthMinutes int32, createdAt, expiresAt, offeredAt pgtype.Timestamptz) queue.Entry {
+func (r *SpotQueueRepository) ResetOffer(ctx context.Context, id int64) error {
+	return r.q.ResetQueueOffer(ctx, id)
+}
+
+func entry(row SpotQueueEntry, spotName string) queue.Entry {
 	e := queue.Entry{
-		ID:        id,
-		GuildID:   guildID,
-		SpotID:    spotID,
+		ID:        row.ID,
+		GuildID:   row.GuildID,
+		SpotID:    row.SpotID,
 		SpotName:  spotName,
-		UserID:    userID,
-		Length:    time.Duration(lengthMinutes) * time.Minute,
-		CreatedAt: createdAt.Time,
-		ExpiresAt: expiresAt.Time,
+		UserID:    row.UserID,
+		Length:    time.Duration(row.LengthMinutes) * time.Minute,
+		CreatedAt: row.CreatedAt.Time,
+		ExpiresAt: row.ExpiresAt.Time,
 	}
-	if offeredAt.Valid {
-		at := offeredAt.Time
+	if row.OfferedAt.Valid {
+		at := row.OfferedAt.Time
 		e.OfferedAt = &at
 	}
 	return e

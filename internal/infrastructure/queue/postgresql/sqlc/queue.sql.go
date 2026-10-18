@@ -16,15 +16,19 @@ UPDATE spot_queue_entries
 SET offered_at = $1
 WHERE id = $2
   AND offered_at IS NULL
+  AND expires_at > $1
+  AND spot_queue_free(guild_id, spot_id, length_minutes, $3::timestamptz)
 `
 
 type ClaimQueueOfferParams struct {
 	OfferedAt pgtype.Timestamptz
 	ID        int64
+	StartAt   pgtype.Timestamptz
 }
 
+// The respawn may have been taken since the caller read it, so "free" is checked again.
 func (q *Queries) ClaimQueueOffer(ctx context.Context, arg ClaimQueueOfferParams) (int64, error) {
-	result, err := q.db.Exec(ctx, claimQueueOffer, arg.OfferedAt, arg.ID)
+	result, err := q.db.Exec(ctx, claimQueueOffer, arg.OfferedAt, arg.ID, arg.StartAt)
 	if err != nil {
 		return 0, err
 	}
@@ -33,11 +37,13 @@ func (q *Queries) ClaimQueueOffer(ctx context.Context, arg ClaimQueueOfferParams
 
 const countUserQueueEntries = `-- name: CountUserQueueEntries :one
 SELECT count(*)
-FROM spot_queue_entries
-WHERE guild_id = $1
-  AND user_id = $2
-  AND spot_id <> $3
-  AND expires_at > $4
+FROM spot_queue_entries q
+JOIN web_spot s ON s.id = q.spot_id
+WHERE q.guild_id = $1
+  AND q.user_id = $2
+  AND q.spot_id <> $3
+  AND q.expires_at > $4
+  AND s.archived_at IS NULL
 `
 
 type CountUserQueueEntriesParams struct {
@@ -61,17 +67,11 @@ func (q *Queries) CountUserQueueEntries(ctx context.Context, arg CountUserQueueE
 
 const deleteExpiredQueueEntries = `-- name: DeleteExpiredQueueEntries :execrows
 DELETE FROM spot_queue_entries
-WHERE guild_id = $1
-  AND expires_at <= $2
+WHERE expires_at <= $1
 `
 
-type DeleteExpiredQueueEntriesParams struct {
-	GuildID string
-	Now     pgtype.Timestamptz
-}
-
-func (q *Queries) DeleteExpiredQueueEntries(ctx context.Context, arg DeleteExpiredQueueEntriesParams) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteExpiredQueueEntries, arg.GuildID, arg.Now)
+func (q *Queries) DeleteExpiredQueueEntries(ctx context.Context, now pgtype.Timestamptz) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteExpiredQueueEntries, now)
 	if err != nil {
 		return 0, err
 	}
@@ -118,77 +118,81 @@ func (q *Queries) DeleteUserSpotQueueEntry(ctx context.Context, arg DeleteUserSp
 	return result.RowsAffected(), nil
 }
 
-const resetQueueOffers = `-- name: ResetQueueOffers :exec
+const resetQueueOffer = `-- name: ResetQueueOffer :exec
 UPDATE spot_queue_entries
 SET offered_at = NULL
-WHERE id = ANY($1::bigint[])
+WHERE id = $1
 `
 
-func (q *Queries) ResetQueueOffers(ctx context.Context, ids []int64) error {
-	_, err := q.db.Exec(ctx, resetQueueOffers, ids)
+func (q *Queries) ResetQueueOffer(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, resetQueueOffer, id)
 	return err
 }
 
-const selectGuildQueueCandidates = `-- name: SelectGuildQueueCandidates :many
-SELECT q.id, q.guild_id, q.spot_id, q.user_id, q.length_minutes, q.created_at, q.expires_at, q.offered_at,
-  s.name AS spot_name,
-  NOT EXISTS (
-    SELECT 1
-    FROM web_reservation r
-    WHERE r.guild_id = q.guild_id
-      AND r.spot_id = q.spot_id
-      AND tstzrange($1::timestamptz, $1::timestamptz + make_interval(0, 0, 0, 0, 0, q.length_minutes), '[]')
-        && tstzrange(r.start_at, r.end_at, '[]')
-  ) AS free
+const resetTakenQueueOffers = `-- name: ResetTakenQueueOffers :execrows
+UPDATE spot_queue_entries
+SET offered_at = NULL
+WHERE guild_id = $1
+  AND offered_at IS NOT NULL
+  AND NOT spot_queue_free(guild_id, spot_id, length_minutes, $2::timestamptz)
+`
+
+type ResetTakenQueueOffersParams struct {
+	GuildID string
+	StartAt pgtype.Timestamptz
+}
+
+// One statement, so an offer claimed after the caller's last read stays.
+func (q *Queries) ResetTakenQueueOffers(ctx context.Context, arg ResetTakenQueueOffersParams) (int64, error) {
+	result, err := q.db.Exec(ctx, resetTakenQueueOffers, arg.GuildID, arg.StartAt)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const selectDueQueueEntries = `-- name: SelectDueQueueEntries :many
+SELECT q.id, q.guild_id, q.spot_id, q.user_id, q.length_minutes, q.created_at, q.expires_at, q.offered_at, s.name AS spot_name
 FROM spot_queue_entries q
 JOIN web_spot s ON s.id = q.spot_id
-WHERE q.guild_id = $2
-  AND q.expires_at > $3
+WHERE q.guild_id = $1
+  AND q.expires_at > $2
+  AND q.offered_at IS NULL
   AND s.archived_at IS NULL
+  AND spot_queue_free(q.guild_id, q.spot_id, q.length_minutes, $3::timestamptz)
 ORDER BY q.created_at, q.id
 `
 
-type SelectGuildQueueCandidatesParams struct {
-	StartAt pgtype.Timestamptz
+type SelectDueQueueEntriesParams struct {
 	GuildID string
 	Now     pgtype.Timestamptz
+	StartAt pgtype.Timestamptz
 }
 
-type SelectGuildQueueCandidatesRow struct {
-	ID            int64
-	GuildID       string
-	SpotID        int64
-	UserID        string
-	LengthMinutes int32
-	CreatedAt     pgtype.Timestamptz
-	ExpiresAt     pgtype.Timestamptz
-	OfferedAt     pgtype.Timestamptz
-	SpotName      string
-	Free          bool
+type SelectDueQueueEntriesRow struct {
+	SpotQueueEntry SpotQueueEntry
+	SpotName       string
 }
 
-// The live entries of active respawns. free uses the inclusive overlap of
-// SelectOverlappingReservations, so a free respawn can be booked.
-func (q *Queries) SelectGuildQueueCandidates(ctx context.Context, arg SelectGuildQueueCandidatesParams) ([]SelectGuildQueueCandidatesRow, error) {
-	rows, err := q.db.Query(ctx, selectGuildQueueCandidates, arg.StartAt, arg.GuildID, arg.Now)
+func (q *Queries) SelectDueQueueEntries(ctx context.Context, arg SelectDueQueueEntriesParams) ([]SelectDueQueueEntriesRow, error) {
+	rows, err := q.db.Query(ctx, selectDueQueueEntries, arg.GuildID, arg.Now, arg.StartAt)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []SelectGuildQueueCandidatesRow
+	var items []SelectDueQueueEntriesRow
 	for rows.Next() {
-		var i SelectGuildQueueCandidatesRow
+		var i SelectDueQueueEntriesRow
 		if err := rows.Scan(
-			&i.ID,
-			&i.GuildID,
-			&i.SpotID,
-			&i.UserID,
-			&i.LengthMinutes,
-			&i.CreatedAt,
-			&i.ExpiresAt,
-			&i.OfferedAt,
+			&i.SpotQueueEntry.ID,
+			&i.SpotQueueEntry.GuildID,
+			&i.SpotQueueEntry.SpotID,
+			&i.SpotQueueEntry.UserID,
+			&i.SpotQueueEntry.LengthMinutes,
+			&i.SpotQueueEntry.CreatedAt,
+			&i.SpotQueueEntry.ExpiresAt,
+			&i.SpotQueueEntry.OfferedAt,
 			&i.SpotName,
-			&i.Free,
 		); err != nil {
 			return nil, err
 		}
@@ -201,45 +205,36 @@ func (q *Queries) SelectGuildQueueCandidates(ctx context.Context, arg SelectGuil
 }
 
 const selectQueueEntry = `-- name: SelectQueueEntry :one
-SELECT q.id, q.guild_id, q.spot_id, q.user_id, q.length_minutes, q.created_at, q.expires_at, q.offered_at,
-  s.name AS spot_name
+SELECT q.id, q.guild_id, q.spot_id, q.user_id, q.length_minutes, q.created_at, q.expires_at, q.offered_at, s.name AS spot_name
 FROM spot_queue_entries q
 JOIN web_spot s ON s.id = q.spot_id
 WHERE q.id = $1
 `
 
 type SelectQueueEntryRow struct {
-	ID            int64
-	GuildID       string
-	SpotID        int64
-	UserID        string
-	LengthMinutes int32
-	CreatedAt     pgtype.Timestamptz
-	ExpiresAt     pgtype.Timestamptz
-	OfferedAt     pgtype.Timestamptz
-	SpotName      string
+	SpotQueueEntry SpotQueueEntry
+	SpotName       string
 }
 
 func (q *Queries) SelectQueueEntry(ctx context.Context, id int64) (SelectQueueEntryRow, error) {
 	row := q.db.QueryRow(ctx, selectQueueEntry, id)
 	var i SelectQueueEntryRow
 	err := row.Scan(
-		&i.ID,
-		&i.GuildID,
-		&i.SpotID,
-		&i.UserID,
-		&i.LengthMinutes,
-		&i.CreatedAt,
-		&i.ExpiresAt,
-		&i.OfferedAt,
+		&i.SpotQueueEntry.ID,
+		&i.SpotQueueEntry.GuildID,
+		&i.SpotQueueEntry.SpotID,
+		&i.SpotQueueEntry.UserID,
+		&i.SpotQueueEntry.LengthMinutes,
+		&i.SpotQueueEntry.CreatedAt,
+		&i.SpotQueueEntry.ExpiresAt,
+		&i.SpotQueueEntry.OfferedAt,
 		&i.SpotName,
 	)
 	return i, err
 }
 
 const selectUserQueueEntries = `-- name: SelectUserQueueEntries :many
-SELECT q.id, q.guild_id, q.spot_id, q.user_id, q.length_minutes, q.created_at, q.expires_at, q.offered_at,
-  s.name AS spot_name
+SELECT q.id, q.guild_id, q.spot_id, q.user_id, q.length_minutes, q.created_at, q.expires_at, q.offered_at, s.name AS spot_name
 FROM spot_queue_entries q
 JOIN web_spot s ON s.id = q.spot_id
 WHERE q.guild_id = $1
@@ -255,15 +250,8 @@ type SelectUserQueueEntriesParams struct {
 }
 
 type SelectUserQueueEntriesRow struct {
-	ID            int64
-	GuildID       string
-	SpotID        int64
-	UserID        string
-	LengthMinutes int32
-	CreatedAt     pgtype.Timestamptz
-	ExpiresAt     pgtype.Timestamptz
-	OfferedAt     pgtype.Timestamptz
-	SpotName      string
+	SpotQueueEntry SpotQueueEntry
+	SpotName       string
 }
 
 func (q *Queries) SelectUserQueueEntries(ctx context.Context, arg SelectUserQueueEntriesParams) ([]SelectUserQueueEntriesRow, error) {
@@ -276,14 +264,14 @@ func (q *Queries) SelectUserQueueEntries(ctx context.Context, arg SelectUserQueu
 	for rows.Next() {
 		var i SelectUserQueueEntriesRow
 		if err := rows.Scan(
-			&i.ID,
-			&i.GuildID,
-			&i.SpotID,
-			&i.UserID,
-			&i.LengthMinutes,
-			&i.CreatedAt,
-			&i.ExpiresAt,
-			&i.OfferedAt,
+			&i.SpotQueueEntry.ID,
+			&i.SpotQueueEntry.GuildID,
+			&i.SpotQueueEntry.SpotID,
+			&i.SpotQueueEntry.UserID,
+			&i.SpotQueueEntry.LengthMinutes,
+			&i.SpotQueueEntry.CreatedAt,
+			&i.SpotQueueEntry.ExpiresAt,
+			&i.SpotQueueEntry.OfferedAt,
 			&i.SpotName,
 		); err != nil {
 			return nil, err

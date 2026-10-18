@@ -13,8 +13,14 @@ import (
 
 const commandReservations = "reservations"
 
-// ephemeralCommands reply to the member only.
-var ephemeralCommands = map[string]bool{commandReservations: true, commandQueue: true, commandQueueLeave: true}
+// ephemeralCommand tells a command that replies to the member only.
+func ephemeralCommand(name string) bool {
+	switch name {
+	case commandReservations, commandQueue, commandQueueLeave:
+		return true
+	}
+	return false
+}
 
 func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 	name := i.ApplicationCommandData().Name
@@ -48,7 +54,7 @@ func (b *Bot) handleCommand(i *discordgo.InteractionCreate) {
 	}
 
 	deferData := &discordgo.InteractionResponseData{}
-	if ephemeralCommands[name] {
+	if ephemeralCommand(name) {
 		deferData.Flags = discordgo.MessageFlagsEphemeral
 	}
 	if err := b.interactionRespond(i, deferData, discordgo.InteractionResponseDeferredChannelMessageWithSource); err != nil {

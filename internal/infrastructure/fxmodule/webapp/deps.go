@@ -30,6 +30,7 @@ import (
 	lootsqlc "spot-assistant/internal/infrastructure/loot/postgresql/sqlc"
 	notifypg "spot-assistant/internal/infrastructure/notify/postgresql"
 	"spot-assistant/internal/infrastructure/notify/webcomm"
+	queuesqlc "spot-assistant/internal/infrastructure/queue/postgresql/sqlc"
 	reservationsqlc "spot-assistant/internal/infrastructure/reservation/postgresql/sqlc"
 	reservationshttp "spot-assistant/internal/infrastructure/reservations-http"
 	settingshttp "spot-assistant/internal/infrastructure/settings-http"
@@ -74,8 +75,10 @@ func newStatsRepository(pool *pgxpool.Pool, tz TimeZone) (*statssqlc.StatsReposi
 }
 
 // newBooking books on the web and signals the bot, which posts on Discord.
-func newBooking(spotRepo *spotsqlc.SpotRepository, reservationRepo *reservationsqlc.ReservationRepository, notifier *notifypg.Notifier, log *zap.SugaredLogger) *booking.Adapter {
-	return booking.NewAdapter(spotRepo, reservationRepo, webcomm.New(notifier, log)).WithLogger(log)
+func newBooking(spotRepo *spotsqlc.SpotRepository, reservationRepo *reservationsqlc.ReservationRepository, queue *queuesqlc.SpotQueueRepository,
+	notifier *notifypg.Notifier, log *zap.SugaredLogger,
+) *booking.Adapter {
+	return booking.NewAdapter(spotRepo, reservationRepo, webcomm.New(notifier, log), queue).WithLogger(log)
 }
 
 func newAuthService(discord ports.OAuthPort, users *webusersqlc.WebUserRepository) *auth.Service {

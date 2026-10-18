@@ -78,8 +78,10 @@ func newCommunication(b *bot.Bot, log *zap.SugaredLogger) *communication.Adapter
 	return communication.NewAdapter(b, b).WithLogger(log)
 }
 
-func newBooking(spots *spotsqlc.SpotRepository, reservationRepo *reservationsqlc.ReservationRepository, comm *communication.Adapter, log *zap.SugaredLogger) *booking.Adapter {
-	return booking.NewAdapter(spots, reservationRepo, comm).WithLogger(log)
+func newBooking(spots *spotsqlc.SpotRepository, reservationRepo *reservationsqlc.ReservationRepository, comm *communication.Adapter,
+	queue *queuesqlc.SpotQueueRepository, log *zap.SugaredLogger,
+) *booking.Adapter {
+	return booking.NewAdapter(spots, reservationRepo, comm, queue).WithLogger(log)
 }
 
 func newEventHandler(booker *booking.Adapter, reservationRepo *reservationsqlc.ReservationRepository, comm *communication.Adapter, summaries *summary.Adapter) *eventhandler.Handler {

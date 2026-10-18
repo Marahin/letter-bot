@@ -237,6 +237,22 @@ func TestTimePicker_TakenNow(t *testing.T) {
 	assert.True(t, picker.TakenNow)
 }
 
+func TestTimePicker_OwnHuntIsNotTaken(t *testing.T) {
+	// given
+	f := newFixture(t)
+	f.spots.On("SelectGuildSpotByID", ctx, guildID, int64(7)).Return(library(), nil)
+	mine := bookedBy(1, "Knight", at(5, 17, 30), at(5, 19, 0))
+	mine.AuthorDiscordID = member().UserID
+	f.reservations.On("Search", ctx, searching(7, now, at(6, 6, 30)), 1).Return(searchPage(mine), nil)
+
+	// when
+	picker, err := f.s.TimePicker(ctx, guildID, member(), reservation.TimeChoice{SpotID: 7, Window: 0})
+
+	// then
+	require.NoError(t, err)
+	assert.False(t, picker.TakenNow, "the member does not queue behind their own hunt")
+}
+
 func TestTimePicker_WindowOfTheStart(t *testing.T) {
 	// given
 	f := newFixture(t)

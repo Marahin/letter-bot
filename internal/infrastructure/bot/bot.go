@@ -124,11 +124,6 @@ type SummaryChannelWriter interface {
 	UserChannelCreate(recipientID string, options ...discordgo.RequestOption) (*discordgo.Channel, error)
 }
 
-// BookingFulfiller is told about every new booking, the /book command's too.
-type BookingFulfiller interface {
-	Fulfil(ctx context.Context, guildID, userID string, spotID int64) error
-}
-
 type shardGateway struct {
 	*discordgo.Session
 
@@ -183,7 +178,6 @@ type Bot struct {
 	summaries          *summaryWorker
 	legacyHashes       cmap.ConcurrentMap[string, string]
 	pacer              *pacer
-	fulfiller          BookingFulfiller
 	queue              ports.SpotQueueService
 	eventHandler       ports.APIPort
 	forms              ports.ReservationFormService
@@ -299,18 +293,10 @@ func (b *Bot) WithSummaryPassHook(h SummaryPassHook) *Bot {
 	return b
 }
 
-// WithBookingFulfiller sets what is told about every new booking. It is optional.
-func (b *Bot) WithBookingFulfiller(f BookingFulfiller) *Bot {
-	b.fulfiller = f
-	return b
-}
-
 // WithSpotQueue turns on the respawn queue: the /queue commands, the Queue
-// button, the removal of a member's entry when they book the respawn, and the
-// offers, which each summary pass sends.
+// button, and the offers, which each summary pass sends.
 func (b *Bot) WithSpotQueue(q ports.SpotQueueService) *Bot {
 	b.queue = q
-	b.fulfiller = q
 	b.passHooks = append(b.passHooks, b.sendQueueOffers)
 	return b
 }

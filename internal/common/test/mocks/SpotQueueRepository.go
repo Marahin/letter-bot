@@ -49,8 +49,8 @@ func (_m *MockSpotQueueRepository) EXPECT() *MockSpotQueueRepository_Expecter {
 }
 
 // ClaimOffer provides a mock function for the type MockSpotQueueRepository
-func (_mock *MockSpotQueueRepository) ClaimOffer(ctx context.Context, id int64, at time.Time) (bool, error) {
-	ret := _mock.Called(ctx, id, at)
+func (_mock *MockSpotQueueRepository) ClaimOffer(ctx context.Context, c queue.Claim) (bool, error) {
+	ret := _mock.Called(ctx, c)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ClaimOffer")
@@ -58,16 +58,16 @@ func (_mock *MockSpotQueueRepository) ClaimOffer(ctx context.Context, id int64, 
 
 	var r0 bool
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, int64, time.Time) (bool, error)); ok {
-		return returnFunc(ctx, id, at)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, queue.Claim) (bool, error)); ok {
+		return returnFunc(ctx, c)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, int64, time.Time) bool); ok {
-		r0 = returnFunc(ctx, id, at)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, queue.Claim) bool); ok {
+		r0 = returnFunc(ctx, c)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, int64, time.Time) error); ok {
-		r1 = returnFunc(ctx, id, at)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, queue.Claim) error); ok {
+		r1 = returnFunc(ctx, c)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -81,30 +81,24 @@ type MockSpotQueueRepository_ClaimOffer_Call struct {
 
 // ClaimOffer is a helper method to define mock.On call
 //   - ctx context.Context
-//   - id int64
-//   - at time.Time
-func (_e *MockSpotQueueRepository_Expecter) ClaimOffer(ctx any, id any, at any) *MockSpotQueueRepository_ClaimOffer_Call {
-	return &MockSpotQueueRepository_ClaimOffer_Call{Call: _e.mock.On("ClaimOffer", ctx, id, at)}
+//   - c queue.Claim
+func (_e *MockSpotQueueRepository_Expecter) ClaimOffer(ctx any, c any) *MockSpotQueueRepository_ClaimOffer_Call {
+	return &MockSpotQueueRepository_ClaimOffer_Call{Call: _e.mock.On("ClaimOffer", ctx, c)}
 }
 
-func (_c *MockSpotQueueRepository_ClaimOffer_Call) Run(run func(ctx context.Context, id int64, at time.Time)) *MockSpotQueueRepository_ClaimOffer_Call {
+func (_c *MockSpotQueueRepository_ClaimOffer_Call) Run(run func(ctx context.Context, c queue.Claim)) *MockSpotQueueRepository_ClaimOffer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 int64
+		var arg1 queue.Claim
 		if args[1] != nil {
-			arg1 = args[1].(int64)
-		}
-		var arg2 time.Time
-		if args[2] != nil {
-			arg2 = args[2].(time.Time)
+			arg1 = args[1].(queue.Claim)
 		}
 		run(
 			arg0,
 			arg1,
-			arg2,
 		)
 	})
 	return _c
@@ -115,14 +109,14 @@ func (_c *MockSpotQueueRepository_ClaimOffer_Call) Return(b bool, err error) *Mo
 	return _c
 }
 
-func (_c *MockSpotQueueRepository_ClaimOffer_Call) RunAndReturn(run func(ctx context.Context, id int64, at time.Time) (bool, error)) *MockSpotQueueRepository_ClaimOffer_Call {
+func (_c *MockSpotQueueRepository_ClaimOffer_Call) RunAndReturn(run func(ctx context.Context, c queue.Claim) (bool, error)) *MockSpotQueueRepository_ClaimOffer_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CountUserEntries provides a mock function for the type MockSpotQueueRepository
-func (_mock *MockSpotQueueRepository) CountUserEntries(ctx context.Context, guildID string, userID string, exceptSpotID int64, now time.Time) (int, error) {
-	ret := _mock.Called(ctx, guildID, userID, exceptSpotID, now)
+func (_mock *MockSpotQueueRepository) CountUserEntries(ctx context.Context, c queue.UserCount) (int, error) {
+	ret := _mock.Called(ctx, c)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CountUserEntries")
@@ -130,16 +124,16 @@ func (_mock *MockSpotQueueRepository) CountUserEntries(ctx context.Context, guil
 
 	var r0 int
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, int64, time.Time) (int, error)); ok {
-		return returnFunc(ctx, guildID, userID, exceptSpotID, now)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, queue.UserCount) (int, error)); ok {
+		return returnFunc(ctx, c)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, int64, time.Time) int); ok {
-		r0 = returnFunc(ctx, guildID, userID, exceptSpotID, now)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, queue.UserCount) int); ok {
+		r0 = returnFunc(ctx, c)
 	} else {
 		r0 = ret.Get(0).(int)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, int64, time.Time) error); ok {
-		r1 = returnFunc(ctx, guildID, userID, exceptSpotID, now)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, queue.UserCount) error); ok {
+		r1 = returnFunc(ctx, c)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -153,42 +147,24 @@ type MockSpotQueueRepository_CountUserEntries_Call struct {
 
 // CountUserEntries is a helper method to define mock.On call
 //   - ctx context.Context
-//   - guildID string
-//   - userID string
-//   - exceptSpotID int64
-//   - now time.Time
-func (_e *MockSpotQueueRepository_Expecter) CountUserEntries(ctx any, guildID any, userID any, exceptSpotID any, now any) *MockSpotQueueRepository_CountUserEntries_Call {
-	return &MockSpotQueueRepository_CountUserEntries_Call{Call: _e.mock.On("CountUserEntries", ctx, guildID, userID, exceptSpotID, now)}
+//   - c queue.UserCount
+func (_e *MockSpotQueueRepository_Expecter) CountUserEntries(ctx any, c any) *MockSpotQueueRepository_CountUserEntries_Call {
+	return &MockSpotQueueRepository_CountUserEntries_Call{Call: _e.mock.On("CountUserEntries", ctx, c)}
 }
 
-func (_c *MockSpotQueueRepository_CountUserEntries_Call) Run(run func(ctx context.Context, guildID string, userID string, exceptSpotID int64, now time.Time)) *MockSpotQueueRepository_CountUserEntries_Call {
+func (_c *MockSpotQueueRepository_CountUserEntries_Call) Run(run func(ctx context.Context, c queue.UserCount)) *MockSpotQueueRepository_CountUserEntries_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 queue.UserCount
 		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 int64
-		if args[3] != nil {
-			arg3 = args[3].(int64)
-		}
-		var arg4 time.Time
-		if args[4] != nil {
-			arg4 = args[4].(time.Time)
+			arg1 = args[1].(queue.UserCount)
 		}
 		run(
 			arg0,
 			arg1,
-			arg2,
-			arg3,
-			arg4,
 		)
 	})
 	return _c
@@ -199,7 +175,7 @@ func (_c *MockSpotQueueRepository_CountUserEntries_Call) Return(n int, err error
 	return _c
 }
 
-func (_c *MockSpotQueueRepository_CountUserEntries_Call) RunAndReturn(run func(ctx context.Context, guildID string, userID string, exceptSpotID int64, now time.Time) (int, error)) *MockSpotQueueRepository_CountUserEntries_Call {
+func (_c *MockSpotQueueRepository_CountUserEntries_Call) RunAndReturn(run func(ctx context.Context, c queue.UserCount) (int, error)) *MockSpotQueueRepository_CountUserEntries_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -277,8 +253,8 @@ func (_c *MockSpotQueueRepository_DeleteEntry_Call) RunAndReturn(run func(ctx co
 }
 
 // DeleteExpired provides a mock function for the type MockSpotQueueRepository
-func (_mock *MockSpotQueueRepository) DeleteExpired(ctx context.Context, guildID string, now time.Time) (int64, error) {
-	ret := _mock.Called(ctx, guildID, now)
+func (_mock *MockSpotQueueRepository) DeleteExpired(ctx context.Context, now time.Time) (int64, error) {
+	ret := _mock.Called(ctx, now)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteExpired")
@@ -286,16 +262,16 @@ func (_mock *MockSpotQueueRepository) DeleteExpired(ctx context.Context, guildID
 
 	var r0 int64
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, time.Time) (int64, error)); ok {
-		return returnFunc(ctx, guildID, now)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time) (int64, error)); ok {
+		return returnFunc(ctx, now)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, time.Time) int64); ok {
-		r0 = returnFunc(ctx, guildID, now)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time) int64); ok {
+		r0 = returnFunc(ctx, now)
 	} else {
 		r0 = ret.Get(0).(int64)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, time.Time) error); ok {
-		r1 = returnFunc(ctx, guildID, now)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, time.Time) error); ok {
+		r1 = returnFunc(ctx, now)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -309,30 +285,24 @@ type MockSpotQueueRepository_DeleteExpired_Call struct {
 
 // DeleteExpired is a helper method to define mock.On call
 //   - ctx context.Context
-//   - guildID string
 //   - now time.Time
-func (_e *MockSpotQueueRepository_Expecter) DeleteExpired(ctx any, guildID any, now any) *MockSpotQueueRepository_DeleteExpired_Call {
-	return &MockSpotQueueRepository_DeleteExpired_Call{Call: _e.mock.On("DeleteExpired", ctx, guildID, now)}
+func (_e *MockSpotQueueRepository_Expecter) DeleteExpired(ctx any, now any) *MockSpotQueueRepository_DeleteExpired_Call {
+	return &MockSpotQueueRepository_DeleteExpired_Call{Call: _e.mock.On("DeleteExpired", ctx, now)}
 }
 
-func (_c *MockSpotQueueRepository_DeleteExpired_Call) Run(run func(ctx context.Context, guildID string, now time.Time)) *MockSpotQueueRepository_DeleteExpired_Call {
+func (_c *MockSpotQueueRepository_DeleteExpired_Call) Run(run func(ctx context.Context, now time.Time)) *MockSpotQueueRepository_DeleteExpired_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 time.Time
 		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 time.Time
-		if args[2] != nil {
-			arg2 = args[2].(time.Time)
+			arg1 = args[1].(time.Time)
 		}
 		run(
 			arg0,
 			arg1,
-			arg2,
 		)
 	})
 	return _c
@@ -343,7 +313,7 @@ func (_c *MockSpotQueueRepository_DeleteExpired_Call) Return(n int64, err error)
 	return _c
 }
 
-func (_c *MockSpotQueueRepository_DeleteExpired_Call) RunAndReturn(run func(ctx context.Context, guildID string, now time.Time) (int64, error)) *MockSpotQueueRepository_DeleteExpired_Call {
+func (_c *MockSpotQueueRepository_DeleteExpired_Call) RunAndReturn(run func(ctx context.Context, now time.Time) (int64, error)) *MockSpotQueueRepository_DeleteExpired_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -574,44 +544,44 @@ func (_c *MockSpotQueueRepository_ListUserEntries_Call) RunAndReturn(run func(ct
 	return _c
 }
 
-// ResetOffers provides a mock function for the type MockSpotQueueRepository
-func (_mock *MockSpotQueueRepository) ResetOffers(ctx context.Context, ids []int64) error {
-	ret := _mock.Called(ctx, ids)
+// ResetOffer provides a mock function for the type MockSpotQueueRepository
+func (_mock *MockSpotQueueRepository) ResetOffer(ctx context.Context, id int64) error {
+	ret := _mock.Called(ctx, id)
 
 	if len(ret) == 0 {
-		panic("no return value specified for ResetOffers")
+		panic("no return value specified for ResetOffer")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []int64) error); ok {
-		r0 = returnFunc(ctx, ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int64) error); ok {
+		r0 = returnFunc(ctx, id)
 	} else {
 		r0 = ret.Error(0)
 	}
 	return r0
 }
 
-// MockSpotQueueRepository_ResetOffers_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ResetOffers'
-type MockSpotQueueRepository_ResetOffers_Call struct {
+// MockSpotQueueRepository_ResetOffer_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ResetOffer'
+type MockSpotQueueRepository_ResetOffer_Call struct {
 	*mock.Call
 }
 
-// ResetOffers is a helper method to define mock.On call
+// ResetOffer is a helper method to define mock.On call
 //   - ctx context.Context
-//   - ids []int64
-func (_e *MockSpotQueueRepository_Expecter) ResetOffers(ctx any, ids any) *MockSpotQueueRepository_ResetOffers_Call {
-	return &MockSpotQueueRepository_ResetOffers_Call{Call: _e.mock.On("ResetOffers", ctx, ids)}
+//   - id int64
+func (_e *MockSpotQueueRepository_Expecter) ResetOffer(ctx any, id any) *MockSpotQueueRepository_ResetOffer_Call {
+	return &MockSpotQueueRepository_ResetOffer_Call{Call: _e.mock.On("ResetOffer", ctx, id)}
 }
 
-func (_c *MockSpotQueueRepository_ResetOffers_Call) Run(run func(ctx context.Context, ids []int64)) *MockSpotQueueRepository_ResetOffers_Call {
+func (_c *MockSpotQueueRepository_ResetOffer_Call) Run(run func(ctx context.Context, id int64)) *MockSpotQueueRepository_ResetOffer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 []int64
+		var arg1 int64
 		if args[1] != nil {
-			arg1 = args[1].([]int64)
+			arg1 = args[1].(int64)
 		}
 		run(
 			arg0,
@@ -621,59 +591,47 @@ func (_c *MockSpotQueueRepository_ResetOffers_Call) Run(run func(ctx context.Con
 	return _c
 }
 
-func (_c *MockSpotQueueRepository_ResetOffers_Call) Return(err error) *MockSpotQueueRepository_ResetOffers_Call {
+func (_c *MockSpotQueueRepository_ResetOffer_Call) Return(err error) *MockSpotQueueRepository_ResetOffer_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *MockSpotQueueRepository_ResetOffers_Call) RunAndReturn(run func(ctx context.Context, ids []int64) error) *MockSpotQueueRepository_ResetOffers_Call {
+func (_c *MockSpotQueueRepository_ResetOffer_Call) RunAndReturn(run func(ctx context.Context, id int64) error) *MockSpotQueueRepository_ResetOffer_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// SelectGuildCandidates provides a mock function for the type MockSpotQueueRepository
-func (_mock *MockSpotQueueRepository) SelectGuildCandidates(ctx context.Context, guildID string, now time.Time, startAt time.Time) ([]queue.Candidate, error) {
-	ret := _mock.Called(ctx, guildID, now, startAt)
+// ResetTakenOffers provides a mock function for the type MockSpotQueueRepository
+func (_mock *MockSpotQueueRepository) ResetTakenOffers(ctx context.Context, guildID string, startAt time.Time) error {
+	ret := _mock.Called(ctx, guildID, startAt)
 
 	if len(ret) == 0 {
-		panic("no return value specified for SelectGuildCandidates")
+		panic("no return value specified for ResetTakenOffers")
 	}
 
-	var r0 []queue.Candidate
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, time.Time, time.Time) ([]queue.Candidate, error)); ok {
-		return returnFunc(ctx, guildID, now, startAt)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, time.Time, time.Time) []queue.Candidate); ok {
-		r0 = returnFunc(ctx, guildID, now, startAt)
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, time.Time) error); ok {
+		r0 = returnFunc(ctx, guildID, startAt)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]queue.Candidate)
-		}
+		r0 = ret.Error(0)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, time.Time, time.Time) error); ok {
-		r1 = returnFunc(ctx, guildID, now, startAt)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
+	return r0
 }
 
-// MockSpotQueueRepository_SelectGuildCandidates_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SelectGuildCandidates'
-type MockSpotQueueRepository_SelectGuildCandidates_Call struct {
+// MockSpotQueueRepository_ResetTakenOffers_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ResetTakenOffers'
+type MockSpotQueueRepository_ResetTakenOffers_Call struct {
 	*mock.Call
 }
 
-// SelectGuildCandidates is a helper method to define mock.On call
+// ResetTakenOffers is a helper method to define mock.On call
 //   - ctx context.Context
 //   - guildID string
-//   - now time.Time
 //   - startAt time.Time
-func (_e *MockSpotQueueRepository_Expecter) SelectGuildCandidates(ctx any, guildID any, now any, startAt any) *MockSpotQueueRepository_SelectGuildCandidates_Call {
-	return &MockSpotQueueRepository_SelectGuildCandidates_Call{Call: _e.mock.On("SelectGuildCandidates", ctx, guildID, now, startAt)}
+func (_e *MockSpotQueueRepository_Expecter) ResetTakenOffers(ctx any, guildID any, startAt any) *MockSpotQueueRepository_ResetTakenOffers_Call {
+	return &MockSpotQueueRepository_ResetTakenOffers_Call{Call: _e.mock.On("ResetTakenOffers", ctx, guildID, startAt)}
 }
 
-func (_c *MockSpotQueueRepository_SelectGuildCandidates_Call) Run(run func(ctx context.Context, guildID string, now time.Time, startAt time.Time)) *MockSpotQueueRepository_SelectGuildCandidates_Call {
+func (_c *MockSpotQueueRepository_ResetTakenOffers_Call) Run(run func(ctx context.Context, guildID string, startAt time.Time)) *MockSpotQueueRepository_ResetTakenOffers_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -687,26 +645,89 @@ func (_c *MockSpotQueueRepository_SelectGuildCandidates_Call) Run(run func(ctx c
 		if args[2] != nil {
 			arg2 = args[2].(time.Time)
 		}
-		var arg3 time.Time
-		if args[3] != nil {
-			arg3 = args[3].(time.Time)
-		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
 }
 
-func (_c *MockSpotQueueRepository_SelectGuildCandidates_Call) Return(candidates []queue.Candidate, err error) *MockSpotQueueRepository_SelectGuildCandidates_Call {
-	_c.Call.Return(candidates, err)
+func (_c *MockSpotQueueRepository_ResetTakenOffers_Call) Return(err error) *MockSpotQueueRepository_ResetTakenOffers_Call {
+	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *MockSpotQueueRepository_SelectGuildCandidates_Call) RunAndReturn(run func(ctx context.Context, guildID string, now time.Time, startAt time.Time) ([]queue.Candidate, error)) *MockSpotQueueRepository_SelectGuildCandidates_Call {
+func (_c *MockSpotQueueRepository_ResetTakenOffers_Call) RunAndReturn(run func(ctx context.Context, guildID string, startAt time.Time) error) *MockSpotQueueRepository_ResetTakenOffers_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SelectDueEntries provides a mock function for the type MockSpotQueueRepository
+func (_mock *MockSpotQueueRepository) SelectDueEntries(ctx context.Context, q queue.DueQuery) ([]queue.Entry, error) {
+	ret := _mock.Called(ctx, q)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SelectDueEntries")
+	}
+
+	var r0 []queue.Entry
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, queue.DueQuery) ([]queue.Entry, error)); ok {
+		return returnFunc(ctx, q)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, queue.DueQuery) []queue.Entry); ok {
+		r0 = returnFunc(ctx, q)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]queue.Entry)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, queue.DueQuery) error); ok {
+		r1 = returnFunc(ctx, q)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockSpotQueueRepository_SelectDueEntries_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SelectDueEntries'
+type MockSpotQueueRepository_SelectDueEntries_Call struct {
+	*mock.Call
+}
+
+// SelectDueEntries is a helper method to define mock.On call
+//   - ctx context.Context
+//   - q queue.DueQuery
+func (_e *MockSpotQueueRepository_Expecter) SelectDueEntries(ctx any, q any) *MockSpotQueueRepository_SelectDueEntries_Call {
+	return &MockSpotQueueRepository_SelectDueEntries_Call{Call: _e.mock.On("SelectDueEntries", ctx, q)}
+}
+
+func (_c *MockSpotQueueRepository_SelectDueEntries_Call) Run(run func(ctx context.Context, q queue.DueQuery)) *MockSpotQueueRepository_SelectDueEntries_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 queue.DueQuery
+		if args[1] != nil {
+			arg1 = args[1].(queue.DueQuery)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSpotQueueRepository_SelectDueEntries_Call) Return(entrys []queue.Entry, err error) *MockSpotQueueRepository_SelectDueEntries_Call {
+	_c.Call.Return(entrys, err)
+	return _c
+}
+
+func (_c *MockSpotQueueRepository_SelectDueEntries_Call) RunAndReturn(run func(ctx context.Context, q queue.DueQuery) ([]queue.Entry, error)) *MockSpotQueueRepository_SelectDueEntries_Call {
 	_c.Call.Return(run)
 	return _c
 }

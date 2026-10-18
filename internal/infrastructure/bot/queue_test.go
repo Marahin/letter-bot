@@ -3,6 +3,8 @@ package bot
 import (
 	"context"
 	"errors"
+	"net"
+	"net/http"
 	"slices"
 	"strings"
 	"testing"
@@ -50,6 +52,7 @@ func newQueueFixture(t *testing.T) *queueFixture {
 	f.b.writer = f.writer
 	f.b.eventHandler = f.events
 	f.b.pacer = &pacer{now: time.Now, sleep: func(context.Context, time.Duration) error { return nil }}
+	f.b.now = func() time.Time { return offeredAt.Add(time.Minute) }
 	f.b.WithSpotQueue(f.queue)
 	return f
 }
@@ -89,15 +92,23 @@ func TestWithSpotQueue_TurnsOnTheQueue(t *testing.T) {
 
 	// then
 	assert.Same(t, q, b.queue)
-	assert.Same(t, q, b.fulfiller)
 	assert.Len(t, b.passHooks, 1)
+}
+
+func (f *queueFixture) due(entries ...queue.Entry) {
+	f.queue.EXPECT().DueOffers(mock.Anything, "g1").Return(entries, nil)
+}
+
+func (f *queueFixture) claims(entryID int64) {
+	f.queue.EXPECT().ClaimOffer(mock.Anything, entryID).Return(offeredAt, true, nil).Once()
 }
 
 func TestSendQueueOffers_SendsADM(t *testing.T) {
 	// given
 	f := newQueueFixture(t)
 	f.config(guildconfig.Config{Name: "Celesta"})
-	f.queue.EXPECT().DueOffers(mock.Anything, "g1").Return([]queue.Entry{waiting(ptrTime(offeredAt))}, nil)
+	f.due(waiting(nil))
+	f.claims(9)
 	f.writer.On("UserChannelCreate", "u1").Return(&discordgo.Channel{ID: "dm1"}, nil)
 	sent := f.recordSend("dm1")
 
@@ -112,12 +123,42 @@ func TestSendQueueOffers_SendsADM(t *testing.T) {
 	assert.Equal(t, []string{"lf1:qb:9:1790000000", "lf1:qc:9:1790000000"}, messageCustomIDs(t, sent.Components))
 }
 
+func TestSendQueueOffers_ClaimsEachOfferJustBeforeItsSend(t *testing.T) {
+	// given
+	f := newQueueFixture(t)
+	f.config(guildconfig.Config{Name: "Celesta"})
+	second := waiting(nil)
+	second.ID, second.UserID = 10, "u2"
+	f.due(waiting(nil), second)
+	var calls []string
+	record := func(call string) func(mock.Arguments) { return func(mock.Arguments) { calls = append(calls, call) } }
+	f.queue.EXPECT().ClaimOffer(mock.Anything, int64(9)).Run(func(context.Context, int64) { calls = append(calls, "claim 9") }).Return(offeredAt, true, nil)
+	f.queue.EXPECT().ClaimOffer(mock.Anything, int64(10)).Run(func(context.Context, int64) { calls = append(calls, "claim 10") }).Return(offeredAt.Add(3*time.Second), true, nil)
+	f.writer.On("UserChannelCreate", "u1").Return(&discordgo.Channel{ID: "dm1"}, nil)
+	f.writer.On("UserChannelCreate", "u2").Return(&discordgo.Channel{ID: "dm2"}, nil)
+	f.writer.On("ChannelMessageSendComplex", "dm1", mock.Anything).Run(record("send 9")).Return(&discordgo.Message{}, nil)
+	sent := &discordgo.MessageSend{}
+	f.writer.On("ChannelMessageSendComplex", "dm2", mock.Anything).Run(func(args mock.Arguments) {
+		calls = append(calls, "send 10")
+		*sent = *args.Get(1).(*discordgo.MessageSend)
+	}).Return(&discordgo.Message{}, nil)
+
+	// when
+	err := f.b.sendQueueOffers(context.Background(), "g1")
+
+	// then
+	require.NoError(t, err)
+	assert.Equal(t, []string{"claim 9", "send 9", "claim 10", "send 10"}, calls)
+	assert.Equal(t, []string{"lf1:qb:10:1790000003", "lf1:qc:10:1790000003"}, messageCustomIDs(t, sent.Components))
+}
+
 func TestSendQueueOffers_ClosedDMsGetAMentionInTheCommandChannel(t *testing.T) {
 	// given
 	f := newQueueFixture(t)
 	f.config(guildconfig.Config{Name: "Celesta", CommandChannelID: "c2"})
 	f.gateway.On("StateChannels", "g1").Return([]*discordgo.Channel{{ID: "c2", Name: "bookings"}}, nil)
-	f.queue.EXPECT().DueOffers(mock.Anything, "g1").Return([]queue.Entry{waiting(ptrTime(offeredAt))}, nil)
+	f.due(waiting(nil))
+	f.claims(9)
 	f.writer.On("UserChannelCreate", "u1").Return(&discordgo.Channel{ID: "dm1"}, nil)
 	f.writer.On("ChannelMessageSendComplex", "dm1", mock.Anything).Return(nil, discordErr(discordgo.ErrCodeCannotSendMessagesToThisUser)).Once()
 	sent := f.recordSend("c2")
@@ -132,21 +173,28 @@ func TestSendQueueOffers_ClosedDMsGetAMentionInTheCommandChannel(t *testing.T) {
 	assert.Len(t, messageCustomIDs(t, sent.Components), 2)
 }
 
-func TestSendQueueOffers_AFailedOfferIsUnclaimed(t *testing.T) {
+func discordStatusErr(status int) error {
+	return &discordgo.RESTError{Response: &http.Response{StatusCode: status}, Message: &discordgo.APIErrorMessage{}}
+}
+
+func TestSendQueueOffers_ATransientFailureIsUnclaimed(t *testing.T) {
 	for _, tt := range []struct {
 		name  string
 		setup func(f *queueFixture)
 	}{
-		{name: "DM fails", setup: func(f *queueFixture) {
+		{name: "Discord fails", setup: func(f *queueFixture) {
 			f.writer.On("UserChannelCreate", "u1").Return(&discordgo.Channel{ID: "dm1"}, nil)
-			f.writer.On("ChannelMessageSendComplex", "dm1", mock.Anything).Return(nil, errors.New("discord down"))
+			f.writer.On("ChannelMessageSendComplex", "dm1", mock.Anything).Return(nil, discordStatusErr(http.StatusBadGateway))
 		}},
-		{name: "DM channel fails", setup: func(f *queueFixture) {
-			f.writer.On("UserChannelCreate", "u1").Return(nil, errors.New("discord down"))
+		{name: "rate limited", setup: func(f *queueFixture) {
+			f.writer.On("UserChannelCreate", "u1").Return(nil, discordStatusErr(http.StatusTooManyRequests))
 		}},
-		{name: "DMs closed and no command channel", setup: func(f *queueFixture) {
+		{name: "network fails", setup: func(f *queueFixture) {
+			f.writer.On("UserChannelCreate", "u1").Return(nil, &net.OpError{Op: "dial", Err: errors.New("refused")})
+		}},
+		{name: "command channel read fails", setup: func(f *queueFixture) {
 			f.gateway.On("StateChannels", "g1").Return([]*discordgo.Channel{}, nil)
-			f.writer.On("GuildChannels", "g1").Return([]*discordgo.Channel{}, nil)
+			f.writer.On("GuildChannels", "g1").Return(nil, discordStatusErr(http.StatusInternalServerError))
 			f.writer.On("UserChannelCreate", "u1").Return(&discordgo.Channel{ID: "dm1"}, nil)
 			f.writer.On("ChannelMessageSendComplex", "dm1", mock.Anything).Return(nil, discordErr(discordgo.ErrCodeCannotSendMessagesToThisUser))
 		}},
@@ -155,7 +203,8 @@ func TestSendQueueOffers_AFailedOfferIsUnclaimed(t *testing.T) {
 			// given
 			f := newQueueFixture(t)
 			f.config(guildconfig.Config{})
-			f.queue.EXPECT().DueOffers(mock.Anything, "g1").Return([]queue.Entry{waiting(ptrTime(offeredAt))}, nil)
+			f.due(waiting(nil))
+			f.claims(9)
 			tt.setup(f)
 			f.queue.EXPECT().Unclaim(mock.Anything, int64(9)).Return(nil)
 
@@ -163,26 +212,113 @@ func TestSendQueueOffers_AFailedOfferIsUnclaimed(t *testing.T) {
 			err := f.b.sendQueueOffers(context.Background(), "g1")
 
 			// then
-			assert.ErrorContains(t, err, "send offer 9")
+			assert.ErrorContains(t, err, "offer 9")
 		})
 	}
 }
 
-func TestSendQueueOffers_WithoutTheConfigEveryOfferIsUnclaimed(t *testing.T) {
+func TestSendQueueOffers_APermanentFailureKeepsTheClaim(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		setup func(f *queueFixture)
+	}{
+		{name: "DMs closed and no command channel", setup: func(f *queueFixture) {
+			f.gateway.On("StateChannels", "g1").Return([]*discordgo.Channel{}, nil)
+			f.writer.On("GuildChannels", "g1").Return([]*discordgo.Channel{}, nil)
+			f.writer.On("UserChannelCreate", "u1").Return(&discordgo.Channel{ID: "dm1"}, nil)
+			f.writer.On("ChannelMessageSendComplex", "dm1", mock.Anything).Return(nil, discordErr(discordgo.ErrCodeCannotSendMessagesToThisUser))
+		}},
+		{name: "unknown member", setup: func(f *queueFixture) {
+			f.writer.On("UserChannelCreate", "u1").Return(nil, discordErr(discordgo.ErrCodeUnknownUser))
+		}},
+		{name: "command channel refuses", setup: func(f *queueFixture) {
+			f.gateway.On("StateChannels", "g1").Return([]*discordgo.Channel{{ID: "c1", Name: "letter"}}, nil)
+			f.writer.On("UserChannelCreate", "u1").Return(&discordgo.Channel{ID: "dm1"}, nil)
+			f.writer.On("ChannelMessageSendComplex", "dm1", mock.Anything).Return(nil, discordErr(discordgo.ErrCodeCannotSendMessagesToThisUser))
+			f.writer.On("ChannelMessageSendComplex", "c1", mock.Anything).Return(nil, discordStatusErr(http.StatusForbidden))
+		}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			// given
+			f := newQueueFixture(t)
+			f.config(guildconfig.Config{})
+			f.due(waiting(nil))
+			f.claims(9)
+			tt.setup(f)
+
+			// when
+			err := f.b.sendQueueOffers(context.Background(), "g1")
+
+			// then: the queue mock fails on Unclaim
+			assert.ErrorContains(t, err, "offer 9")
+		})
+	}
+}
+
+func TestSendQueueOffers_UnclaimOutlivesTheCancelledPass(t *testing.T) {
 	// given
 	f := newQueueFixture(t)
-	f.configs.On("Get", mock.Anything, "g1").Return(nil, errors.New("db down"))
-	second := waiting(ptrTime(offeredAt))
-	second.ID = 10
-	f.queue.EXPECT().DueOffers(mock.Anything, "g1").Return([]queue.Entry{waiting(ptrTime(offeredAt)), second}, nil)
-	f.queue.EXPECT().Unclaim(mock.Anything, int64(9)).Return(nil)
-	f.queue.EXPECT().Unclaim(mock.Anything, int64(10)).Return(errors.New("db down"))
+	f.config(guildconfig.Config{})
+	f.due(waiting(nil))
+	f.claims(9)
+	f.b.pacer.sleep = func(ctx context.Context, _ time.Duration) error { return ctx.Err() }
+	ctx, cancel := context.WithCancel(context.Background())
+	f.writer.On("UserChannelCreate", "u1").Run(func(mock.Arguments) { cancel() }).Return(&discordgo.Channel{ID: "dm1"}, nil)
+	var unclaimErr error
+	f.queue.EXPECT().Unclaim(mock.Anything, int64(9)).Run(func(ctx context.Context, _ int64) { unclaimErr = ctx.Err() }).Return(nil)
+
+	// when
+	err := f.b.sendQueueOffers(ctx, "g1")
+
+	// then
+	assert.ErrorIs(t, err, context.Canceled)
+	assert.NoError(t, unclaimErr)
+}
+
+func TestSendQueueOffers_UnclaimFails(t *testing.T) {
+	// given
+	f := newQueueFixture(t)
+	f.config(guildconfig.Config{})
+	f.due(waiting(nil))
+	f.claims(9)
+	f.writer.On("UserChannelCreate", "u1").Return(nil, discordStatusErr(http.StatusBadGateway))
+	f.queue.EXPECT().Unclaim(mock.Anything, int64(9)).Return(errors.New("db down"))
 
 	// when
 	err := f.b.sendQueueOffers(context.Background(), "g1")
 
 	// then
-	assert.ErrorContains(t, err, "unclaim offer 10")
+	assert.ErrorContains(t, err, "unclaim: db down")
+}
+
+func TestSendQueueOffers_NothingIsSentWithoutAClaim(t *testing.T) {
+	// given
+	f := newQueueFixture(t)
+	f.config(guildconfig.Config{})
+	second := waiting(nil)
+	second.ID = 10
+	f.due(waiting(nil), second)
+	f.queue.EXPECT().ClaimOffer(mock.Anything, int64(9)).Return(time.Time{}, false, nil)
+	f.queue.EXPECT().ClaimOffer(mock.Anything, int64(10)).Return(time.Time{}, false, errors.New("db down"))
+
+	// when
+	err := f.b.sendQueueOffers(context.Background(), "g1")
+
+	// then: the writer mock fails on any send
+	assert.ErrorContains(t, err, "offer 10: db down")
+}
+
+func TestSendQueueOffers_WithoutTheConfigNothingIsClaimed(t *testing.T) {
+	// given
+	f := newQueueFixture(t)
+	f.configs.On("Get", mock.Anything, "g1").Return(nil, errors.New("db down"))
+	f.due(waiting(nil))
+
+	// when
+	err := f.b.sendQueueOffers(context.Background(), "g1")
+
+	// then
+	assert.ErrorContains(t, err, "load guild config")
 }
 
 func TestSendQueueOffers_NothingDue(t *testing.T) {
@@ -246,7 +382,7 @@ func TestQueueOfferClick_BookFromADM(t *testing.T) {
 	e := waiting(ptrTime(offeredAt))
 	f.queue.EXPECT().Entry(mock.Anything, int64(9)).Return(&e, nil)
 	resp := f.expectRespond(i)
-	f.queue.EXPECT().CheckOffer(&e, "u1", offeredAt).Return(nil)
+	f.queue.EXPECT().OfferUsable(&e, offeredAt).Return(nil)
 	f.configs.On("Get", mock.Anything, "g1").Return(&guildconfig.Config{GuildID: "g1", Premium: true, ManageRoleIDs: []string{"boss"}}, nil)
 	f.gateway.On("StateGuild", "g1").Return(&discordgo.Guild{ID: "g1", Roles: []*discordgo.Role{
 		{ID: "g1", Permissions: 0}, {ID: "admin", Permissions: discordgo.PermissionAdministrator},
@@ -278,7 +414,7 @@ func TestQueueOfferClick_BookInTheCommandChannelUsesTheClickingMember(t *testing
 	e := waiting(ptrTime(offeredAt))
 	f.queue.EXPECT().Entry(mock.Anything, int64(9)).Return(&e, nil)
 	f.expectRespond(i)
-	f.queue.EXPECT().CheckOffer(&e, "u1", offeredAt).Return(nil)
+	f.queue.EXPECT().OfferUsable(&e, offeredAt).Return(nil)
 	f.premium(guildconfig.Config{})
 	f.queue.EXPECT().Book(mock.Anything, mock.MatchedBy(func(a reservation.Actor) bool { return a.Name == "Knight" && a.Caps.Reserve }), int64(9), offeredAt).
 		Return(&reservation.FormOutcome{SpotName: "Library -1"}, nil)
@@ -289,6 +425,91 @@ func TestQueueOfferClick_BookInTheCommandChannelUsesTheClickingMember(t *testing
 
 	// then
 	assert.Contains(t, f.editedContent(t), "Booked **Library -1**")
+}
+
+// publicOfferClick is a click on the offer in the command channel.
+func publicOfferClick(customID string) *discordgo.InteractionCreate {
+	i := component(customID)
+	i.ChannelID = "c1"
+	i.Message = &discordgo.Message{ID: "m1", ChannelID: "c1"}
+	return i
+}
+
+func TestQueueOfferClick_APublicOfferAnswersInPrivate(t *testing.T) {
+	for _, tt := range []struct {
+		name      string
+		customID  string
+		setup     func(f *queueFixture)
+		want      string
+		wantClose bool
+	}{
+		{name: "booked", customID: "lf1:qb:9:1790000000", wantClose: true, want: "Booked **Library -1**", setup: func(f *queueFixture) {
+			f.queue.EXPECT().OfferUsable(mock.Anything, offeredAt).Return(nil)
+			f.premium(guildconfig.Config{})
+			f.queue.EXPECT().Book(mock.Anything, mock.Anything, int64(9), offeredAt).Return(&reservation.FormOutcome{SpotName: "Library -1"}, nil)
+		}},
+		{name: "booking refused", customID: "lf1:qb:9:1790000000", want: "at most 3 hours", setup: func(f *queueFixture) {
+			f.queue.EXPECT().OfferUsable(mock.Anything, offeredAt).Return(nil)
+			f.premium(guildconfig.Config{})
+			f.queue.EXPECT().Book(mock.Anything, mock.Anything, int64(9), offeredAt).Return(nil, booking.ErrQuotaExceeded)
+		}},
+		{name: "expired", customID: "lf1:qb:9:1790000000", want: "has expired", setup: func(f *queueFixture) {
+			f.queue.EXPECT().OfferUsable(mock.Anything, offeredAt).Return(corequeue.ErrOfferExpired)
+		}},
+		{name: "cancelled", customID: "lf1:qc:9:1790000000", wantClose: true, want: "You left the queue", setup: func(f *queueFixture) {
+			f.queue.EXPECT().Leave(mock.Anything, "u1", int64(9)).Return(nil)
+		}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			// given
+			f := newQueueFixture(t)
+			i := publicOfferClick(tt.customID)
+			e := waiting(ptrTime(offeredAt))
+			f.queue.EXPECT().Entry(mock.Anything, int64(9)).Return(&e, nil)
+			resp := f.expectRespond(i)
+			tt.setup(f)
+			f.expectEdit(i)
+			var closed *discordgo.MessageEdit
+			if tt.wantClose {
+				f.writer.EXPECT().ChannelMessageEditComplex(mock.Anything).
+					Run(func(m *discordgo.MessageEdit, _ ...discordgo.RequestOption) { closed = m }).
+					Return(&discordgo.Message{}, nil).Once()
+			}
+
+			// when
+			f.b.handleComponent(i)
+
+			// then
+			assert.Equal(t, discordgo.InteractionResponseDeferredChannelMessageWithSource, resp.Type)
+			assert.Equal(t, discordgo.MessageFlagsEphemeral, resp.Data.Flags)
+			assert.Contains(t, f.editedContent(t), tt.want)
+			if tt.wantClose {
+				require.NotNil(t, closed)
+				assert.Equal(t, "m1", closed.ID)
+				assert.Equal(t, "c1", closed.Channel)
+				assert.Empty(t, closed.Components)
+				assert.NotNil(t, closed.Components, "an empty list removes the buttons")
+			}
+		})
+	}
+}
+
+func TestQueueOfferClick_AFailedCloseIsOnlyLogged(t *testing.T) {
+	// given
+	f := newQueueFixture(t)
+	i := publicOfferClick("lf1:qc:9:1790000000")
+	e := waiting(ptrTime(offeredAt))
+	f.queue.EXPECT().Entry(mock.Anything, int64(9)).Return(&e, nil)
+	f.expectRespond(i)
+	f.queue.EXPECT().Leave(mock.Anything, "u1", int64(9)).Return(nil)
+	f.expectEdit(i)
+	f.writer.On("ChannelMessageEditComplex", mock.Anything).Return(nil, errors.New("discord down")).Once()
+
+	// when
+	f.b.handleComponent(i)
+
+	// then
+	assert.Contains(t, f.editedContent(t), "You left the queue")
 }
 
 func TestQueueOfferClick_BookRefused(t *testing.T) {
@@ -313,7 +534,7 @@ func TestQueueOfferClick_BookRefused(t *testing.T) {
 			e := waiting(ptrTime(offeredAt))
 			f.queue.EXPECT().Entry(mock.Anything, int64(9)).Return(&e, nil)
 			f.expectRespond(i)
-			f.queue.EXPECT().CheckOffer(&e, "u1", offeredAt).Return(nil)
+			f.queue.EXPECT().OfferUsable(&e, offeredAt).Return(nil)
 			f.premium(guildconfig.Config{})
 			f.queue.EXPECT().Book(mock.Anything, mock.Anything, int64(9), offeredAt).Return(tt.outcome, tt.err)
 			f.expectEdit(i)
@@ -341,7 +562,7 @@ func TestQueueOfferClick_ExpiredOfferIsNotBooked(t *testing.T) {
 	e := waiting(ptrTime(offeredAt))
 	f.queue.EXPECT().Entry(mock.Anything, int64(9)).Return(&e, nil)
 	f.expectRespond(i)
-	f.queue.EXPECT().CheckOffer(&e, "u1", offeredAt).Return(corequeue.ErrOfferExpired)
+	f.queue.EXPECT().OfferUsable(&e, offeredAt).Return(corequeue.ErrOfferExpired)
 	f.expectEdit(i)
 
 	// when
@@ -382,7 +603,7 @@ func TestQueueOfferClick_ActorRefusals(t *testing.T) {
 			e := waiting(ptrTime(offeredAt))
 			f.queue.EXPECT().Entry(mock.Anything, int64(9)).Return(&e, nil)
 			f.expectRespond(i)
-			f.queue.EXPECT().CheckOffer(&e, "u1", offeredAt).Return(nil)
+			f.queue.EXPECT().OfferUsable(&e, offeredAt).Return(nil)
 			tt.setup(f)
 			f.expectEdit(i)
 
@@ -427,6 +648,12 @@ func TestQueueOfferClick_Cancel(t *testing.T) {
 	}
 }
 
+func joinRequest(spotID int64, length time.Duration) any {
+	return mock.MatchedBy(func(r queue.JoinRequest) bool {
+		return r.GuildID == "g1" && r.Actor.UserID == "u1" && r.Actor.Caps.Reserve && r.SpotID == spotID && r.Length == length
+	})
+}
+
 func TestQueueJoin_FromTheWizard(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
@@ -445,7 +672,7 @@ func TestQueueJoin_FromTheWizard(t *testing.T) {
 			f.premium(guildconfig.Config{})
 			i := component("lf1:qj:7:60")
 			f.expectRespond(i)
-			f.queue.EXPECT().Join(mock.Anything, "g1", mock.Anything, int64(7), time.Hour).Return(tt.outcome, tt.err)
+			f.queue.EXPECT().Join(mock.Anything, joinRequest(7, time.Hour)).Return(tt.outcome, tt.err)
 			f.expectEdit(i)
 
 			// when
@@ -518,7 +745,7 @@ func TestQueueCommand(t *testing.T) {
 	}{
 		{name: "joins", setup: func(f *queueFixture) {
 			f.forms.On("FindRespawn", mock.Anything, "g1", "lib").Return(&spot.Spot{ID: 7, Name: "Library -1"}, nil)
-			f.queue.EXPECT().Join(mock.Anything, "g1", mock.Anything, int64(7), 90*time.Minute).Return(&queue.JoinOutcome{Entry: waiting(nil)}, nil)
+			f.queue.EXPECT().Join(mock.Anything, joinRequest(7, 90*time.Minute)).Return(&queue.JoinOutcome{Entry: waiting(nil)}, nil)
 		}, want: "You are in the queue"},
 		{name: "ambiguous", setup: func(f *queueFixture) {
 			f.forms.On("FindRespawn", mock.Anything, "g1", "lib").Return(nil, &reservationforms.AmbiguousSpotError{Query: "lib"})
@@ -674,8 +901,6 @@ func TestGetCommands_QueueOnlyWithTheQueue(t *testing.T) {
 func TestTimeStepView_QueueButton(t *testing.T) {
 	taken := timePicker(reservation.TimeChoice{Length: time.Hour})
 	taken.TakenNow = true
-	editing := timePicker(reservation.TimeChoice{ReservationID: 9, Length: time.Hour})
-	editing.Editing, editing.TakenNow = listed(9, "Library -1", viewNow.Add(time.Hour)), true
 	withQueue := viewBot()
 	withQueue.queue = mocks.NewMockSpotQueueService(t)
 	for _, tt := range []struct {
@@ -686,7 +911,6 @@ func TestTimeStepView_QueueButton(t *testing.T) {
 	}{
 		{name: "taken now", b: withQueue, picker: taken, want: true},
 		{name: "free now", b: withQueue, picker: timePicker(reservation.TimeChoice{Length: time.Hour})},
-		{name: "an edit", b: withQueue, picker: editing},
 		{name: "no queue", b: viewBot(), picker: taken},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

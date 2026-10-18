@@ -605,29 +605,38 @@ because Discord rate-limits the bot.
      a premium server, before any summary write. Its error is logged and the
      pass goes on. The booking queue sends its due offers there.
 105. **The queue.** A member waits for a taken respawn with `/queue` (respawn,
-     length) or the "Queue" button of the wizard, which shows when the respawn
-     is taken now. `/queue-leave` stops it. The replies are private. The queue
+     length) or the "Queue" button of the wizard, which shows when another
+     member holds the respawn now. `/queue-leave` stops it. The replies are private. The queue
      lives in Discord only (`spot_queue_entries`); the web has no queue page.
      - "Free" means that no reservation of the respawn overlaps [start,
        start + length], edges included, as in booking. The start is the next
        full minute, because booking counts the minute in which the previous
-       hunt ended as taken.
+       hunt ended as taken. One SQL function (`spot_queue_free`) holds this
+       rule for all queue queries.
      - The length is 30 minutes to 3 hours, in steps of 30 minutes, default
-       2 hours. An entry lasts 24 hours. A member waits for at most 3
-       respawns per server. Queueing the same respawn again replaces its
-       length and expiry.
+       2 hours. The rule is in core; the database checks only that the
+       length is positive. An entry lasts 24 hours. A member waits for at
+       most 3 active respawns per server. Queueing the same respawn again
+       replaces its length and expiry.
      - A respawn that is free when the member queues gives the offer at once,
        in the reply.
 106. **Offers.** Each summary pass of a premium server deletes the expired
-     entries, clears the offer of an entry whose respawn was taken again, and
-     offers each free respawn to every member who waits for it, at the same
-     time. The first member to book gets it; the others get the normal booking
-     error. An entry gets a new offer only after its respawn was taken and
-     freed again. The bot sends the offer by DM, through the summary worker's
-     session and pacing (decision 92). When Discord refuses the DM (code
-     50007), the offer goes to the command channel with a mention that pings
-     only that member. An offer that could not be sent is cleared, so a later
-     pass tries again.
+     entries of all servers, clears the offer of an entry whose respawn was
+     taken again, and offers each free respawn to every member who waits for
+     it, in the same pass. The clear is one statement that checks the overlap
+     again, so it keeps an offer that `/queue` made meanwhile. The first
+     member to book gets it; the others get the normal booking error. An
+     entry gets a new offer only after its respawn was taken and freed again.
+     The bot sends the offer by DM, through the summary worker's session and
+     pacing (decision 92). It claims each offer just before it sends it, and
+     only when the respawn is still free, so each member gets the full 10
+     minutes. When Discord refuses the DM (code 50007), the offer goes to the
+     command channel with a mention that pings only that member.
+     - A send that fails for a reason that can pass (the network, a Discord
+       error 5xx or 429, or the end of the pass at shutdown) clears the
+       offer, so a later pass tries again. Any other refusal (closed DMs and
+       no command channel, a member who left) keeps the offer, so the bot
+       does not try again until the respawn was taken and freed again.
      - A respawn becomes free only when a reservation ends or is deleted,
        moved or shortened. The end of a listed reservation is a boundary
        timer, and a change triggers a pass (decision 90). The 2-minute tick
@@ -640,10 +649,18 @@ because Discord rate-limits the bot.
      from the entry and the member from the API (with the permissions of
      their roles). Book books from the next full minute for the queued length
      through the normal booking, so the booking is announced (decision 87) and
-     the summary changes. Any new booking of the respawn by the member removes
-     their entry. Cancel removes the entry. A newer offer replaces an older
-     one. When the respawn was taken meanwhile, Book shows the booking error
-     and keeps Cancel.
+     the summary changes. Cancel removes the entry. A newer offer replaces an
+     older one. When the respawn was taken meanwhile, Book shows the booking
+     error and keeps Cancel.
+     - Cancel has no 10-minute limit: a member can always leave the queue.
+     - A click on an offer in the command channel gets a private reply, as
+       the other queue replies (decision 105). A booking from it, or Cancel,
+       removes the buttons of the public offer.
+     - Any new booking of the respawn by the member removes their entry: a
+       button, the wizard, `/book` or the web. An edit that moves a
+       reservation to the respawn, or gives it to the member, removes it too.
+       The booking service of each binary does it, so it does not depend on
+       the NOTIFY signal.
 
 ## Parity with scxmanager
 

@@ -429,8 +429,10 @@ Manage Channels or Manage Roles keeps the single summary (decision 97); the
 "Re-invite bot" button in Settings fixes it.
 
 **The queue (migration `20261018120200`): any order.** It only adds the table
-`spot_queue_entries`, which only the new bot uses. The bot registers `/queue`
-and `/queue-leave` on each server when it starts.
+`spot_queue_entries` and the function `spot_queue_free`. Only the new release
+uses them: the bot, and the booking of both binaries, which removes the
+member's entry. The bot registers `/queue` and `/queue-leave` on each server
+when it starts.
 
 The notes below are for the first release of the web panel.
 

@@ -21,7 +21,6 @@ packages:
       LogEntry: {}
   spot-assistant/internal/infrastructure/bot:
     interfaces:
-      BookingFulfiller: {}
       DiscordGuildReader: {}
       GuildActions: {}
       InteractionGateway: {}

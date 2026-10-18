@@ -107,7 +107,7 @@ func (s *Service) TimePicker(ctx context.Context, guildID string, actor reservat
 		return picker, nil
 	}
 	if picker.Editing == nil {
-		if picker.TakenNow, err = s.takenNow(ctx, guildID, sp.ID, now, choice.Window, picker.Booked); err != nil {
+		if picker.TakenNow, err = s.takenNow(ctx, guildID, actor.UserID, sp.ID, now, choice.Window, picker.Booked); err != nil {
 			return nil, err
 		}
 	}
@@ -172,15 +172,17 @@ func (s *Service) booked(ctx context.Context, guildID string, spotID, excludeID 
 	return booked, nil
 }
 
-// takenNow reuses the reservations of the first window, which starts now.
-func (s *Service) takenNow(ctx context.Context, guildID string, spotID int64, now time.Time, window int, booked []*reservation.Reservation) (bool, error) {
+// takenNow tells whether another member holds the respawn now. It reuses the
+// reservations of the first window, which starts now.
+func (s *Service) takenNow(ctx context.Context, guildID, userID string, spotID int64, now time.Time, window int, booked []*reservation.Reservation) (bool, error) {
 	if window != 0 {
 		var err error
 		if booked, err = s.booked(ctx, guildID, spotID, 0, now, now); err != nil {
 			return false, err
 		}
 	}
-	return holder(now, booked) != nil, nil
+	h := holder(now, booked)
+	return h != nil && (userID == "" || h.AuthorDiscordID != userID), nil
 }
 
 func (s *Service) BookChoice(ctx context.Context, guildID string, actor reservation.Actor, choice reservation.TimeChoice) (*reservation.FormOutcome, error) {

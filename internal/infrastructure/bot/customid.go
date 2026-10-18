@@ -59,11 +59,10 @@ const (
 	actionEditLengthPick
 	actionEditWindow
 	actionEditSubmit
-	// The Book button of a region channel and its respawn pages.
+	// Region channels.
 	actionBookRegion
 	actionRegionPage
-	// The respawn queue: join from the wizard, the offer's Book and Cancel,
-	// and Leave.
+	// The queue.
 	actionQueueJoin
 	actionQueueBook
 	actionQueueCancel

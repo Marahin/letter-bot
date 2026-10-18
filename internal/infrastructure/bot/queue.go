@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -27,6 +29,7 @@ const (
 	// queueLookupTimeout bounds the read before an offer click is answered:
 	// a refusal must be the first reply, within Discord's 3 seconds.
 	queueLookupTimeout = 2 * time.Second
+	unclaimTimeout     = 5 * time.Second
 )
 
 // sendQueueOffers is the summary pass hook of the queue. Running in the pass
@@ -37,29 +40,65 @@ func (b *Bot) sendQueueOffers(ctx context.Context, guildID string) error {
 		return err
 	}
 	errs := []error{err}
-	cfg, cfgErr := b.guildConfig(ctx, guildID)
+	cfg, err := b.guildConfig(ctx, guildID)
+	if err != nil {
+		return errors.Join(append(errs, fmt.Errorf("load guild config: %w", err))...)
+	}
 	for _, e := range due {
-		sendErr := cfgErr
-		if sendErr == nil {
-			sendErr = b.sendQueueOffer(ctx, cfg, e)
-		}
-		if sendErr == nil {
-			continue
-		}
-		errs = append(errs, fmt.Errorf("send offer %d: %w", e.ID, sendErr))
-		if err := b.queue.Unclaim(ctx, e.ID); err != nil {
-			errs = append(errs, fmt.Errorf("unclaim offer %d: %w", e.ID, err))
+		if err := b.offer(ctx, cfg, e); err != nil {
+			errs = append(errs, fmt.Errorf("offer %d: %w", e.ID, err))
 		}
 	}
 	return errors.Join(errs...)
 }
 
-// sendQueueOffer sends the offer by DM. A member who does not take DMs from
-// the server gets it with a mention in the command channel.
-func (b *Bot) sendQueueOffer(ctx context.Context, cfg *guildconfig.Config, e queue.Entry) error {
+// offer claims the entry's offer just before it sends it, so the member gets
+// the full 10 minutes. A send that fails for good keeps the claim, so later
+// passes do not try again until the respawn was taken and freed again.
+func (b *Bot) offer(ctx context.Context, cfg *guildconfig.Config, e queue.Entry) error {
 	if err := b.pacer.Wait(ctx, messageOpGap); err != nil {
 		return err
 	}
+	at, claimed, err := b.queue.ClaimOffer(ctx, e.ID)
+	if err != nil || !claimed {
+		return err
+	}
+	e.OfferedAt = &at
+	err = b.sendQueueOffer(ctx, cfg, e)
+	if err == nil || !retryableSend(err) {
+		return err
+	}
+	// The pass may end at shutdown; the claim must still go.
+	unclaimCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), unclaimTimeout)
+	defer cancel()
+	if unclaimErr := b.queue.Unclaim(unclaimCtx, e.ID); unclaimErr != nil {
+		return errors.Join(err, fmt.Errorf("unclaim: %w", unclaimErr))
+	}
+	return err
+}
+
+// retryableSend tells a send failure that a later pass may not hit: the context
+// ended, the network failed, or Discord failed or rate-limited. Any other
+// refusal (closed DMs without a command channel, a member who left) repeats.
+func retryableSend(err error) bool {
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return true
+	}
+	var restErr *discordgo.RESTError
+	if !errors.As(err, &restErr) {
+		return false
+	}
+	return restErr.Response == nil || restErr.Response.StatusCode >= http.StatusInternalServerError ||
+		restErr.Response.StatusCode == http.StatusTooManyRequests
+}
+
+// sendQueueOffer sends the offer by DM. A member who does not take DMs from
+// the server gets it with a mention in the command channel.
+func (b *Bot) sendQueueOffer(ctx context.Context, cfg *guildconfig.Config, e queue.Entry) error {
 	dm, err := b.writer.UserChannelCreate(e.UserID)
 	if err != nil {
 		return fmt.Errorf("open DM: %w", err)
@@ -139,58 +178,92 @@ func (b *Bot) queueOfferClick(ctx context.Context, i *discordgo.InteractionCreat
 		b.respondEphemeral(i, b.formatter.FormatFormError(corequeue.ErrOfferNotYours))
 		return
 	}
-	if err := b.interactionRespond(i, nil, discordgo.InteractionResponseDeferredMessageUpdate); err != nil {
+	// The offer in the command channel is public, so the reply is a new private message.
+	public := isPublicMessage(i)
+	kind := discordgo.InteractionResponseDeferredMessageUpdate
+	var data *discordgo.InteractionResponseData
+	if public {
+		kind, data = discordgo.InteractionResponseDeferredChannelMessageWithSource, &discordgo.InteractionResponseData{Flags: discordgo.MessageFlagsEphemeral}
+	}
+	if err := b.interactionRespond(i, data, kind); err != nil {
 		b.log.Errorf("could not defer the interaction: %s", err)
 		return
 	}
 	var view formView
+	var done bool
 	if action.Kind == actionQueueCancel {
-		view = b.queueCancelView(ctx, e, action.StartAt)
+		view, done = b.queueCancelView(ctx, e, action.StartAt)
 	} else {
-		view = b.queueBookView(ctx, i, e, action.StartAt)
+		view, done = b.queueBookView(ctx, i, e, action.StartAt)
 	}
 	if _, err := b.gateway.InteractionResponseEdit(i.Interaction, view.edit()); err != nil {
 		b.log.Errorf("could not edit the interaction response: %s", err)
 	}
+	if public && done {
+		b.closePublicOffer(ctx, i)
+	}
 }
 
-func (b *Bot) queueCancelView(ctx context.Context, e *queue.Entry, offeredAt time.Time) formView {
+func isPublicMessage(i *discordgo.InteractionCreate) bool {
+	return i.GuildID != "" && i.Message != nil && i.Message.Flags&discordgo.MessageFlagsEphemeral == 0
+}
+
+// closePublicOffer removes the buttons of a used offer in the command channel.
+func (b *Bot) closePublicOffer(ctx context.Context, i *discordgo.InteractionCreate) {
+	if err := b.pacer.Wait(ctx, messageOpGap); err != nil {
+		return
+	}
+	_, err := b.writer.ChannelMessageEditComplex(&discordgo.MessageEdit{
+		ID:         i.Message.ID,
+		Channel:    i.ChannelID,
+		Components: []discordgo.MessageComponent{},
+	})
+	if err != nil {
+		b.log.With("guild.ID", i.GuildID, "channel.ID", i.ChannelID).Warnf("could not remove the buttons of the offer: %s", err)
+	}
+}
+
+// queueCancelView skips the 10-minute gate: leaving the queue is always allowed.
+// done means the member left the queue.
+func (b *Bot) queueCancelView(ctx context.Context, e *queue.Entry, offeredAt time.Time) (formView, bool) {
 	err := b.queue.Leave(ctx, e.UserID, e.ID)
 	if err != nil && !errors.Is(err, ports.ErrNotFound) {
 		b.log.With("queue.ID", e.ID).Errorf("could not leave the queue: %s", err)
 		return formView{
 			content:    b.formatter.FormatGenericError(errors.New("could not leave the queue, please try again")),
 			components: []discordgo.MessageComponent{row(cancelOfferButton(e.ID, offeredAt))},
-		}
+		}, false
 	}
-	return formView{content: b.formatter.FormatQueueLeft(e.SpotName)}
+	return formView{content: b.formatter.FormatQueueLeft(e.SpotName)}, true
 }
 
-func (b *Bot) queueBookView(ctx context.Context, i *discordgo.InteractionCreate, e *queue.Entry, offeredAt time.Time) formView {
-	now := time.Now()
-	if err := b.queue.CheckOffer(e, e.UserID, offeredAt); err != nil {
-		return formView{content: b.formatter.FormatQueueOfferExpired(*e, now)}
+// queueBookView books the offer. done means it booked.
+func (b *Bot) queueBookView(ctx context.Context, i *discordgo.InteractionCreate, e *queue.Entry, offeredAt time.Time) (formView, bool) {
+	now := b.now()
+	// Checked before the actor, which costs Discord reads.
+	if err := b.queue.OfferUsable(e, offeredAt); err != nil {
+		return formView{content: b.formatter.FormatQueueOfferExpired(*e, now)}, false
 	}
 	keepCancel := []discordgo.MessageComponent{row(cancelOfferButton(e.ID, offeredAt))}
 	actor, reply := b.queueActor(ctx, i, e)
 	if reply != "" {
-		return formView{content: reply, components: keepCancel}
+		return formView{content: reply, components: keepCancel}, false
 	}
 	outcome, err := b.queue.Book(ctx, actor, e.ID, offeredAt)
 	b.logFormError("queue book", err)
 	switch {
 	case err == nil:
-		return formView{content: b.formatter.FormatFormBooked(outcome)}
+		return formView{content: b.formatter.FormatFormBooked(outcome)}, true
 	case errors.Is(err, corequeue.ErrOfferExpired):
-		return formView{content: b.formatter.FormatQueueOfferExpired(*e, now)}
+		return formView{content: b.formatter.FormatQueueOfferExpired(*e, now)}, false
 	case errors.Is(err, ports.ErrNotFound):
-		return formView{content: b.formatter.FormatQueueGone()}
+		return formView{content: b.formatter.FormatQueueGone()}, false
 	case errors.Is(err, booking.ErrInsufficientPermissions) && outcome != nil && len(outcome.Conflicts) > 0:
 		// The offer has no Overbook button; the wizard has.
 		outcome.CanOverbook = false
-		return formView{content: b.formatter.FormatFormConflicts(outcome), components: keepCancel}
+		return formView{content: b.formatter.FormatFormConflicts(outcome), components: keepCancel}, false
 	}
-	return formView{content: b.formatter.FormatFormError(err), components: keepCancel}
+	return formView{content: b.formatter.FormatFormError(err), components: keepCancel}, false
 }
 
 // queueActor resolves the clicking member's rights in the entry's guild, as
@@ -253,7 +326,7 @@ func interactionUserID(i *discordgo.InteractionCreate) string {
 }
 
 func (b *Bot) joinQueue(ctx context.Context, req *formRequest, spotID int64, length time.Duration) formView {
-	outcome, err := b.queue.Join(ctx, req.guild.ID, req.actor, spotID, length)
+	outcome, err := b.queue.Join(ctx, queue.JoinRequest{GuildID: req.guild.ID, Actor: req.actor, SpotID: spotID, Length: length})
 	if err != nil {
 		b.logFormError("queue", err)
 		return formView{content: b.formatter.FormatFormError(err)}
@@ -262,7 +335,7 @@ func (b *Bot) joinQueue(ctx context.Context, req *formRequest, spotID int64, len
 		return formView{content: b.formatter.FormatQueueOffer(outcome.Entry, "", offerDeadline(outcome.Entry)), components: offerComponents(outcome.Entry)}
 	}
 	return formView{
-		content: b.formatter.FormatQueueJoined(outcome.Entry, time.Now()),
+		content: b.formatter.FormatQueueJoined(outcome.Entry, b.now()),
 		components: []discordgo.MessageComponent{row(
 			button("Leave queue", discordgo.SecondaryButton, formAction{Kind: actionQueueLeave, QueueID: outcome.Entry.ID}),
 		)},
@@ -452,5 +525,5 @@ func (b *Bot) queueCommands() []*discordgo.ApplicationCommand {
 
 // queueable tells whether the time step offers the Queue button.
 func (b *Bot) queueable(p *reservation.TimePicker) bool {
-	return b.queue != nil && p.TakenNow && p.Editing == nil
+	return b.queue != nil && p.TakenNow
 }

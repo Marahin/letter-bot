@@ -74,6 +74,18 @@ func TestBookingStart(t *testing.T) {
 	assert.Equal(t, onMinute, on)
 }
 
+func joinRequest(actor reservation.Actor, length time.Duration) queue.JoinRequest {
+	return queue.JoinRequest{GuildID: guildID, Actor: actor, SpotID: 7, Length: length}
+}
+
+func userCount() queue.UserCount {
+	return queue.UserCount{GuildID: guildID, UserID: "u1", ExceptSpotID: 7, Now: now}
+}
+
+func claim(entryID int64) queue.Claim {
+	return queue.Claim{EntryID: entryID, OfferedAt: nowSec, StartAt: start}
+}
+
 func TestJoin_Refusals(t *testing.T) {
 	archived := library()
 	archived.ArchivedAt = ptr(now)
@@ -99,23 +111,23 @@ func TestJoin_Refusals(t *testing.T) {
 		}, want: errBoom},
 		{name: "queue full", actor: knight(), setup: func(f fixture) {
 			f.spots.EXPECT().SelectGuildSpotByID(ctx, guildID, int64(7)).Return(library(), nil)
-			f.repo.EXPECT().CountUserEntries(ctx, guildID, "u1", int64(7), now).Return(MaxEntriesPerUser, nil)
+			f.repo.EXPECT().CountUserEntries(ctx, userCount()).Return(MaxEntriesPerUser, nil)
 		}, want: ErrQueueFull},
 		{name: "count fails", actor: knight(), setup: func(f fixture) {
 			f.spots.EXPECT().SelectGuildSpotByID(ctx, guildID, int64(7)).Return(library(), nil)
-			f.repo.EXPECT().CountUserEntries(ctx, guildID, "u1", int64(7), now).Return(0, errBoom)
+			f.repo.EXPECT().CountUserEntries(ctx, userCount()).Return(0, errBoom)
 		}, want: errBoom},
 		{name: "upsert fails", actor: knight(), setup: func(f fixture) {
 			f.spots.EXPECT().SelectGuildSpotByID(ctx, guildID, int64(7)).Return(library(), nil)
-			f.repo.EXPECT().CountUserEntries(ctx, guildID, "u1", int64(7), now).Return(2, nil)
+			f.repo.EXPECT().CountUserEntries(ctx, userCount()).Return(2, nil)
 			f.repo.EXPECT().UpsertEntry(ctx, mock.Anything).Return(nil, errBoom)
 		}, want: errBoom},
-		{name: "free check fails", actor: knight(), setup: func(f fixture) {
+		{name: "claim fails", actor: knight(), setup: func(f fixture) {
 			f.spots.EXPECT().SelectGuildSpotByID(ctx, guildID, int64(7)).Return(library(), nil)
-			f.repo.EXPECT().CountUserEntries(ctx, guildID, "u1", int64(7), now).Return(0, nil)
+			f.repo.EXPECT().CountUserEntries(ctx, userCount()).Return(0, nil)
 			e := entry(1, nil)
 			f.repo.EXPECT().UpsertEntry(ctx, mock.Anything).Return(&e, nil)
-			f.repo.EXPECT().SelectGuildCandidates(ctx, guildID, now, start).Return(nil, errBoom)
+			f.repo.EXPECT().ClaimOffer(ctx, claim(1)).Return(false, errBoom)
 		}, want: errBoom},
 	}
 	for _, tt := range tests {
@@ -127,7 +139,7 @@ func TestJoin_Refusals(t *testing.T) {
 			}
 
 			// when
-			out, err := f.s.Join(ctx, guildID, tt.actor, 7, tt.length)
+			out, err := f.s.Join(ctx, joinRequest(tt.actor, tt.length))
 
 			// then
 			require.ErrorIs(t, err, tt.want)
@@ -140,19 +152,16 @@ func TestJoin_TakenSpotWaits(t *testing.T) {
 	// given
 	f := newFixture(t)
 	f.spots.EXPECT().SelectGuildSpotByID(ctx, guildID, int64(7)).Return(library(), nil)
-	f.repo.EXPECT().CountUserEntries(ctx, guildID, "u1", int64(7), now).Return(2, nil)
+	f.repo.EXPECT().CountUserEntries(ctx, userCount()).Return(2, nil)
 	stored := entry(1, nil)
 	stored.Length = 90 * time.Minute
 	f.repo.EXPECT().UpsertEntry(ctx, queue.Entry{
 		GuildID: guildID, SpotID: 7, SpotName: "Library -1", UserID: "u1", Length: 90 * time.Minute, ExpiresAt: now.Add(EntryTTL),
 	}).Return(&stored, nil)
-	f.repo.EXPECT().SelectGuildCandidates(ctx, guildID, now, start).Return([]queue.Candidate{
-		{Entry: entry(2, nil), Free: true},
-		{Entry: stored, Free: false},
-	}, nil)
+	f.repo.EXPECT().ClaimOffer(ctx, claim(1)).Return(false, nil)
 
 	// when
-	out, err := f.s.Join(ctx, guildID, knight(), 7, 90*time.Minute)
+	out, err := f.s.Join(ctx, joinRequest(knight(), 90*time.Minute))
 
 	// then
 	require.NoError(t, err)
@@ -163,53 +172,18 @@ func TestJoin_FreeSpotGetsTheOfferAtOnce(t *testing.T) {
 	// given
 	f := newFixture(t)
 	f.spots.EXPECT().SelectGuildSpotByID(ctx, guildID, int64(7)).Return(library(), nil)
-	f.repo.EXPECT().CountUserEntries(ctx, guildID, "u1", int64(7), now).Return(0, nil)
+	f.repo.EXPECT().CountUserEntries(ctx, userCount()).Return(0, nil)
 	stored := entry(1, nil)
 	f.repo.EXPECT().UpsertEntry(ctx, mock.MatchedBy(func(e queue.Entry) bool { return e.Length == DefaultLength })).Return(&stored, nil)
-	f.repo.EXPECT().SelectGuildCandidates(ctx, guildID, now, start).Return([]queue.Candidate{{Entry: stored, Free: true}}, nil)
-	f.repo.EXPECT().ClaimOffer(ctx, int64(1), nowSec).Return(true, nil)
+	f.repo.EXPECT().ClaimOffer(ctx, claim(1)).Return(true, nil)
 
 	// when
-	out, err := f.s.Join(ctx, guildID, knight(), 7, 0)
+	out, err := f.s.Join(ctx, joinRequest(knight(), 0))
 
 	// then
 	require.NoError(t, err)
 	assert.True(t, out.FreeNow)
 	assert.Equal(t, ptr(nowSec), out.Entry.OfferedAt)
-}
-
-func TestJoin_ClaimLostOrFailed(t *testing.T) {
-	for _, tt := range []struct {
-		name    string
-		claimed bool
-		err     error
-	}{
-		{name: "another pass claimed it", claimed: false},
-		{name: "claim fails", err: errBoom},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			// given
-			f := newFixture(t)
-			f.spots.EXPECT().SelectGuildSpotByID(ctx, guildID, int64(7)).Return(library(), nil)
-			f.repo.EXPECT().CountUserEntries(ctx, guildID, "u1", int64(7), now).Return(0, nil)
-			stored := entry(1, nil)
-			f.repo.EXPECT().UpsertEntry(ctx, mock.Anything).Return(&stored, nil)
-			f.repo.EXPECT().SelectGuildCandidates(ctx, guildID, now, start).Return([]queue.Candidate{{Entry: stored, Free: true}}, nil)
-			f.repo.EXPECT().ClaimOffer(ctx, int64(1), nowSec).Return(tt.claimed, tt.err)
-
-			// when
-			out, err := f.s.Join(ctx, guildID, knight(), 7, 0)
-
-			// then
-			if tt.err != nil {
-				require.ErrorIs(t, err, tt.err)
-				return
-			}
-			require.NoError(t, err)
-			assert.False(t, out.FreeNow)
-			assert.Nil(t, out.Entry.OfferedAt)
-		})
-	}
 }
 
 func TestLeave(t *testing.T) {
@@ -250,52 +224,34 @@ func TestMineAndEntry(t *testing.T) {
 func TestDueOffers(t *testing.T) {
 	// given
 	f := newFixture(t)
-	earlier := ptr(now.Add(-time.Hour))
-	f.repo.EXPECT().DeleteExpired(ctx, guildID, now).Return(1, nil)
-	f.repo.EXPECT().SelectGuildCandidates(ctx, guildID, now, start).Return([]queue.Candidate{
-		{Entry: entry(1, nil), Free: true},      // freed: offered
-		{Entry: entry(2, earlier), Free: false}, // taken again: offer cleared
-		{Entry: entry(3, earlier), Free: true},  // still on offer: left alone
-		{Entry: entry(4, nil), Free: false},     // still waiting
-		{Entry: entry(5, nil), Free: true},      // claimed by another pass
-	}, nil)
-	f.repo.EXPECT().ClaimOffer(ctx, int64(1), nowSec).Return(true, nil)
-	f.repo.EXPECT().ClaimOffer(ctx, int64(5), nowSec).Return(false, nil)
-	f.repo.EXPECT().ResetOffers(ctx, []int64{2}).Return(nil)
+	f.repo.EXPECT().DeleteExpired(ctx, now).Return(1, nil)
+	f.repo.EXPECT().ResetTakenOffers(ctx, guildID, start).Return(nil)
+	f.repo.EXPECT().SelectDueEntries(ctx, queue.DueQuery{GuildID: guildID, Now: now, StartAt: start}).Return([]queue.Entry{entry(1, nil)}, nil)
 
 	// when
 	due, err := f.s.DueOffers(ctx, guildID)
 
 	// then
 	require.NoError(t, err)
-	assert.Equal(t, []queue.Entry{entry(1, ptr(nowSec))}, due)
+	assert.Equal(t, []queue.Entry{entry(1, nil)}, due)
 }
 
 func TestDueOffers_Failures(t *testing.T) {
 	tests := []struct {
 		name  string
 		setup func(f fixture)
-		due   int
 	}{
 		{name: "expiry cleanup fails", setup: func(f fixture) {
-			f.repo.EXPECT().DeleteExpired(ctx, guildID, now).Return(0, errBoom)
-		}},
-		{name: "candidates fail", setup: func(f fixture) {
-			f.repo.EXPECT().DeleteExpired(ctx, guildID, now).Return(0, nil)
-			f.repo.EXPECT().SelectGuildCandidates(ctx, guildID, now, start).Return(nil, errBoom)
-		}},
-		{name: "claim fails, the claimed ones are kept", due: 1, setup: func(f fixture) {
-			f.repo.EXPECT().DeleteExpired(ctx, guildID, now).Return(0, nil)
-			f.repo.EXPECT().SelectGuildCandidates(ctx, guildID, now, start).Return([]queue.Candidate{
-				{Entry: entry(1, nil), Free: true}, {Entry: entry(2, nil), Free: true},
-			}, nil)
-			f.repo.EXPECT().ClaimOffer(ctx, int64(1), nowSec).Return(true, nil)
-			f.repo.EXPECT().ClaimOffer(ctx, int64(2), nowSec).Return(false, errBoom)
+			f.repo.EXPECT().DeleteExpired(ctx, now).Return(0, errBoom)
 		}},
 		{name: "reset fails", setup: func(f fixture) {
-			f.repo.EXPECT().DeleteExpired(ctx, guildID, now).Return(0, nil)
-			f.repo.EXPECT().SelectGuildCandidates(ctx, guildID, now, start).Return([]queue.Candidate{{Entry: entry(1, ptr(now)), Free: false}}, nil)
-			f.repo.EXPECT().ResetOffers(ctx, []int64{1}).Return(errBoom)
+			f.repo.EXPECT().DeleteExpired(ctx, now).Return(0, nil)
+			f.repo.EXPECT().ResetTakenOffers(ctx, guildID, start).Return(errBoom)
+		}},
+		{name: "select fails", setup: func(f fixture) {
+			f.repo.EXPECT().DeleteExpired(ctx, now).Return(0, nil)
+			f.repo.EXPECT().ResetTakenOffers(ctx, guildID, start).Return(nil)
+			f.repo.EXPECT().SelectDueEntries(ctx, mock.Anything).Return(nil, errBoom)
 		}},
 	}
 	for _, tt := range tests {
@@ -309,15 +265,36 @@ func TestDueOffers_Failures(t *testing.T) {
 
 			// then
 			require.ErrorIs(t, err, errBoom)
-			assert.Len(t, due, tt.due)
+			assert.Empty(t, due)
 		})
 	}
+}
+
+func TestClaimOffer(t *testing.T) {
+	// given
+	f := newFixture(t)
+	f.repo.EXPECT().ClaimOffer(ctx, claim(1)).Return(true, nil)
+	f.repo.EXPECT().ClaimOffer(ctx, claim(2)).Return(false, nil)
+	f.repo.EXPECT().ClaimOffer(ctx, claim(3)).Return(false, errBoom)
+
+	// when
+	at, claimed, err := f.s.ClaimOffer(ctx, 1)
+	lostAt, lost, lostErr := f.s.ClaimOffer(ctx, 2)
+	_, _, failErr := f.s.ClaimOffer(ctx, 3)
+
+	// then
+	require.NoError(t, errors.Join(err, lostErr))
+	assert.True(t, claimed)
+	assert.Equal(t, nowSec, at)
+	assert.False(t, lost)
+	assert.True(t, lostAt.IsZero())
+	assert.ErrorIs(t, failErr, errBoom)
 }
 
 func TestUnclaim(t *testing.T) {
 	// given
 	f := newFixture(t)
-	f.repo.EXPECT().ResetOffers(ctx, []int64{4}).Return(nil)
+	f.repo.EXPECT().ResetOffer(ctx, int64(4)).Return(nil)
 
 	// when
 	err := f.s.Unclaim(ctx, 4)
@@ -326,22 +303,20 @@ func TestUnclaim(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestCheckOffer(t *testing.T) {
+func TestOfferUsable(t *testing.T) {
 	offered := now.Add(-5 * time.Minute)
 	tests := []struct {
 		name      string
 		entry     queue.Entry
-		userID    string
 		offeredAt time.Time
 		want      error
 	}{
-		{name: "current offer", entry: entry(1, ptr(offered)), userID: "u1", offeredAt: offered},
-		{name: "cleared after the spot was taken again", entry: entry(1, nil), userID: "u1", offeredAt: offered},
-		{name: "last second", entry: entry(1, ptr(now.Add(-OfferTTL))), userID: "u1", offeredAt: now.Add(-OfferTTL)},
-		{name: "another member", entry: entry(1, ptr(offered)), userID: "u2", offeredAt: offered, want: ErrOfferNotYours},
-		{name: "past the time gate", entry: entry(1, nil), userID: "u1", offeredAt: now.Add(-OfferTTL - time.Second), want: ErrOfferExpired},
-		{name: "from the future", entry: entry(1, nil), userID: "u1", offeredAt: now.Add(time.Minute), want: ErrOfferExpired},
-		{name: "a newer offer replaced it", entry: entry(1, ptr(now.Add(-time.Minute))), userID: "u1", offeredAt: offered, want: ErrOfferExpired},
+		{name: "current offer", entry: entry(1, ptr(offered)), offeredAt: offered},
+		{name: "cleared after the spot was taken again", entry: entry(1, nil), offeredAt: offered},
+		{name: "last second", entry: entry(1, ptr(now.Add(-OfferTTL))), offeredAt: now.Add(-OfferTTL)},
+		{name: "past the time gate", entry: entry(1, nil), offeredAt: now.Add(-OfferTTL - time.Second), want: ErrOfferExpired},
+		{name: "from the future", entry: entry(1, nil), offeredAt: now.Add(time.Minute), want: ErrOfferExpired},
+		{name: "a newer offer replaced it", entry: entry(1, ptr(now.Add(-time.Minute))), offeredAt: offered, want: ErrOfferExpired},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -349,7 +324,7 @@ func TestCheckOffer(t *testing.T) {
 			f := newFixture(t)
 
 			// when
-			err := f.s.CheckOffer(&tt.entry, tt.userID, tt.offeredAt)
+			err := f.s.OfferUsable(&tt.entry, tt.offeredAt)
 
 			// then
 			assert.ErrorIs(t, err, tt.want)
@@ -369,7 +344,6 @@ func TestBook(t *testing.T) {
 	draft := reservation.Draft{SpotID: 7, StartAt: start, EndAt: start.Add(2 * time.Hour)}
 	outcome := &reservation.FormOutcome{Draft: draft, SpotName: "Library -1"}
 	f.forms.EXPECT().Book(ctx, guildID, knight(), draft).Return(outcome, nil)
-	f.repo.EXPECT().DeleteEntry(ctx, int64(1), "u1").Return(false, errBoom)
 
 	// when
 	got, err := f.s.Book(ctx, knight(), 1, offered)
@@ -394,6 +368,10 @@ func TestBook_Refusals(t *testing.T) {
 			e.UserID = "u2"
 			f.repo.EXPECT().GetEntry(ctx, int64(1)).Return(&e, nil)
 		}, want: ErrOfferNotYours},
+		{name: "replaced by a newer offer", setup: func(f fixture) {
+			e := entry(1, ptr(nowSec))
+			f.repo.EXPECT().GetEntry(ctx, int64(1)).Return(&e, nil)
+		}, want: ErrOfferExpired},
 		{name: "taken in the meantime", setup: func(f fixture) {
 			e := entry(1, nil)
 			f.repo.EXPECT().GetEntry(ctx, int64(1)).Return(&e, nil)
@@ -413,19 +391,4 @@ func TestBook_Refusals(t *testing.T) {
 			assert.ErrorIs(t, err, tt.want)
 		})
 	}
-}
-
-func TestFulfil(t *testing.T) {
-	// given
-	f := newFixture(t)
-	f.repo.EXPECT().DeleteUserSpotEntry(ctx, guildID, "u1", int64(7)).Return(true, nil)
-	f.repo.EXPECT().DeleteUserSpotEntry(ctx, guildID, "u2", int64(7)).Return(false, errBoom)
-
-	// when
-	ok := f.s.Fulfil(ctx, guildID, "u1", 7)
-	failed := f.s.Fulfil(ctx, guildID, "u2", 7)
-
-	// then
-	assert.NoError(t, ok)
-	assert.ErrorIs(t, failed, errBoom)
 }

@@ -196,53 +196,6 @@ func TestBookingMade_SkipsWithoutAChannelOrPremium(t *testing.T) {
 	}
 }
 
-func TestBookingMade_SlashCommandOnlyTellsTheFulfiller(t *testing.T) {
-	// given
-	f := newDiscordFixture(t)
-	fulfiller := mocks.NewMockBookingFulfiller(t)
-	f.b.WithBookingFulfiller(fulfiller)
-	event := announcement()
-	event.SpotID, event.SpotName, event.Source = 0, "Hero Cave", book.SourceSlash
-	f.spots.On("SelectGuildSpotByName", mock.Anything, "g1", "Hero Cave").Return(&spot.Spot{ID: 4, Name: "Hero Cave"}, nil)
-	fulfiller.On("Fulfil", mock.Anything, "g1", "u1", int64(4)).Return(nil).Once()
-
-	// when
-	f.b.BookingMade(context.Background(), event)
-
-	// then: no config read and no message
-}
-
-func TestBookingMade_FulfilErrorsDoNotStopTheAnnouncement(t *testing.T) {
-	// given
-	f := newDiscordFixture(t)
-	fulfiller := mocks.NewMockBookingFulfiller(t)
-	f.b.WithBookingFulfiller(fulfiller)
-	fulfiller.On("Fulfil", mock.Anything, "g1", "u1", int64(4)).Return(errors.New("db down")).Once()
-	f.config(premiumConfig())
-	f.channels(&discordgo.Channel{ID: "c1", Name: "letter"})
-	event := announcement()
-	event.SpotName = "Hero Cave"
-	f.expectAnnouncement("c1")
-
-	// when
-	f.b.BookingMade(context.Background(), event)
-
-	// then: expectations are asserted on cleanup
-}
-
-func TestBookingMade_FreeTextAuthorSkipsTheFulfiller(t *testing.T) {
-	// given
-	f := newDiscordFixture(t)
-	f.b.WithBookingFulfiller(mocks.NewMockBookingFulfiller(t))
-	event := announcement()
-	event.AuthorDiscordID, event.Source = "", book.SourceSlash
-
-	// when
-	f.b.BookingMade(context.Background(), event)
-
-	// then: the fulfiller mock fails on any call
-}
-
 func TestBookingMadeAsync_ShutdownCancelsAndWaits(t *testing.T) {
 	// given
 	configs := mocks.NewMockGuildConfigRepository(t)

@@ -284,8 +284,8 @@ func (f *DiscordFormatter) FormatUsualRespawn(r reservation.UsualRespawn) string
 }
 
 // FormatTimeStep is the text of step 2 of the booking wizard. status, when set,
-// goes first.
-func (f *DiscordFormatter) FormatTimeStep(p *reservation.TimePicker, status string, now time.Time) string {
+// goes first. queueable adds the hint of the Queue button.
+func (f *DiscordFormatter) FormatTimeStep(p *reservation.TimePicker, status string, queueable bool, now time.Time) string {
 	var msg strings.Builder
 	if status != "" {
 		msg.WriteString(status + "\n\n")
@@ -299,7 +299,7 @@ func (f *DiscordFormatter) FormatTimeStep(p *reservation.TimePicker, status stri
 	default:
 		fmt.Fprintf(&msg, "**%s** — pick the start and the length. Times in %s.", p.Spot.Name, zone)
 	}
-	if p.TakenNow && p.Editing == nil {
+	if queueable {
 		msg.WriteString("\nIt is taken now. Press Queue to get a DM when it is free.")
 	}
 	if p.Choice.Complete() {

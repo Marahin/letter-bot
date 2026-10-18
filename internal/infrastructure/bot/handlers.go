@@ -292,17 +292,6 @@ func (b *Bot) Book(i *discordgo.InteractionCreate, cfg *guildconfig.Config) erro
 		message = b.formatter.FormatBookError(response, err)
 	} else {
 		b.RefreshGuildLetter(g.ID)
-		b.BookingMade(context.Background(), book.Booked{
-			GuildID:         g.ID,
-			SpotName:        request.Spot,
-			StartAt:         startAt,
-			EndAt:           endAt,
-			Author:          member.Nick,
-			AuthorDiscordID: member.ID,
-			ActorID:         member.ID,
-			Overbooked:      len(response.ConflictingReservations),
-			Source:          book.SourceSlash,
-		})
 		message = b.formatter.FormatBookResponse(response)
 	}
 

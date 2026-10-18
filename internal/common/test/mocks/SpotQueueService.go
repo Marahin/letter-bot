@@ -129,65 +129,74 @@ func (_c *MockSpotQueueService_Book_Call) RunAndReturn(run func(ctx context.Cont
 	return _c
 }
 
-// CheckOffer provides a mock function for the type MockSpotQueueService
-func (_mock *MockSpotQueueService) CheckOffer(e *queue.Entry, userID string, offeredAt time.Time) error {
-	ret := _mock.Called(e, userID, offeredAt)
+// ClaimOffer provides a mock function for the type MockSpotQueueService
+func (_mock *MockSpotQueueService) ClaimOffer(ctx context.Context, entryID int64) (time.Time, bool, error) {
+	ret := _mock.Called(ctx, entryID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for CheckOffer")
+		panic("no return value specified for ClaimOffer")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*queue.Entry, string, time.Time) error); ok {
-		r0 = returnFunc(e, userID, offeredAt)
-	} else {
-		r0 = ret.Error(0)
+	var r0 time.Time
+	var r1 bool
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int64) (time.Time, bool, error)); ok {
+		return returnFunc(ctx, entryID)
 	}
-	return r0
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int64) time.Time); ok {
+		r0 = returnFunc(ctx, entryID)
+	} else {
+		r0 = ret.Get(0).(time.Time)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int64) bool); ok {
+		r1 = returnFunc(ctx, entryID)
+	} else {
+		r1 = ret.Get(1).(bool)
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, int64) error); ok {
+		r2 = returnFunc(ctx, entryID)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
 }
 
-// MockSpotQueueService_CheckOffer_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CheckOffer'
-type MockSpotQueueService_CheckOffer_Call struct {
+// MockSpotQueueService_ClaimOffer_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ClaimOffer'
+type MockSpotQueueService_ClaimOffer_Call struct {
 	*mock.Call
 }
 
-// CheckOffer is a helper method to define mock.On call
-//   - e *queue.Entry
-//   - userID string
-//   - offeredAt time.Time
-func (_e *MockSpotQueueService_Expecter) CheckOffer(e any, userID any, offeredAt any) *MockSpotQueueService_CheckOffer_Call {
-	return &MockSpotQueueService_CheckOffer_Call{Call: _e.mock.On("CheckOffer", e, userID, offeredAt)}
+// ClaimOffer is a helper method to define mock.On call
+//   - ctx context.Context
+//   - entryID int64
+func (_e *MockSpotQueueService_Expecter) ClaimOffer(ctx any, entryID any) *MockSpotQueueService_ClaimOffer_Call {
+	return &MockSpotQueueService_ClaimOffer_Call{Call: _e.mock.On("ClaimOffer", ctx, entryID)}
 }
 
-func (_c *MockSpotQueueService_CheckOffer_Call) Run(run func(e *queue.Entry, userID string, offeredAt time.Time)) *MockSpotQueueService_CheckOffer_Call {
+func (_c *MockSpotQueueService_ClaimOffer_Call) Run(run func(ctx context.Context, entryID int64)) *MockSpotQueueService_ClaimOffer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *queue.Entry
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(*queue.Entry)
+			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 int64
 		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 time.Time
-		if args[2] != nil {
-			arg2 = args[2].(time.Time)
+			arg1 = args[1].(int64)
 		}
 		run(
 			arg0,
 			arg1,
-			arg2,
 		)
 	})
 	return _c
 }
 
-func (_c *MockSpotQueueService_CheckOffer_Call) Return(err error) *MockSpotQueueService_CheckOffer_Call {
-	_c.Call.Return(err)
+func (_c *MockSpotQueueService_ClaimOffer_Call) Return(time1 time.Time, b bool, err error) *MockSpotQueueService_ClaimOffer_Call {
+	_c.Call.Return(time1, b, err)
 	return _c
 }
 
-func (_c *MockSpotQueueService_CheckOffer_Call) RunAndReturn(run func(e *queue.Entry, userID string, offeredAt time.Time) error) *MockSpotQueueService_CheckOffer_Call {
+func (_c *MockSpotQueueService_ClaimOffer_Call) RunAndReturn(run func(ctx context.Context, entryID int64) (time.Time, bool, error)) *MockSpotQueueService_ClaimOffer_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -328,78 +337,9 @@ func (_c *MockSpotQueueService_Entry_Call) RunAndReturn(run func(ctx context.Con
 	return _c
 }
 
-// Fulfil provides a mock function for the type MockSpotQueueService
-func (_mock *MockSpotQueueService) Fulfil(ctx context.Context, guildID string, userID string, spotID int64) error {
-	ret := _mock.Called(ctx, guildID, userID, spotID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Fulfil")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, int64) error); ok {
-		r0 = returnFunc(ctx, guildID, userID, spotID)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// MockSpotQueueService_Fulfil_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Fulfil'
-type MockSpotQueueService_Fulfil_Call struct {
-	*mock.Call
-}
-
-// Fulfil is a helper method to define mock.On call
-//   - ctx context.Context
-//   - guildID string
-//   - userID string
-//   - spotID int64
-func (_e *MockSpotQueueService_Expecter) Fulfil(ctx any, guildID any, userID any, spotID any) *MockSpotQueueService_Fulfil_Call {
-	return &MockSpotQueueService_Fulfil_Call{Call: _e.mock.On("Fulfil", ctx, guildID, userID, spotID)}
-}
-
-func (_c *MockSpotQueueService_Fulfil_Call) Run(run func(ctx context.Context, guildID string, userID string, spotID int64)) *MockSpotQueueService_Fulfil_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 int64
-		if args[3] != nil {
-			arg3 = args[3].(int64)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
-	})
-	return _c
-}
-
-func (_c *MockSpotQueueService_Fulfil_Call) Return(err error) *MockSpotQueueService_Fulfil_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *MockSpotQueueService_Fulfil_Call) RunAndReturn(run func(ctx context.Context, guildID string, userID string, spotID int64) error) *MockSpotQueueService_Fulfil_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Join provides a mock function for the type MockSpotQueueService
-func (_mock *MockSpotQueueService) Join(ctx context.Context, guildID string, actor reservation.Actor, spotID int64, length time.Duration) (*queue.JoinOutcome, error) {
-	ret := _mock.Called(ctx, guildID, actor, spotID, length)
+func (_mock *MockSpotQueueService) Join(ctx context.Context, req queue.JoinRequest) (*queue.JoinOutcome, error) {
+	ret := _mock.Called(ctx, req)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Join")
@@ -407,18 +347,18 @@ func (_mock *MockSpotQueueService) Join(ctx context.Context, guildID string, act
 
 	var r0 *queue.JoinOutcome
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, reservation.Actor, int64, time.Duration) (*queue.JoinOutcome, error)); ok {
-		return returnFunc(ctx, guildID, actor, spotID, length)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, queue.JoinRequest) (*queue.JoinOutcome, error)); ok {
+		return returnFunc(ctx, req)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, reservation.Actor, int64, time.Duration) *queue.JoinOutcome); ok {
-		r0 = returnFunc(ctx, guildID, actor, spotID, length)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, queue.JoinRequest) *queue.JoinOutcome); ok {
+		r0 = returnFunc(ctx, req)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*queue.JoinOutcome)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, reservation.Actor, int64, time.Duration) error); ok {
-		r1 = returnFunc(ctx, guildID, actor, spotID, length)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, queue.JoinRequest) error); ok {
+		r1 = returnFunc(ctx, req)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -432,42 +372,24 @@ type MockSpotQueueService_Join_Call struct {
 
 // Join is a helper method to define mock.On call
 //   - ctx context.Context
-//   - guildID string
-//   - actor reservation.Actor
-//   - spotID int64
-//   - length time.Duration
-func (_e *MockSpotQueueService_Expecter) Join(ctx any, guildID any, actor any, spotID any, length any) *MockSpotQueueService_Join_Call {
-	return &MockSpotQueueService_Join_Call{Call: _e.mock.On("Join", ctx, guildID, actor, spotID, length)}
+//   - req queue.JoinRequest
+func (_e *MockSpotQueueService_Expecter) Join(ctx any, req any) *MockSpotQueueService_Join_Call {
+	return &MockSpotQueueService_Join_Call{Call: _e.mock.On("Join", ctx, req)}
 }
 
-func (_c *MockSpotQueueService_Join_Call) Run(run func(ctx context.Context, guildID string, actor reservation.Actor, spotID int64, length time.Duration)) *MockSpotQueueService_Join_Call {
+func (_c *MockSpotQueueService_Join_Call) Run(run func(ctx context.Context, req queue.JoinRequest)) *MockSpotQueueService_Join_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 queue.JoinRequest
 		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 reservation.Actor
-		if args[2] != nil {
-			arg2 = args[2].(reservation.Actor)
-		}
-		var arg3 int64
-		if args[3] != nil {
-			arg3 = args[3].(int64)
-		}
-		var arg4 time.Duration
-		if args[4] != nil {
-			arg4 = args[4].(time.Duration)
+			arg1 = args[1].(queue.JoinRequest)
 		}
 		run(
 			arg0,
 			arg1,
-			arg2,
-			arg3,
-			arg4,
 		)
 	})
 	return _c
@@ -478,7 +400,7 @@ func (_c *MockSpotQueueService_Join_Call) Return(joinOutcome *queue.JoinOutcome,
 	return _c
 }
 
-func (_c *MockSpotQueueService_Join_Call) RunAndReturn(run func(ctx context.Context, guildID string, actor reservation.Actor, spotID int64, length time.Duration) (*queue.JoinOutcome, error)) *MockSpotQueueService_Join_Call {
+func (_c *MockSpotQueueService_Join_Call) RunAndReturn(run func(ctx context.Context, req queue.JoinRequest) (*queue.JoinOutcome, error)) *MockSpotQueueService_Join_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -616,6 +538,63 @@ func (_c *MockSpotQueueService_Mine_Call) Return(entrys []queue.Entry, err error
 }
 
 func (_c *MockSpotQueueService_Mine_Call) RunAndReturn(run func(ctx context.Context, guildID string, userID string) ([]queue.Entry, error)) *MockSpotQueueService_Mine_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// OfferUsable provides a mock function for the type MockSpotQueueService
+func (_mock *MockSpotQueueService) OfferUsable(e *queue.Entry, offeredAt time.Time) error {
+	ret := _mock.Called(e, offeredAt)
+
+	if len(ret) == 0 {
+		panic("no return value specified for OfferUsable")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(*queue.Entry, time.Time) error); ok {
+		r0 = returnFunc(e, offeredAt)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockSpotQueueService_OfferUsable_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'OfferUsable'
+type MockSpotQueueService_OfferUsable_Call struct {
+	*mock.Call
+}
+
+// OfferUsable is a helper method to define mock.On call
+//   - e *queue.Entry
+//   - offeredAt time.Time
+func (_e *MockSpotQueueService_Expecter) OfferUsable(e any, offeredAt any) *MockSpotQueueService_OfferUsable_Call {
+	return &MockSpotQueueService_OfferUsable_Call{Call: _e.mock.On("OfferUsable", e, offeredAt)}
+}
+
+func (_c *MockSpotQueueService_OfferUsable_Call) Run(run func(e *queue.Entry, offeredAt time.Time)) *MockSpotQueueService_OfferUsable_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *queue.Entry
+		if args[0] != nil {
+			arg0 = args[0].(*queue.Entry)
+		}
+		var arg1 time.Time
+		if args[1] != nil {
+			arg1 = args[1].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSpotQueueService_OfferUsable_Call) Return(err error) *MockSpotQueueService_OfferUsable_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockSpotQueueService_OfferUsable_Call) RunAndReturn(run func(e *queue.Entry, offeredAt time.Time) error) *MockSpotQueueService_OfferUsable_Call {
 	_c.Call.Return(run)
 	return _c
 }

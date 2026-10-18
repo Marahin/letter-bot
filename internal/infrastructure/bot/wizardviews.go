@@ -118,12 +118,6 @@ func respawnNav(p *reservation.RespawnPicker, state formAction) []discordgo.Mess
 // timeStepView is step 2 of the wizard: the start, the length and the submit.
 func (b *Bot) timeStepView(p *reservation.TimePicker, status string, now time.Time) formView {
 	queueable := b.queueable(p)
-	// The text's Queue hint shows only with the button.
-	if p.TakenNow != queueable {
-		shown := *p
-		shown.TakenNow = queueable
-		p = &shown
-	}
 	state := choiceAction(p.Choice)
 	starts := make([]plainOption, 0, len(p.Starts))
 	for _, o := range p.Starts {
@@ -172,7 +166,7 @@ func (b *Bot) timeStepView(p *reservation.TimePicker, status string, now time.Ti
 		actions = append(actions, button("Back", discordgo.SecondaryButton, formAction{Kind: actionList}))
 	}
 	components = append(components, row(actions...))
-	return formView{content: b.formatter.FormatTimeStep(p, status, now), components: components}
+	return formView{content: b.formatter.FormatTimeStep(p, status, queueable, now), components: components}
 }
 
 // wizardErrorView explains why a step could not show, with a way back.

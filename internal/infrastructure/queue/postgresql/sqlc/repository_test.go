@@ -60,7 +60,7 @@ func TestCountUserEntries(t *testing.T) {
 	mock.ExpectQuery("SELECT count").WithArgs("g1", "u1", int64(7), tsz(t0)).WillReturnRows(pgxmock.NewRows([]string{"count"}).AddRow(int64(2)))
 
 	// when
-	n, err := repo.CountUserEntries(ctx, "g1", "u1", 7, t0)
+	n, err := repo.CountUserEntries(ctx, queue.UserCount{GuildID: "g1", UserID: "u1", ExceptSpotID: 7, Now: t0})
 
 	// then
 	require.NoError(t, err)
@@ -112,12 +112,12 @@ func TestDeletes(t *testing.T) {
 	mock, repo := newMock(t)
 	mock.ExpectExec("DELETE FROM spot_queue_entries").WithArgs(int64(1), "u1").WillReturnResult(pgxmock.NewResult("DELETE", 1))
 	mock.ExpectExec("DELETE FROM spot_queue_entries").WithArgs("g1", "u1", int64(7)).WillReturnResult(pgxmock.NewResult("DELETE", 0))
-	mock.ExpectExec("DELETE FROM spot_queue_entries").WithArgs("g1", tsz(t0)).WillReturnResult(pgxmock.NewResult("DELETE", 3))
+	mock.ExpectExec("DELETE FROM spot_queue_entries").WithArgs(tsz(t0)).WillReturnResult(pgxmock.NewResult("DELETE", 3))
 
 	// when
 	deleted, err1 := repo.DeleteEntry(ctx, 1, "u1")
 	spotDeleted, err2 := repo.DeleteUserSpotEntry(ctx, "g1", "u1", 7)
-	expired, err3 := repo.DeleteExpired(ctx, "g1", t0)
+	expired, err3 := repo.DeleteExpired(ctx, t0)
 
 	// then
 	require.NoError(t, errors.Join(err1, err2, err3))
@@ -126,37 +126,39 @@ func TestDeletes(t *testing.T) {
 	assert.Equal(t, int64(3), expired)
 }
 
-func TestSelectGuildCandidates(t *testing.T) {
+func TestSelectDueEntries(t *testing.T) {
 	// given
 	mock, repo := newMock(t)
-	columns := append(append([]string{}, entryColumns...), "spot_name", "free")
+	columns := append(append([]string{}, entryColumns...), "spot_name")
 	start := t0.Add(time.Minute)
-	mock.ExpectQuery("AS free").WithArgs(tsz(start), "g1", tsz(t0)).
-		WillReturnRows(pgxmock.NewRows(columns).AddRow(int64(1), "g1", int64(7), "u1", int32(60), tsz(t0), tsz(t0), pgtype.Timestamptz{}, "Library", true))
-	mock.ExpectQuery("AS free").WithArgs(tsz(start), "g2", tsz(t0)).WillReturnError(errBoom)
+	mock.ExpectQuery("spot_queue_free").WithArgs("g1", tsz(t0), tsz(start)).
+		WillReturnRows(pgxmock.NewRows(columns).AddRow(int64(1), "g1", int64(7), "u1", int32(60), tsz(t0), tsz(t0), pgtype.Timestamptz{}, "Library"))
+	mock.ExpectQuery("spot_queue_free").WithArgs("g2", tsz(t0), tsz(start)).WillReturnError(errBoom)
 
 	// when
-	got, err := repo.SelectGuildCandidates(ctx, "g1", t0, start)
-	_, failErr := repo.SelectGuildCandidates(ctx, "g2", t0, start)
+	got, err := repo.SelectDueEntries(ctx, queue.DueQuery{GuildID: "g1", Now: t0, StartAt: start})
+	_, failErr := repo.SelectDueEntries(ctx, queue.DueQuery{GuildID: "g2", Now: t0, StartAt: start})
 
 	// then
 	require.NoError(t, err)
-	assert.Equal(t, []queue.Candidate{{Entry: queue.Entry{ID: 1, GuildID: "g1", SpotID: 7, SpotName: "Library", UserID: "u1", Length: time.Hour, CreatedAt: t0, ExpiresAt: t0}, Free: true}}, got)
+	assert.Equal(t, []queue.Entry{{ID: 1, GuildID: "g1", SpotID: 7, SpotName: "Library", UserID: "u1", Length: time.Hour, CreatedAt: t0, ExpiresAt: t0}}, got)
 	assert.ErrorIs(t, failErr, errBoom)
 }
 
 func TestClaimAndResetOffers(t *testing.T) {
 	// given
 	mock, repo := newMock(t)
-	mock.ExpectExec("SET offered_at = \\$1").WithArgs(tsz(t0), int64(1)).WillReturnResult(pgxmock.NewResult("UPDATE", 1))
-	mock.ExpectExec("SET offered_at = NULL").WithArgs([]int64{1, 2}).WillReturnResult(pgxmock.NewResult("UPDATE", 2))
+	start := t0.Add(time.Minute)
+	mock.ExpectExec("SET offered_at = \\$1").WithArgs(tsz(t0), int64(1), tsz(start)).WillReturnResult(pgxmock.NewResult("UPDATE", 1))
+	mock.ExpectExec("NOT spot_queue_free").WithArgs("g1", tsz(start)).WillReturnResult(pgxmock.NewResult("UPDATE", 2))
+	mock.ExpectExec("SET offered_at = NULL").WithArgs(int64(1)).WillReturnResult(pgxmock.NewResult("UPDATE", 1))
 
 	// when
-	claimed, claimErr := repo.ClaimOffer(ctx, 1, t0)
-	resetErr := repo.ResetOffers(ctx, []int64{1, 2})
-	emptyErr := repo.ResetOffers(ctx, nil)
+	claimed, claimErr := repo.ClaimOffer(ctx, queue.Claim{EntryID: 1, OfferedAt: t0, StartAt: start})
+	resetTakenErr := repo.ResetTakenOffers(ctx, "g1", start)
+	resetErr := repo.ResetOffer(ctx, 1)
 
 	// then
-	require.NoError(t, errors.Join(claimErr, resetErr, emptyErr))
+	require.NoError(t, errors.Join(claimErr, resetTakenErr, resetErr))
 	assert.True(t, claimed)
 }

@@ -10,8 +10,6 @@ const (
 	SourceDiscord BookedSource = iota + 1
 	// SourceWeb is the web panel.
 	SourceWeb
-	// SourceSlash is the /book command, which already replies in public.
-	SourceSlash
 )
 
 // Booked is a new reservation, announced to the guild.

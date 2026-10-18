@@ -286,10 +286,10 @@ func TestDiscordFormatter_WizardTexts(t *testing.T) {
 		f.FormatUsualRespawn(reservation.UsualRespawn{}),
 		f.FormatUsualRespawn(reservation.UsualRespawn{Bookings: 1}),
 		f.FormatUsualRespawn(reservation.UsualRespawn{Bookings: 7}),
-		f.FormatTimeStep(&reservation.TimePicker{Spot: spot}, "", now),
-		f.FormatTimeStep(&reservation.TimePicker{Spot: spot, Choice: reservation.TimeChoice{StartAt: now.Add(30 * time.Hour), Length: 90 * time.Minute}, Booked: []*reservation.Reservation{booked}}, "", now),
-		f.FormatTimeStep(&reservation.TimePicker{Spot: spot, Editing: editing, Choice: reservation.TimeChoice{Now: true, Length: time.Hour}, Booked: many}, "Status.", now),
-		f.FormatTimeStep(&reservation.TimePicker{Spot: spot, Editing: editing, Ongoing: true}, "", now),
+		f.FormatTimeStep(&reservation.TimePicker{Spot: spot}, "", false, now),
+		f.FormatTimeStep(&reservation.TimePicker{Spot: spot, Choice: reservation.TimeChoice{StartAt: now.Add(30 * time.Hour), Length: 90 * time.Minute}, Booked: []*reservation.Reservation{booked}}, "", false, now),
+		f.FormatTimeStep(&reservation.TimePicker{Spot: spot, Editing: editing, Choice: reservation.TimeChoice{Now: true, Length: time.Hour}, Booked: many}, "Status.", false, now),
+		f.FormatTimeStep(&reservation.TimePicker{Spot: spot, Editing: editing, Ongoing: true}, "", false, now),
 		f.FormatClock(now.Add(time.Hour), now),
 		f.FormatClock(now.Add(7*time.Hour), now),
 		f.FormatClock(now.Add(31*time.Hour), now),
@@ -309,7 +309,7 @@ func TestDiscordFormatter_WizardTexts(t *testing.T) {
 	texts = append(texts,
 		f.FormatRespawnStep(false, false, "Port Hope & Tiquanda", ""),
 		f.FormatRespawnStep(false, true, "Ingol", ""),
-		f.FormatTimeStep(&reservation.TimePicker{Spot: spot, TakenNow: true}, "", now),
+		f.FormatTimeStep(&reservation.TimePicker{Spot: spot, TakenNow: true}, "", true, now),
 	)
 
 	// then

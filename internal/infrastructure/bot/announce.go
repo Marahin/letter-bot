@@ -13,20 +13,12 @@ import (
 	"spot-assistant/internal/core/dto/guildconfig"
 )
 
-// BookingMade runs after every new booking. It tells the fulfiller, and announces
-// the booking in the command channel of the guild, which is the guild's public
-// record of bookings. The /book command already replies in public, so it is not
-// announced again.
+// BookingMade runs after every new booking but /book, which already replies in
+// public. It announces the booking in the command channel of the guild, which
+// is the guild's public record of bookings.
 func (b *Bot) BookingMade(ctx context.Context, event book.Booked) {
-	log := b.log.With("guild.ID", event.GuildID, "spot.ID", event.SpotID, "source", event.Source)
-	if err := b.fulfil(ctx, event); err != nil {
-		log.Warnw("could not tell the fulfiller about the booking", "error", err)
-	}
-	if event.Source == book.SourceSlash {
-		return
-	}
 	if err := b.announce(ctx, event); err != nil {
-		log.Warnw("could not announce the booking", "error", err)
+		b.log.With("guild.ID", event.GuildID, "spot.ID", event.SpotID, "source", event.Source).Warnw("could not announce the booking", "error", err)
 	}
 }
 
@@ -34,21 +26,6 @@ func (b *Bot) BookingMade(ctx context.Context, event book.Booked) {
 // up. Shutdown cancels it and waits for it.
 func (b *Bot) BookingMadeAsync(event book.Booked) {
 	b.goBackground(func(ctx context.Context) { b.BookingMade(ctx, event) })
-}
-
-func (b *Bot) fulfil(ctx context.Context, event book.Booked) error {
-	if b.fulfiller == nil || event.AuthorDiscordID == "" {
-		return nil
-	}
-	spotID := event.SpotID
-	if spotID == 0 {
-		sp, err := b.spots.SelectGuildSpotByName(ctx, event.GuildID, event.SpotName)
-		if err != nil {
-			return fmt.Errorf("select spot %q: %w", event.SpotName, err)
-		}
-		spotID = sp.ID
-	}
-	return b.fulfiller.Fulfil(ctx, event.GuildID, event.AuthorDiscordID, spotID)
 }
 
 func (b *Bot) announce(ctx context.Context, event book.Booked) error {
