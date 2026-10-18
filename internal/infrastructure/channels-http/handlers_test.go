@@ -13,6 +13,7 @@ import (
 	"spot-assistant/internal/core/dto/access"
 	"spot-assistant/internal/core/dto/discord"
 	"spot-assistant/internal/core/dto/guildconfig"
+	"spot-assistant/internal/core/dto/summarylayout"
 	"spot-assistant/internal/core/permission"
 	"spot-assistant/internal/infrastructure/web/webtest"
 	"spot-assistant/internal/ports"
@@ -52,6 +53,7 @@ func TestHandleChannels(t *testing.T) {
 	// given
 	h, m, cookie := signedIn(t, guildconfig.Config{Premium: true, CommandChannelID: "c1"}, admin())
 	m.Settings.EXPECT().Channels(mock.Anything, guildID).Return(synced(), nil)
+	m.Settings.EXPECT().RegionSummaryStatus(mock.Anything, mock.Anything).Return(summarylayout.StatusOff, nil)
 
 	// when
 	rec := webtest.Serve(h, webtest.Get("/servers/g1/channels", cookie))
@@ -70,26 +72,44 @@ func TestHandleChannels(t *testing.T) {
 		assert.Contains(t, body, want)
 	}
 	assert.NotContains(t, body, "no longer on the server")
-	assert.NotContains(t, body, "Region summaries are on")
+	assert.NotContains(t, body, "Region summaries are in use")
 }
 
-func TestHandleChannels_NotesTheRegionSummaries(t *testing.T) {
-	// given
-	h, m, cookie := signedIn(t, guildconfig.Config{Premium: true, RegionSummaries: true}, admin())
-	m.Settings.EXPECT().Channels(mock.Anything, guildID).Return(synced(), nil)
+func TestHandleChannels_NotesTheRegionSummariesOnlyInUse(t *testing.T) {
+	const note = "Region summaries are in use (see Settings): this channel links to the region channels."
+	cases := map[summarylayout.Status]bool{
+		summarylayout.StatusInUse:   true,
+		summarylayout.StatusUnused:  false,
+		summarylayout.StatusBlocked: false,
+	}
+	for status, shown := range cases {
+		t.Run(string(status), func(t *testing.T) {
+			// given
+			h, m, cookie := signedIn(t, guildconfig.Config{Premium: true, RegionSummaries: true}, admin())
+			m.Settings.EXPECT().Channels(mock.Anything, guildID).Return(synced(), nil)
+			m.Settings.EXPECT().RegionSummaryStatus(mock.Anything, mock.MatchedBy(func(c guildconfig.Config) bool {
+				return c.GuildID == guildID && c.RegionSummaries
+			})).Return(status, nil)
 
-	// when
-	rec := webtest.Serve(h, webtest.Get("/servers/g1/channels", cookie))
+			// when
+			rec := webtest.Serve(h, webtest.Get("/servers/g1/channels", cookie))
 
-	// then
-	require.Equal(t, http.StatusOK, rec.Code)
-	assert.Contains(t, rec.Body.String(), "Region summaries are on (see Settings): this channel links the region channels.")
+			// then
+			require.Equal(t, http.StatusOK, rec.Code)
+			if shown {
+				assert.Contains(t, rec.Body.String(), note)
+			} else {
+				assert.NotContains(t, rec.Body.String(), note)
+			}
+		})
+	}
 }
 
 func TestHandleChannels_WarnsAboutDeletedChannel(t *testing.T) {
 	// given
 	h, m, cookie := signedIn(t, guildconfig.Config{Premium: true, SummaryChannelID: "gone"}, admin())
 	m.Settings.EXPECT().Channels(mock.Anything, guildID).Return(nil, nil)
+	m.Settings.EXPECT().RegionSummaryStatus(mock.Anything, mock.Anything).Return(summarylayout.StatusOff, nil)
 
 	// when
 	rec := webtest.Serve(h, webtest.Get("/servers/g1/channels", cookie))
@@ -101,16 +121,30 @@ func TestHandleChannels_WarnsAboutDeletedChannel(t *testing.T) {
 	assert.Contains(t, body, "No channels copied yet.")
 }
 
-func TestHandleChannels_Error(t *testing.T) {
-	// given
-	h, m, cookie := signedIn(t, guildconfig.Config{Premium: true}, admin())
-	m.Settings.EXPECT().Channels(mock.Anything, guildID).Return(nil, errors.New("db down"))
+func TestHandleChannels_Errors(t *testing.T) {
+	t.Run("channels", func(t *testing.T) {
+		// given
+		h, m, cookie := signedIn(t, guildconfig.Config{Premium: true}, admin())
+		m.Settings.EXPECT().Channels(mock.Anything, guildID).Return(nil, errors.New("db down"))
 
-	// when
-	rec := webtest.Serve(h, webtest.Get("/servers/g1/channels", cookie))
+		// when
+		rec := webtest.Serve(h, webtest.Get("/servers/g1/channels", cookie))
 
-	// then
-	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+		// then
+		assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	})
+	t.Run("region summary status", func(t *testing.T) {
+		// given
+		h, m, cookie := signedIn(t, guildconfig.Config{Premium: true}, admin())
+		m.Settings.EXPECT().Channels(mock.Anything, guildID).Return(synced(), nil)
+		m.Settings.EXPECT().RegionSummaryStatus(mock.Anything, mock.Anything).Return("", errors.New("db down"))
+
+		// when
+		rec := webtest.Serve(h, webtest.Get("/servers/g1/channels", cookie))
+
+		// then
+		assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	})
 }
 
 func TestRoutes_ManagerIsForbidden(t *testing.T) {

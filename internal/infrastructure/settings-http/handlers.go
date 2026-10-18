@@ -31,9 +31,14 @@ func (h *Handlers) HandleSettings(w http.ResponseWriter, r *http.Request) {
 		h.D.ServerError(w, r, "load world", err)
 		return
 	}
+	regionStatus, err := h.D.Settings.RegionSummaryStatus(r.Context(), current.Config)
+	if err != nil {
+		h.D.ServerError(w, r, "load region summary status", err)
+		return
+	}
 	nav := h.D.Nav(r, guildID)
 	nav.Active = "settings"
-	h.D.Render(w, r, Settings(h.D.Cfg.BaseURL, current.Config, roles, world, h.D.InviteURL(guildID), nav))
+	h.D.Render(w, r, Settings(h.D.Cfg.BaseURL, current.Config, roles, world, regionStatus, h.D.InviteURL(guildID), nav))
 }
 
 // HandleSetRanks stores one rank list. Unchecked boxes are absent from the form,

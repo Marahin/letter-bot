@@ -166,33 +166,62 @@ func Combobox(p ComboboxProps) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "\" autocomplete=\"off\" spellcheck=\"false\"><template x-if=\"open\"><div class=\"letter-combo-panel\" id=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var12 string
-		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.ResolveAttributeValue(p.ID + "-panel")
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/combobox.templ`, Line: 41, Col: 55}
+		if p.Invalid {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, " aria-invalid=\"true\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var12)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
+		if p.DescribedBy != "" {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, " aria-describedby=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var12 string
+			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.ResolveAttributeValue(p.DescribedBy)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/combobox.templ`, Line: 41, Col: 36}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var12)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\" role=\"listbox\"><template x-for=\"g in groups\" :key=\"g.key\"><div :role=\"g.name ? 'group' : 'presentation'\" :aria-label=\"g.name || null\"><template x-if=\"g.name\"><div class=\"letter-combo-group\" x-text=\"g.name\" aria-hidden=\"true\"></div></template><template x-for=\"it in g.items\" :key=\"it.o.value\"><div class=\"letter-combo-opt\" role=\"option\" :id=\"optionId(it.i)\" :aria-selected=\"it.i === hi\" :class=\"{ 'is-hi': it.i === hi }\" @mousedown.prevent @click.prevent=\"pick(it.o.value)\" @mouseenter=\"hi = it.i\"><span class=\"letter-combo-label\" x-text=\"it.o.label\"></span></div></template></div></template><div x-show=\"filtered.length === 0\" class=\"letter-combo-empty\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, " autocomplete=\"off\" spellcheck=\"false\"><template x-if=\"open\"><div class=\"letter-combo-panel\" id=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var13 string
-		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "combobox.no_matches"))
+		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.ResolveAttributeValue(p.ID + "-panel")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/combobox.templ`, Line: 63, Col: 103}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/combobox.templ`, Line: 47, Col: 55}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var13)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</div></div></template></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\" role=\"listbox\"><template x-for=\"g in groups\" :key=\"g.key\"><div :role=\"g.name ? 'group' : 'presentation'\" :aria-label=\"g.name || null\"><template x-if=\"g.name\"><div class=\"letter-combo-group\" x-text=\"g.name\" aria-hidden=\"true\"></div></template><template x-for=\"it in g.items\" :key=\"it.o.value\"><div class=\"letter-combo-opt\" role=\"option\" :id=\"optionId(it.i)\" :aria-selected=\"it.i === hi\" :class=\"{ 'is-hi': it.i === hi }\" @mousedown.prevent @click.prevent=\"pick(it.o.value)\" @mouseenter=\"hi = it.i\"><span class=\"letter-combo-label\" x-text=\"it.o.label\"></span></div></template></div></template><div x-show=\"filtered.length === 0\" class=\"letter-combo-empty\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var14 string
+		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "combobox.no_matches"))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/infrastructure/web/combobox.templ`, Line: 69, Col: 103}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</div></div></template></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

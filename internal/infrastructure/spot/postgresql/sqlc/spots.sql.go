@@ -106,21 +106,27 @@ func (q *Queries) InsertSpot(ctx context.Context, arg InsertSpotParams) (WebSpot
 }
 
 const insertSpotsIgnoreDuplicates = `-- name: InsertSpotsIgnoreDuplicates :execrows
-INSERT INTO web_spot (guild_id, name, region, created_at)
-SELECT $1::text, ($2::text[])[i], NULLIF(($3::text[])[i], ''), now()
+INSERT INTO web_spot (guild_id, name, region, image_url, created_at)
+SELECT $1::text, ($2::text[])[i], NULLIF(($3::text[])[i], ''), NULLIF(($4::text[])[i], ''), now()
 FROM generate_subscripts($2::text[], 1) AS i
 ON CONFLICT (guild_id, lower(name)) WHERE archived_at IS NULL DO NOTHING
 `
 
 type InsertSpotsIgnoreDuplicatesParams struct {
-	GuildID string
-	Names   []string
-	Regions []string
+	GuildID   string
+	Names     []string
+	Regions   []string
+	ImageUrls []string
 }
 
-// regions holds one key per name, empty for none.
+// regions and image_urls hold one value per name, empty for none.
 func (q *Queries) InsertSpotsIgnoreDuplicates(ctx context.Context, arg InsertSpotsIgnoreDuplicatesParams) (int64, error) {
-	result, err := q.db.Exec(ctx, insertSpotsIgnoreDuplicates, arg.GuildID, arg.Names, arg.Regions)
+	result, err := q.db.Exec(ctx, insertSpotsIgnoreDuplicates,
+		arg.GuildID,
+		arg.Names,
+		arg.Regions,
+		arg.ImageUrls,
+	)
 	if err != nil {
 		return 0, err
 	}

@@ -369,9 +369,9 @@ func TestService_ImportDefaults(t *testing.T) {
 	// given
 	ctx := context.Background()
 	s, repo, notifier := newService(t)
-	var regionsOf []string
-	repo.EXPECT().InsertSpotsIgnoreDuplicates(ctx, guildID, DefaultNames, mock.Anything).
-		Run(func(_ context.Context, _ string, _ []string, r []string) { regionsOf = r }).
+	var inserted []spot.Fields
+	repo.EXPECT().InsertSpotsIgnoreDuplicates(ctx, guildID, mock.Anything).
+		Run(func(_ context.Context, _ string, f []spot.Fields) { inserted = f }).
 		Return(int64(len(DefaultNames)), nil)
 	notifier.EXPECT().SummaryChanged(ctx, guildID).Return(nil)
 
@@ -381,9 +381,9 @@ func TestService_ImportDefaults(t *testing.T) {
 	// then
 	require.NoError(t, err)
 	assert.Equal(t, int64(len(DefaultNames)), added)
-	require.Len(t, regionsOf, len(DefaultNames))
+	require.Len(t, inserted, len(DefaultNames))
 	for i, name := range DefaultNames {
-		assert.Equal(t, regions.DefaultSpotRegion[name], regionsOf[i], name)
+		assert.Equal(t, spot.Fields{Name: name, Region: regions.DefaultSpotRegion[name]}, inserted[i])
 	}
 }
 
@@ -391,7 +391,7 @@ func TestService_ImportDefaults_NothingAddedSendsNoSignal(t *testing.T) {
 	// given
 	ctx := context.Background()
 	s, repo, _ := newService(t)
-	repo.EXPECT().InsertSpotsIgnoreDuplicates(ctx, guildID, DefaultNames, mock.Anything).Return(int64(0), nil)
+	repo.EXPECT().InsertSpotsIgnoreDuplicates(ctx, guildID, mock.Anything).Return(int64(0), nil)
 
 	// when
 	added, err := s.ImportDefaults(ctx, guildID)
@@ -405,7 +405,7 @@ func TestService_ImportDefaults_Error(t *testing.T) {
 	// given
 	ctx := context.Background()
 	s, repo, _ := newService(t)
-	repo.EXPECT().InsertSpotsIgnoreDuplicates(ctx, guildID, DefaultNames, mock.Anything).Return(int64(0), errors.New("boom"))
+	repo.EXPECT().InsertSpotsIgnoreDuplicates(ctx, guildID, mock.Anything).Return(int64(0), errors.New("boom"))
 
 	// when
 	_, err := s.ImportDefaults(ctx, guildID)

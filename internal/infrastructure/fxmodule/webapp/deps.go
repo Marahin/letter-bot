@@ -39,6 +39,7 @@ import (
 	statshttp "spot-assistant/internal/infrastructure/stats-http"
 	statscache "spot-assistant/internal/infrastructure/stats/cache"
 	statssqlc "spot-assistant/internal/infrastructure/stats/postgresql/sqlc"
+	summarylayoutsqlc "spot-assistant/internal/infrastructure/summarylayout/postgresql/sqlc"
 	toolshttp "spot-assistant/internal/infrastructure/tools-http"
 	"spot-assistant/internal/infrastructure/web"
 	webusersqlc "spot-assistant/internal/infrastructure/webuser/postgresql/sqlc"
@@ -93,8 +94,11 @@ func newPremiumService(configs *guildsqlc.GuildConfigRepository, notifier *notif
 	return premium.New(configs, notifier, log)
 }
 
-func newSettingsService(configs *guildsqlc.GuildConfigRepository, channels *guildsqlc.GuildChannelRepository, roles *guildsqlc.GuildRoleRepository, worlds *worldnamesqlc.WorldNameRepository, notifier *notifypg.Notifier, log *zap.SugaredLogger) *guildsettings.Service {
-	return guildsettings.New(configs, channels, roles, worlds, notifier, log)
+func newSettingsService(configs *guildsqlc.GuildConfigRepository, channels *guildsqlc.GuildChannelRepository, roles *guildsqlc.GuildRoleRepository,
+	worlds *worldnamesqlc.WorldNameRepository, spotRepo *spotsqlc.SpotRepository, layouts *summarylayoutsqlc.SummaryLayoutRepository,
+	notifier *notifypg.Notifier, log *zap.SugaredLogger,
+) *guildsettings.Service {
+	return guildsettings.New(configs, channels, roles, worlds, spotRepo, layouts, notifier, log)
 }
 
 func newSpotService(spotRepo *spotsqlc.SpotRepository, notifier *notifypg.Notifier, log *zap.SugaredLogger) *spots.Service {

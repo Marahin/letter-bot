@@ -15,6 +15,7 @@ Polish column is the settled wording of `pl.json` (see
 | Overbook | Nadpisz | `Overbook`, `ClippedOrRemovedReservation` | Book over existing reservations. They are shortened or removed, and their authors get a Discord message. |
 | Summary | Podsumowanie | `SummaryService`, `letter-summary` | The bot's message with the upcoming reservations and a chart, in the summary channel. |
 | Region | Region | `regions`, `web_spot.region` | A group of respawns for the summary, e.g. "Port Hope & Tiquanda". A respawn without one is in "Other" (Inne). |
+| Region summaries | Podsumowania regionów | `guilds.region_summaries`, `summarylayout` | The feature that posts one region channel per region and an index in the summary channel. In use only when the setting is on, Discord does not block the channels, and an active respawn has a region. |
 | Region channel | Kanał regionu | `summary_region_channels`, `letter-<key>` | The bot's channel with the summary of one region, in the category "Letter respawns". |
 | Respawn image | Obrazek respa | `web_spot.image_url` | An optional picture of a respawn, shown in its region channel. |
 | Booking announcement | Ogłoszenie rezerwacji (bot only, in English) | `letter_booked`, `BookingMade` | The bot's public message in the command channel about a new booking. |

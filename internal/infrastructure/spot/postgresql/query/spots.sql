@@ -94,10 +94,10 @@ FROM web_reservation r
 WHERE s.id = @spot_id
   AND s.guild_id = @guild_id::text;
 
--- regions holds one key per name, empty for none.
+-- regions and image_urls hold one value per name, empty for none.
 -- name: InsertSpotsIgnoreDuplicates :execrows
-INSERT INTO web_spot (guild_id, name, region, created_at)
-SELECT @guild_id::text, (@names::text[])[i], NULLIF((@regions::text[])[i], ''), now()
+INSERT INTO web_spot (guild_id, name, region, image_url, created_at)
+SELECT @guild_id::text, (@names::text[])[i], NULLIF((@regions::text[])[i], ''), NULLIF((@image_urls::text[])[i], ''), now()
 FROM generate_subscripts(@names::text[], 1) AS i
 ON CONFLICT (guild_id, lower(name)) WHERE archived_at IS NULL DO NOTHING;
 

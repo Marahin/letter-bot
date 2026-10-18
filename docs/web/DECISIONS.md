@@ -537,10 +537,21 @@ because Discord rate-limits the bot.
     areas make two regions ("POI, Inquisition & Ferumbras", "Endgame Quests").
     32 names that we could not place stay in Other. The owner should review the
     mapping; a manager can change a region in the web.
-95. **The summary per region is on by default** (`guilds.region_summaries`).
-    An admin switches it on the Settings page, with scxmanager's checkbox,
+95. **The region summaries are on by default** (`guilds.region_summaries`).
+    An admin switches them on the Settings page, with scxmanager's checkbox,
     Save and status pattern. Saving sends `letter_summary_refresh`: the summary
-    pass reads the setting.
+    pass reads the setting. The UI calls the feature "Region summaries"
+    ("Podsumowania regionów").
+    - The web reads whether the region summaries are in use
+      (`GuildSettingsService.RegionSummaryStatus`, from `summary_layouts` and
+      the active respawns). "In use" means: the setting is on, the server is
+      not blocked (decision 97), and at least one active respawn has a
+      catalog region. The Channels page notes that the summary channel links
+      to the region channels only then.
+    - While the server is blocked, Settings shows a warning with a re-invite
+      link, as scxmanager's `SessionEventsSettings`. The checkbox stays
+      enabled, because switching off is still valid. When no active respawn
+      has a region, Settings says that the bot posts one summary.
 96. **Layout.** The category "Letter respawns" holds one text channel per
     region with respawns, `letter-<key>` (e.g. `letter-port-hope`,
     `letter-other`), made in catalog order. The bot never renames, moves or
@@ -554,7 +565,8 @@ because Discord rate-limits the bot.
 97. **The summary per region needs at least one active respawn with a region.**
     Otherwise the server keeps the single summary. When Discord refuses a
     channel (missing permissions, or the limit of 500 channels), the server
-    keeps the single summary for an hour, then the bot tries again.
+    keeps the single summary for an hour, then the bot tries again. The web
+    shows these two cases on the Settings page (decision 95).
 98. **The bot changes Discord gently.** Each region channel stores a hash of
     the content the bot wrote there (`summary_region_channels.content_hash`).
     A pass writes only to the regions whose content changed, also after a
@@ -601,6 +613,10 @@ because Discord rate-limits the bot.
      had no other users. A closed row loads its form on the first open
      (`GET .../edit`, htmx), so the list does not carry a region picker per
      row. A refused edit renders that row open, with its form.
+     - The row asks for its form on each open until the form is there, so a
+       failed load tries again on the next open. For a respawn that is gone,
+       the answer is the same as for a save of it: the refreshed list with
+       the flash "does not exist any more" (`HX-Retarget` to the list).
 104. **The summary pass has hooks.** A hook runs at the start of each pass of
      a premium server, before any summary write. Its error is logged and the
      pass goes on. The booking queue sends its due offers there.

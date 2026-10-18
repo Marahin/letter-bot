@@ -129,3 +129,19 @@ func TestCombobox_RendersFormFieldAndARIA(t *testing.T) {
 	assert.Contains(t, html, `id="post-channel-options"`)
 	assert.NotContains(t, html, `>#general<`)
 }
+
+func TestCombobox_MarksARefusedField(t *testing.T) {
+	// given a valid and a refused picker
+	var valid, refused strings.Builder
+	p := comboProps()
+	require.NoError(t, Combobox(p).Render(context.Background(), &valid))
+	p.Invalid, p.DescribedBy = true, "post-channel-error"
+
+	// when
+	require.NoError(t, Combobox(p).Render(context.Background(), &refused))
+
+	// then only the refused one points at its error line
+	assert.NotContains(t, valid.String(), "aria-invalid")
+	assert.NotContains(t, valid.String(), "aria-describedby")
+	assert.Contains(t, refused.String(), `aria-invalid="true" aria-describedby="post-channel-error"`)
+}

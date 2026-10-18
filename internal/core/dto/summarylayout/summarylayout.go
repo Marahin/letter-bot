@@ -22,6 +22,22 @@ func (l Layout) Blocked(now time.Time) bool {
 	return l.BlockedUntil != nil && now.Before(*l.BlockedUntil)
 }
 
+// Status is how the region summaries of a guild stand, as the web shows them.
+type Status string
+
+const (
+	StatusOff Status = "off"
+	// StatusUnused: the setting is on, but no active respawn has a region, so
+	// the guild keeps the single summary.
+	StatusUnused Status = "unused"
+	// StatusBlocked: Discord refused a channel, so the guild keeps the single
+	// summary until BlockedUntil.
+	StatusBlocked Status = "blocked"
+	// StatusInUse: the setting is on, the guild is not blocked and at least one
+	// active respawn has a region.
+	StatusInUse Status = "in_use"
+)
+
 // RegionChannel is a region channel the bot made or adopted, with the messages
 // it posted there. ContentHash is "" when the messages must be written again.
 type RegionChannel struct {

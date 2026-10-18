@@ -83,9 +83,9 @@ templ createForm(v pageView) {
 	>
 		@keepFilter(v)
 		<div class="flex min-w-[14rem] flex-1 flex-col gap-1.5">
-			<label for="spot-new-name" class="text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-400">{ i18n.T(ctx, "spots.form.new") }</label>
+			<label for={ spotNewID + "-name" } class="text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-400">{ i18n.T(ctx, "spots.form.new") }</label>
 			<input
-				id="spot-new-name"
+				id={ spotNewID + "-name" }
 				name="name"
 				required
 				maxlength={ strconv.Itoa(spots.MaxNameLength) }
@@ -94,7 +94,7 @@ templ createForm(v pageView) {
 				autocomplete="off"
 				if v.CreateErrors.Name != "" {
 					aria-invalid="true"
-					aria-describedby="spot-new-name-error"
+					aria-describedby={ spotNewID + "-name-error" }
 				}
 				if v.CreateErrors.Name != "" || v.FocusCreate {
 					autofocus
@@ -104,7 +104,7 @@ templ createForm(v pageView) {
 					templ.KV("border-zone-700 focus:border-signal focus:ring-signal/30", v.CreateErrors.Name == "") }
 			/>
 		</div>
-		@regionField(spotNewID, v.Create.Region)
+		@regionField(spotNewID, v.Create.Region, v.CreateErrors.Region != "")
 		@imageField(spotNewID, v.Create.ImageURL, v.CreateErrors.Image != "")
 		<button class="min-h-11 rounded-md bg-signal px-4 py-1.5 text-sm font-semibold text-zone-950 transition hover:bg-signal-bright sm:min-h-9">{ i18n.T(ctx, "spots.form.add") }</button>
 		<p id={ spotNewID + "-image-hint" } class="w-full text-xs text-zone-500">{ i18n.T(ctx, "spots.form.image_hint") }</p>
@@ -114,21 +114,22 @@ templ createForm(v pageView) {
 
 // regionField picks the region of a respawn; none puts it in Other. A sibling
 // label, not a wrapper: a click on an option inside a <label> re-opens the panel.
-templ regionField(idPrefix, selected string) {
+templ regionField(idPrefix, selected string, invalid bool) {
 	<div class="flex flex-col gap-1.5">
 		<label for={ idPrefix + "-region" } class="text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-400">{ i18n.T(ctx, "spots.form.region") }</label>
 		@web.Combobox(web.ComboboxProps{
-			ID:       idPrefix + "-region",
-			Name:     "region",
-			Label:    i18n.T(ctx, "spots.form.region"),
-			Options:  regionOptions(ctx),
-			Selected: selected,
-			Class:    "min-w-56",
+			ID:          idPrefix + "-region",
+			Name:        "region",
+			Label:       i18n.T(ctx, "spots.form.region"),
+			Options:     regionOptions(ctx),
+			Selected:    selected,
+			Class:       "min-w-56",
+			Invalid:     invalid,
+			DescribedBy: errorID(idPrefix+"-region", invalid),
 		})
 	</div>
 }
 
-// imageField is the optional thumbnail link of a respawn.
 templ imageField(idPrefix, value string, invalid bool) {
 	<div class="flex min-w-[14rem] flex-1 flex-col gap-1.5">
 		<label for={ idPrefix + "-image" } class="text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-400">{ i18n.T(ctx, "spots.form.image") }</label>
@@ -153,7 +154,6 @@ templ imageField(idPrefix, value string, invalid bool) {
 	</div>
 }
 
-// fieldErrorLines are the messages of a refused spot form, one per field.
 templ fieldErrorLines(idPrefix string, errs fieldErrors) {
 	if errs.Name != "" {
 		<p id={ idPrefix + "-name-error" } role="alert" class="w-full text-xs text-rose-400">{ errs.Name }</p>
@@ -175,8 +175,8 @@ templ keepFilter(v pageView) {
 
 templ tabs(v pageView) {
 	<nav aria-label={ i18n.T(ctx, "spots.tabs.label") } class="mt-8 flex gap-1 border-b border-zone-800">
-		@tab(tabURL(v.GuildID, false, v.Filter.Query), i18n.T(ctx, "spots.tabs.active"), v.List.ActiveCount, !v.Filter.Archived)
-		@tab(tabURL(v.GuildID, true, v.Filter.Query), i18n.T(ctx, "spots.tabs.archived"), v.List.ArchivedCount, v.Filter.Archived)
+		@tab(listURL(v.GuildID, spot.ListFilter{Query: v.Filter.Query}), i18n.T(ctx, "spots.tabs.active"), v.List.ActiveCount, !v.Filter.Archived)
+		@tab(listURL(v.GuildID, spot.ListFilter{Archived: true, Query: v.Filter.Query}), i18n.T(ctx, "spots.tabs.archived"), v.List.ArchivedCount, v.Filter.Archived)
 	</nav>
 }
 
@@ -303,7 +303,8 @@ templ editEditor(v pageView, s spot.Listed) {
 			@editForm(v, s)
 		</details>
 	} else {
-		<details class="group" hx-get={ editFormURL(v, s.ID) } hx-trigger="toggle once" hx-target="find [data-spot-editor]" hx-swap="outerHTML">
+		// The trigger stays while the placeholder does, so a failed load retries on the next open.
+		<details class="group" hx-get={ editFormURL(v, s.ID) } hx-trigger="toggle[this.open && this.querySelector('[data-spot-editor]')]" hx-target="find [data-spot-editor]" hx-swap="outerHTML">
 			@editSummary(s)
 			<div data-spot-editor class="mt-2 min-h-11 sm:min-h-9"></div>
 		</details>
@@ -333,7 +334,7 @@ templ editForm(v pageView, s spot.Listed) {
 	>
 		@keepFilter(v)
 		<div class="flex min-w-[12rem] flex-1 flex-col gap-1.5">
-			<label for={ idPrefix + "-name" } class="sr-only">{ i18n.T(ctx, "spots.edit.label", s.Name) }</label>
+			<label for={ idPrefix + "-name" } class="text-[11px] font-semibold uppercase tracking-[0.12em] text-zone-400">{ i18n.T(ctx, "spots.form.name") }</label>
 			<input
 				id={ idPrefix + "-name" }
 				name="name"
@@ -351,7 +352,7 @@ templ editForm(v pageView, s spot.Listed) {
 					templ.KV("border-zone-700 focus:border-signal focus:ring-signal/30", errs.Name == "") }
 			/>
 		</div>
-		@regionField(idPrefix, f.Region)
+		@regionField(idPrefix, f.Region, errs.Region != "")
 		@imageField(idPrefix, f.ImageURL, errs.Image != "")
 		<button class="letter-btn-quiet min-h-11 sm:min-h-9">{ i18n.T(ctx, "spots.edit.save") }</button>
 		<p id={ idPrefix + "-image-hint" } class="w-full text-xs text-zone-500">{ i18n.T(ctx, "spots.form.image_hint") }</p>

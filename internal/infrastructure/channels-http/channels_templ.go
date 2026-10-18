@@ -17,7 +17,7 @@ import (
 
 // Channels is the admin-only channel configuration page: one card, one form and
 // one Save for the command and summary channels.
-func Channels(baseURL string, guild guildconfig.Config, channels []*discord.Channel, nav web.Nav) templ.Component {
+func Channels(baseURL string, guild guildconfig.Config, channels []*discord.Channel, regionsInUse bool, nav web.Nav) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -286,7 +286,7 @@ func Channels(baseURL string, guild guildconfig.Config, channels []*discord.Chan
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			if guild.RegionSummaries {
+			if regionsInUse {
 				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<p class=\"text-xs leading-relaxed text-zone-300\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err

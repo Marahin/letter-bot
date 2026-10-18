@@ -164,6 +164,9 @@
        uppercase, wide-tracked form label never leaks into the readout. */
     @apply w-full cursor-pointer rounded-md border border-zone-700 bg-zone-850 py-1.5 pl-2 pr-8 text-sm font-normal normal-case tracking-normal text-zone-100 outline-none placeholder:text-zone-500 focus:border-signal focus:ring-2 focus:ring-signal/30;
   }
+  .letter-combo[aria-invalid="true"] {
+    @apply border-rose-500 focus:border-rose-500 focus:ring-rose-500/30;
+  }
   .letter-combo-panel {
     /* The wider right padding keeps the options clear of the scrollbar. */
     padding: 4px 10px 4px 4px;

@@ -11,6 +11,7 @@ import (
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/role"
 	"spot-assistant/internal/core/dto/spot"
+	"spot-assistant/internal/core/dto/summarylayout"
 	"spot-assistant/internal/core/dto/webuser"
 )
 
@@ -86,6 +87,10 @@ type GuildSettingsService interface {
 	SetWorld(ctx context.Context, guildID, world string) error
 	// SetRegionSummaries switches between one summary per region and one summary.
 	SetRegionSummaries(ctx context.Context, guildID string, enabled bool) error
+	// RegionSummaryStatus tells whether the bot uses the region summaries of the
+	// guild: the setting is on, Discord did not block them, and at least one
+	// active respawn has a region.
+	RegionSummaryStatus(ctx context.Context, cfg guildconfig.Config) (summarylayout.Status, error)
 	// RequestResync asks the bot to sync channels and roles again. During the
 	// cooldown it does nothing and returns the time left.
 	RequestResync(ctx context.Context, guildID string) (retryAfter time.Duration, err error)

@@ -77,7 +77,7 @@ func TestHandleList_ManagerSeesControls(t *testing.T) {
 		"Respawns", `id="spots-region"`, `id="spots-search"`,
 		"Dragon Lords", "New Spot", "02 Jan 2026",
 		`hx-post="/servers/g1/spots"`,
-		`hx-get="/servers/g1/spots/1/edit" hx-trigger="toggle once" hx-target="find [data-spot-editor]"`,
+		`hx-get="/servers/g1/spots/1/edit" hx-trigger="toggle[this.open && this.querySelector('[data-spot-editor]')]" hx-target="find [data-spot-editor]"`,
 		`hx-post="/servers/g1/spots/1/remove"`,
 		"Archive Dragon Lords? It has 12 reservations, so it is archived, not deleted",
 		"Its 2 upcoming reservations stay.",
@@ -247,7 +247,7 @@ func TestHandleEditForm(t *testing.T) {
 	body := rec.Body.String()
 	for _, want := range []string{
 		`hx-post="/servers/g1/spots/1/edit"`, `hx-target="#spots-region"`,
-		`id="spot-1-name"`, `value="Dragon Lords"`,
+		`<label for="spot-1-name" class="text-[11px]`, `id="spot-1-name"`, `value="Dragon Lords"`,
 		`id="spot-1-region"`, `<input type="hidden" name="region" value="darama"`,
 		`id="spot-1-image"`, `value="https://img.test/dl.gif"`,
 		`<input type="hidden" name="tab" value="archived">`, `<input type="hidden" name="q" value="dra">`,
@@ -259,16 +259,35 @@ func TestHandleEditForm(t *testing.T) {
 }
 
 func TestHandleEditForm_Refusals(t *testing.T) {
-	t.Run("unknown spot", func(t *testing.T) {
+	t.Run("unknown spot refreshes the list", func(t *testing.T) {
 		// given
 		h, m, cookie := signedIn(t, managerAccess())
 		m.Spots.EXPECT().Get(mock.Anything, guildID, int64(99)).Return(nil, spots.ErrNotFound)
+		m.Spots.EXPECT().List(mock.Anything, guildID, spot.ListFilter{Query: "dra"}).Return(activeList(), nil)
+
+		// when
+		rec := webtest.Serve(h, htmx(webtest.Get("/servers/g1/spots/99/edit?q=dra", cookie)))
+
+		// then
+		require.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, "#spots-region", rec.Header().Get("HX-Retarget"))
+		assert.Equal(t, "outerHTML", rec.Header().Get("HX-Reswap"))
+		body := rec.Body.String()
+		assert.True(t, strings.HasPrefix(body, `<div id="spots-region">`))
+		assert.Contains(t, body, "This respawn does not exist any more.")
+		assert.Contains(t, body, `<input type="hidden" name="q" value="dra">`)
+	})
+	t.Run("unknown spot, list fails", func(t *testing.T) {
+		// given
+		h, m, cookie := signedIn(t, managerAccess())
+		m.Spots.EXPECT().Get(mock.Anything, guildID, int64(99)).Return(nil, spots.ErrNotFound)
+		m.Spots.EXPECT().List(mock.Anything, guildID, spot.ListFilter{}).Return(nil, errors.New("db down"))
 
 		// when
 		rec := webtest.Serve(h, htmx(webtest.Get("/servers/g1/spots/99/edit", cookie)))
 
 		// then
-		assert.Equal(t, http.StatusNotFound, rec.Code)
+		assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	})
 	t.Run("bad id", func(t *testing.T) {
 		// given
@@ -397,8 +416,26 @@ func TestHandleCreate_RefusedFieldRendersInlineError(t *testing.T) {
 			assert.Contains(t, body, `value="Hero Cave"`)
 			assert.Contains(t, body, `value="ftp://img.test/a.png"`)
 			assert.Contains(t, body, `<input type="hidden" name="region" value="zao"`)
+			assert.Contains(t, body, `aria-describedby="`+tc.errorID)
 		})
 	}
+}
+
+func TestHandleUpdate_RefusedRegionMarksThePicker(t *testing.T) {
+	// given
+	h, m, cookie := signedIn(t, managerAccess())
+	m.Spots.EXPECT().Update(mock.Anything, guildID, int64(1), spot.Fields{Name: "Dragon Lords", Region: "zz"}).Return(spots.ErrUnknownRegion)
+	m.Spots.EXPECT().List(mock.Anything, guildID, spot.ListFilter{}).Return(activeList(), nil)
+
+	// when
+	rec := webtest.Serve(h, htmx(webtest.Post("/servers/g1/spots/1/edit", url.Values{"name": {"Dragon Lords"}, "region": {"zz"}}, cookie)))
+
+	// then
+	require.Equal(t, http.StatusOK, rec.Code)
+	body := rec.Body.String()
+	assert.Regexp(t, `id="spot-1-region"[^>]*aria-invalid="true" aria-describedby="spot-1-region-error"`, body)
+	assert.Contains(t, body, `id="spot-1-region-error"`)
+	assert.NotRegexp(t, `id="spot-new-region"[^>]*aria-invalid`, body, "the add form keeps its picker valid")
 }
 
 func TestHandleCreate_ServiceError(t *testing.T) {

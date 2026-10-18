@@ -41,7 +41,6 @@ type pageView struct {
 	EditErrors fieldErrors
 }
 
-// fieldErrors are the inline messages of a refused spot form.
 type fieldErrors struct {
 	Name   string
 	Region string
@@ -76,43 +75,39 @@ func tabValue(f spot.ListFilter) string {
 }
 
 func listURL(guildID string, f spot.ListFilter) string {
-	return tabURL(guildID, f.Archived, f.Query)
+	return withFilter(web.GuildPath(guildID, "/spots"), f)
 }
 
-func tabURL(guildID string, archived bool, query string) string {
-	v := url.Values{}
-	if archived {
-		v.Set("tab", tabArchived)
+func withFilter(path string, f spot.ListFilter) string {
+	q := url.Values{}
+	if f.Archived {
+		q.Set("tab", tabArchived)
 	}
-	if query != "" {
-		v.Set("q", query)
+	if f.Query != "" {
+		q.Set("q", f.Query)
 	}
-	path := web.GuildPath(guildID, "/spots")
-	if len(v) == 0 {
+	if len(q) == 0 {
 		return path
 	}
-	return path + "?" + v.Encode()
+	return path + "?" + q.Encode()
 }
 
 func spotPath(guildID string, id int64, action string) string {
 	return web.GuildPath(guildID, "/spots/"+strconv.FormatInt(id, 10)+"/"+action)
 }
 
-// editFormURL loads a spot's editor with the tab and search of the page, which
-// its form posts back.
+// editFormURL carries the tab and search of the page into the editor, whose
+// form posts them back.
 func editFormURL(v pageView, id int64) string {
-	q := url.Values{}
-	if v.Filter.Archived {
-		q.Set("tab", tabArchived)
+	return withFilter(spotPath(v.GuildID, id, "edit"), v.Filter)
+}
+
+// errorID is the aria-describedby of a field: its error line, when it has one.
+func errorID(fieldID string, invalid bool) string {
+	if !invalid {
+		return ""
 	}
-	if v.Filter.Query != "" {
-		q.Set("q", v.Filter.Query)
-	}
-	path := spotPath(v.GuildID, id, "edit")
-	if len(q) == 0 {
-		return path
-	}
-	return path + "?" + q.Encode()
+	return fieldID + "-error"
 }
 
 func spotDOMID(id int64) string { return "spot-" + strconv.FormatInt(id, 10) }
@@ -174,7 +169,6 @@ func regionOptions(ctx context.Context) []web.ComboboxOption {
 	return opts
 }
 
-// regionName is the region column of a spot.
 func regionName(ctx context.Context, key string) string {
 	r := regions.Of(key)
 	if r.Key == regions.Other.Key {

@@ -47,6 +47,10 @@ type ComboboxProps struct {
 	Selected string
 	// Class adds layout classes (width, margin) to the wrapper.
 	Class string
+	// Invalid marks the input aria-invalid, for a refused field.
+	Invalid bool
+	// DescribedBy is the input's aria-describedby, e.g. the id of its error line.
+	DescribedBy string
 }
 
 // selectedLabel is the closed control's initial readout, resolved server-side

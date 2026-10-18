@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"spot-assistant/internal/core/dto/summarylayout"
 	"spot-assistant/internal/infrastructure/web"
 	"spot-assistant/internal/ports"
 )
@@ -25,9 +26,14 @@ func (h *Handlers) HandleChannels(w http.ResponseWriter, r *http.Request) {
 		h.D.ServerError(w, r, "list channels", err)
 		return
 	}
+	regionStatus, err := h.D.Settings.RegionSummaryStatus(r.Context(), current.Config)
+	if err != nil {
+		h.D.ServerError(w, r, "load region summary status", err)
+		return
+	}
 	nav := h.D.Nav(r, current.Config.GuildID)
 	nav.Active = "channels"
-	h.D.Render(w, r, Channels(h.D.Cfg.BaseURL, current.Config, channels, nav))
+	h.D.Render(w, r, Channels(h.D.Cfg.BaseURL, current.Config, channels, regionStatus == summarylayout.StatusInUse, nav))
 }
 
 // HandleSetChannels stores both channels. An empty value selects the default. A

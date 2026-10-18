@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"spot-assistant/internal/core/dto/access"
 	"spot-assistant/internal/core/dto/spot"
 	"spot-assistant/internal/core/spots"
 	"spot-assistant/internal/infrastructure/i18n"
@@ -65,7 +66,13 @@ func (h *Handlers) HandleEditForm(w http.ResponseWriter, r *http.Request) {
 	}
 	sp, err := h.D.Spots.Get(r.Context(), v.GuildID, id)
 	if errors.Is(err, spots.ErrNotFound) {
-		h.D.NotFound(w, r)
+		// As HandleUpdate: the row is stale, so the whole list is refreshed.
+		w.Header().Set("HX-Retarget", "#"+regionID)
+		w.Header().Set("HX-Reswap", "outerHTML")
+		v.Flash = warnFlash(i18n.T(r.Context(), "spots.flash.not_found"))
+		if v, ok = h.withList(w, r, current, v); ok {
+			h.D.Render(w, r, Region(v))
+		}
 		return
 	}
 	if err != nil {
@@ -75,7 +82,6 @@ func (h *Handlers) HandleEditForm(w http.ResponseWriter, r *http.Request) {
 	h.D.Render(w, r, editForm(v, spot.Listed{Spot: *sp}))
 }
 
-// HandleUpdate saves the name, region and image of a spot.
 func (h *Handlers) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 	id, ok := h.D.PathInt64(w, r, "spot")
 	if !ok || !web.ParseForm(w, r) {
@@ -176,16 +182,10 @@ func (h *Handlers) respond(w http.ResponseWriter, r *http.Request, v pageView) {
 	if !ok {
 		return
 	}
-	guildID := current.Config.GuildID
-	list, err := h.D.Spots.List(r.Context(), guildID, v.Filter)
-	if err != nil {
-		h.D.ServerError(w, r, "list spots", err)
+	if v, ok = h.withList(w, r, current, v); !ok {
 		return
 	}
-	v.GuildID, v.GuildName = guildID, current.Config.Name
-	v.CanManage = current.Caps.Manage
-	v.List = list
-
+	guildID := v.GuildID
 	if web.IsHTMX(r) && (r.Method == http.MethodPost || r.Header.Get("HX-Target") == regionID) {
 		h.D.Render(w, r, Region(v))
 		return
@@ -194,6 +194,19 @@ func (h *Handlers) respond(w http.ResponseWriter, r *http.Request, v pageView) {
 	nav.Active = "spots"
 	nav.ReturnTo = listURL(guildID, v.Filter)
 	h.D.Render(w, r, Page(h.D.Cfg.BaseURL, v, nav))
+}
+
+// withList fills in the guild and its list for the filter of v.
+func (h *Handlers) withList(w http.ResponseWriter, r *http.Request, current access.GuildAccess, v pageView) (pageView, bool) {
+	list, err := h.D.Spots.List(r.Context(), current.Config.GuildID, v.Filter)
+	if err != nil {
+		h.D.ServerError(w, r, "list spots", err)
+		return v, false
+	}
+	v.GuildID, v.GuildName = current.Config.GuildID, current.Config.Name
+	v.CanManage = current.Caps.Manage
+	v.List = list
+	return v, true
 }
 
 func fieldsFromForm(r *http.Request) spot.Fields {
@@ -213,7 +226,7 @@ func formErrors(r *http.Request, err error) fieldErrors {
 	case errors.Is(err, spots.ErrUnknownRegion):
 		return fieldErrors{Region: i18n.T(ctx, "spots.form.error_region")}
 	case errors.Is(err, spots.ErrImageURLTooLong):
-		return fieldErrors{Image: i18n.T(ctx, "spots.form.error_image_too_long", spots.MaxImageURLLength)}
+		return fieldErrors{Image: i18n.T(ctx, "spots.form.error_too_long", spots.MaxImageURLLength)}
 	case errors.Is(err, spots.ErrImageURLInvalid):
 		return fieldErrors{Image: i18n.T(ctx, "spots.form.error_image")}
 	}

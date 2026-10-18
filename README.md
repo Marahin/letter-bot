@@ -94,7 +94,7 @@ The slash commands `/book`, `/unbook` and `/summary` work as before.
 
 Letter has a web panel, [TibiaLoot.com](https://tibialoot.com) (`cmd/web`, image `marahin/letter-web`). Its landing page opens with the public Loot Calculator. Server members sign in with Discord and:
 
-* manage the respawn list (add, rename, archive, restore, import the default list),
+* manage the respawn list (add, edit the name, region and image, archive, restore, import the default list),
 * search, create, edit and delete reservations,
 * set the command and summary channels, the Tibia world and the ranks that may manage, view, reserve and overbook,
 * read stats per respawn, player and character, with the experience gained during reservations (from the TibiaData highscores, top 1000 only),

@@ -57,15 +57,19 @@ premium server.
     `letter_guild_resync`. The bot then copies the channels and roles again. One
     request per server every 5 minutes (kept in the memory of the web process).
   - **Tibia world**: the same value as `/world-set`. Saving sends `letter_guild_config`.
-  - **Summary per region** (on by default): one channel per region in the
+  - **Region summaries** (on by default): one channel per region in the
     category "Letter respawns", and an index in the summary channel. Saving
-    sends `letter_summary_refresh`. See decisions 94 to 104.
+    sends `letter_summary_refresh`. See decisions 94 to 104. The section shows
+    a warning with a re-invite link while Discord blocks the channels, and a
+    hint when no active respawn has a region.
   - Four rank lists: manage, view, reserve, overbook. With no reserve rank, everyone
     can reserve. With no overbook rank, the `Postman` role can overbook. The lists
     apply on the next request or command, so no signal is sent.
 - **Channels** (`/servers/{id}/channels`): the command channel (empty = `/book`
   and `/unbook` work in every channel) and the summary channel (empty =
   `#letter-summary`). Saving sends `letter_guild_config` and `letter_summary_refresh`.
+  The summary channel notes that it links to the region channels only while the
+  region summaries are in use (decision 95).
 - The pickers list only the channels and roles that the bot copied. A value that
   is not in that list is refused.
 
@@ -87,7 +91,7 @@ Managers can change it.
   the 208 names from `seeds/spots.sql`, with their regions, and skips names
   that exist.
 - Every change sends `letter_summary_refresh`.
-- The upcoming count (and the name, for members who cannot rename) links to the respawn's own page,
+- The upcoming count (and the name, for members who cannot edit) links to the respawn's own page,
   `/servers/{id}/spots/{spot}`: its reservations and counts.
 
 ## Reservations
@@ -420,13 +424,16 @@ back, so it must be safe to run again.
 ### Rollout order
 
 **Region summaries (migrations `20261018120000` and `20261018120100`): any
-order.** The migrations only add nullable columns, a column with a default and
-two tables. The previous bot ignores them and the previous web never writes
-them. The new bot turns the summary per region on for every premium server:
+order.** The migrations add two nullable columns to `web_spot` with CHECK
+constraints (a region key, an image link of at most 2048 characters), fill
+`region` for the default respawns that have none, and add
+`guilds.region_summaries` (default true) and two tables. The previous bot and
+web ignore the new columns and tables. The new bot turns the region summaries
+on for every premium server with a respawn in a region:
 on the first start it makes about 19 channels per server, one every 5 seconds,
 so about 2 minutes per server, one server at a time. A server whose bot lacks
-Manage Channels or Manage Roles keeps the single summary (decision 97); the
-"Re-invite bot" button in Settings fixes it.
+Manage Channels or Manage Roles keeps the single summary (decision 97).
+Settings then shows a warning with a re-invite link, which fixes it.
 
 **The queue (migration `20261018120200`): any order.** It only adds the table
 `spot_queue_entries` and the function `spot_queue_free`. Only the new release

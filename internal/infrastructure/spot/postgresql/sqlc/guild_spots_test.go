@@ -344,14 +344,16 @@ func TestCountGuildSpots(t *testing.T) {
 func TestInsertSpotsIgnoreDuplicates(t *testing.T) {
 	// given
 	mock := newSpotMock(t)
-	names := []string{"Dragon Lords", "Hero Cave"}
 	mock.ExpectExec("ON CONFLICT \\(guild_id, lower\\(name\\)\\) WHERE archived_at IS NULL DO NOTHING").
-		WithArgs("guild-1", names, []string{"darama", ""}).
+		WithArgs("guild-1", []string{"Dragon Lords", "Hero Cave"}, []string{"darama", ""}, []string{"https://img.test/dl.gif", ""}).
 		WillReturnResult(pgxmock.NewResult("INSERT", 1))
 	repo := NewSpotRepository(mock)
 
-	// when: a missing region is no region
-	inserted, err := repo.InsertSpotsIgnoreDuplicates(context.Background(), "guild-1", names, []string{"darama"})
+	// when
+	inserted, err := repo.InsertSpotsIgnoreDuplicates(context.Background(), "guild-1", []spot.Fields{
+		{Name: "Dragon Lords", Region: "darama", ImageURL: "https://img.test/dl.gif"},
+		{Name: "Hero Cave"},
+	})
 
 	// then
 	require.NoError(t, err)
@@ -364,7 +366,7 @@ func TestInsertSpotsIgnoreDuplicates_NoNamesSkipsQuery(t *testing.T) {
 	repo := NewSpotRepository(mock)
 
 	// when
-	inserted, err := repo.InsertSpotsIgnoreDuplicates(context.Background(), "guild-1", nil, nil)
+	inserted, err := repo.InsertSpotsIgnoreDuplicates(context.Background(), "guild-1", nil)
 
 	// then
 	require.NoError(t, err)

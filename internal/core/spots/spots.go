@@ -140,11 +140,11 @@ func (s *Service) Restore(ctx context.Context, guildID string, id int64) error {
 }
 
 func (s *Service) ImportDefaults(ctx context.Context, guildID string) (int64, error) {
-	defaultRegions := make([]string, len(DefaultNames))
+	defaults := make([]spot.Fields, len(DefaultNames))
 	for i, name := range DefaultNames {
-		defaultRegions[i] = regions.DefaultSpotRegion[name]
+		defaults[i] = spot.Fields{Name: name, Region: regions.DefaultSpotRegion[name]}
 	}
-	added, err := s.spots.InsertSpotsIgnoreDuplicates(ctx, guildID, DefaultNames, defaultRegions)
+	added, err := s.spots.InsertSpotsIgnoreDuplicates(ctx, guildID, defaults)
 	if err != nil {
 		return 0, fmt.Errorf("import default spots: %w", err)
 	}
@@ -170,15 +170,15 @@ func normalizeFields(f spot.Fields) (spot.Fields, error) {
 	if regionKey != "" && !regions.Valid(regionKey) {
 		return spot.Fields{}, ErrUnknownRegion
 	}
-	image, err := NormalizeImageURL(f.ImageURL)
+	image, err := normalizeImageURL(f.ImageURL)
 	if err != nil {
 		return spot.Fields{}, err
 	}
 	return spot.Fields{Name: name, Region: regionKey, ImageURL: image}, nil
 }
 
-// NormalizeImageURL trims the link and accepts "" or an absolute http or https URL.
-func NormalizeImageURL(raw string) (string, error) {
+// normalizeImageURL trims the link and accepts "" or an absolute http or https URL.
+func normalizeImageURL(raw string) (string, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
 		return "", nil

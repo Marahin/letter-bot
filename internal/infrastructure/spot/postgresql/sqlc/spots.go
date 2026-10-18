@@ -118,15 +118,20 @@ func (repo *SpotRepository) SelectSpotReservationCounts(ctx context.Context, gui
 	return spot.ReservationCounts{Total: row.Total, Upcoming: row.Upcoming}, nil
 }
 
-// InsertSpotsIgnoreDuplicates reads regions[i] for names[i]; a missing one is no region.
-func (repo *SpotRepository) InsertSpotsIgnoreDuplicates(ctx context.Context, guildID string, names, regions []string) (int64, error) {
-	if len(names) == 0 {
+func (repo *SpotRepository) InsertSpotsIgnoreDuplicates(ctx context.Context, guildID string, spots []spot.Fields) (int64, error) {
+	if len(spots) == 0 {
 		return 0, nil
 	}
-	padded := make([]string, len(names))
-	copy(padded, regions)
-
-	return repo.q.InsertSpotsIgnoreDuplicates(ctx, InsertSpotsIgnoreDuplicatesParams{GuildID: guildID, Names: names, Regions: padded})
+	p := InsertSpotsIgnoreDuplicatesParams{
+		GuildID:   guildID,
+		Names:     make([]string, len(spots)),
+		Regions:   make([]string, len(spots)),
+		ImageUrls: make([]string, len(spots)),
+	}
+	for i, f := range spots {
+		p.Names[i], p.Regions[i], p.ImageUrls[i] = f.Name, f.Region, f.ImageURL
+	}
+	return repo.q.InsertSpotsIgnoreDuplicates(ctx, p)
 }
 
 func (repo *SpotRepository) SelectTopGuildSpots(ctx context.Context, guildID, authorDiscordID string, since time.Time, limit int) ([]spot.Ranked, error) {

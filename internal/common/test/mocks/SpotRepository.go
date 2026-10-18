@@ -321,8 +321,8 @@ func (_c *MockSpotRepository_InsertSpot_Call) RunAndReturn(run func(ctx context.
 }
 
 // InsertSpotsIgnoreDuplicates provides a mock function for the type MockSpotRepository
-func (_mock *MockSpotRepository) InsertSpotsIgnoreDuplicates(ctx context.Context, guildID string, names []string, regions []string) (int64, error) {
-	ret := _mock.Called(ctx, guildID, names, regions)
+func (_mock *MockSpotRepository) InsertSpotsIgnoreDuplicates(ctx context.Context, guildID string, spots []spot.Fields) (int64, error) {
+	ret := _mock.Called(ctx, guildID, spots)
 
 	if len(ret) == 0 {
 		panic("no return value specified for InsertSpotsIgnoreDuplicates")
@@ -330,16 +330,16 @@ func (_mock *MockSpotRepository) InsertSpotsIgnoreDuplicates(ctx context.Context
 
 	var r0 int64
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []string, []string) (int64, error)); ok {
-		return returnFunc(ctx, guildID, names, regions)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []spot.Fields) (int64, error)); ok {
+		return returnFunc(ctx, guildID, spots)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []string, []string) int64); ok {
-		r0 = returnFunc(ctx, guildID, names, regions)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []spot.Fields) int64); ok {
+		r0 = returnFunc(ctx, guildID, spots)
 	} else {
 		r0 = ret.Get(0).(int64)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, []string, []string) error); ok {
-		r1 = returnFunc(ctx, guildID, names, regions)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, []spot.Fields) error); ok {
+		r1 = returnFunc(ctx, guildID, spots)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -354,13 +354,12 @@ type MockSpotRepository_InsertSpotsIgnoreDuplicates_Call struct {
 // InsertSpotsIgnoreDuplicates is a helper method to define mock.On call
 //   - ctx context.Context
 //   - guildID string
-//   - names []string
-//   - regions []string
-func (_e *MockSpotRepository_Expecter) InsertSpotsIgnoreDuplicates(ctx any, guildID any, names any, regions any) *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call {
-	return &MockSpotRepository_InsertSpotsIgnoreDuplicates_Call{Call: _e.mock.On("InsertSpotsIgnoreDuplicates", ctx, guildID, names, regions)}
+//   - spots []spot.Fields
+func (_e *MockSpotRepository_Expecter) InsertSpotsIgnoreDuplicates(ctx any, guildID any, spots any) *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call {
+	return &MockSpotRepository_InsertSpotsIgnoreDuplicates_Call{Call: _e.mock.On("InsertSpotsIgnoreDuplicates", ctx, guildID, spots)}
 }
 
-func (_c *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call) Run(run func(ctx context.Context, guildID string, names []string, regions []string)) *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call {
+func (_c *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call) Run(run func(ctx context.Context, guildID string, spots []spot.Fields)) *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -370,19 +369,14 @@ func (_c *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call) Run(run func(ctx 
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 []string
+		var arg2 []spot.Fields
 		if args[2] != nil {
-			arg2 = args[2].([]string)
-		}
-		var arg3 []string
-		if args[3] != nil {
-			arg3 = args[3].([]string)
+			arg2 = args[2].([]spot.Fields)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
@@ -393,7 +387,7 @@ func (_c *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call) Return(n int64, e
 	return _c
 }
 
-func (_c *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call) RunAndReturn(run func(ctx context.Context, guildID string, names []string, regions []string) (int64, error)) *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call {
+func (_c *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call) RunAndReturn(run func(ctx context.Context, guildID string, spots []spot.Fields) (int64, error)) *MockSpotRepository_InsertSpotsIgnoreDuplicates_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -113,9 +113,9 @@ type SpotRepository interface {
 	// booked first, then the latest booked.
 	SelectTopGuildSpots(ctx context.Context, guildID, authorDiscordID string, since time.Time, limit int) ([]spot.Ranked, error)
 
-	// InsertSpotsIgnoreDuplicates adds the names that are not active in the guild yet,
-	// regions[i] being the region of names[i] ("" for none). Returns the number of spots added.
-	InsertSpotsIgnoreDuplicates(ctx context.Context, guildID string, names, regions []string) (int64, error)
+	// InsertSpotsIgnoreDuplicates adds the spots whose name is not active in the guild yet.
+	// An empty region or image is stored as none. Returns the number of spots added.
+	InsertSpotsIgnoreDuplicates(ctx context.Context, guildID string, spots []spot.Fields) (int64, error)
 }
 
 type BotPort interface {

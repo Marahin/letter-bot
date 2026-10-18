@@ -15,6 +15,7 @@ import (
 	"spot-assistant/internal/core/dto/access"
 	"spot-assistant/internal/core/dto/guildconfig"
 	"spot-assistant/internal/core/dto/role"
+	"spot-assistant/internal/core/dto/summarylayout"
 	"spot-assistant/internal/core/permission"
 	"spot-assistant/internal/infrastructure/web/webtest"
 	"spot-assistant/internal/ports"
@@ -59,6 +60,7 @@ func TestHandleSettings_RendersEverySection(t *testing.T) {
 		{ID: "r2", Name: "Member"},
 	}, nil)
 	m.Settings.EXPECT().World(mock.Anything, guildID).Return("Celesta", nil)
+	m.Settings.EXPECT().RegionSummaryStatus(mock.Anything, mock.Anything).Return(summarylayout.StatusOff, nil)
 
 	// when
 	rec := webtest.Serve(h, webtest.Get("/servers/g1/settings", cookie))
@@ -73,7 +75,7 @@ func TestHandleSettings_RendersEverySection(t *testing.T) {
 		"None checked: members with the @Postman role can overbook.",
 		`hx-post="/servers/g1/settings/ranks/overbook"`,
 		`hx-post="/servers/g1/settings/refresh"`,
-		"Summary per region", `hx-post="/servers/g1/settings/region-summaries"`, "Post a summary channel per region",
+		"Region summaries", `hx-post="/servers/g1/settings/region-summaries"`, "Post a summary channel per region",
 		"Leader", "background-color:#f97316",
 		"guild_id=g1",
 		`name="world" value="Celesta"`,
@@ -104,6 +106,7 @@ func TestHandleSettings_EmptyRolesAndWorld(t *testing.T) {
 	h, m, cookie := signedInAdmin(t, guildconfig.Config{Premium: true})
 	m.Settings.EXPECT().Roles(mock.Anything, guildID).Return(nil, nil)
 	m.Settings.EXPECT().World(mock.Anything, guildID).Return("", nil)
+	m.Settings.EXPECT().RegionSummaryStatus(mock.Anything, mock.Anything).Return(summarylayout.StatusOff, nil)
 
 	// when
 	rec := webtest.Serve(h, webtest.Get("/servers/g1/settings", cookie))
@@ -132,6 +135,19 @@ func TestHandleSettings_Errors(t *testing.T) {
 		h, m, cookie := signedInAdmin(t, guildconfig.Config{Premium: true})
 		m.Settings.EXPECT().Roles(mock.Anything, guildID).Return(nil, nil)
 		m.Settings.EXPECT().World(mock.Anything, guildID).Return("", errors.New("db down"))
+
+		// when
+		rec := webtest.Serve(h, webtest.Get("/servers/g1/settings", cookie))
+
+		// then
+		assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	})
+	t.Run("region summary status", func(t *testing.T) {
+		// given
+		h, m, cookie := signedInAdmin(t, guildconfig.Config{Premium: true})
+		m.Settings.EXPECT().Roles(mock.Anything, guildID).Return(nil, nil)
+		m.Settings.EXPECT().World(mock.Anything, guildID).Return("", nil)
+		m.Settings.EXPECT().RegionSummaryStatus(mock.Anything, mock.Anything).Return("", errors.New("db down"))
 
 		// when
 		rec := webtest.Serve(h, webtest.Get("/servers/g1/settings", cookie))
@@ -289,6 +305,7 @@ func TestHandleSettings_RegionSummariesOnIsChecked(t *testing.T) {
 	h, m, cookie := signedInAdmin(t, guildconfig.Config{Premium: true, RegionSummaries: true})
 	m.Settings.EXPECT().Roles(mock.Anything, guildID).Return(nil, nil)
 	m.Settings.EXPECT().World(mock.Anything, guildID).Return("", nil)
+	m.Settings.EXPECT().RegionSummaryStatus(mock.Anything, mock.Anything).Return(summarylayout.StatusOff, nil)
 
 	// when
 	rec := webtest.Serve(h, webtest.Get("/servers/g1/settings", cookie))
@@ -296,6 +313,47 @@ func TestHandleSettings_RegionSummariesOnIsChecked(t *testing.T) {
 	// then
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.Contains(t, rec.Body.String(), `name="enabled" value="1" checked`)
+}
+
+func TestHandleSettings_RegionSummaryStatus(t *testing.T) {
+	const (
+		blocked = "The bot could not make a region channel in this server"
+		unused  = "No active respawn has a region yet, so the bot posts one summary."
+	)
+	cases := map[summarylayout.Status]struct {
+		want    []string
+		notWant []string
+		invites int
+	}{
+		summarylayout.StatusBlocked: {want: []string{blocked}, notWant: []string{unused}, invites: 2},
+		summarylayout.StatusUnused:  {want: []string{unused, `href="/servers/g1/spots"`}, notWant: []string{blocked}, invites: 1},
+		summarylayout.StatusInUse:   {notWant: []string{blocked, unused}, invites: 1},
+		summarylayout.StatusOff:     {notWant: []string{blocked, unused}, invites: 1},
+	}
+	for status, tc := range cases {
+		t.Run(string(status), func(t *testing.T) {
+			// given
+			h, m, cookie := signedInAdmin(t, guildconfig.Config{Premium: true, RegionSummaries: status != summarylayout.StatusOff})
+			m.Settings.EXPECT().Roles(mock.Anything, guildID).Return(nil, nil)
+			m.Settings.EXPECT().World(mock.Anything, guildID).Return("", nil)
+			m.Settings.EXPECT().RegionSummaryStatus(mock.Anything, mock.MatchedBy(func(c guildconfig.Config) bool { return c.GuildID == guildID })).Return(status, nil)
+
+			// when
+			rec := webtest.Serve(h, webtest.Get("/servers/g1/settings", cookie))
+
+			// then
+			require.Equal(t, http.StatusOK, rec.Code)
+			body := rec.Body.String()
+			for _, want := range tc.want {
+				assert.Contains(t, body, want)
+			}
+			for _, notWant := range tc.notWant {
+				assert.NotContains(t, body, notWant)
+			}
+			assert.Equal(t, tc.invites, strings.Count(body, "guild_id=g1"), "a blocked server gets its own re-invite link")
+			assert.NotContains(t, body, `name="enabled" value="1" disabled`, "the toggle stays usable")
+		})
+	}
 }
 
 func TestHandleSetRegionSummaries(t *testing.T) {
@@ -358,6 +416,7 @@ func TestHandleSettings_Polish(t *testing.T) {
 	h, m, cookie := signedInAdmin(t, guildconfig.Config{Premium: true})
 	m.Settings.EXPECT().Roles(mock.Anything, guildID).Return([]*role.Role{{ID: "r1", Name: "Leader"}}, nil)
 	m.Settings.EXPECT().World(mock.Anything, guildID).Return("Celesta", nil)
+	m.Settings.EXPECT().RegionSummaryStatus(mock.Anything, mock.Anything).Return(summarylayout.StatusOff, nil)
 
 	// when
 	rec := webtest.Serve(h, webtest.Get("/servers/g1/settings?lang=pl", cookie))
