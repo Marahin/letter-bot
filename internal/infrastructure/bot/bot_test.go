@@ -133,7 +133,7 @@ func TestConnectShards_ReturnsTheManager(t *testing.T) {
 
 func TestShutdown_IsIdempotent(t *testing.T) {
 	// given
-	b := NewManager(&shards.Manager{}, "", nil, nil, nil)
+	b := NewManager(&shards.Manager{}, "", nil, nil, nil, nil)
 
 	// when
 	first := b.Shutdown()

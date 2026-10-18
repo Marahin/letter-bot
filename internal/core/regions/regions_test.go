@@ -1,10 +1,14 @@
 package regions
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+// keyPattern is the web_spot.region check constraint.
+var keyPattern = regexp.MustCompile(`^[a-z0-9-]{1,32}$`)
 
 func TestCatalog_KeysAreUniqueAndFitTheChannelRules(t *testing.T) {
 	// given
@@ -15,11 +19,11 @@ func TestCatalog_KeysAreUniqueAndFitTheChannelRules(t *testing.T) {
 	for _, r := range Catalog {
 		assert.False(t, seen[r.Key], "duplicate key %q", r.Key)
 		seen[r.Key] = true
-		assert.Regexp(t, KeyPattern, r.Key)
+		assert.Regexp(t, keyPattern, r.Key)
 		assert.NotEmpty(t, r.Name)
 		assert.LessOrEqual(t, len(ChannelName(r)), 100, "Discord channel names have at most 100 characters")
 	}
-	assert.Regexp(t, KeyPattern, Other.Key)
+	assert.Regexp(t, keyPattern, Other.Key)
 }
 
 func TestLookupOfValid(t *testing.T) {

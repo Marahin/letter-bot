@@ -30,6 +30,12 @@ func (b *Bot) BookingMade(ctx context.Context, event book.Booked) {
 	}
 }
 
+// BookingMadeAsync runs BookingMade in the background, so the caller is not held
+// up. Shutdown cancels it and waits for it.
+func (b *Bot) BookingMadeAsync(event book.Booked) {
+	b.goBackground(func(ctx context.Context) { b.BookingMade(ctx, event) })
+}
+
 func (b *Bot) fulfil(ctx context.Context, event book.Booked) error {
 	if b.fulfiller == nil || event.AuthorDiscordID == "" {
 		return nil

@@ -57,6 +57,8 @@ func (b *Bot) SendDMOverbookedNotification(m *member.Member, request book.BookRe
 
 // CleanChannel deletes the last 100 messages of the channel.
 func (b *Bot) CleanChannel(ctx context.Context, channel *discord.Channel) error {
+	// The bot's own deletes must not look like deletes by hand.
+	b.tracked.forget(channel.ID)
 	messages, err := b.writer.ChannelMessages(channel.ID, 100, "", "", "")
 	if err != nil {
 		return err
@@ -66,7 +68,7 @@ func (b *Bot) CleanChannel(ctx context.Context, channel *discord.Channel) error 
 	young, old := splitByAge(ids, time.Now())
 	deleted := 0
 	defer func() {
-		if deleted > 0 {
+		if deleted > 0 && b.metrics != nil {
 			b.metrics.AddMessagesDeleted(channel.ID, channel.Name, deleted)
 		}
 	}()
@@ -244,22 +246,6 @@ func (b *Bot) GetGuild(id int64) (*guild.Guild, error) {
 	return MapGuild(g), nil
 }
 
-// reconcileLegacy is the summary pass of a guild in the single-summary layout.
-func (b *Bot) reconcileLegacy(ctx context.Context, guildID string) reconcileResult {
-	cfg, err := b.guildConfig(ctx, guildID)
-	if err != nil {
-		return reconcileResult{Err: err}
-	}
-	if !cfg.BotPresent {
-		return reconcileResult{}
-	}
-	if cfg.IsPremium() {
-		b.runPassHooks(ctx, guildID)
-	}
-	next, err := b.PostLegacySummary(ctx, cfg)
-	return reconcileResult{Next: next, Err: err}
-}
-
 // PostLegacySummary posts the summary of a premium guild in its summary channel,
 // unless the bot already posted the same content there. It returns the next
 // start or end of a reservation in the summary, or zero when there is none.
@@ -280,7 +266,7 @@ func (b *Bot) PostLegacySummary(ctx context.Context, cfg *guildconfig.Config) (t
 	if b.metrics != nil {
 		b.metrics.SetUpcomingReservations(g.ID, g.Name, len(reservations))
 	}
-	next, _ := coresummary.NextRefresh(reservations, time.Now())
+	next, _ := coresummary.NextRefresh(reservations, b.now())
 
 	key := g.ID + "/" + channel.ID
 	hash := b.summarySrv.Ledger(reservations).Hash()
@@ -288,19 +274,21 @@ func (b *Bot) PostLegacySummary(ctx context.Context, cfg *guildconfig.Config) (t
 		return next, nil
 	}
 
+	var ids []string
 	if len(reservations) == 0 {
-		err = b.sendEmptyLetter(ctx, channel)
+		ids, err = b.sendEmptyLetter(ctx, channel)
 	} else {
 		var sum *summary.Summary
 		sum, err = b.summarySrv.PrepareSummary(reservations)
 		if err == nil {
 			hash = sum.Ledger.Hash()
-			err = b.sendLetter(ctx, channel, sum)
+			ids, err = b.sendLetter(ctx, channel, sum)
 		}
 	}
 	if err != nil {
 		return next, err
 	}
+	b.tracked.track(g.ID, channel.ID, ids)
 	b.legacyHashes.Set(key, hash)
 	return next, nil
 }
@@ -315,7 +303,8 @@ func (b *Bot) forgetLegacyChannel(guildID, channelID string) bool {
 // SendLetterMessage sends a message to a guild channel,
 // or in a DM if guild is nil.
 func (b *Bot) SendLetterMessage(g *guild.Guild, channel *discord.Channel, sum *summary.Summary) error {
-	return b.sendLetter(context.Background(), channel, sum)
+	_, err := b.sendLetter(context.Background(), channel, sum)
+	return err
 }
 
 // letterSender is the part of a session that sends a summary.
@@ -326,10 +315,11 @@ type letterSender interface {
 	ChannelFileSend(channelID, name string, r io.Reader, options ...discordgo.RequestOption) (*discordgo.Message, error)
 }
 
-// sendLetter paces the writes to a guild channel. A DM is sent at once.
-func (b *Bot) sendLetter(ctx context.Context, channel *discord.Channel, sum *summary.Summary) error {
+// sendLetter paces the writes to a guild channel. A DM is sent at once. It
+// returns the ids of the messages it sent.
+func (b *Bot) sendLetter(ctx context.Context, channel *discord.Channel, sum *summary.Summary) ([]string, error) {
 	if len(sum.Ledger) == 0 {
-		return errors.New("SendLetterMessage requires at least 1 ledger entry to be present")
+		return nil, errors.New("SendLetterMessage requires at least 1 ledger entry to be present")
 	}
 
 	unlock := b.lockChannel(channel.ID)
@@ -379,28 +369,36 @@ func (b *Bot) sendLetter(ctx context.Context, channel *discord.Channel, sum *sum
 
 	if channel.Type != discord.ChannelTypeDM {
 		if err := b.CleanChannel(ctx, channel); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
+	var ids []string
+	sent := func(msg *discordgo.Message) {
+		b.metrics.IncMessagesSent(channel.ID, channel.Name)
+		if msg != nil {
+			ids = append(ids, msg.ID)
+		}
+	}
 	if sum.PreMessage != "" {
 		if err := pace(); err != nil {
-			return err
+			return ids, err
 		}
-		if _, err := dcSession.ChannelMessageSend(channel.ID, sum.PreMessage); err != nil {
-			return err
+		msg, err := dcSession.ChannelMessageSend(channel.ID, sum.PreMessage)
+		if err != nil {
+			return ids, err
 		}
-		b.metrics.IncMessagesSent(channel.ID, channel.Name)
+		sent(msg)
 	}
 
 	if err := pace(); err != nil {
-		return err
+		return ids, err
 	}
-	_, err := dcSession.ChannelFileSend(channel.ID, "spots.png", bytes.NewReader(sum.Chart))
+	msg, err := dcSession.ChannelFileSend(channel.ID, "spots.png", bytes.NewReader(sum.Chart))
 	if err != nil {
-		return err
+		return ids, err
 	}
-	defer b.metrics.IncMessagesSent(channel.ID, channel.Name)
+	sent(msg)
 
 	// It seems that discord applies the same validation to 1 embed and to bulk sent embeds,
 	// without treating them as separate messages. Because of that, we're gonna need to send embeds 1 by 1.
@@ -413,25 +411,24 @@ func (b *Bot) sendLetter(ctx context.Context, channel *discord.Channel, sum *sum
 	var embedErrs []error
 	for idx, embed := range embeds {
 		if err := pace(); err != nil {
-			return err
+			return ids, err
 		}
 		if channel.Type != discord.ChannelTypeDM && idx == len(embeds)-1 {
-			_, err = dcSession.ChannelMessageSendComplex(channel.ID, &discordgo.MessageSend{
+			msg, err = dcSession.ChannelMessageSendComplex(channel.ID, &discordgo.MessageSend{
 				Embeds:     []*discordgo.MessageEmbed{embed},
 				Components: summaryComponents(b.webBaseURL),
 			})
 		} else {
-			_, err = dcSession.ChannelMessageSendEmbed(channel.ID, embed)
+			msg, err = dcSession.ChannelMessageSendEmbed(channel.ID, embed)
 		}
 		if err != nil {
 			embedErrs = append(embedErrs, err)
 			continue
 		}
-
-		b.metrics.IncMessagesSent(channel.ID, channel.Name)
+		sent(msg)
 	}
 
-	return errors.Join(embedErrs...)
+	return ids, errors.Join(embedErrs...)
 }
 
 // lockChannel serializes the summaries of one channel; two at once double the summary.
@@ -448,25 +445,25 @@ func (b *Bot) lockChannel(channelID string) func() {
 
 // sendEmptyLetter replaces the summary of a guild with no upcoming hunts, so the
 // channel keeps the buttons.
-func (b *Bot) sendEmptyLetter(ctx context.Context, channel *discord.Channel) error {
+func (b *Bot) sendEmptyLetter(ctx context.Context, channel *discord.Channel) ([]string, error) {
 	unlock := b.lockChannel(channel.ID)
 	defer unlock()
 
 	if err := b.CleanChannel(ctx, channel); err != nil {
-		return err
+		return nil, err
 	}
 	if err := b.pacer.Wait(ctx, messageOpGap); err != nil {
-		return err
+		return nil, err
 	}
-	_, err := b.writer.ChannelMessageSendComplex(channel.ID, &discordgo.MessageSend{
+	msg, err := b.writer.ChannelMessageSendComplex(channel.ID, &discordgo.MessageSend{
 		Embeds:     []*discordgo.MessageEmbed{b.emptyEmbed()},
 		Components: summaryComponents(b.webBaseURL),
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	b.metrics.IncMessagesSent(channel.ID, channel.Name)
-	return nil
+	return []string{msg.ID}, nil
 }
 
 func (b *Bot) SendDM(m *member.Member, message string) error {

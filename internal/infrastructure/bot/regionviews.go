@@ -157,6 +157,18 @@ func payloadHash(msgs []*discordgo.MessageSend) string {
 	return hex.EncodeToString(sum[:])
 }
 
+// dropThumbnails removes the respawn images and reports whether there were any.
+func dropThumbnails(msgs []*discordgo.MessageSend) bool {
+	dropped := false
+	for _, m := range msgs {
+		for _, e := range m.Embeds {
+			dropped = dropped || e.Thumbnail != nil
+			e.Thumbnail = nil
+		}
+	}
+	return dropped
+}
+
 // stampUpdated shows when the bot last wrote the messages.
 func stampUpdated(msgs []*discordgo.MessageSend, now time.Time) {
 	if len(msgs) > 0 && len(msgs[0].Embeds) > 0 {

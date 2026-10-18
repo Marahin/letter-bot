@@ -196,16 +196,26 @@ type Bot struct {
 	quit               chan struct{}
 	formatter          *formatter.DiscordFormatter
 	channelLocks       cmap.ConcurrentMap[string, *sync.RWMutex]
+	tracked            trackedMessages
 	ticking            sync.Once
 	started            atomic.Bool
 	stopped            atomic.Bool
 	shutdown           sync.Once
 	shutdownErr        error
+
+	// lifetime ends at Shutdown, which waits for the background work.
+	lifetime     context.Context
+	endLifetime  context.CancelFunc
+	backgroundMu sync.Mutex
+	background   sync.WaitGroup
 }
 
 // NewManager builds the bot over mgr. webBaseURL may be empty.
-func NewManager(mgr *shards.Manager, webBaseURL string, summarySrv ports.SummaryService, reservationRepo ports.ReservationRepository, checkOnlineSrv ports.OnlineCheckService) *Bot {
+func NewManager(mgr *shards.Manager, webBaseURL string, summarySrv ports.SummaryService, reservationRepo ports.ReservationRepository,
+	checkOnlineSrv ports.OnlineCheckService, layouts ports.SummaryLayoutRepository,
+) *Bot {
 	mgr.Intent = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages | discordgo.IntentsGuildVoiceStates
+	lifetime, endLifetime := context.WithCancel(context.Background())
 	bot := &Bot{
 		mgr:                mgr,
 		gateway:            shardGateway{Session: mgr.Gateway, mgr: mgr},
@@ -219,6 +229,9 @@ func NewManager(mgr *shards.Manager, webBaseURL string, summarySrv ports.Summary
 		summarySrv:         summarySrv,
 		reservationRepo:    reservationRepo,
 		onlineCheckService: checkOnlineSrv,
+		layouts:            layouts,
+		lifetime:           lifetime,
+		endLifetime:        endLifetime,
 		log:                zap.NewNop().Sugar(),
 	}
 	bot.summaries = newSummaryWorker(bot.reconcileSummaries, summaryRefreshDelay)
@@ -229,6 +242,8 @@ func NewManager(mgr *shards.Manager, webBaseURL string, summarySrv ports.Summary
 	bot.mgr.AddHandler(bot.ChannelCreate)
 	bot.mgr.AddHandler(bot.ChannelUpdate)
 	bot.mgr.AddHandler(bot.ChannelDelete)
+	bot.mgr.AddHandler(bot.MessageDelete)
+	bot.mgr.AddHandler(bot.MessageDeleteBulk)
 	bot.mgr.AddHandler(bot.GuildRoleCreate)
 	bot.mgr.AddHandler(bot.GuildRoleUpdate)
 	bot.mgr.AddHandler(bot.GuildRoleDelete)
@@ -271,16 +286,10 @@ func (b *Bot) WithReservationForms(forms ports.ReservationFormService) *Bot {
 	return b
 }
 
-// WithSpots sets the spot store, for the names in the booking announcements.
+// WithSpots sets the spot store, for the region summaries, the booking
+// announcements and the queue.
 func (b *Bot) WithSpots(spots ports.SpotRepository) *Bot {
 	b.spots = spots
-	return b
-}
-
-// WithSummaryLayouts turns on the region summaries: without the store every
-// guild keeps the single summary.
-func (b *Bot) WithSummaryLayouts(layouts ports.SummaryLayoutRepository) *Bot {
-	b.layouts = layouts
 	return b
 }
 
@@ -288,13 +297,6 @@ func (b *Bot) WithSummaryLayouts(layouts ports.SummaryLayoutRepository) *Bot {
 func (b *Bot) WithSummaryPassHook(h SummaryPassHook) *Bot {
 	b.passHooks = append(b.passHooks, h)
 	return b
-}
-
-func (b *Bot) clock() time.Time {
-	if b.now == nil {
-		return time.Now()
-	}
-	return b.now()
 }
 
 // WithBookingFulfiller sets what is told about every new booking. It is optional.
@@ -334,14 +336,35 @@ func (b *Bot) Start() error {
 	return nil
 }
 
-// Shutdown stops the ticker and closes the gateway connections. Only the first call has an effect.
+// Shutdown stops the ticker, ends the background work and waits for it, then
+// closes the gateway connections. Only the first call has an effect.
 func (b *Bot) Shutdown() error {
 	b.shutdown.Do(func() {
 		close(b.quit)
+		b.backgroundMu.Lock()
+		b.endLifetime()
+		b.backgroundMu.Unlock()
+		b.background.Wait()
 		b.shutdownErr = b.mgr.Shutdown()
 		b.stopped.Store(true)
 	})
 	return b.shutdownErr
+}
+
+// goBackground runs f until it returns or Shutdown ends the bot's lifetime.
+// After Shutdown it does nothing.
+func (b *Bot) goBackground(f func(ctx context.Context)) {
+	b.backgroundMu.Lock()
+	defer b.backgroundMu.Unlock()
+	// The check under the lock keeps Add from racing the Wait in Shutdown.
+	if b.lifetime.Err() != nil {
+		return
+	}
+	b.background.Add(1)
+	go func() {
+		defer b.background.Done()
+		f(b.lifetime)
+	}()
 }
 
 // RunSummaryWorker updates the summaries until ctx ends. It is the only writer of the summaries.

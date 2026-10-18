@@ -119,6 +119,30 @@ func (b *Bot) ChannelDelete(s *discordgo.Session, c *discordgo.ChannelDelete) {
 	}
 }
 
+// MessageDelete makes the summary worker write again a summary message that
+// someone deleted.
+func (b *Bot) MessageDelete(s *discordgo.Session, m *discordgo.MessageDelete) {
+	if m.Message == nil {
+		return
+	}
+	b.summaryMessagesDeleted(m.ChannelID, m.ID)
+}
+
+// MessageDeleteBulk is MessageDelete for a purge.
+func (b *Bot) MessageDeleteBulk(s *discordgo.Session, m *discordgo.MessageDeleteBulk) {
+	b.summaryMessagesDeleted(m.ChannelID, m.Messages...)
+}
+
+// summaryMessagesDeleted reads only memory, as it sees every delete the bot can see.
+func (b *Bot) summaryMessagesDeleted(channelID string, messageIDs ...string) {
+	guildID, ok := b.tracked.deleted(channelID, messageIDs)
+	if !ok {
+		return
+	}
+	b.forgetLegacyChannel(guildID, channelID)
+	b.RefreshGuildLetter(guildID)
+}
+
 func (b *Bot) GuildRoleCreate(s *discordgo.Session, r *discordgo.GuildRoleCreate) {
 	b.scheduleSync(r.GuildID)
 }

@@ -500,7 +500,8 @@ because Discord rate-limits the bot.
     and replaces the summary. Bookings from the buttons, the wizard, an
     overbook and the web are announced. Edits and cancels are not. `/book`
     already replies in public, so it is not announced twice. The message
-    mentions the author but pings nobody.
+    mentions the author but pings nobody. The bot announces in the
+    background. At shutdown it stops the announcements and waits for them.
 88. **A web booking reaches the bot through `letter_booked`**, with a JSON
     payload with json tags. `letter_summary_refresh` keeps its guild id payload.
 89. **The online dot shows only for a reservation in progress**, in the summary
@@ -510,7 +511,8 @@ because Discord rate-limits the bot.
 90. **No polling of the summary.** It is refreshed on startup (`GuildCreate`),
     after a booking, spot or settings change (in the bot or through NOTIFY), at
     the next start or end of a listed reservation (one timer per server, at most
-    24 hours ahead) and when the NOTIFY listener connects again. The 3-second
+    24 hours ahead), when the NOTIFY listener connects again, and when someone
+    deletes a summary message (decision 98). The 3-second
     debounce per server stays. A failed
     refresh is retried after 30 seconds, then after twice as long each time, up
     to 15 minutes.
@@ -547,7 +549,8 @@ because Discord rate-limits the bot.
     allow the bot. When Discord refuses the overwrites, the bot makes the
     channel without them. The summary channel (configured or `#letter-summary`)
     becomes an index: a link to each region channel with its number of
-    upcoming hunts, and the buttons of the whole server.
+    upcoming hunts, and the buttons of the whole server. When the summary
+    channel setting changes, the bot deletes the index in the old channel.
 97. **The summary per region needs at least one active respawn with a region.**
     Otherwise the server keeps the single summary. When Discord refuses a
     channel (missing permissions, or the limit of 500 channels), the server
@@ -555,17 +558,26 @@ because Discord rate-limits the bot.
 98. **The bot changes Discord gently.** Each region channel stores a hash of
     the content the bot wrote there (`summary_region_channels.content_hash`).
     A pass writes only to the regions whose content changed, also after a
-    restart. A pass makes at most one channel create or delete, 5 seconds
-    after the previous write, and asks for another pass after 5 seconds, so
-    servers take turns. Message writes keep 1 second apart. All writes go
-    through the summary worker's one session (decision 92). Before the bot
-    makes a channel, it adopts one of the same name in the category, and it
-    asks the API before it decides a channel is missing: the gateway cache can
-    lag behind a channel the bot just made.
+    restart. A failed region does not stop the other regions. A pass makes
+    at most one channel create or delete, 5 seconds after the previous write,
+    and asks for another pass after 5 seconds, so servers take turns. Message
+    writes keep 1 second apart. All writes go through the summary worker's one
+    session (decision 92). Before the bot makes a channel, it adopts one of
+    the same name in the category, and it asks the API before it decides a
+    channel is missing: the gateway cache can lag behind a channel the bot
+    just made.
+    - The bot keeps the ids of its summary messages in memory. When someone
+      deletes one of them (one message or a purge), the bot forgets the hash
+      of that channel and refreshes the server. This applies to the single
+      summary, the index and the region channels. Deletes in other channels
+      cost no database query. The bot's own deletes do not count.
 99. **Cleanup.** A region channel that is no longer needed (no active respawns
     in the region, or the setting is off) gets a notice, and the bot deletes
     it 24 hours later. Switched back on within 24 hours, the region gets its
-    channel back. The bot deletes the category only when it is empty. A
+    channel back. The region stays retired until a pass writes its summary,
+    so a pass that stops early (e.g. at the channel limit) does not restart
+    the 24 hours. The cleanup runs also when the summary or the index write
+    fails. The bot deletes the category only when it is empty. A
     category with the server's own channels in it is left to the server. A
     region channel that someone deletes by hand comes back while it is needed
     (scxmanager parity). Without premium, or without the bot, nothing is
@@ -580,7 +592,9 @@ because Discord rate-limits the bot.
      (`bookr`, `rrp`) leave the old ones unchanged, so old buttons keep working.
 102. **A respawn has an optional image** (`web_spot.image_url`, http or https,
      at most 2048 characters). It shows as the embed thumbnail of the respawn
-     in its region channel only, because the single summary uses fields. The
+     in its region channel only, because the single summary uses fields. When
+     Discord refuses the message (code 50035), the bot writes the region again
+     without images. The images come back when the content changes. The
      web shows a small thumbnail with `referrerpolicy="no-referrer"`.
 103. **"Rename" becomes "Edit"** (name, region, image) on the Respawns page,
      at `/servers/{id}/spots/{spot}/edit`. The `/rename` route is removed; it

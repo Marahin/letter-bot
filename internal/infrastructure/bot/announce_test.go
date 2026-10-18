@@ -60,8 +60,11 @@ func newDiscordFixture(t *testing.T) *discordFixture {
 		legacyHashes:    cmap.New[string](),
 		channelLocks:    cmap.New[*sync.RWMutex](),
 		pacer:           &pacer{now: time.Now, sleep: func(context.Context, time.Duration) error { return nil }},
+		now:             time.Now,
 	}
-	f.b.summaries = newSummaryWorker(f.b.reconcileLegacy, time.Millisecond)
+	f.b.lifetime, f.b.endLifetime = context.WithCancel(context.Background())
+	t.Cleanup(f.b.endLifetime)
+	f.b.summaries = newSummaryWorker(f.b.reconcileSummaries, time.Millisecond)
 	f.metrics.On("IncMessagesSent", mock.Anything, mock.Anything).Maybe()
 	f.metrics.On("AddMessagesDeleted", mock.Anything, mock.Anything, mock.Anything).Maybe()
 	f.metrics.On("SetUpcomingReservations", mock.Anything, mock.Anything, mock.Anything).Maybe()
@@ -238,4 +241,31 @@ func TestBookingMade_FreeTextAuthorSkipsTheFulfiller(t *testing.T) {
 	f.b.BookingMade(context.Background(), event)
 
 	// then: the fulfiller mock fails on any call
+}
+
+func TestBookingMadeAsync_ShutdownCancelsAndWaits(t *testing.T) {
+	// given
+	configs := mocks.NewMockGuildConfigRepository(t)
+	b := NewManager(&shards.Manager{}, "", nil, nil, nil, nil)
+	b.guildConfigs = configs
+	started, finished := make(chan struct{}), make(chan struct{})
+	configs.On("Get", mock.Anything, "g1").Run(func(args mock.Arguments) {
+		close(started)
+		<-args.Get(0).(context.Context).Done()
+		close(finished)
+	}).Return(nil, context.Canceled).Once()
+	b.BookingMadeAsync(announcement())
+	<-started
+
+	// when
+	err := b.Shutdown()
+	b.BookingMadeAsync(announcement())
+
+	// then: the strict mock fails on a second call
+	require.NoError(t, err)
+	select {
+	case <-finished:
+	default:
+		t.Fatal("Shutdown returned before the announcement ended")
+	}
 }

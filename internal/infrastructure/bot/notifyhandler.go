@@ -17,7 +17,8 @@ type GuildActions interface {
 	RefreshAllGuildLetters(ctx context.Context)
 	SyncGuild(ctx context.Context, guildID string) error
 	ApplyGuildConfig(ctx context.Context, guildID string)
-	BookingMade(ctx context.Context, event book.Booked)
+	// BookingMadeAsync handles a new booking in the background, within the bot's lifetime.
+	BookingMadeAsync(event book.Booked)
 }
 
 // NotifyHandler implements ports.NotifyHandler for the bot.
@@ -56,8 +57,8 @@ func (h *NotifyHandler) OnOverbooked(_ context.Context, request book.BookRequest
 
 // OnBooked announces in the background, so a slow Discord does not hold up the
 // signals behind it.
-func (h *NotifyHandler) OnBooked(ctx context.Context, event book.Booked) {
-	go h.guilds.BookingMade(context.WithoutCancel(ctx), event)
+func (h *NotifyHandler) OnBooked(_ context.Context, event book.Booked) {
+	h.guilds.BookingMadeAsync(event)
 }
 
 // OnListenerConnected refreshes every summary, because a signal sent while the

@@ -67,10 +67,9 @@ type botParams struct {
 }
 
 func newBot(p botParams) *bot.Bot {
-	return bot.NewManager(p.Shards, p.Cfg.WebBaseURL, p.Summary, p.Reservations, p.Online).
+	return bot.NewManager(p.Shards, p.Cfg.WebBaseURL, p.Summary, p.Reservations, p.Online, p.Layouts).
 		WithGuildRepositories(p.Configs, p.Channels, p.Roles).
 		WithSpots(p.Spots).
-		WithSummaryLayouts(p.Layouts).
 		WithFormatter(p.Formatter).
 		WithLogger(p.Log)
 }

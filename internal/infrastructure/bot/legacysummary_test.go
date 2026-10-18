@@ -118,62 +118,17 @@ func TestPostLegacySummary_AFailedPostIsRetried(t *testing.T) {
 	assert.Error(t, second, "nothing was stored, so the next pass posts again")
 }
 
-func TestReconcileLegacy_SkipsWithoutDiscordCalls(t *testing.T) {
-	cases := map[string]guildconfig.Config{
-		"not premium": {BotPresent: true},
-		"bot left":    {Premium: true},
-	}
-	for name, cfg := range cases {
-		t.Run(name, func(t *testing.T) {
-			// given
-			f := newDiscordFixture(t)
-			f.config(cfg)
-
-			// when
-			res := f.b.reconcileLegacy(context.Background(), "g1")
-
-			// then
-			assert.Equal(t, reconcileResult{}, res)
-		})
-	}
-}
-
-func TestReconcileLegacy_RunsThePassHooksOfAPremiumGuild(t *testing.T) {
-	// given
-	f := newDiscordFixture(t)
-	f.config(premiumConfig())
-	f.channels()
-	f.writer.On("GuildChannels", "g1").Return(nil, errors.New("discord down"))
-	var calls []string
-	f.b.WithSummaryPassHook(func(_ context.Context, guildID string) error {
-		calls = append(calls, guildID)
-		return nil
-	})
-
-	// when
-	f.b.reconcileLegacy(context.Background(), "g1")
-
-	// then
-	assert.Equal(t, []string{"g1"}, calls)
-}
-
-func TestReconcileLegacy_Errors(t *testing.T) {
+func TestPostLegacySummary_Errors(t *testing.T) {
 	cases := map[string]func(f *discordFixture){
-		"config": func(f *discordFixture) {
-			f.configs.On("Get", mock.Anything, "g1").Return(nil, errors.New("db down"))
-		},
 		"no summary channel": func(f *discordFixture) {
-			f.config(premiumConfig())
 			f.channels()
 			f.writer.On("GuildChannels", "g1").Return(nil, errors.New("discord down"))
 		},
 		"reservations": func(f *discordFixture) {
-			f.config(premiumConfig())
 			f.channels(&discordgo.Channel{ID: "c1", Name: discord.SummaryChannel})
 			f.reservations.On("SelectUpcomingReservationsWithSpot", mock.Anything, "g1").Return(nil, errors.New("db down"))
 		},
 		"prepare": func(f *discordFixture) {
-			f.config(premiumConfig())
 			f.channels(&discordgo.Channel{ID: "c1", Name: discord.SummaryChannel})
 			f.reservations.On("SelectUpcomingReservationsWithSpot", mock.Anything, "g1").Return(upcomingReservations(time.Now()), nil)
 			f.summaries.On("Ledger", mock.Anything).Return(ledgerOf("Knight"))
@@ -184,13 +139,15 @@ func TestReconcileLegacy_Errors(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// given
 			f := newDiscordFixture(t)
+			cfg := premiumConfig()
+			cfg.GuildID = "g1"
 			given(f)
 
 			// when
-			res := f.b.reconcileLegacy(context.Background(), "g1")
+			_, err := f.b.PostLegacySummary(context.Background(), &cfg)
 
 			// then
-			assert.Error(t, res.Err)
+			assert.Error(t, err)
 		})
 	}
 }

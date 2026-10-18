@@ -93,48 +93,42 @@ func (_c *MockGuildActions_ApplyGuildConfig_Call) RunAndReturn(run func(ctx cont
 	return _c
 }
 
-// BookingMade provides a mock function for the type MockGuildActions
-func (_mock *MockGuildActions) BookingMade(ctx context.Context, event book.Booked) {
-	_mock.Called(ctx, event)
+// BookingMadeAsync provides a mock function for the type MockGuildActions
+func (_mock *MockGuildActions) BookingMadeAsync(event book.Booked) {
+	_mock.Called(event)
 	return
 }
 
-// MockGuildActions_BookingMade_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BookingMade'
-type MockGuildActions_BookingMade_Call struct {
+// MockGuildActions_BookingMadeAsync_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BookingMadeAsync'
+type MockGuildActions_BookingMadeAsync_Call struct {
 	*mock.Call
 }
 
-// BookingMade is a helper method to define mock.On call
-//   - ctx context.Context
+// BookingMadeAsync is a helper method to define mock.On call
 //   - event book.Booked
-func (_e *MockGuildActions_Expecter) BookingMade(ctx any, event any) *MockGuildActions_BookingMade_Call {
-	return &MockGuildActions_BookingMade_Call{Call: _e.mock.On("BookingMade", ctx, event)}
+func (_e *MockGuildActions_Expecter) BookingMadeAsync(event any) *MockGuildActions_BookingMadeAsync_Call {
+	return &MockGuildActions_BookingMadeAsync_Call{Call: _e.mock.On("BookingMadeAsync", event)}
 }
 
-func (_c *MockGuildActions_BookingMade_Call) Run(run func(ctx context.Context, event book.Booked)) *MockGuildActions_BookingMade_Call {
+func (_c *MockGuildActions_BookingMadeAsync_Call) Run(run func(event book.Booked)) *MockGuildActions_BookingMadeAsync_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
+		var arg0 book.Booked
 		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 book.Booked
-		if args[1] != nil {
-			arg1 = args[1].(book.Booked)
+			arg0 = args[0].(book.Booked)
 		}
 		run(
 			arg0,
-			arg1,
 		)
 	})
 	return _c
 }
 
-func (_c *MockGuildActions_BookingMade_Call) Return() *MockGuildActions_BookingMade_Call {
+func (_c *MockGuildActions_BookingMadeAsync_Call) Return() *MockGuildActions_BookingMadeAsync_Call {
 	_c.Call.Return()
 	return _c
 }
 
-func (_c *MockGuildActions_BookingMade_Call) RunAndReturn(run func(ctx context.Context, event book.Booked)) *MockGuildActions_BookingMade_Call {
+func (_c *MockGuildActions_BookingMadeAsync_Call) RunAndReturn(run func(event book.Booked)) *MockGuildActions_BookingMadeAsync_Call {
 	_c.Run(run)
 	return _c
 }

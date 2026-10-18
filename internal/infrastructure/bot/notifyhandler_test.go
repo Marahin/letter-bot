@@ -6,9 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-
 	"spot-assistant/internal/common/test/mocks"
 	"spot-assistant/internal/core/dto/book"
 	"spot-assistant/internal/core/dto/guild"
@@ -62,25 +59,13 @@ func TestNotifyHandler_OnBookedAnnouncesInTheBackground(t *testing.T) {
 	// given
 	guilds := mocks.NewMockGuildActions(t)
 	h := NewNotifyHandler(guilds, mocks.NewMockCommunicationService(t))
-	ctx, cancel := context.WithCancel(context.Background())
 	event := book.Booked{GuildID: "g1", SpotID: 4, Source: book.SourceWeb}
-	announced := make(chan error, 1)
-	guilds.On("BookingMade", mock.Anything, event).Run(func(args mock.Arguments) {
-		c, _ := args.Get(0).(context.Context)
-		announced <- c.Err()
-	}).Once()
+	guilds.On("BookingMadeAsync", event).Once()
 
 	// when
-	h.OnBooked(ctx, event)
-	cancel()
+	h.OnBooked(context.Background(), event)
 
-	// then
-	select {
-	case err := <-announced:
-		assert.NoError(t, err, "the listener stopping does not cancel the announcement")
-	case <-time.After(5 * time.Second):
-		t.Fatal("BookingMade was not called")
-	}
+	// then: expectations are asserted on cleanup
 }
 
 func TestNotifyHandler_OnListenerConnectedRefreshesEverySummary(t *testing.T) {

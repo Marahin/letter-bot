@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -40,9 +41,6 @@ type SummaryPassHook func(ctx context.Context, guildID string) error
 // rendered content changed. A pass makes at most one channel create or delete
 // and asks for another pass after channelOpGap, so guilds take turns.
 func (b *Bot) reconcileSummaries(ctx context.Context, guildID string) reconcileResult {
-	if b.layouts == nil {
-		return b.reconcileLegacy(ctx, guildID)
-	}
 	cfg, err := b.guildConfig(ctx, guildID)
 	if err != nil {
 		return reconcileResult{Err: err}
@@ -104,7 +102,7 @@ func (b *Bot) newRegionPass(ctx context.Context, cfg *guildconfig.Config) (*regi
 		b:        b,
 		ctx:      ctx,
 		cfg:      cfg,
-		now:      b.clock(),
+		now:      b.now(),
 		layout:   *layout,
 		rows:     make(map[string]*summarylayout.RegionChannel, len(stored)),
 		channels: &channelView{b: b, guildID: guildID},
@@ -113,6 +111,7 @@ func (b *Bot) newRegionPass(ctx context.Context, cfg *guildconfig.Config) (*regi
 	for i := range stored {
 		p.rows[stored[i].Region] = &stored[i]
 	}
+	p.trackStored()
 	if !cfg.RegionSummaries || p.layout.Blocked(p.now) {
 		return p, nil
 	}
@@ -133,101 +132,99 @@ func (b *Bot) newRegionPass(ctx context.Context, cfg *guildconfig.Config) (*regi
 	return p, nil
 }
 
-// legacy posts the single summary and retires the region channels.
-func (p *regionPass) legacy() reconcileResult {
-	next, err := p.b.PostLegacySummary(p.ctx, p.cfg)
-	if err != nil {
-		return reconcileResult{Next: next, Err: err}
-	}
-	// The single summary cleaned the channel, the index with it.
-	if p.layout.IndexMessageID != "" {
-		p.layout.IndexChannelID, p.layout.IndexMessageID, p.layout.IndexHash = "", "", ""
-		if err := p.saveLayout(); err != nil {
-			return reconcileResult{Next: next, Err: err}
+// trackStored watches the stored messages for deletes, also after a restart.
+func (p *regionPass) trackStored() {
+	for _, row := range p.rows {
+		if !row.Retired() {
+			p.b.tracked.track(p.cfg.GuildID, row.ChannelID, row.MessageIDs)
 		}
 	}
-	again, err := p.retire(nil)
+	if p.layout.IndexMessageID != "" {
+		p.b.tracked.track(p.cfg.GuildID, p.layout.IndexChannelID, []string{p.layout.IndexMessageID})
+	}
+}
+
+// legacy posts the single summary and retires the region channels. A failed
+// post does not stop the retirement.
+func (p *regionPass) legacy() reconcileResult {
+	next, postErr := p.b.PostLegacySummary(p.ctx, p.cfg)
+	var layoutErr error
+	// The single summary cleaned the channel, the index with it.
+	if postErr == nil && p.layout.IndexMessageID != "" {
+		p.layout.IndexChannelID, p.layout.IndexMessageID, p.layout.IndexHash = "", "", ""
+		layoutErr = p.saveLayout()
+	}
+	again, retireErr := p.retire(nil)
 	if p.cfg.RegionSummaries && p.layout.Blocked(p.now) {
 		again = minPositive(again, p.layout.BlockedUntil.Sub(p.now))
 	}
-	return reconcileResult{Next: next, Again: again, Err: err}
+	return reconcileResult{Next: next, Again: again, Err: errors.Join(postErr, layoutErr, retireErr)}
 }
 
 func (p *regionPass) regions() reconcileResult {
-	done, res := p.ensureCategory()
-	if !done {
-		return res
+	if res := p.ensureCategory(); res != nil {
+		return *res
 	}
-	done, res = p.ensureChannels()
-	if !done {
-		return res
+	if res := p.ensureChannels(); res != nil {
+		return *res
 	}
-	if res, ok := p.writeRegions(); !ok {
-		return res
-	}
-	if err := p.writeIndex(); err != nil {
-		return reconcileResult{Next: p.next, Err: err}
-	}
+	writeAgain, writeErr := p.writeRegions()
+	indexErr := p.writeIndex()
 	keep := make(map[string]bool, len(p.desired))
 	for _, rs := range p.desired {
 		keep[rs.Region.Key] = true
 	}
-	again, err := p.retire(keep)
-	return reconcileResult{Next: p.next, Again: again, Err: err}
+	retireAgain, retireErr := p.retire(keep)
+	return reconcileResult{Next: p.next, Again: minPositive(writeAgain, retireAgain), Err: errors.Join(writeErr, indexErr, retireErr)}
 }
 
-// ensureCategory finds or makes the category. done is false when the pass ends here.
-func (p *regionPass) ensureCategory() (done bool, res reconcileResult) {
+// ensureCategory finds or makes the category. A result means the pass ends here.
+func (p *regionPass) ensureCategory() *reconcileResult {
 	if p.layout.CategoryID != "" {
 		ok, err := p.channels.has(p.layout.CategoryID)
 		if err != nil {
-			return false, reconcileResult{Err: err}
+			return &reconcileResult{Err: err}
 		}
 		if ok {
-			return true, reconcileResult{}
+			return nil
 		}
 	}
 	found, ok, err := p.channels.find(regions.CategoryName, discordgo.ChannelTypeGuildCategory, "")
 	if err != nil {
-		return false, reconcileResult{Err: err}
+		return &reconcileResult{Err: err}
 	}
 	if ok {
 		p.layout.CategoryID = found.ID
 		if err := p.saveLayout(); err != nil {
-			return false, reconcileResult{Err: err}
+			return &reconcileResult{Err: err}
 		}
-		return true, reconcileResult{}
+		return nil
 	}
 	created, err := p.createChannel(discordgo.GuildChannelCreateData{
 		Name: regions.CategoryName,
 		Type: discordgo.ChannelTypeGuildCategory,
 	})
 	if errors.Is(err, errSummaryBlocked) {
-		return false, p.block(err)
+		return p.block(err)
 	}
 	if err != nil {
-		return false, reconcileResult{Err: err}
+		return &reconcileResult{Err: err}
 	}
 	p.layout.CategoryID = created.ID
-	return false, p.again(p.saveLayout())
+	return p.again(p.saveLayout())
 }
 
 // ensureChannels gives every desired region a channel: its stored one, one of
-// its name under the category, or a new one. It makes at most one per pass.
-func (p *regionPass) ensureChannels() (done bool, res reconcileResult) {
+// its name under the category, or a new one. It makes at most one per pass. A
+// result means the pass ends here. A retired region keeps its retirement until
+// writeRegions, so a pass that ends here does not restart the 24 hours.
+func (p *regionPass) ensureChannels() *reconcileResult {
 	for _, rs := range p.desired {
 		key := rs.Region.Key
-		row := p.rows[key]
-		if row != nil && row.Retired() {
-			row.RetiredAt, row.ContentHash = nil, ""
-			if err := p.saveRow(row); err != nil {
-				return false, reconcileResult{Err: err}
-			}
-		}
-		if row != nil {
+		if row := p.rows[key]; row != nil {
 			ok, err := p.channels.has(row.ChannelID)
 			if err != nil {
-				return false, reconcileResult{Err: err}
+				return &reconcileResult{Err: err}
 			}
 			if ok {
 				continue
@@ -237,11 +234,11 @@ func (p *regionPass) ensureChannels() (done bool, res reconcileResult) {
 		name := regions.ChannelName(rs.Region)
 		found, ok, err := p.channels.find(name, discordgo.ChannelTypeGuildText, p.layout.CategoryID)
 		if err != nil {
-			return false, reconcileResult{Err: err}
+			return &reconcileResult{Err: err}
 		}
 		if ok {
 			if err := p.saveRow(&summarylayout.RegionChannel{GuildID: p.cfg.GuildID, Region: key, ChannelID: found.ID}); err != nil {
-				return false, reconcileResult{Err: err}
+				return &reconcileResult{Err: err}
 			}
 			continue
 		}
@@ -252,42 +249,57 @@ func (p *regionPass) ensureChannels() (done bool, res reconcileResult) {
 			ParentID: p.layout.CategoryID,
 		})
 		if errors.Is(err, errSummaryBlocked) {
-			return false, p.block(err)
+			return p.block(err)
 		}
 		if err != nil {
-			return false, reconcileResult{Err: err}
+			return &reconcileResult{Err: err}
 		}
-		return false, p.again(p.saveRow(&summarylayout.RegionChannel{GuildID: p.cfg.GuildID, Region: key, ChannelID: created.ID}))
+		return p.again(p.saveRow(&summarylayout.RegionChannel{GuildID: p.cfg.GuildID, Region: key, ChannelID: created.ID}))
 	}
-	return true, reconcileResult{}
+	return nil
 }
 
-// writeRegions edits the messages of each region whose content changed. ok is
-// false when the pass ends here.
-func (p *regionPass) writeRegions() (reconcileResult, bool) {
+// writeRegions writes the messages of each region whose content changed, or
+// whose messages someone deleted. A failed region does not stop the others. It
+// returns when to look again.
+func (p *regionPass) writeRegions() (time.Duration, error) {
+	var (
+		again time.Duration
+		errs  []error
+	)
 	for _, rs := range p.desired {
 		row := p.rows[rs.Region.Key]
+		stale := p.b.tracked.takeStale(row.ChannelID)
+		if row.Retired() {
+			row.RetiredAt, row.ContentHash = nil, ""
+		}
 		msgs := regionMessages(rs, p.b.webBaseURL)
 		hash := payloadHash(msgs)
-		if hash != "" && row.ContentHash == hash {
+		if !stale && hash != "" && row.ContentHash == hash {
 			continue
 		}
 		stampUpdated(msgs, p.now)
 		ids, err := p.writeMessages(row.ChannelID, row.MessageIDs, msgs)
+		if isDiscordCode(err, discordgo.ErrCodeInvalidFormBody) && dropThumbnails(msgs) {
+			// Discord refuses some image URLs. The region goes without images
+			// until its content changes.
+			ids, err = p.writeMessages(row.ChannelID, ids, msgs)
+		}
 		if isDiscordCode(err, discordgo.ErrCodeUnknownChannel) {
 			// Deleted by hand: the next pass makes it again.
-			return p.again(p.deleteRow(row)), false
+			errs = append(errs, p.deleteRow(row))
+			again = channelOpGap
+			continue
 		}
-		row.MessageIDs = ids
-		row.ContentHash = hash
+		row.MessageIDs, row.ContentHash = ids, hash
 		if err != nil {
 			row.ContentHash = ""
+			errs = append(errs, fmt.Errorf("write region %s: %w", row.Region, err))
 		}
-		if saveErr := p.saveRow(row); saveErr != nil || err != nil {
-			return reconcileResult{Next: p.next, Err: errors.Join(err, saveErr)}, false
-		}
+		p.b.tracked.track(p.cfg.GuildID, row.ChannelID, ids)
+		errs = append(errs, p.saveRow(row))
 	}
-	return reconcileResult{}, true
+	return again, errors.Join(errs...)
 }
 
 // writeMessages edits the stored messages in order, sends the missing ones and
@@ -308,6 +320,11 @@ func (p *regionPass) writeMessages(channelID string, stored []string, msgs []*di
 			if !isDiscordCode(err, discordgo.ErrCodeUnknownMessage) {
 				return keep(), err
 			}
+			// Deleted by hand. The rest is sent again after it, so the order holds.
+			if left, err := p.deleteMessages(channelID, stored[i+1:]); err != nil {
+				return append(ids, left...), err
+			}
+			stored = stored[:i]
 		}
 		if err := p.wait(messageOpGap); err != nil {
 			return keep(), err
@@ -318,15 +335,26 @@ func (p *regionPass) writeMessages(channelID string, stored []string, msgs []*di
 		}
 		ids = append(ids, sent.ID)
 	}
-	for i := len(msgs); i < len(stored); i++ {
-		if err := p.wait(messageOpGap); err != nil {
-			return append(ids, stored[i:]...), err
-		}
-		if err := p.b.writer.ChannelMessageDelete(channelID, stored[i]); err != nil && !isDiscordCode(err, discordgo.ErrCodeUnknownMessage) {
-			return append(ids, stored[i:]...), err
+	if len(stored) > len(msgs) {
+		if left, err := p.deleteMessages(channelID, stored[len(msgs):]); err != nil {
+			return append(ids, left...), err
 		}
 	}
 	return ids, nil
+}
+
+// deleteMessages returns the ids it did not delete, on an error.
+func (p *regionPass) deleteMessages(channelID string, ids []string) ([]string, error) {
+	for i, id := range ids {
+		if err := p.wait(messageOpGap); err != nil {
+			return ids[i:], err
+		}
+		p.b.tracked.untrack(channelID, id)
+		if err := p.b.writer.ChannelMessageDelete(channelID, id); err != nil && !isDiscordCode(err, discordgo.ErrCodeUnknownMessage) {
+			return ids[i:], err
+		}
+	}
+	return nil, nil
 }
 
 func messageEdit(channelID, messageID string, m *discordgo.MessageSend) *discordgo.MessageEdit {
@@ -354,13 +382,17 @@ func (p *regionPass) writeIndex() error {
 		p.b.log.With("guild.ID", g.ID).Debugf("no summary channel for the region index: %s", err)
 		return nil
 	}
+	if err := p.dropMovedIndex(channel.ID); err != nil {
+		return err
+	}
 	msg := indexMessage(p.desired, p.rows, p.b.webBaseURL)
 	hash := payloadHash([]*discordgo.MessageSend{msg})
-	sameChannel := p.layout.IndexChannelID == channel.ID && p.layout.IndexMessageID != ""
-	if sameChannel && hash != "" && p.layout.IndexHash == hash {
+	stale := p.b.tracked.takeStale(channel.ID)
+	posted := p.layout.IndexMessageID != ""
+	if posted && !stale && hash != "" && p.layout.IndexHash == hash {
 		return nil
 	}
-	if sameChannel {
+	if posted {
 		if err := p.wait(messageOpGap); err != nil {
 			return err
 		}
@@ -391,7 +423,26 @@ func (p *regionPass) writeIndex() error {
 	if p.b.metrics != nil {
 		p.b.metrics.IncMessagesSent(channel.ID, channel.Name)
 	}
+	p.b.tracked.track(g.ID, channel.ID, []string{sent.ID})
 	p.layout.IndexChannelID, p.layout.IndexMessageID, p.layout.IndexHash = channel.ID, sent.ID, hash
+	return p.saveLayout()
+}
+
+// dropMovedIndex deletes the index from a channel that is no longer the
+// guild's summary channel.
+func (p *regionPass) dropMovedIndex(channelID string) error {
+	if p.layout.IndexMessageID == "" || p.layout.IndexChannelID == channelID {
+		return nil
+	}
+	if err := p.wait(messageOpGap); err != nil {
+		return err
+	}
+	p.b.tracked.forget(p.layout.IndexChannelID)
+	err := p.b.writer.ChannelMessageDelete(p.layout.IndexChannelID, p.layout.IndexMessageID)
+	if err != nil && !isDiscordCode(err, discordgo.ErrCodeUnknownMessage) && !isDiscordCode(err, discordgo.ErrCodeUnknownChannel) {
+		return err
+	}
+	p.layout.IndexChannelID, p.layout.IndexMessageID, p.layout.IndexHash = "", "", ""
 	return p.saveLayout()
 }
 
@@ -432,16 +483,20 @@ func (p *regionPass) retire(keep map[string]bool) (time.Duration, error) {
 	return again, p.deleteCategory()
 }
 
+// retireRow replaces the summary with the notice. On an error it keeps the ids
+// of the messages it wrote, so the retry does not send the notice twice.
 func (p *regionPass) retireRow(row *summarylayout.RegionChannel) error {
+	p.b.tracked.forget(row.ChannelID)
 	ids, err := p.writeMessages(row.ChannelID, row.MessageIDs, []*discordgo.MessageSend{retiredMessage()})
 	if isDiscordCode(err, discordgo.ErrCodeUnknownChannel) {
 		return p.deleteRow(row)
 	}
+	row.MessageIDs, row.ContentHash = ids, ""
 	if err != nil {
-		return err
+		return errors.Join(err, p.saveRow(row))
 	}
 	at := p.now
-	row.MessageIDs, row.ContentHash, row.RetiredAt = ids, "", &at
+	row.RetiredAt = &at
 	return p.saveRow(row)
 }
 
@@ -499,14 +554,15 @@ func (p *regionPass) deleteChannel(channelID string) error {
 }
 
 // block keeps the guild on the single summary for a while.
-func (p *regionPass) block(cause error) reconcileResult {
+func (p *regionPass) block(cause error) *reconcileResult {
 	p.b.log.With("guild.ID", p.cfg.GuildID).Warnf("region summaries blocked for %s: %s", blockedRetry, cause)
 	until := p.now.Add(blockedRetry)
 	p.layout.BlockedUntil = &until
 	if err := p.saveLayout(); err != nil {
-		return reconcileResult{Err: err}
+		return &reconcileResult{Err: err}
 	}
-	return p.legacy()
+	res := p.legacy()
+	return &res
 }
 
 func (p *regionPass) wait(gap time.Duration) error {
@@ -527,18 +583,23 @@ func (p *regionPass) saveRow(row *summarylayout.RegionChannel) error {
 }
 
 func (p *regionPass) deleteRow(row *summarylayout.RegionChannel) error {
+	p.b.tracked.forget(row.ChannelID)
 	delete(p.rows, row.Region)
 	return p.b.layouts.DeleteRegionChannel(p.ctx, row.GuildID, row.Region)
 }
 
 // again asks for the next pass after a channel was made.
-func (p *regionPass) again(err error) reconcileResult {
-	return reconcileResult{Next: p.next, Again: channelOpGap, Err: err}
+func (p *regionPass) again(err error) *reconcileResult {
+	return &reconcileResult{Next: p.next, Again: channelOpGap, Err: err}
 }
 
+// minPositive is the smaller of a and b, ignoring a zero or negative one.
 func minPositive(a, b time.Duration) time.Duration {
 	if a <= 0 {
 		return b
+	}
+	if b <= 0 {
+		return a
 	}
 	return min(a, b)
 }
@@ -557,17 +618,27 @@ func (b *Bot) summaryOverwrites(guildID string) []*discordgo.PermissionOverwrite
 	}
 }
 
+// botUserID reads the bot's user from a shard's Ready. mgr.Gateway is a REST
+// session that never connects, so its state has no user.
 func (b *Bot) botUserID() string {
-	if b.mgr == nil || b.mgr.Gateway == nil || b.mgr.Gateway.State == nil {
+	if b.mgr == nil {
 		return ""
 	}
-	state := b.mgr.Gateway.State
-	state.RLock()
-	defer state.RUnlock()
-	if state.User == nil {
-		return ""
+	b.mgr.RLock()
+	defer b.mgr.RUnlock()
+	for _, shard := range b.mgr.Shards {
+		if shard == nil || shard.Session == nil || shard.Session.State == nil {
+			continue
+		}
+		state := shard.Session.State
+		state.RLock()
+		user := state.User
+		state.RUnlock()
+		if user != nil {
+			return user.ID
+		}
 	}
-	return state.User.ID
+	return ""
 }
 
 // channelView reads the guild's channels from the gateway cache. Before it
@@ -638,4 +709,83 @@ func (v *channelView) children(parentID string) (n int, found bool, err error) {
 		}
 	}
 	return n, found, nil
+}
+
+// trackedMessages are the summary messages the bot keeps, by channel, so a
+// delete by hand makes the next pass write them again. Passes fill it, and the
+// bot untracks a message before it deletes one itself. The zero value is ready.
+type trackedMessages struct {
+	mu       sync.Mutex
+	channels map[string]*trackedChannel
+}
+
+type trackedChannel struct {
+	guildID string
+	ids     map[string]bool
+	stale   bool
+}
+
+// track replaces the messages of the channel. A stale mark stays.
+func (t *trackedMessages) track(guildID, channelID string, ids []string) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.channels == nil {
+		t.channels = map[string]*trackedChannel{}
+	}
+	c, ok := t.channels[channelID]
+	if !ok {
+		c = &trackedChannel{}
+		t.channels[channelID] = c
+	}
+	c.guildID = guildID
+	c.ids = make(map[string]bool, len(ids))
+	for _, id := range ids {
+		c.ids[id] = true
+	}
+}
+
+func (t *trackedMessages) untrack(channelID, messageID string) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if c, ok := t.channels[channelID]; ok {
+		delete(c.ids, messageID)
+	}
+}
+
+func (t *trackedMessages) forget(channelID string) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	delete(t.channels, channelID)
+}
+
+// deleted marks the channel stale when one of the messages is tracked, and
+// returns the channel's guild.
+func (t *trackedMessages) deleted(channelID string, messageIDs []string) (string, bool) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	c, ok := t.channels[channelID]
+	if !ok {
+		return "", false
+	}
+	hit := false
+	for _, id := range messageIDs {
+		if c.ids[id] {
+			delete(c.ids, id)
+			hit = true
+		}
+	}
+	c.stale = c.stale || hit
+	return c.guildID, hit
+}
+
+// takeStale reports and clears the stale mark of the channel.
+func (t *trackedMessages) takeStale(channelID string) bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	c, ok := t.channels[channelID]
+	if !ok || !c.stale {
+		return false
+	}
+	c.stale = false
+	return true
 }

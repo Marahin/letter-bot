@@ -3,20 +3,13 @@
 // know, belongs to Other.
 package regions
 
-import (
-	"regexp"
-
-	"spot-assistant/internal/core/dto/region"
-)
+import "spot-assistant/internal/core/dto/region"
 
 // CategoryName is the Discord category that holds the region channels.
 const CategoryName = "Letter respawns"
 
 // ChannelPrefix keeps the region channels apart from the guild's own channels.
 const ChannelPrefix = "letter-"
-
-// KeyPattern is the web_spot.region check constraint.
-var KeyPattern = regexp.MustCompile(`^[a-z0-9-]{1,32}$`)
 
 // Other holds the respawns without a known region. It is always last.
 var Other = region.Region{Key: "other", Name: "Other"}
