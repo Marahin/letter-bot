@@ -273,8 +273,8 @@ func TestDiscordFormatter_WizardTexts(t *testing.T) {
 	// when
 	texts := make([]string, 0, 21)
 	texts = append(texts,
-		f.FormatRespawnStep(false, false, ""),
-		f.FormatRespawnStep(true, true, "No respawn has this name."),
+		f.FormatRespawnStep(false, false, "", ""),
+		f.FormatRespawnStep(true, true, "", "No respawn has this name."),
 		f.FormatRespawnMatches("lib", false),
 		f.FormatRespawnMatches("lib", true),
 		f.FormatUsualRespawn(reservation.UsualRespawn{}),
@@ -300,6 +300,10 @@ func TestDiscordFormatter_WizardTexts(t *testing.T) {
 		label, description := f.FormatStartOption(o, now)
 		texts = append(texts, label+" | "+description)
 	}
+	texts = append(texts,
+		f.FormatRespawnStep(false, false, "Port Hope & Tiquanda", ""),
+		f.FormatRespawnStep(false, true, "Ingol", ""),
+	)
 
 	// then
 	snaps.MatchSnapshot(t, strings.Join(texts, "\n---\n"))

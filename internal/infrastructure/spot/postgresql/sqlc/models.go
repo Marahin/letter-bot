@@ -100,6 +100,7 @@ type Guild struct {
 	SyncedAt          pgtype.Timestamptz
 	CreatedAt         pgtype.Timestamptz
 	UpdatedAt         pgtype.Timestamptz
+	RegionSummaries   bool
 }
 
 type GuildChannel struct {
@@ -196,6 +197,27 @@ type ReservationLoot struct {
 	PickedAt       pgtype.Timestamptz
 }
 
+type SummaryLayout struct {
+	GuildID        string
+	CategoryID     string
+	IndexChannelID string
+	IndexMessageID string
+	IndexHash      string
+	BlockedUntil   pgtype.Timestamptz
+	UpdatedAt      pgtype.Timestamptz
+}
+
+type SummaryRegionChannel struct {
+	GuildID     string
+	Region      string
+	ChannelID   string
+	MessageIds  []string
+	ContentHash string
+	RetiredAt   pgtype.Timestamptz
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+}
+
 type WebReservation struct {
 	ID              int64
 	Author          string
@@ -219,6 +241,8 @@ type WebSpot struct {
 	CreatedAt  pgtype.Timestamptz
 	GuildID    pgtype.Text
 	ArchivedAt pgtype.Timestamptz
+	Region     pgtype.Text
+	ImageUrl   pgtype.Text
 }
 
 type WebUser struct {

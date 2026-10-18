@@ -253,7 +253,8 @@ These items of the request were unclear or had a cost. Each has a decision.
     "Open panel" (only when `WEB_BASE_URL` is set). A DM summary has no buttons.
     A guild without upcoming hunts gets a "No upcoming hunts" message with the
     same buttons, so the channel never shows an old summary. Each new booking
-    is announced in public (decision 87). Rules:
+    is announced in public (decision 87). A region channel has "Book in
+    <region>" instead of "Book a respawn" (decision 101). Rules:
     - The member picks from lists (string selects) and does not type. Typed
       names and times caused too many errors. discordgo stays at v0.27.1 (see
       "Parity with scxmanager"), and a Discord form (modal) cannot hold a list,
@@ -523,6 +524,69 @@ because Discord rate-limits the bot.
 93. **The summary cleanup deletes messages older than 13 days one by one.**
     Discord refuses those in a bulk delete, and a quiet server can keep a
     summary that long.
+94. **A respawn has an optional region from a fixed catalog**
+    (`internal/core/regions`), stored as a key in `web_spot.region`. No region,
+    or an unknown key, means "Other". Region names are proper nouns and are not
+    translated. The migration and the default list import give the default
+    respawns their regions (`regions.DefaultSpotRegion`; a test keeps the two
+    equal). The default list makes 18 regions by Tibia geography. Places with
+    few respawns share a region (e.g. "Darama & Krailos"), and the big quest
+    areas make two regions ("POI, Inquisition & Ferumbras", "Endgame Quests").
+    32 names that we could not place stay in Other. The owner should review the
+    mapping; a manager can change a region in the web.
+95. **The summary per region is on by default** (`guilds.region_summaries`).
+    An admin switches it on the Settings page, with scxmanager's checkbox,
+    Save and status pattern. Saving sends `letter_summary_refresh`: the summary
+    pass reads the setting.
+96. **Layout.** The category "Letter respawns" holds one text channel per
+    region with respawns, `letter-<key>` (e.g. `letter-port-hope`,
+    `letter-other`), made in catalog order. The bot never renames, moves or
+    edits a channel after it made it, because Discord limits channel edits
+    hard. The channels deny Send Messages and Add Reactions to @everyone and
+    allow the bot. When Discord refuses the overwrites, the bot makes the
+    channel without them. The summary channel (configured or `#letter-summary`)
+    becomes an index: a link to each region channel with its number of
+    upcoming hunts, and the buttons of the whole server.
+97. **The summary per region needs at least one active respawn with a region.**
+    Otherwise the server keeps the single summary. When Discord refuses a
+    channel (missing permissions, or the limit of 500 channels), the server
+    keeps the single summary for an hour, then the bot tries again.
+98. **The bot changes Discord gently.** Each region channel stores a hash of
+    the content the bot wrote there (`summary_region_channels.content_hash`).
+    A pass writes only to the regions whose content changed, also after a
+    restart. A pass makes at most one channel create or delete, 5 seconds
+    after the previous write, and asks for another pass after 5 seconds, so
+    servers take turns. Message writes keep 1 second apart. All writes go
+    through the summary worker's one session (decision 92). Before the bot
+    makes a channel, it adopts one of the same name in the category, and it
+    asks the API before it decides a channel is missing: the gateway cache can
+    lag behind a channel the bot just made.
+99. **Cleanup.** A region channel that is no longer needed (no active respawns
+    in the region, or the setting is off) gets a notice, and the bot deletes
+    it 24 hours later. Switched back on within 24 hours, the region gets its
+    channel back. The bot deletes the category only when it is empty. A
+    category with the server's own channels in it is left to the server. A
+    region channel that someone deletes by hand comes back while it is needed
+    (scxmanager parity). Without premium, or without the bot, nothing is
+    touched.
+100. **A region channel shows a header and one embed per booked respawn**,
+     packed into messages of at most 10 embeds and about 5800 characters. The
+     last message has "Book in <region>", "My reservations" and "Open panel".
+     There is no chart; the single summary keeps its chart.
+101. **"Book in <region>" limits only step 1 of the wizard** to the respawns
+     and the usual respawns of the region, with an "All respawns" button.
+     Search and "Change respawn" stay for the whole server. The new custom ids
+     (`bookr`, `rrp`) leave the old ones unchanged, so old buttons keep working.
+102. **A respawn has an optional image** (`web_spot.image_url`, http or https,
+     at most 2048 characters). It shows as the embed thumbnail of the respawn
+     in its region channel only, because the single summary uses fields. The
+     web shows a small thumbnail with `referrerpolicy="no-referrer"`.
+103. **"Rename" becomes "Edit"** (name, region, image) on the Respawns page,
+     at `/servers/{id}/spots/{spot}/edit`. The `/rename` route is removed; it
+     had no other users.
+104. **The summary pass has hooks.** A hook runs at the start of each pass of
+     a premium server, before any summary write. Its error is logged and the
+     pass goes on. The booking queue will send its due offers there.
 
 ## Parity with scxmanager
 

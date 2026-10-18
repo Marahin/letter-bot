@@ -8,18 +8,27 @@ import (
 	"time"
 
 	"spot-assistant/internal/core/booking"
+	"spot-assistant/internal/core/dto/region"
 	"spot-assistant/internal/core/dto/reservation"
 	"spot-assistant/internal/core/dto/spot"
+	"spot-assistant/internal/core/regions"
 	"spot-assistant/internal/ports"
 )
 
 // bookedLimit is far above the reservations that fit in one 12-hour window.
 const bookedLimit = 100
 
-func (s *Service) RespawnPicker(ctx context.Context, guildID string, actor reservation.Actor, page int) (*reservation.RespawnPicker, error) {
+func (s *Service) RespawnPicker(ctx context.Context, guildID string, actor reservation.Actor, regionKey string, page int) (*reservation.RespawnPicker, error) {
 	spots, err := s.spots.SelectGuildSpots(ctx, guildID, false)
 	if err != nil {
 		return nil, fmt.Errorf("select spots: %w", err)
+	}
+	inRegion := func(spot.Spot) bool { return true }
+	var pickerRegion region.Region
+	if regionKey != "" {
+		pickerRegion = regions.Of(regionKey)
+		inRegion = func(sp spot.Spot) bool { return regions.Of(sp.Region).Key == pickerRegion.Key }
+		spots = keep(spots, func(sp *spot.Spot) bool { return inRegion(*sp) })
 	}
 	now := s.now()
 	var mine []spot.Ranked
@@ -33,8 +42,10 @@ func (s *Service) RespawnPicker(ctx context.Context, guildID string, actor reser
 	if err != nil {
 		return nil, fmt.Errorf("select popular spots: %w", err)
 	}
+	ranks := func(r spot.Ranked) bool { return inRegion(r.Spot) }
 	picker := PageRespawns(spots, page)
-	picker.Usual = UsualRespawns(mine, popular, SelectOptions)
+	picker.Usual = UsualRespawns(keep(mine, ranks), keep(popular, ranks), SelectOptions)
+	picker.Region = pickerRegion
 	return &picker, nil
 }
 
@@ -184,4 +195,15 @@ func (s *Service) EditChoice(ctx context.Context, guildID string, actor reservat
 	}
 	draft := reservation.Draft{SpotID: choice.SpotID, StartAt: startAt, EndAt: startAt.Add(choice.Length)}
 	return s.edit(ctx, guildID, actor, choice.ReservationID, draft)
+}
+
+// keep returns the items that match, in a new slice.
+func keep[T any](items []T, match func(T) bool) []T {
+	out := make([]T, 0, len(items))
+	for _, item := range items {
+		if match(item) {
+			out = append(out, item)
+		}
+	}
+	return out
 }

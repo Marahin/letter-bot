@@ -2,6 +2,8 @@ package summary
 
 import (
 	"time"
+
+	"spot-assistant/internal/core/dto/region"
 )
 
 type OnlineStatus int
@@ -27,8 +29,18 @@ type Ledger []LedgerEntry
 
 type LedgerEntry struct {
 	Spot string
+	// ImageURL is shown only in the region summaries.
+	ImageURL string
 
 	Bookings []*Booking
+}
+
+// RegionSummary is the summary of one region channel. Spots names every active
+// respawn of the region; Ledger has only the booked ones.
+type RegionSummary struct {
+	Region region.Region
+	Spots  []string
+	Ledger Ledger
 }
 
 type Booking struct {

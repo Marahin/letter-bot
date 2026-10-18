@@ -30,9 +30,10 @@ func (h *Handlers) HandleCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v := viewFromForm(r)
-	created, err := h.D.Spots.Create(r.Context(), r.PathValue("id"), r.PostFormValue("name"))
-	if msg := nameError(r, err); msg != "" {
-		v.CreateName, v.CreateError = r.PostFormValue("name"), msg
+	f := fieldsFromForm(r)
+	created, err := h.D.Spots.Create(r.Context(), r.PathValue("id"), f)
+	if errs := formErrors(r, err); errs.any() {
+		v.Create, v.CreateErrors = f, errs
 		h.respond(w, r, v)
 		return
 	}
@@ -45,16 +46,17 @@ func (h *Handlers) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	h.done(w, r, v)
 }
 
-func (h *Handlers) HandleRename(w http.ResponseWriter, r *http.Request) {
+// HandleUpdate saves the name, region and image of a spot.
+func (h *Handlers) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 	id, ok := h.D.PathInt64(w, r, "spot")
 	if !ok || !web.ParseForm(w, r) {
 		return
 	}
 	v := viewFromForm(r)
-	name := strings.TrimSpace(r.PostFormValue("name"))
-	err := h.D.Spots.Rename(r.Context(), r.PathValue("id"), id, name)
-	if msg := nameError(r, err); msg != "" {
-		v.RenameID, v.RenameValue, v.RenameError = id, r.PostFormValue("name"), msg
+	f := fieldsFromForm(r)
+	err := h.D.Spots.Update(r.Context(), r.PathValue("id"), id, f)
+	if errs := formErrors(r, err); errs.any() {
+		v.EditID, v.Edit, v.EditErrors = id, f, errs
 		h.respond(w, r, v)
 		return
 	}
@@ -62,10 +64,10 @@ func (h *Handlers) HandleRename(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, spots.ErrNotFound):
 		v.Flash = warnFlash(i18n.T(r.Context(), "spots.flash.not_found"))
 	case err != nil:
-		h.D.ServerError(w, r, "rename spot", err)
+		h.D.ServerError(w, r, "update spot", err)
 		return
 	default:
-		v.Flash = okFlash(i18n.T(r.Context(), "spots.flash.renamed", name))
+		v.Flash = okFlash(i18n.T(r.Context(), "spots.flash.updated", strings.TrimSpace(f.Name)))
 	}
 	h.done(w, r, v)
 }
@@ -165,16 +167,26 @@ func (h *Handlers) respond(w http.ResponseWriter, r *http.Request, v pageView) {
 	h.D.Render(w, r, Page(h.D.Cfg.BaseURL, v, nav))
 }
 
-// nameError is the inline message for a refused name, "" for any other outcome.
-func nameError(r *http.Request, err error) string {
+func fieldsFromForm(r *http.Request) spot.Fields {
+	return spot.Fields{Name: r.PostFormValue("name"), Region: r.PostFormValue("region"), ImageURL: r.PostFormValue("image_url")}
+}
+
+// formErrors are the inline messages for a refused field, none for any other outcome.
+func formErrors(r *http.Request, err error) fieldErrors {
 	ctx := r.Context()
 	switch {
 	case errors.Is(err, spots.ErrNameEmpty):
-		return i18n.T(ctx, "spots.form.error_empty")
+		return fieldErrors{Name: i18n.T(ctx, "spots.form.error_empty")}
 	case errors.Is(err, spots.ErrNameTooLong):
-		return i18n.T(ctx, "spots.form.error_too_long", spots.MaxNameLength)
+		return fieldErrors{Name: i18n.T(ctx, "spots.form.error_too_long", spots.MaxNameLength)}
 	case errors.Is(err, spots.ErrDuplicateName):
-		return i18n.T(ctx, "spots.form.error_duplicate", strings.TrimSpace(r.PostFormValue("name")))
+		return fieldErrors{Name: i18n.T(ctx, "spots.form.error_duplicate", strings.TrimSpace(r.PostFormValue("name")))}
+	case errors.Is(err, spots.ErrUnknownRegion):
+		return fieldErrors{Region: i18n.T(ctx, "spots.form.error_region")}
+	case errors.Is(err, spots.ErrImageURLTooLong):
+		return fieldErrors{Image: i18n.T(ctx, "spots.form.error_image_too_long", spots.MaxImageURLLength)}
+	case errors.Is(err, spots.ErrImageURLInvalid):
+		return fieldErrors{Image: i18n.T(ctx, "spots.form.error_image")}
 	}
-	return ""
+	return fieldErrors{}
 }

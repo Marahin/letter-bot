@@ -6,6 +6,7 @@ package mocks
 
 import (
 	"spot-assistant/internal/core/dto/reservation"
+	"spot-assistant/internal/core/dto/spot"
 	"spot-assistant/internal/core/dto/summary"
 
 	mock "github.com/stretchr/testify/mock"
@@ -96,6 +97,65 @@ func (_c *MockSummaryService_Ledger_Call) Return(ledger summary.Ledger) *MockSum
 }
 
 func (_c *MockSummaryService_Ledger_Call) RunAndReturn(run func(reservations []*reservation.ReservationWithSpot) summary.Ledger) *MockSummaryService_Ledger_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// PrepareRegionSummaries provides a mock function for the type MockSummaryService
+func (_mock *MockSummaryService) PrepareRegionSummaries(spots []*spot.Spot, reservations []*reservation.ReservationWithSpot) []summary.RegionSummary {
+	ret := _mock.Called(spots, reservations)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PrepareRegionSummaries")
+	}
+
+	var r0 []summary.RegionSummary
+	if returnFunc, ok := ret.Get(0).(func([]*spot.Spot, []*reservation.ReservationWithSpot) []summary.RegionSummary); ok {
+		r0 = returnFunc(spots, reservations)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]summary.RegionSummary)
+		}
+	}
+	return r0
+}
+
+// MockSummaryService_PrepareRegionSummaries_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PrepareRegionSummaries'
+type MockSummaryService_PrepareRegionSummaries_Call struct {
+	*mock.Call
+}
+
+// PrepareRegionSummaries is a helper method to define mock.On call
+//   - spots []*spot.Spot
+//   - reservations []*reservation.ReservationWithSpot
+func (_e *MockSummaryService_Expecter) PrepareRegionSummaries(spots any, reservations any) *MockSummaryService_PrepareRegionSummaries_Call {
+	return &MockSummaryService_PrepareRegionSummaries_Call{Call: _e.mock.On("PrepareRegionSummaries", spots, reservations)}
+}
+
+func (_c *MockSummaryService_PrepareRegionSummaries_Call) Run(run func(spots []*spot.Spot, reservations []*reservation.ReservationWithSpot)) *MockSummaryService_PrepareRegionSummaries_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 []*spot.Spot
+		if args[0] != nil {
+			arg0 = args[0].([]*spot.Spot)
+		}
+		var arg1 []*reservation.ReservationWithSpot
+		if args[1] != nil {
+			arg1 = args[1].([]*reservation.ReservationWithSpot)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSummaryService_PrepareRegionSummaries_Call) Return(regionSummarys []summary.RegionSummary) *MockSummaryService_PrepareRegionSummaries_Call {
+	_c.Call.Return(regionSummarys)
+	return _c
+}
+
+func (_c *MockSummaryService_PrepareRegionSummaries_Call) RunAndReturn(run func(spots []*spot.Spot, reservations []*reservation.ReservationWithSpot) []summary.RegionSummary) *MockSummaryService_PrepareRegionSummaries_Call {
 	_c.Call.Return(run)
 	return _c
 }

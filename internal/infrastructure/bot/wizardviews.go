@@ -37,7 +37,7 @@ func (b *Bot) respawnStepView(p *reservation.RespawnPicker, state formAction, st
 	}
 	components = append(components, row(respawnNav(p, state)...))
 	empty := len(p.Groups) == 0
-	return formView{content: b.formatter.FormatRespawnStep(state.editing(), empty, status), components: components}
+	return formView{content: b.formatter.FormatRespawnStep(state.editing(), empty, p.Region.Name, status), components: components}
 }
 
 // matchesView replaces the respawn lists with the respawns that match a search.
@@ -92,8 +92,13 @@ func spotOption(sp reservation.Spot, description string) plainOption {
 // page, so its custom id stays unique.
 func respawnNav(p *reservation.RespawnPicker, state formAction) []discordgo.MessageComponent {
 	buttons := make([]discordgo.MessageComponent, 0, 4)
+	inRegion := p.Region.Key != "" && !state.editing()
 	if p.Pages > 1 {
 		previous, next := state.as(actionRespawnPage), state.as(actionRespawnPage)
+		if inRegion {
+			previous = formAction{Kind: actionRegionPage, Region: p.Region.Key}
+			next = previous
+		}
 		previous.Page, next.Page = max(p.Page-1, 0), min(p.Page+1, p.Pages-1)
 		buttons = append(buttons,
 			disabledButton("‹ Previous", discordgo.SecondaryButton, previous, p.Page == 0),
@@ -101,6 +106,9 @@ func respawnNav(p *reservation.RespawnPicker, state formAction) []discordgo.Mess
 		)
 	}
 	buttons = append(buttons, button("Search by name", discordgo.PrimaryButton, state.as(actionSearch)))
+	if inRegion {
+		buttons = append(buttons, button("All respawns", discordgo.SecondaryButton, formAction{Kind: actionRespawnPage}))
+	}
 	if state.editing() {
 		buttons = append(buttons, button("Back", discordgo.SecondaryButton, formAction{Kind: actionList}))
 	}

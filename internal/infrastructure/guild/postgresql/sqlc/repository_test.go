@@ -41,7 +41,7 @@ func newGuildRows() *pgxmock.Rows {
 		"guild_id", "name", "icon", "owner_id", "bot_present", "premium", "premium_forever",
 		"command_channel_id", "summary_channel_id",
 		"manage_role_ids", "view_role_ids", "reserve_role_ids", "overbook_role_ids",
-		"resync_requested_at", "synced_at", "created_at", "updated_at",
+		"resync_requested_at", "synced_at", "created_at", "updated_at", "region_summaries",
 	})
 }
 
@@ -50,7 +50,7 @@ func addGuildRow(rows *pgxmock.Rows, id string, syncedAt any) *pgxmock.Rows {
 	return rows.AddRow(id, "Celesta", "icon", "owner", true, false, true,
 		"cmd", "sum",
 		[]string{"m1"}, []string{}, nil, []string{"o1"},
-		nil, syncedAt, now, now)
+		nil, syncedAt, now, now, true)
 }
 
 func TestGuildConfigRepository_Get(t *testing.T) {
@@ -72,6 +72,7 @@ func TestGuildConfigRepository_Get(t *testing.T) {
 	assert.True(t, cfg.BotPresent)
 	assert.Equal(t, "cmd", cfg.CommandChannelID)
 	assert.Equal(t, "sum", cfg.SummaryChannelID)
+	assert.True(t, cfg.RegionSummaries)
 	assert.Equal(t, []string{"m1"}, cfg.ManageRoleIDs)
 	assert.Equal(t, []string{}, cfg.ReserveRoleIDs)
 	assert.Equal(t, []string{"o1"}, cfg.OverbookRoleIDs)
@@ -236,6 +237,11 @@ func TestGuildConfigRepository_Setters(t *testing.T) {
 			sql:  "SET command_channel_id",
 			args: []any{"c1", "c2", "g1"},
 			call: func(r *GuildConfigRepository) error { return r.SetChannels(context.Background(), "g1", "c1", "c2") },
+		},
+		"region summaries": {
+			sql:  "SET region_summaries = \\$1",
+			args: []any{false, "g1"},
+			call: func(r *GuildConfigRepository) error { return r.SetRegionSummaries(context.Background(), "g1", false) },
 		},
 		"manage ranks": {
 			sql:  "SET manage_role_ids",

@@ -50,10 +50,16 @@ func (a *Adapter) Ledger(reservations []*reservation.ReservationWithSpot) dto.Le
 	}
 	slices.Sort(spotNames)
 
+	images := make(map[string]string, len(spotNames))
+	for _, r := range reservations {
+		images[r.Spot.Name] = r.Spot.ImageURL
+	}
+
 	ledger := make(dto.Ledger, len(spotNames))
 	for i, spotName := range spotNames {
 		ledger[i] = dto.LedgerEntry{
 			Spot:     spotName,
+			ImageURL: images[spotName],
 			Bookings: a.MapReservations(spotsToReservations[spotName]),
 		}
 	}

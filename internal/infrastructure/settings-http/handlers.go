@@ -74,6 +74,19 @@ func (h *Handlers) HandleSetWorld(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// HandleSetRegionSummaries stores the toggle. An unchecked box is absent from the form.
+func (h *Handlers) HandleSetRegionSummaries(w http.ResponseWriter, r *http.Request) {
+	if !web.ParseForm(w, r) {
+		return
+	}
+	enabled := r.PostFormValue("enabled") == "1"
+	if err := h.D.Settings.SetRegionSummaries(r.Context(), r.PathValue("id"), enabled); err != nil {
+		h.D.ServerError(w, r, "set region summaries", err)
+		return
+	}
+	h.D.Render(w, r, RegionSummariesStatus(enabled))
+}
+
 // HandleRefresh backs the "Refresh server data" button: it asks the bot to sync
 // the channels and roles again, or reports the cooldown.
 func (h *Handlers) HandleRefresh(w http.ResponseWriter, r *http.Request) {

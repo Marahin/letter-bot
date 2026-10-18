@@ -8,6 +8,16 @@ type Spot struct {
 	CreatedAt  time.Time
 	GuildID    string
 	ArchivedAt *time.Time
+	// Region is a regions.Catalog key, "" for Other.
+	Region   string
+	ImageURL string
+}
+
+// Fields are what a manager sets on a spot.
+type Fields struct {
+	Name     string
+	Region   string
+	ImageURL string
 }
 
 func (s Spot) IsArchived() bool {

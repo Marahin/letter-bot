@@ -33,6 +33,10 @@ type SummaryService interface {
 	PrepareSummary(reservations []*reservation.ReservationWithSpot) (*summary.Summary, error)
 	// Ledger is the ledger of PrepareSummary, without rendering the chart.
 	Ledger(reservations []*reservation.ReservationWithSpot) summary.Ledger
+	// PrepareRegionSummaries groups the active spots and their reservations by
+	// region, in catalog order with Other last. It returns none when no active
+	// spot has a region: the guild then keeps the single summary.
+	PrepareRegionSummaries(spots []*spot.Spot, reservations []*reservation.ReservationWithSpot) []summary.RegionSummary
 }
 
 type BookingService interface {
@@ -86,8 +90,9 @@ type NotifyHandler interface {
 // rules as the web (ReservationService) to the member who clicked.
 type ReservationFormService interface {
 	// RespawnPicker returns step 1 of the booking wizard: the actor's usual
-	// respawns and one page (0-based, clamped) of the active respawns.
-	RespawnPicker(ctx context.Context, guildID string, actor reservation.Actor, page int) (*reservation.RespawnPicker, error)
+	// respawns and one page (0-based, clamped) of the active respawns. A region
+	// key limits both to the region; "" shows all.
+	RespawnPicker(ctx context.Context, guildID string, actor reservation.Actor, regionKey string, page int) (*reservation.RespawnPicker, error)
 	// FindRespawn returns the active respawn with the name, or the only one that
 	// contains it. It returns a *reservationforms.AmbiguousSpotError when more
 	// match, and booking.ErrSpotNotFound when none does.

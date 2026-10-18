@@ -18,7 +18,7 @@ import (
 )
 
 func newGuildSpotRows() *pgxmock.Rows {
-	return pgxmock.NewRows([]string{"id", "name", "created_at", "guild_id", "archived_at"})
+	return pgxmock.NewRows([]string{"id", "name", "created_at", "guild_id", "archived_at", "region", "image_url"})
 }
 
 func newSpotMock(t *testing.T) pgxmock.PgxPoolIface {
@@ -38,8 +38,8 @@ func TestSelectGuildSpots_MapsGuildAndArchivedAt(t *testing.T) {
 	mock.ExpectQuery("FROM web_spot WHERE guild_id = \\$1::text").
 		WithArgs("guild-1", true).
 		WillReturnRows(newGuildSpotRows().
-			AddRow(int64(1), "Dragon Lords", time.Now(), "guild-1", nil).
-			AddRow(int64(2), "empty", time.Now(), "guild-1", archivedAt))
+			AddRow(int64(1), "Dragon Lords", time.Now(), "guild-1", nil, "port-hope", "https://img.test/dl.gif").
+			AddRow(int64(2), "empty", time.Now(), "guild-1", archivedAt, nil, nil))
 	repo := NewSpotRepository(mock)
 
 	// when
@@ -52,6 +52,9 @@ func TestSelectGuildSpots_MapsGuildAndArchivedAt(t *testing.T) {
 	assert.False(t, spots[0].IsArchived())
 	assert.True(t, spots[1].IsArchived())
 	assert.True(t, archivedAt.Equal(*spots[1].ArchivedAt))
+	assert.Equal(t, "port-hope", spots[0].Region)
+	assert.Equal(t, "https://img.test/dl.gif", spots[0].ImageURL)
+	assert.Empty(t, spots[1].Region)
 }
 
 func TestSelectGuildSpots_Error(t *testing.T) {
@@ -89,7 +92,7 @@ func TestSelectGuildSpotByName_Found(t *testing.T) {
 	mock := newSpotMock(t)
 	mock.ExpectQuery("lower\\(name\\) = lower\\(\\$2\\)").
 		WithArgs("guild-1", "dragon lords").
-		WillReturnRows(newGuildSpotRows().AddRow(int64(1), "Dragon Lords", time.Now(), "guild-1", nil))
+		WillReturnRows(newGuildSpotRows().AddRow(int64(1), "Dragon Lords", time.Now(), "guild-1", nil, nil, nil))
 	repo := NewSpotRepository(mock)
 
 	// when
@@ -105,7 +108,7 @@ func TestSelectGuildSpotsLike(t *testing.T) {
 	mock := newSpotMock(t)
 	mock.ExpectQuery("LIKE").
 		WithArgs("guild-1", `dra\_\%`, int32(ports.SpotsLikeLimit)).
-		WillReturnRows(newGuildSpotRows().AddRow(int64(1), "Dragon Lords", time.Now(), "guild-1", nil))
+		WillReturnRows(newGuildSpotRows().AddRow(int64(1), "Dragon Lords", time.Now(), "guild-1", nil, nil, nil))
 	repo := NewSpotRepository(mock)
 
 	// when
@@ -135,7 +138,7 @@ func TestSelectGuildSpotByID(t *testing.T) {
 	mock := newSpotMock(t)
 	mock.ExpectQuery("WHERE id = \\$1").
 		WithArgs(int64(7), "guild-1").
-		WillReturnRows(newGuildSpotRows().AddRow(int64(7), "Hero Cave", time.Now(), "guild-1", nil))
+		WillReturnRows(newGuildSpotRows().AddRow(int64(7), "Hero Cave", time.Now(), "guild-1", nil, nil, nil))
 	mock.ExpectQuery("WHERE id = \\$1").
 		WithArgs(int64(8), "guild-1").
 		WillReturnError(pgx.ErrNoRows)
@@ -156,29 +159,31 @@ func TestInsertSpot(t *testing.T) {
 	// given
 	mock := newSpotMock(t)
 	mock.ExpectQuery("INSERT INTO web_spot").
-		WithArgs("Hero Cave", "guild-1").
-		WillReturnRows(newGuildSpotRows().AddRow(int64(9), "Hero Cave", time.Now(), "guild-1", nil))
+		WithArgs("Hero Cave", "guild-1", "edron", "https://img.test/hc.png").
+		WillReturnRows(newGuildSpotRows().AddRow(int64(9), "Hero Cave", time.Now(), "guild-1", nil, "edron", "https://img.test/hc.png"))
 	repo := NewSpotRepository(mock)
 
 	// when
-	s, err := repo.InsertSpot(context.Background(), "guild-1", "Hero Cave")
+	s, err := repo.InsertSpot(context.Background(), "guild-1", spot.Fields{Name: "Hero Cave", Region: "edron", ImageURL: "https://img.test/hc.png"})
 
 	// then
 	require.NoError(t, err)
 	assert.Equal(t, int64(9), s.ID)
 	assert.Equal(t, "guild-1", s.GuildID)
+	assert.Equal(t, "edron", s.Region)
+	assert.Equal(t, "https://img.test/hc.png", s.ImageURL)
 }
 
 func TestInsertSpot_Duplicate(t *testing.T) {
 	// given
 	mock := newSpotMock(t)
 	mock.ExpectQuery("INSERT INTO web_spot").
-		WithArgs("Hero Cave", "guild-1").
+		WithArgs("Hero Cave", "guild-1", "", "").
 		WillReturnError(&pgconn.PgError{Code: "23505"})
 	repo := NewSpotRepository(mock)
 
 	// when
-	s, err := repo.InsertSpot(context.Background(), "guild-1", "Hero Cave")
+	s, err := repo.InsertSpot(context.Background(), "guild-1", spot.Fields{Name: "Hero Cave"})
 
 	// then
 	assert.Nil(t, s)
@@ -191,11 +196,11 @@ func TestSpotMutations_RowsAffected(t *testing.T) {
 		args []any
 		call func(repo *SpotRepository) error
 	}{
-		"rename": {
+		"update": {
 			sql:  "UPDATE web_spot SET name",
-			args: []any{"New", int64(1), "guild-1"},
+			args: []any{"New", "zao", "https://img.test/x.png", int64(1), "guild-1"},
 			call: func(repo *SpotRepository) error {
-				return repo.RenameSpot(context.Background(), "guild-1", 1, "New")
+				return repo.UpdateSpot(context.Background(), "guild-1", 1, spot.Fields{Name: "New", Region: "zao", ImageURL: "https://img.test/x.png"})
 			},
 		},
 		"archive": {
@@ -234,16 +239,16 @@ func TestSpotMutations_RowsAffected(t *testing.T) {
 	}
 }
 
-func TestRenameSpot_Duplicate(t *testing.T) {
+func TestUpdateSpot_Duplicate(t *testing.T) {
 	// given
 	mock := newSpotMock(t)
 	mock.ExpectExec("UPDATE web_spot SET name").
-		WithArgs("Taken", int64(1), "guild-1").
+		WithArgs("Taken", "", "", int64(1), "guild-1").
 		WillReturnError(&pgconn.PgError{Code: "23505"})
 	repo := NewSpotRepository(mock)
 
 	// when
-	err := repo.RenameSpot(context.Background(), "guild-1", 1, "Taken")
+	err := repo.UpdateSpot(context.Background(), "guild-1", 1, spot.Fields{Name: "Taken"})
 
 	// then
 	assert.ErrorIs(t, err, ports.ErrDuplicate)
@@ -284,8 +289,9 @@ func TestSelectGuildSpotList(t *testing.T) {
 	archivedAt := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
 	mock.ExpectQuery("CROSS JOIN LATERAL").
 		WithArgs("guild-1", true, `50\%`).
-		WillReturnRows(pgxmock.NewRows([]string{"id", "name", "created_at", "guild_id", "archived_at", "total", "upcoming"}).
-			AddRow(int64(4), "50% Cave", pgtype.Timestamptz{Time: archivedAt, Valid: true}, pgtype.Text{String: "guild-1", Valid: true}, pgtype.Timestamptz{Time: archivedAt, Valid: true}, int64(3), int64(1)))
+		WillReturnRows(pgxmock.NewRows([]string{"id", "name", "created_at", "guild_id", "archived_at", "region", "image_url", "total", "upcoming"}).
+			AddRow(int64(4), "50% Cave", pgtype.Timestamptz{Time: archivedAt, Valid: true}, pgtype.Text{String: "guild-1", Valid: true}, pgtype.Timestamptz{Time: archivedAt, Valid: true},
+				pgtype.Text{String: "zao", Valid: true}, pgtype.Text{String: "https://img.test/c.png", Valid: true}, int64(3), int64(1)))
 	repo := NewSpotRepository(mock)
 
 	// when
@@ -297,6 +303,8 @@ func TestSelectGuildSpotList(t *testing.T) {
 	assert.Equal(t, "50% Cave", list[0].Name)
 	assert.True(t, list[0].IsArchived())
 	assert.Equal(t, spot.ReservationCounts{Total: 3, Upcoming: 1}, list[0].Reservations)
+	assert.Equal(t, "zao", list[0].Region)
+	assert.Equal(t, "https://img.test/c.png", list[0].ImageURL)
 }
 
 func TestSelectGuildSpotList_Error(t *testing.T) {
@@ -338,12 +346,12 @@ func TestInsertSpotsIgnoreDuplicates(t *testing.T) {
 	mock := newSpotMock(t)
 	names := []string{"Dragon Lords", "Hero Cave"}
 	mock.ExpectExec("ON CONFLICT \\(guild_id, lower\\(name\\)\\) WHERE archived_at IS NULL DO NOTHING").
-		WithArgs("guild-1", names).
+		WithArgs("guild-1", names, []string{"darama", ""}).
 		WillReturnResult(pgxmock.NewResult("INSERT", 1))
 	repo := NewSpotRepository(mock)
 
-	// when
-	inserted, err := repo.InsertSpotsIgnoreDuplicates(context.Background(), "guild-1", names)
+	// when: a missing region is no region
+	inserted, err := repo.InsertSpotsIgnoreDuplicates(context.Background(), "guild-1", names, []string{"darama"})
 
 	// then
 	require.NoError(t, err)
@@ -356,7 +364,7 @@ func TestInsertSpotsIgnoreDuplicates_NoNamesSkipsQuery(t *testing.T) {
 	repo := NewSpotRepository(mock)
 
 	// when
-	inserted, err := repo.InsertSpotsIgnoreDuplicates(context.Background(), "guild-1", nil)
+	inserted, err := repo.InsertSpotsIgnoreDuplicates(context.Background(), "guild-1", nil, nil)
 
 	// then
 	require.NoError(t, err)
@@ -370,8 +378,8 @@ func TestSelectTopGuildSpots_MapsTheRanking(t *testing.T) {
 	last := time.Date(2026, 10, 1, 18, 0, 0, 0, time.UTC)
 	mock.ExpectQuery("FROM web_reservation r").
 		WithArgs("guild-1", pgtype.Timestamptz{Time: since, Valid: true}, pgtype.Text{String: "u1", Valid: true}, int32(25)).
-		WillReturnRows(pgxmock.NewRows([]string{"id", "name", "created_at", "guild_id", "archived_at", "bookings", "last_start_at"}).
-			AddRow(int64(1), "Library -1", time.Now(), "guild-1", nil, int64(7), last))
+		WillReturnRows(pgxmock.NewRows([]string{"id", "name", "created_at", "guild_id", "archived_at", "region", "image_url", "bookings", "last_start_at"}).
+			AddRow(int64(1), "Library -1", time.Now(), "guild-1", nil, "endgame-quests", nil, int64(7), last))
 	repo := NewSpotRepository(mock)
 
 	// when
@@ -382,6 +390,7 @@ func TestSelectTopGuildSpots_MapsTheRanking(t *testing.T) {
 	require.Len(t, ranked, 1)
 	assert.Equal(t, "Library -1", ranked[0].Name)
 	assert.Equal(t, int64(7), ranked[0].Bookings)
+	assert.Equal(t, "endgame-quests", ranked[0].Region)
 	assert.True(t, last.Equal(ranked[0].LastStartAt))
 }
 

@@ -41,6 +41,8 @@ func TestFormAction_RoundTrip(t *testing.T) {
 		{Kind: actionEditLengthPick, ReservationID: 5, SpotID: 7, Window: 0, StartAt: start},
 		{Kind: actionEditWindow, ReservationID: 5, SpotID: 7, Window: 2, Now: true, Length: 30 * time.Minute},
 		{Kind: actionEditSubmit, ReservationID: 5, SpotID: 7, StartAt: start, Length: 3 * time.Hour},
+		{Kind: actionBookRegion, Region: "port-hope"},
+		{Kind: actionRegionPage, Region: "other", Page: 2},
 	}
 	require.Len(t, actions, len(actionLayouts), "every action is covered")
 	for _, action := range actions {
@@ -69,6 +71,7 @@ func TestFormAction_FitsDiscordsLimit(t *testing.T) {
 			Window:        maxWindow,
 			Page:          maxPage,
 			Index:         maxIndex,
+			Region:        "endgame-quests",
 		}
 
 		// when
@@ -130,6 +133,12 @@ func TestParseFormAction_RejectsMalformedIDs(t *testing.T) {
 		"lf1:pick:1:2",
 		"lf1:retry:1830:2030:x",
 		"lf1:mbook",
+		"lf1:bookr",
+		"lf1:bookr:",
+		"lf1:bookr:atlantis",
+		"lf1:bookr:Port-Hope",
+		"lf1:rrp:zao",
+		"lf1:rrp:zao:x",
 	} {
 		t.Run(id, func(t *testing.T) {
 			// when

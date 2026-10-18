@@ -113,6 +113,7 @@ sqlc-diff: ## Verify sqlc generated code is up to date
 	@sqlc diff -f internal/infrastructure/experience/postgresql/sqlc.yaml
 	@sqlc diff -f internal/infrastructure/stats/postgresql/sqlc.yaml
 	@sqlc diff -f internal/infrastructure/loot/postgresql/sqlc.yaml
+	@sqlc diff -f internal/infrastructure/summarylayout/postgresql/sqlc.yaml
 
 migration: ## Create a goose migration: make migration name=add_x
 	@test -n "$(name)" || { echo "ERROR: set name, e.g. make migration name=add_x"; exit 1; }
@@ -141,7 +142,8 @@ test-db: ## Run the database tests (needs LETTER_TEST_DATABASE_URL)
 		./internal/infrastructure/experience/... \
 		./internal/infrastructure/loot/... \
 		./internal/infrastructure/notify/... \
-		./internal/infrastructure/stats/...
+		./internal/infrastructure/stats/... \
+		./internal/infrastructure/summarylayout/...
 	@go test -race -count=1 -tags devauth ./internal/infrastructure/devauth/...
 
 test: install-dependencies sqlc-diff lint css ## Run lint, sqlc diff and the test suite
@@ -191,6 +193,7 @@ sqlc-generate: ## Generate sqlc code
 	@sqlc generate -f internal/infrastructure/experience/postgresql/sqlc.yaml
 	@sqlc generate -f internal/infrastructure/stats/postgresql/sqlc.yaml
 	@sqlc generate -f internal/infrastructure/loot/postgresql/sqlc.yaml
+	@sqlc generate -f internal/infrastructure/summarylayout/postgresql/sqlc.yaml
 
 sqlc-vet: ## Run sqlc vet
 	@echo "INFO: Running sqlc vet"
@@ -202,6 +205,7 @@ sqlc-vet: ## Run sqlc vet
 	@sqlc vet -f internal/infrastructure/experience/postgresql/sqlc.yaml
 	@sqlc vet -f internal/infrastructure/stats/postgresql/sqlc.yaml
 	@sqlc vet -f internal/infrastructure/loot/postgresql/sqlc.yaml
+	@sqlc vet -f internal/infrastructure/summarylayout/postgresql/sqlc.yaml
 
 build: install-dependencies sqlc-generate test ## Generate, test and build both binaries
 	@make build-only

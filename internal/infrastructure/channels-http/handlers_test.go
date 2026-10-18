@@ -70,6 +70,20 @@ func TestHandleChannels(t *testing.T) {
 		assert.Contains(t, body, want)
 	}
 	assert.NotContains(t, body, "no longer on the server")
+	assert.NotContains(t, body, "Region summaries are on")
+}
+
+func TestHandleChannels_NotesTheRegionSummaries(t *testing.T) {
+	// given
+	h, m, cookie := signedIn(t, guildconfig.Config{Premium: true, RegionSummaries: true}, admin())
+	m.Settings.EXPECT().Channels(mock.Anything, guildID).Return(synced(), nil)
+
+	// when
+	rec := webtest.Serve(h, webtest.Get("/servers/g1/channels", cookie))
+
+	// then
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Contains(t, rec.Body.String(), "Region summaries are on (see Settings): this channel links the region channels.")
 }
 
 func TestHandleChannels_WarnsAboutDeletedChannel(t *testing.T) {

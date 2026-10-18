@@ -72,18 +72,26 @@ func (q *Queries) DeleteSpot(ctx context.Context, arg DeleteSpotParams) (int64, 
 }
 
 const insertSpot = `-- name: InsertSpot :one
-INSERT INTO web_spot (name, created_at, guild_id)
-VALUES ($1, now(), $2::text)
-RETURNING id, name, created_at, guild_id, archived_at
+INSERT INTO web_spot (name, created_at, guild_id, region, image_url)
+VALUES ($1, now(), $2::text, NULLIF($3::text, ''), NULLIF($4::text, ''))
+RETURNING id, name, created_at, guild_id, archived_at, region, image_url
 `
 
 type InsertSpotParams struct {
-	Name    string
-	GuildID string
+	Name     string
+	GuildID  string
+	Region   string
+	ImageUrl string
 }
 
+// An empty region or image is stored as NULL.
 func (q *Queries) InsertSpot(ctx context.Context, arg InsertSpotParams) (WebSpot, error) {
-	row := q.db.QueryRow(ctx, insertSpot, arg.Name, arg.GuildID)
+	row := q.db.QueryRow(ctx, insertSpot,
+		arg.Name,
+		arg.GuildID,
+		arg.Region,
+		arg.ImageUrl,
+	)
 	var i WebSpot
 	err := row.Scan(
 		&i.ID,
@@ -91,44 +99,28 @@ func (q *Queries) InsertSpot(ctx context.Context, arg InsertSpotParams) (WebSpot
 		&i.CreatedAt,
 		&i.GuildID,
 		&i.ArchivedAt,
+		&i.Region,
+		&i.ImageUrl,
 	)
 	return i, err
 }
 
 const insertSpotsIgnoreDuplicates = `-- name: InsertSpotsIgnoreDuplicates :execrows
-INSERT INTO web_spot (guild_id, name, created_at)
-SELECT $1::text, unnest($2::text[]), now()
+INSERT INTO web_spot (guild_id, name, region, created_at)
+SELECT $1::text, ($2::text[])[i], NULLIF(($3::text[])[i], ''), now()
+FROM generate_subscripts($2::text[], 1) AS i
 ON CONFLICT (guild_id, lower(name)) WHERE archived_at IS NULL DO NOTHING
 `
 
 type InsertSpotsIgnoreDuplicatesParams struct {
 	GuildID string
 	Names   []string
+	Regions []string
 }
 
+// regions holds one key per name, empty for none.
 func (q *Queries) InsertSpotsIgnoreDuplicates(ctx context.Context, arg InsertSpotsIgnoreDuplicatesParams) (int64, error) {
-	result, err := q.db.Exec(ctx, insertSpotsIgnoreDuplicates, arg.GuildID, arg.Names)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
-const renameSpot = `-- name: RenameSpot :execrows
-UPDATE web_spot
-SET name = $1
-WHERE id = $2
-  AND guild_id = $3::text
-`
-
-type RenameSpotParams struct {
-	Name    string
-	ID      int64
-	GuildID string
-}
-
-func (q *Queries) RenameSpot(ctx context.Context, arg RenameSpotParams) (int64, error) {
-	result, err := q.db.Exec(ctx, renameSpot, arg.Name, arg.ID, arg.GuildID)
+	result, err := q.db.Exec(ctx, insertSpotsIgnoreDuplicates, arg.GuildID, arg.Names, arg.Regions)
 	if err != nil {
 		return 0, err
 	}
@@ -157,7 +149,7 @@ func (q *Queries) RestoreSpot(ctx context.Context, arg RestoreSpotParams) (int64
 }
 
 const selectGuildSpotByID = `-- name: SelectGuildSpotByID :one
-SELECT id, name, created_at, guild_id, archived_at
+SELECT id, name, created_at, guild_id, archived_at, region, image_url
 FROM web_spot
 WHERE id = $1
   AND guild_id = $2::text
@@ -178,12 +170,14 @@ func (q *Queries) SelectGuildSpotByID(ctx context.Context, arg SelectGuildSpotBy
 		&i.CreatedAt,
 		&i.GuildID,
 		&i.ArchivedAt,
+		&i.Region,
+		&i.ImageUrl,
 	)
 	return i, err
 }
 
 const selectGuildSpotByName = `-- name: SelectGuildSpotByName :one
-SELECT id, name, created_at, guild_id, archived_at
+SELECT id, name, created_at, guild_id, archived_at, region, image_url
 FROM web_spot
 WHERE guild_id = $1::text
   AND archived_at IS NULL
@@ -205,12 +199,14 @@ func (q *Queries) SelectGuildSpotByName(ctx context.Context, arg SelectGuildSpot
 		&i.CreatedAt,
 		&i.GuildID,
 		&i.ArchivedAt,
+		&i.Region,
+		&i.ImageUrl,
 	)
 	return i, err
 }
 
 const selectGuildSpotList = `-- name: SelectGuildSpotList :many
-SELECT s.id, s.name, s.created_at, s.guild_id, s.archived_at, c.total, c.upcoming
+SELECT s.id, s.name, s.created_at, s.guild_id, s.archived_at, s.region, s.image_url, c.total, c.upcoming
 FROM web_spot s
   CROSS JOIN LATERAL (
     SELECT count(*) AS total,
@@ -236,6 +232,8 @@ type SelectGuildSpotListRow struct {
 	CreatedAt  pgtype.Timestamptz
 	GuildID    pgtype.Text
 	ArchivedAt pgtype.Timestamptz
+	Region     pgtype.Text
+	ImageUrl   pgtype.Text
 	Total      int64
 	Upcoming   int64
 }
@@ -257,6 +255,8 @@ func (q *Queries) SelectGuildSpotList(ctx context.Context, arg SelectGuildSpotLi
 			&i.CreatedAt,
 			&i.GuildID,
 			&i.ArchivedAt,
+			&i.Region,
+			&i.ImageUrl,
 			&i.Total,
 			&i.Upcoming,
 		); err != nil {
@@ -271,7 +271,7 @@ func (q *Queries) SelectGuildSpotList(ctx context.Context, arg SelectGuildSpotLi
 }
 
 const selectGuildSpots = `-- name: SelectGuildSpots :many
-SELECT id, name, created_at, guild_id, archived_at
+SELECT id, name, created_at, guild_id, archived_at, region, image_url
 FROM web_spot
 WHERE guild_id = $1::text
   AND ($2::boolean OR archived_at IS NULL)
@@ -298,6 +298,8 @@ func (q *Queries) SelectGuildSpots(ctx context.Context, arg SelectGuildSpotsPara
 			&i.CreatedAt,
 			&i.GuildID,
 			&i.ArchivedAt,
+			&i.Region,
+			&i.ImageUrl,
 		); err != nil {
 			return nil, err
 		}
@@ -310,7 +312,7 @@ func (q *Queries) SelectGuildSpots(ctx context.Context, arg SelectGuildSpotsPara
 }
 
 const selectGuildSpotsLike = `-- name: SelectGuildSpotsLike :many
-SELECT id, name, created_at, guild_id, archived_at
+SELECT id, name, created_at, guild_id, archived_at, region, image_url
 FROM web_spot
 WHERE guild_id = $1::text
   AND archived_at IS NULL
@@ -340,6 +342,8 @@ func (q *Queries) SelectGuildSpotsLike(ctx context.Context, arg SelectGuildSpots
 			&i.CreatedAt,
 			&i.GuildID,
 			&i.ArchivedAt,
+			&i.Region,
+			&i.ImageUrl,
 		); err != nil {
 			return nil, err
 		}
@@ -379,7 +383,7 @@ func (q *Queries) SelectSpotReservationCounts(ctx context.Context, arg SelectSpo
 }
 
 const selectTopGuildSpots = `-- name: SelectTopGuildSpots :many
-SELECT s.id, s.name, s.created_at, s.guild_id, s.archived_at,
+SELECT s.id, s.name, s.created_at, s.guild_id, s.archived_at, s.region, s.image_url,
   count(r.id) AS bookings,
   max(r.start_at)::timestamptz AS last_start_at
 FROM web_reservation r
@@ -389,7 +393,7 @@ WHERE r.guild_id = $1::text
   AND s.archived_at IS NULL
   AND r.start_at >= $2::timestamptz
   AND ($3::text IS NULL OR r.author_discord_id = $3::text)
-GROUP BY s.id, s.name, s.created_at, s.guild_id, s.archived_at
+GROUP BY s.id, s.name, s.created_at, s.guild_id, s.archived_at, s.region, s.image_url
 ORDER BY bookings DESC, last_start_at DESC, s.id
 LIMIT $4::int
 `
@@ -407,6 +411,8 @@ type SelectTopGuildSpotsRow struct {
 	CreatedAt   pgtype.Timestamptz
 	GuildID     pgtype.Text
 	ArchivedAt  pgtype.Timestamptz
+	Region      pgtype.Text
+	ImageUrl    pgtype.Text
 	Bookings    int64
 	LastStartAt pgtype.Timestamptz
 }
@@ -432,6 +438,8 @@ func (q *Queries) SelectTopGuildSpots(ctx context.Context, arg SelectTopGuildSpo
 			&i.CreatedAt,
 			&i.GuildID,
 			&i.ArchivedAt,
+			&i.Region,
+			&i.ImageUrl,
 			&i.Bookings,
 			&i.LastStartAt,
 		); err != nil {
@@ -443,4 +451,35 @@ func (q *Queries) SelectTopGuildSpots(ctx context.Context, arg SelectTopGuildSpo
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateSpot = `-- name: UpdateSpot :execrows
+UPDATE web_spot
+SET name = $1,
+  region = NULLIF($2::text, ''),
+  image_url = NULLIF($3::text, '')
+WHERE id = $4
+  AND guild_id = $5::text
+`
+
+type UpdateSpotParams struct {
+	Name     string
+	Region   string
+	ImageUrl string
+	ID       int64
+	GuildID  string
+}
+
+func (q *Queries) UpdateSpot(ctx context.Context, arg UpdateSpotParams) (int64, error) {
+	result, err := q.db.Exec(ctx, updateSpot,
+		arg.Name,
+		arg.Region,
+		arg.ImageUrl,
+		arg.ID,
+		arg.GuildID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

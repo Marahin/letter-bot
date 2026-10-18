@@ -152,6 +152,31 @@ func TestSetChannels_StoresAndSignals(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestSetRegionSummaries_StoresAndSignals(t *testing.T) {
+	// given
+	f := newFixture(t)
+	f.configs.EXPECT().SetRegionSummaries(mock.Anything, guildID, false).Return(nil)
+	f.notifier.EXPECT().SummaryChanged(mock.Anything, guildID).Return(errors.New("notify failed"))
+
+	// when
+	err := f.svc.SetRegionSummaries(context.Background(), guildID, false)
+
+	// then
+	assert.NoError(t, err)
+}
+
+func TestSetRegionSummaries_StoreError(t *testing.T) {
+	// given
+	f := newFixture(t)
+	f.configs.EXPECT().SetRegionSummaries(mock.Anything, guildID, true).Return(errors.New("db down"))
+
+	// when
+	err := f.svc.SetRegionSummaries(context.Background(), guildID, true)
+
+	// then
+	assert.ErrorContains(t, err, "db down")
+}
+
 func TestSetChannels_RefusesUnsyncedChannel(t *testing.T) {
 	cases := map[string][2]string{
 		"voice channel":   {"v1", ""},

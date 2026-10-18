@@ -27,8 +27,10 @@ type ClippedOrRemovedReservation struct {
 }
 
 type Spot struct {
-	ID   int64
-	Name string
+	ID       int64
+	Name     string
+	Region   string
+	ImageURL string
 }
 
 type ReservationWithSpot struct {

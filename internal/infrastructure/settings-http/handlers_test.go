@@ -73,6 +73,7 @@ func TestHandleSettings_RendersEverySection(t *testing.T) {
 		"None checked: members with the @Postman role can overbook.",
 		`hx-post="/servers/g1/settings/ranks/overbook"`,
 		`hx-post="/servers/g1/settings/refresh"`,
+		"Summary per region", `hx-post="/servers/g1/settings/region-summaries"`, "Post a summary channel per region",
 		"Leader", "background-color:#f97316",
 		"guild_id=g1",
 		`name="world" value="Celesta"`,
@@ -146,6 +147,7 @@ func TestRoutes_ManagerIsForbidden(t *testing.T) {
 		"ranks":   webtest.Post("/servers/g1/settings/ranks/manage", url.Values{"role_ids": {"r1"}}, nil),
 		"world":   webtest.Post("/servers/g1/settings/world", url.Values{"world": {"Antica"}}, nil),
 		"refresh": webtest.Post("/servers/g1/settings/refresh", nil, nil),
+		"regions": webtest.Post("/servers/g1/settings/region-summaries", url.Values{"enabled": {"1"}}, nil),
 	}
 	for name, r := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -274,6 +276,48 @@ func TestHandleSetWorld(t *testing.T) {
 
 			// when
 			rec := webtest.Serve(h, htmx(webtest.Post("/servers/g1/settings/world", url.Values{"world": {"Celesta"}}, cookie)))
+
+			// then
+			assert.Equal(t, tc.code, rec.Code)
+			assert.Contains(t, rec.Body.String(), tc.want)
+		})
+	}
+}
+
+func TestHandleSettings_RegionSummariesOnIsChecked(t *testing.T) {
+	// given
+	h, m, cookie := signedInAdmin(t, guildconfig.Config{Premium: true, RegionSummaries: true})
+	m.Settings.EXPECT().Roles(mock.Anything, guildID).Return(nil, nil)
+	m.Settings.EXPECT().World(mock.Anything, guildID).Return("", nil)
+
+	// when
+	rec := webtest.Serve(h, webtest.Get("/servers/g1/settings", cookie))
+
+	// then
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Contains(t, rec.Body.String(), `name="enabled" value="1" checked`)
+}
+
+func TestHandleSetRegionSummaries(t *testing.T) {
+	cases := map[string]struct {
+		form    url.Values
+		enabled bool
+		err     error
+		code    int
+		want    string
+	}{
+		"on":    {url.Values{"enabled": {"1"}}, true, nil, http.StatusOK, "Region summaries on."},
+		"off":   {url.Values{}, false, nil, http.StatusOK, "Region summaries off."},
+		"error": {url.Values{"enabled": {"1"}}, true, errors.New("db down"), http.StatusInternalServerError, ""},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			// given
+			h, m, cookie := signedInAdmin(t, guildconfig.Config{Premium: true})
+			m.Settings.EXPECT().SetRegionSummaries(mock.Anything, guildID, tc.enabled).Return(tc.err)
+
+			// when
+			rec := webtest.Serve(h, htmx(webtest.Post("/servers/g1/settings/region-summaries", tc.form, cookie)))
 
 			// then
 			assert.Equal(t, tc.code, rec.Code)

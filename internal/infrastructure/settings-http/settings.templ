@@ -22,6 +22,7 @@ templ Settings(baseURL string, guild guildconfig.Config, roles []*role.Role, wor
 			@ReinviteBot(inviteURL)
 			@RefreshData(guild)
 			@WorldSettings(guild, world)
+			@RegionSummariesSettings(guild)
 			for _, kind := range guildconfig.RoleKinds {
 				@RankSection(guild, roles, kind)
 			}
@@ -124,6 +125,37 @@ templ WorldStatus() {
 // WorldInvalidStatus refuses an empty or unknown world.
 templ WorldInvalidStatus() {
 	<span class="text-amber-400">{ i18n.T(ctx, "settings.world.invalid") }</span>
+}
+
+// RegionSummariesSettings switches between one summary channel per region and
+// one summary. The markup follows scxmanager's SessionEventsSettings.
+templ RegionSummariesSettings(guild guildconfig.Config) {
+	<section class="mt-12">
+		<h2 class="font-display text-xl font-semibold text-zone-100">{ i18n.T(ctx, "settings.region_summaries.heading") }</h2>
+		<p class="mt-1 max-w-2xl text-sm leading-relaxed text-zone-400">{ i18n.T(ctx, "settings.region_summaries.body") }</p>
+		<form
+			hx-post={ web.GuildPath(guild.GuildID, "/settings/region-summaries") }
+			hx-target="#region-summaries-status"
+			hx-swap="innerHTML"
+			class="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-zone-800 bg-zone-900 shadow-glass p-4"
+		>
+			<label class="flex items-center gap-2.5 text-sm text-zone-300">
+				<input type="checkbox" name="enabled" value="1" checked?={ guild.RegionSummaries } class="h-4 w-4 rounded border border-zone-600 bg-zone-850 accent-signal focus:ring-2 focus:ring-signal/30"/>
+				{ i18n.T(ctx, "settings.region_summaries.toggle") }
+			</label>
+			<button class="rounded-md bg-signal px-4 py-1.5 text-sm font-semibold text-zone-950 transition hover:bg-signal-bright">{ i18n.T(ctx, "settings.form.save") }</button>
+			<span id="region-summaries-status" aria-live="polite" class="text-sm text-zone-400"></span>
+		</form>
+	</section>
+}
+
+// RegionSummariesStatus confirms the saved choice.
+templ RegionSummariesStatus(enabled bool) {
+	if enabled {
+		<span class="text-emerald-400">{ i18n.T(ctx, "settings.region_summaries.enabled") }</span>
+	} else {
+		<span class="text-emerald-400">{ i18n.T(ctx, "settings.region_summaries.disabled") }</span>
+	}
 }
 
 // RankSection is one rank list as a checkbox grid over the synced roles. The

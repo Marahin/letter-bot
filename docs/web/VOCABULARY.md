@@ -14,6 +14,9 @@ Polish column is the settled wording of `pl.json` (see
 | Free-text author | Autor wpisany ręcznie | `author_discord_id = ''` | An author that a manager typed, with no Discord account. No quota, no owner. |
 | Overbook | Nadpisz | `Overbook`, `ClippedOrRemovedReservation` | Book over existing reservations. They are shortened or removed, and their authors get a Discord message. |
 | Summary | Podsumowanie | `SummaryService`, `letter-summary` | The bot's message with the upcoming reservations and a chart, in the summary channel. |
+| Region | Region | `regions`, `web_spot.region` | A group of respawns for the summary, e.g. "Port Hope & Tiquanda". A respawn without one is in "Other" (Inne). |
+| Region channel | Kanał regionu | `summary_region_channels`, `letter-<key>` | The bot's channel with the summary of one region, in the category "Letter respawns". |
+| Respawn image | Obrazek respa | `web_spot.image_url` | An optional picture of a respawn, shown in its region channel. |
 | Booking announcement | Ogłoszenie rezerwacji (bot only, in English) | `letter_booked`, `BookingMade` | The bot's public message in the command channel about a new booking. |
 | Booking wizard | Kreator rezerwacji (bot only, in English) | `reservationforms`, `RespawnPicker`, `TimePicker` | The bot's private message with lists where a member picks the respawn, the start and the length to book or edit a reservation. |
 | My reservations | Moje rezerwacje (bot only, in English) | `actionMine`, `/reservations` | The bot's private list of the member's upcoming reservations, with Edit and Cancel buttons. |

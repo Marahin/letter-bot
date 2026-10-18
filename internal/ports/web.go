@@ -84,6 +84,8 @@ type GuildSettingsService interface {
 	SetChannels(ctx context.Context, guildID, commandChannelID, summaryChannelID string) error
 	SetRoleIDs(ctx context.Context, guildID string, kind guildconfig.RoleKind, roleIDs []string) error
 	SetWorld(ctx context.Context, guildID, world string) error
+	// SetRegionSummaries switches between one summary per region and one summary.
+	SetRegionSummaries(ctx context.Context, guildID string, enabled bool) error
 	// RequestResync asks the bot to sync channels and roles again. During the
 	// cooldown it does nothing and returns the time left.
 	RequestResync(ctx context.Context, guildID string) (retryAfter time.Duration, err error)
@@ -92,8 +94,9 @@ type GuildSettingsService interface {
 // SpotService manages the respawn list of a guild. Every id is checked against the guild.
 type SpotService interface {
 	List(ctx context.Context, guildID string, filter spot.ListFilter) (*spot.List, error)
-	Create(ctx context.Context, guildID, name string) (*spot.Spot, error)
-	Rename(ctx context.Context, guildID string, id int64, name string) error
+	Create(ctx context.Context, guildID string, f spot.Fields) (*spot.Spot, error)
+	// Update sets the name, region and image of a spot.
+	Update(ctx context.Context, guildID string, id int64, f spot.Fields) error
 	// Remove deletes a spot without reservations and archives any other, so history and stats stay.
 	Remove(ctx context.Context, guildID string, id int64) (spot.RemoveOutcome, error)
 	Restore(ctx context.Context, guildID string, id int64) error

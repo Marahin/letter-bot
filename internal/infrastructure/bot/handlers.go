@@ -17,6 +17,7 @@ import (
 	"spot-assistant/internal/core/dto/guildconfig"
 	"spot-assistant/internal/core/dto/summary"
 	"spot-assistant/internal/core/permission"
+	"spot-assistant/internal/core/regions"
 	"spot-assistant/internal/core/reservationforms"
 	"spot-assistant/internal/core/worlds"
 	"spot-assistant/internal/ports"
@@ -113,7 +114,7 @@ func (b *Bot) ChannelUpdate(s *discordgo.Session, c *discordgo.ChannelUpdate) {
 
 func (b *Bot) ChannelDelete(s *discordgo.Session, c *discordgo.ChannelDelete) {
 	b.scheduleSync(c.GuildID)
-	if b.forgetLegacyChannel(c.GuildID, c.ID) {
+	if b.forgetLegacyChannel(c.GuildID, c.ID) || isSummaryChannel(c.Channel) {
 		b.RefreshGuildLetter(c.GuildID)
 	}
 }
@@ -521,4 +522,10 @@ func (b *Bot) SetWorldAutocomplete(i *discordgo.InteractionCreate) error {
 	return b.interactionRespond(i, &discordgo.InteractionResponseData{
 		Choices: filtered,
 	}, discordgo.InteractionApplicationCommandAutocompleteResult)
+}
+
+// isSummaryChannel tells a channel the region summaries may use. The pass
+// checks against what it stored, so a false match costs one quiet pass.
+func isSummaryChannel(c *discordgo.Channel) bool {
+	return c != nil && (strings.HasPrefix(c.Name, regions.ChannelPrefix) || c.Name == regions.CategoryName)
 }

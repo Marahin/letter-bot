@@ -112,6 +112,10 @@ func (b *Bot) runFormAction(i *discordgo.InteractionCreate, customID string, sel
 		b.deferred(ctx, i, openKind(i), func(req *formRequest) formView {
 			return b.respawnStep(ctx, req, formAction{}, "")
 		})
+	case actionBookRegion:
+		b.deferred(ctx, i, openKind(i), func(req *formRequest) formView {
+			return b.respawnStep(ctx, req, formAction{Region: action.Region}, "")
+		})
 	default:
 		b.deferred(ctx, i, discordgo.InteractionResponseDeferredMessageUpdate, func(req *formRequest) formView {
 			return b.updateInPlace(ctx, req, action, selected, query)
@@ -177,7 +181,7 @@ func (b *Bot) updateInPlace(ctx context.Context, req *formRequest, action formAc
 		return b.bookDraft(ctx, req, draft)
 	case actionEdit:
 		return b.timeStep(ctx, req, formAction{ReservationID: action.ReservationID, Window: reservation.AutoWindow})
-	case actionRespawnPage, actionEditRespawnPage:
+	case actionRespawnPage, actionEditRespawnPage, actionRegionPage:
 		return b.respawnStep(ctx, req, action, "")
 	case actionRespawnPick, actionEditRespawnPick:
 		spotID, ok := selectedID(selected)
@@ -221,7 +225,7 @@ func (b *Bot) updateInPlace(ctx context.Context, req *formRequest, action formAc
 // isBookingStep tells the wizard actions of a booking, which need the reserve right.
 func isBookingStep(kind formActionKind) bool {
 	_, ok := editTwin[kind]
-	return ok
+	return ok || kind == actionRegionPage
 }
 
 func retryState(action formAction) formAction {
@@ -233,7 +237,7 @@ func (b *Bot) respawnStep(ctx context.Context, req *formRequest, state formActio
 	if !state.editing() && !req.actor.Caps.Reserve {
 		return formView{content: b.formatter.FormatFormError(booking.ErrReserveNotAllowed)}
 	}
-	picker, err := b.forms.RespawnPicker(ctx, req.guild.ID, req.actor, state.Page)
+	picker, err := b.forms.RespawnPicker(ctx, req.guild.ID, req.actor, state.Region, state.Page)
 	if err != nil {
 		b.log.Errorf("could not list respawns: %s", err)
 		return formView{content: b.formatter.FormatGenericError(err)}

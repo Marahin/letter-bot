@@ -54,7 +54,7 @@ func activeList() *spot.List {
 	created := time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC)
 	return &spot.List{
 		Spots: []spot.Listed{
-			{Spot: spot.Spot{ID: 1, Name: "Dragon Lords", CreatedAt: created}, Reservations: spot.ReservationCounts{Total: 12, Upcoming: 2}},
+			{Spot: spot.Spot{ID: 1, Name: "Dragon Lords", CreatedAt: created, Region: "darama", ImageURL: "https://img.test/dl.gif"}, Reservations: spot.ReservationCounts{Total: 12, Upcoming: 2}},
 			{Spot: spot.Spot{ID: 7, Name: "New Spot", CreatedAt: created}},
 		},
 		ActiveCount:   2,
@@ -77,13 +77,16 @@ func TestHandleList_ManagerSeesControls(t *testing.T) {
 		"Respawns", `id="spots-region"`, `id="spots-search"`,
 		"Dragon Lords", "New Spot", "02 Jan 2026",
 		`hx-post="/servers/g1/spots"`,
-		`hx-post="/servers/g1/spots/1/rename"`,
+		`hx-post="/servers/g1/spots/1/edit"`,
 		`hx-post="/servers/g1/spots/1/remove"`,
 		"Archive Dragon Lords? It has 12 reservations, so it is archived, not deleted",
 		"Its 2 upcoming reservations stay.",
 		"Delete New Spot? It has no reservations",
 		`class="letter-btn-danger`, `class="letter-btn-quiet`,
 		`href="/servers/g1/spots?tab=archived"`,
+		`<img src="https://img.test/dl.gif" alt="" loading="lazy" referrerpolicy="no-referrer" class="h-8 w-8 shrink-0 rounded bg-zone-950 object-contain p-0.5">`,
+		"Darama &amp; Krailos", "Other", `id="spot-new-region"`, `name="image_url"`, `id="spot-1-region"`,
+		"/assets/alpine.js",
 	} {
 		assert.Contains(t, body, want)
 	}
@@ -102,7 +105,7 @@ func TestHandleList_ViewerSeesNoControls(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	body := rec.Body.String()
 	assert.Contains(t, body, "Dragon Lords")
-	assert.NotContains(t, body, "/rename")
+	assert.NotContains(t, body, "/edit")
 	assert.NotContains(t, body, "/remove")
 	assert.NotContains(t, body, "New respawn")
 }
@@ -232,7 +235,7 @@ func TestHandleList_PremiumRequired(t *testing.T) {
 func TestMutations_NeedManageTier(t *testing.T) {
 	for _, target := range []string{
 		"/servers/g1/spots", "/servers/g1/spots/import",
-		"/servers/g1/spots/1/rename", "/servers/g1/spots/1/remove", "/servers/g1/spots/1/restore",
+		"/servers/g1/spots/1/edit", "/servers/g1/spots/1/remove", "/servers/g1/spots/1/restore",
 	} {
 		t.Run(target, func(t *testing.T) {
 			// given
@@ -250,11 +253,11 @@ func TestMutations_NeedManageTier(t *testing.T) {
 func TestHandleCreate_HTMXAnswersRegionWithFlash(t *testing.T) {
 	// given
 	h, m, cookie := signedIn(t, managerAccess())
-	m.Spots.EXPECT().Create(mock.Anything, guildID, " Hero Cave ").Return(&spot.Spot{ID: 12, Name: "Hero Cave"}, nil)
+	m.Spots.EXPECT().Create(mock.Anything, guildID, spot.Fields{Name: " Hero Cave ", Region: "edron", ImageURL: "https://img.test/hc.png"}).Return(&spot.Spot{ID: 12, Name: "Hero Cave"}, nil)
 	m.Spots.EXPECT().List(mock.Anything, guildID, spot.ListFilter{Query: "h"}).Return(activeList(), nil)
 
 	// when
-	rec := webtest.Serve(h, htmx(webtest.Post("/servers/g1/spots", url.Values{"name": {" Hero Cave "}, "q": {"h"}}, cookie)))
+	rec := webtest.Serve(h, htmx(webtest.Post("/servers/g1/spots", url.Values{"name": {" Hero Cave "}, "region": {"edron"}, "image_url": {"https://img.test/hc.png"}, "q": {"h"}}, cookie)))
 
 	// then
 	require.Equal(t, http.StatusOK, rec.Code)
@@ -267,7 +270,7 @@ func TestHandleCreate_HTMXAnswersRegionWithFlash(t *testing.T) {
 func TestHandleCreate_PlainPostRedirects(t *testing.T) {
 	// given
 	h, m, cookie := signedIn(t, managerAccess())
-	m.Spots.EXPECT().Create(mock.Anything, guildID, "Hero Cave").Return(&spot.Spot{ID: 12, Name: "Hero Cave"}, nil)
+	m.Spots.EXPECT().Create(mock.Anything, guildID, spot.Fields{Name: "Hero Cave"}).Return(&spot.Spot{ID: 12, Name: "Hero Cave"}, nil)
 
 	// when
 	rec := webtest.Serve(h, webtest.Post("/servers/g1/spots", url.Values{"name": {"Hero Cave"}, "tab": {"archived"}}, cookie))
@@ -277,32 +280,41 @@ func TestHandleCreate_PlainPostRedirects(t *testing.T) {
 	assert.Equal(t, "/servers/g1/spots?tab=archived", rec.Header().Get("Location"))
 }
 
-func TestHandleCreate_RefusedNameRendersInlineError(t *testing.T) {
+func TestHandleCreate_RefusedFieldRendersInlineError(t *testing.T) {
 	cases := map[string]struct {
-		err  error
-		want string
+		err     error
+		want    string
+		errorID string
 	}{
-		"empty":     {err: spots.ErrNameEmpty, want: "Enter a name."},
-		"too long":  {err: spots.ErrNameTooLong, want: "Use 120 characters or fewer."},
-		"duplicate": {err: spots.ErrDuplicateName, want: "An active respawn already has the name Hero Cave."},
+		"empty":          {err: spots.ErrNameEmpty, want: "Enter a name.", errorID: "spot-new-name-error"},
+		"too long":       {err: spots.ErrNameTooLong, want: "Use 120 characters or fewer.", errorID: "spot-new-name-error"},
+		"duplicate":      {err: spots.ErrDuplicateName, want: "An active respawn already has the name Hero Cave.", errorID: "spot-new-name-error"},
+		"region":         {err: spots.ErrUnknownRegion, want: "Select a region from the list.", errorID: "spot-new-region-error"},
+		"image":          {err: spots.ErrImageURLInvalid, want: "Enter a link that starts with http:// or https://.", errorID: "spot-new-image-error"},
+		"image too long": {err: spots.ErrImageURLTooLong, want: "Use 2,048 characters or fewer.", errorID: "spot-new-image-error"},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			// given
 			h, m, cookie := signedIn(t, managerAccess())
-			m.Spots.EXPECT().Create(mock.Anything, guildID, "Hero Cave").Return(nil, tc.err)
+			posted := spot.Fields{Name: "Hero Cave", Region: "zao", ImageURL: "ftp://img.test/a.png"}
+			m.Spots.EXPECT().Create(mock.Anything, guildID, posted).Return(nil, tc.err)
 			m.Spots.EXPECT().List(mock.Anything, guildID, spot.ListFilter{}).Return(activeList(), nil)
 
 			// when
-			rec := webtest.Serve(h, htmx(webtest.Post("/servers/g1/spots", url.Values{"name": {"Hero Cave"}}, cookie)))
+			rec := webtest.Serve(h, htmx(webtest.Post("/servers/g1/spots", url.Values{
+				"name": {"Hero Cave"}, "region": {"zao"}, "image_url": {"ftp://img.test/a.png"},
+			}, cookie)))
 
 			// then
 			require.Equal(t, http.StatusOK, rec.Code)
 			body := rec.Body.String()
 			assert.Contains(t, body, tc.want)
-			assert.Contains(t, body, `aria-describedby="spot-new-name-error"`)
+			assert.Contains(t, body, `id="`+tc.errorID+`"`)
 			assert.Contains(t, body, `role="alert"`)
 			assert.Contains(t, body, `value="Hero Cave"`)
+			assert.Contains(t, body, `value="ftp://img.test/a.png"`)
+			assert.Contains(t, body, `<input type="hidden" name="region" value="zao"`)
 		})
 	}
 }
@@ -310,7 +322,7 @@ func TestHandleCreate_RefusedNameRendersInlineError(t *testing.T) {
 func TestHandleCreate_ServiceError(t *testing.T) {
 	// given
 	h, m, cookie := signedIn(t, managerAccess())
-	m.Spots.EXPECT().Create(mock.Anything, guildID, "Hero Cave").Return(nil, errors.New("db down"))
+	m.Spots.EXPECT().Create(mock.Anything, guildID, spot.Fields{Name: "Hero Cave"}).Return(nil, errors.New("db down"))
 
 	// when
 	rec := webtest.Serve(h, webtest.Post("/servers/g1/spots", url.Values{"name": {"Hero Cave"}}, cookie))
@@ -319,28 +331,30 @@ func TestHandleCreate_ServiceError(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 }
 
-func TestHandleRename(t *testing.T) {
+func TestHandleUpdate(t *testing.T) {
 	// given
 	h, m, cookie := signedIn(t, managerAccess())
-	m.Spots.EXPECT().Rename(mock.Anything, guildID, int64(1), "Dragon Lords (north)").Return(nil)
+	m.Spots.EXPECT().Update(mock.Anything, guildID, int64(1), spot.Fields{Name: " Dragon Lords (north) ", Region: "darama", ImageURL: "https://img.test/dl.gif"}).Return(nil)
 	m.Spots.EXPECT().List(mock.Anything, guildID, spot.ListFilter{}).Return(activeList(), nil)
 
 	// when
-	rec := webtest.Serve(h, htmx(webtest.Post("/servers/g1/spots/1/rename", url.Values{"name": {" Dragon Lords (north) "}}, cookie)))
+	rec := webtest.Serve(h, htmx(webtest.Post("/servers/g1/spots/1/edit", url.Values{
+		"name": {" Dragon Lords (north) "}, "region": {"darama"}, "image_url": {"https://img.test/dl.gif"},
+	}, cookie)))
 
 	// then
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.Contains(t, rec.Body.String(), "Renamed to Dragon Lords (north).")
+	assert.Contains(t, rec.Body.String(), "Dragon Lords (north) saved.")
 }
 
-func TestHandleRename_DuplicateOpensTheEditor(t *testing.T) {
+func TestHandleUpdate_RefusedFieldOpensTheEditor(t *testing.T) {
 	// given
 	h, m, cookie := signedIn(t, managerAccess())
-	m.Spots.EXPECT().Rename(mock.Anything, guildID, int64(1), "New Spot").Return(spots.ErrDuplicateName)
+	m.Spots.EXPECT().Update(mock.Anything, guildID, int64(1), spot.Fields{Name: "New Spot", Region: "edron"}).Return(spots.ErrDuplicateName)
 	m.Spots.EXPECT().List(mock.Anything, guildID, spot.ListFilter{}).Return(activeList(), nil)
 
 	// when
-	rec := webtest.Serve(h, htmx(webtest.Post("/servers/g1/spots/1/rename", url.Values{"name": {"New Spot"}}, cookie)))
+	rec := webtest.Serve(h, htmx(webtest.Post("/servers/g1/spots/1/edit", url.Values{"name": {"New Spot"}, "region": {"edron"}}, cookie)))
 
 	// then
 	require.Equal(t, http.StatusOK, rec.Code)
@@ -348,30 +362,31 @@ func TestHandleRename_DuplicateOpensTheEditor(t *testing.T) {
 	assert.Contains(t, body, "An active respawn already has the name New Spot.")
 	assert.Contains(t, body, `<details class="group" open>`)
 	assert.Contains(t, body, `aria-describedby="spot-1-name-error"`)
+	assert.Contains(t, body, `<input type="hidden" name="region" value="edron"`)
 	assert.Equal(t, 1, strings.Count(body, " open>"), "only the refused row opens")
 }
 
-func TestHandleRename_NotFound(t *testing.T) {
+func TestHandleUpdate_NotFound(t *testing.T) {
 	// given
 	h, m, cookie := signedIn(t, managerAccess())
-	m.Spots.EXPECT().Rename(mock.Anything, guildID, int64(99), "X").Return(spots.ErrNotFound)
+	m.Spots.EXPECT().Update(mock.Anything, guildID, int64(99), spot.Fields{Name: "X"}).Return(spots.ErrNotFound)
 	m.Spots.EXPECT().List(mock.Anything, guildID, spot.ListFilter{}).Return(activeList(), nil)
 
 	// when
-	rec := webtest.Serve(h, htmx(webtest.Post("/servers/g1/spots/99/rename", url.Values{"name": {"X"}}, cookie)))
+	rec := webtest.Serve(h, htmx(webtest.Post("/servers/g1/spots/99/edit", url.Values{"name": {"X"}}, cookie)))
 
 	// then
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.Contains(t, rec.Body.String(), "This respawn does not exist any more.")
 }
 
-func TestHandleRename_Errors(t *testing.T) {
+func TestHandleUpdate_Errors(t *testing.T) {
 	t.Run("bad id", func(t *testing.T) {
 		// given
 		h, _, cookie := signedIn(t, managerAccess())
 
 		// when
-		rec := webtest.Serve(h, webtest.Post("/servers/g1/spots/abc/rename", url.Values{"name": {"X"}}, cookie))
+		rec := webtest.Serve(h, webtest.Post("/servers/g1/spots/abc/edit", url.Values{"name": {"X"}}, cookie))
 
 		// then
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -379,10 +394,10 @@ func TestHandleRename_Errors(t *testing.T) {
 	t.Run("service", func(t *testing.T) {
 		// given
 		h, m, cookie := signedIn(t, managerAccess())
-		m.Spots.EXPECT().Rename(mock.Anything, guildID, int64(1), "X").Return(errors.New("db down"))
+		m.Spots.EXPECT().Update(mock.Anything, guildID, int64(1), spot.Fields{Name: "X"}).Return(errors.New("db down"))
 
 		// when
-		rec := webtest.Serve(h, webtest.Post("/servers/g1/spots/1/rename", url.Values{"name": {"X"}}, cookie))
+		rec := webtest.Serve(h, webtest.Post("/servers/g1/spots/1/edit", url.Values{"name": {"X"}}, cookie))
 
 		// then
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)

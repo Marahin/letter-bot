@@ -107,6 +107,16 @@ func (s *Service) SetChannels(ctx context.Context, guildID, commandChannelID, su
 	return nil
 }
 
+// SetRegionSummaries stores the choice and asks the bot for a summary pass,
+// which reads the config and moves the summaries.
+func (s *Service) SetRegionSummaries(ctx context.Context, guildID string, enabled bool) error {
+	if err := s.configs.SetRegionSummaries(ctx, guildID, enabled); err != nil {
+		return fmt.Errorf("set region summaries: %w", err)
+	}
+	s.signal(guildID, "summary", s.notifier.SummaryChanged(ctx, guildID))
+	return nil
+}
+
 // SetRoleIDs validates the ids against the synced roles and stores the rank list.
 // The bot and the web read the lists on each command and request, so no signal is needed.
 func (s *Service) SetRoleIDs(ctx context.Context, guildID string, kind guildconfig.RoleKind, roleIDs []string) error {

@@ -6,12 +6,18 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/a-h/templ"
+
 	"spot-assistant/internal/core/dto/spot"
+	"spot-assistant/internal/core/regions"
 	"spot-assistant/internal/infrastructure/i18n"
 	"spot-assistant/internal/infrastructure/web"
 )
 
 const tabArchived = "archived"
+
+// spotNewID prefixes the element ids of the add form.
+const spotNewID = "spot-new"
 
 // pageView is everything the page and its region render.
 type pageView struct {
@@ -22,16 +28,27 @@ type pageView struct {
 	List      *spot.List
 	Flash     flash
 
-	CreateName  string
-	CreateError string
+	// Create holds the posted fields of a refused add.
+	Create       spot.Fields
+	CreateErrors fieldErrors
 	// FocusCreate puts the cursor back in the add field after an add.
 	FocusCreate bool
 
-	// RenameID is the spot whose rename was refused; its editor renders open.
-	RenameID    int64
-	RenameValue string
-	RenameError string
+	// EditID is the spot whose edit was refused; its editor renders open with
+	// the posted fields.
+	EditID     int64
+	Edit       spot.Fields
+	EditErrors fieldErrors
 }
+
+// fieldErrors are the inline messages of a refused spot form.
+type fieldErrors struct {
+	Name   string
+	Region string
+	Image  string
+}
+
+func (e fieldErrors) any() bool { return e.Name != "" || e.Region != "" || e.Image != "" }
 
 type flash struct {
 	Text string
@@ -113,11 +130,41 @@ func (v pageView) showImport() bool {
 	return v.CanManage && v.List != nil && v.List.Total() == 0
 }
 
-func (v pageView) renameOpen(id int64) bool { return v.RenameID == id && v.RenameError != "" }
+func (v pageView) editOpen(id int64) bool { return v.EditID == id && v.EditErrors.any() }
 
-func (v pageView) renameValue(s spot.Listed) string {
-	if v.renameOpen(s.ID) {
-		return v.RenameValue
+// editFields are what a spot's editor shows: the refused post, else the spot.
+func (v pageView) editFields(s spot.Listed) spot.Fields {
+	if v.editOpen(s.ID) {
+		return v.Edit
 	}
-	return s.Name
+	return spot.Fields{Name: s.Name, Region: s.Region, ImageURL: s.ImageURL}
 }
+
+func (v pageView) editErrors(id int64) fieldErrors {
+	if v.EditID == id {
+		return v.EditErrors
+	}
+	return fieldErrors{}
+}
+
+// regionOptions are the catalog regions, after the choice of none (Other).
+func regionOptions(ctx context.Context) []web.ComboboxOption {
+	opts := make([]web.ComboboxOption, 0, len(regions.Catalog)+1)
+	opts = append(opts, web.ComboboxOption{Value: "", Label: i18n.T(ctx, "spots.form.region_none")})
+	for _, r := range regions.Catalog {
+		opts = append(opts, web.ComboboxOption{Value: r.Key, Label: r.Name})
+	}
+	return opts
+}
+
+// regionName is the region column of a spot.
+func regionName(ctx context.Context, key string) string {
+	r := regions.Of(key)
+	if r.Key == regions.Other.Key {
+		return i18n.T(ctx, "spots.region.other")
+	}
+	return r.Name
+}
+
+// imageURL keeps a javascript: link out of the page, though the service accepts only http and https.
+func imageURL(raw string) string { return string(templ.URL(raw)) }

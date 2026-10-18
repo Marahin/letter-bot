@@ -26,7 +26,7 @@ func TestRespawnPicker(t *testing.T) {
 		Return([]spot.Ranked{ranked(1, "Banuta", 9, now), ranked(2, "Asura", 3, now)}, nil)
 
 	// when
-	picker, err := f.s.RespawnPicker(ctx, guildID, member(), 0)
+	picker, err := f.s.RespawnPicker(ctx, guildID, member(), "", 0)
 
 	// then
 	require.NoError(t, err)
@@ -38,6 +38,34 @@ func TestRespawnPicker(t *testing.T) {
 	assert.Equal(t, "Asura", picker.Groups[0].Spots[0].Name)
 }
 
+func TestRespawnPicker_RegionLimitsTheRespawnsAndTheUsual(t *testing.T) {
+	// given
+	f := newFixture(t)
+	inRegion := func(id int64, name, key string) *spot.Spot { return &spot.Spot{ID: id, Name: name, Region: key} }
+	f.spots.On("SelectGuildSpots", ctx, guildID, false).Return([]*spot.Spot{
+		inRegion(1, "Banuta", "port-hope"), inRegion(2, "Asura", "port-hope"), inRegion(3, "Hero Cave", "edron"), inRegion(4, "Mystery", ""),
+	}, nil)
+	edronRanked := ranked(3, "Hero Cave", 8, now)
+	edronRanked.Region = "edron"
+	banutaRanked := ranked(1, "Banuta", 4, now)
+	banutaRanked.Region = "port-hope"
+	f.spots.On("SelectTopGuildSpots", ctx, guildID, "u1", now.Add(-UsualPeriod), SelectOptions).Return([]spot.Ranked{edronRanked, banutaRanked}, nil)
+	f.spots.On("SelectTopGuildSpots", ctx, guildID, "", now.Add(-PopularPeriod), SelectOptions).Return([]spot.Ranked{edronRanked}, nil)
+
+	// when
+	portHope, err := f.s.RespawnPicker(ctx, guildID, member(), "port-hope", 0)
+	other, otherErr := f.s.RespawnPicker(ctx, guildID, member(), "other", 0)
+
+	// then
+	require.NoError(t, errors.Join(err, otherErr))
+	assert.Equal(t, "Port Hope & Tiquanda", portHope.Region.Name)
+	assert.Equal(t, []reservation.UsualRespawn{{Spot: reservation.Spot{ID: 1, Name: "Banuta"}, Bookings: 4}}, portHope.Usual)
+	require.Len(t, portHope.Groups, 1)
+	assert.Equal(t, []reservation.Spot{{ID: 2, Name: "Asura"}, {ID: 1, Name: "Banuta"}}, portHope.Groups[0].Spots)
+	assert.Empty(t, other.Usual)
+	assert.Equal(t, []reservation.Spot{{ID: 4, Name: "Mystery"}}, other.Groups[0].Spots)
+}
+
 func TestRespawnPicker_WithoutAUserAsksOnlyForPopular(t *testing.T) {
 	// given
 	f := newFixture(t)
@@ -45,7 +73,7 @@ func TestRespawnPicker_WithoutAUserAsksOnlyForPopular(t *testing.T) {
 	f.spots.On("SelectTopGuildSpots", ctx, guildID, "", mock.Anything, SelectOptions).Return(nil, nil)
 
 	// when
-	picker, err := f.s.RespawnPicker(ctx, guildID, reservation.Actor{}, 3)
+	picker, err := f.s.RespawnPicker(ctx, guildID, reservation.Actor{}, "", 3)
 
 	// then
 	require.NoError(t, err)
@@ -79,7 +107,7 @@ func TestRespawnPicker_Errors(t *testing.T) {
 			tt.setup(f)
 
 			// when
-			_, err := f.s.RespawnPicker(ctx, guildID, member(), 0)
+			_, err := f.s.RespawnPicker(ctx, guildID, member(), "", 0)
 
 			// then
 			assert.ErrorIs(t, err, boom)

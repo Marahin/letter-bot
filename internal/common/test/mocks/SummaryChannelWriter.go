@@ -47,6 +47,83 @@ func (_m *MockSummaryChannelWriter) EXPECT() *MockSummaryChannelWriter_Expecter 
 	return &MockSummaryChannelWriter_Expecter{mock: &_m.Mock}
 }
 
+// ChannelDelete provides a mock function for the type MockSummaryChannelWriter
+func (_mock *MockSummaryChannelWriter) ChannelDelete(channelID string, options ...discordgo.RequestOption) (*discordgo.Channel, error) {
+	var tmpRet mock.Arguments
+	if len(options) > 0 {
+		tmpRet = _mock.Called(channelID, options)
+	} else {
+		tmpRet = _mock.Called(channelID)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for ChannelDelete")
+	}
+
+	var r0 *discordgo.Channel
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string, ...discordgo.RequestOption) (*discordgo.Channel, error)); ok {
+		return returnFunc(channelID, options...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string, ...discordgo.RequestOption) *discordgo.Channel); ok {
+		r0 = returnFunc(channelID, options...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*discordgo.Channel)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(string, ...discordgo.RequestOption) error); ok {
+		r1 = returnFunc(channelID, options...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockSummaryChannelWriter_ChannelDelete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ChannelDelete'
+type MockSummaryChannelWriter_ChannelDelete_Call struct {
+	*mock.Call
+}
+
+// ChannelDelete is a helper method to define mock.On call
+//   - channelID string
+//   - options ...discordgo.RequestOption
+func (_e *MockSummaryChannelWriter_Expecter) ChannelDelete(channelID any, options ...any) *MockSummaryChannelWriter_ChannelDelete_Call {
+	return &MockSummaryChannelWriter_ChannelDelete_Call{Call: _e.mock.On("ChannelDelete",
+		append([]any{channelID}, options...)...)}
+}
+
+func (_c *MockSummaryChannelWriter_ChannelDelete_Call) Run(run func(channelID string, options ...discordgo.RequestOption)) *MockSummaryChannelWriter_ChannelDelete_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 []discordgo.RequestOption
+		var variadicArgs []discordgo.RequestOption
+		if len(args) > 1 {
+			variadicArgs = args[1].([]discordgo.RequestOption)
+		}
+		arg1 = variadicArgs
+		run(
+			arg0,
+			arg1...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSummaryChannelWriter_ChannelDelete_Call) Return(channel *discordgo.Channel, err error) *MockSummaryChannelWriter_ChannelDelete_Call {
+	_c.Call.Return(channel, err)
+	return _c
+}
+
+func (_c *MockSummaryChannelWriter_ChannelDelete_Call) RunAndReturn(run func(channelID string, options ...discordgo.RequestOption) (*discordgo.Channel, error)) *MockSummaryChannelWriter_ChannelDelete_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ChannelFileSend provides a mock function for the type MockSummaryChannelWriter
 func (_mock *MockSummaryChannelWriter) ChannelFileSend(channelID string, name string, r io.Reader, options ...discordgo.RequestOption) (*discordgo.Message, error) {
 	var tmpRet mock.Arguments
@@ -204,6 +281,83 @@ func (_c *MockSummaryChannelWriter_ChannelMessageDelete_Call) Return(err error) 
 }
 
 func (_c *MockSummaryChannelWriter_ChannelMessageDelete_Call) RunAndReturn(run func(channelID string, messageID string, options ...discordgo.RequestOption) error) *MockSummaryChannelWriter_ChannelMessageDelete_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ChannelMessageEditComplex provides a mock function for the type MockSummaryChannelWriter
+func (_mock *MockSummaryChannelWriter) ChannelMessageEditComplex(m *discordgo.MessageEdit, options ...discordgo.RequestOption) (*discordgo.Message, error) {
+	var tmpRet mock.Arguments
+	if len(options) > 0 {
+		tmpRet = _mock.Called(m, options)
+	} else {
+		tmpRet = _mock.Called(m)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for ChannelMessageEditComplex")
+	}
+
+	var r0 *discordgo.Message
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(*discordgo.MessageEdit, ...discordgo.RequestOption) (*discordgo.Message, error)); ok {
+		return returnFunc(m, options...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(*discordgo.MessageEdit, ...discordgo.RequestOption) *discordgo.Message); ok {
+		r0 = returnFunc(m, options...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*discordgo.Message)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(*discordgo.MessageEdit, ...discordgo.RequestOption) error); ok {
+		r1 = returnFunc(m, options...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockSummaryChannelWriter_ChannelMessageEditComplex_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ChannelMessageEditComplex'
+type MockSummaryChannelWriter_ChannelMessageEditComplex_Call struct {
+	*mock.Call
+}
+
+// ChannelMessageEditComplex is a helper method to define mock.On call
+//   - m *discordgo.MessageEdit
+//   - options ...discordgo.RequestOption
+func (_e *MockSummaryChannelWriter_Expecter) ChannelMessageEditComplex(m any, options ...any) *MockSummaryChannelWriter_ChannelMessageEditComplex_Call {
+	return &MockSummaryChannelWriter_ChannelMessageEditComplex_Call{Call: _e.mock.On("ChannelMessageEditComplex",
+		append([]any{m}, options...)...)}
+}
+
+func (_c *MockSummaryChannelWriter_ChannelMessageEditComplex_Call) Run(run func(m *discordgo.MessageEdit, options ...discordgo.RequestOption)) *MockSummaryChannelWriter_ChannelMessageEditComplex_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *discordgo.MessageEdit
+		if args[0] != nil {
+			arg0 = args[0].(*discordgo.MessageEdit)
+		}
+		var arg1 []discordgo.RequestOption
+		var variadicArgs []discordgo.RequestOption
+		if len(args) > 1 {
+			variadicArgs = args[1].([]discordgo.RequestOption)
+		}
+		arg1 = variadicArgs
+		run(
+			arg0,
+			arg1...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSummaryChannelWriter_ChannelMessageEditComplex_Call) Return(message *discordgo.Message, err error) *MockSummaryChannelWriter_ChannelMessageEditComplex_Call {
+	_c.Call.Return(message, err)
+	return _c
+}
+
+func (_c *MockSummaryChannelWriter_ChannelMessageEditComplex_Call) RunAndReturn(run func(m *discordgo.MessageEdit, options ...discordgo.RequestOption) (*discordgo.Message, error)) *MockSummaryChannelWriter_ChannelMessageEditComplex_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -626,6 +780,89 @@ func (_c *MockSummaryChannelWriter_ChannelMessagesBulkDelete_Call) Return(err er
 }
 
 func (_c *MockSummaryChannelWriter_ChannelMessagesBulkDelete_Call) RunAndReturn(run func(channelID string, messages []string, options ...discordgo.RequestOption) error) *MockSummaryChannelWriter_ChannelMessagesBulkDelete_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GuildChannelCreateComplex provides a mock function for the type MockSummaryChannelWriter
+func (_mock *MockSummaryChannelWriter) GuildChannelCreateComplex(guildID string, data discordgo.GuildChannelCreateData, options ...discordgo.RequestOption) (*discordgo.Channel, error) {
+	var tmpRet mock.Arguments
+	if len(options) > 0 {
+		tmpRet = _mock.Called(guildID, data, options)
+	} else {
+		tmpRet = _mock.Called(guildID, data)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GuildChannelCreateComplex")
+	}
+
+	var r0 *discordgo.Channel
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string, discordgo.GuildChannelCreateData, ...discordgo.RequestOption) (*discordgo.Channel, error)); ok {
+		return returnFunc(guildID, data, options...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string, discordgo.GuildChannelCreateData, ...discordgo.RequestOption) *discordgo.Channel); ok {
+		r0 = returnFunc(guildID, data, options...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*discordgo.Channel)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(string, discordgo.GuildChannelCreateData, ...discordgo.RequestOption) error); ok {
+		r1 = returnFunc(guildID, data, options...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockSummaryChannelWriter_GuildChannelCreateComplex_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GuildChannelCreateComplex'
+type MockSummaryChannelWriter_GuildChannelCreateComplex_Call struct {
+	*mock.Call
+}
+
+// GuildChannelCreateComplex is a helper method to define mock.On call
+//   - guildID string
+//   - data discordgo.GuildChannelCreateData
+//   - options ...discordgo.RequestOption
+func (_e *MockSummaryChannelWriter_Expecter) GuildChannelCreateComplex(guildID any, data any, options ...any) *MockSummaryChannelWriter_GuildChannelCreateComplex_Call {
+	return &MockSummaryChannelWriter_GuildChannelCreateComplex_Call{Call: _e.mock.On("GuildChannelCreateComplex",
+		append([]any{guildID, data}, options...)...)}
+}
+
+func (_c *MockSummaryChannelWriter_GuildChannelCreateComplex_Call) Run(run func(guildID string, data discordgo.GuildChannelCreateData, options ...discordgo.RequestOption)) *MockSummaryChannelWriter_GuildChannelCreateComplex_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 discordgo.GuildChannelCreateData
+		if args[1] != nil {
+			arg1 = args[1].(discordgo.GuildChannelCreateData)
+		}
+		var arg2 []discordgo.RequestOption
+		var variadicArgs []discordgo.RequestOption
+		if len(args) > 2 {
+			variadicArgs = args[2].([]discordgo.RequestOption)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSummaryChannelWriter_GuildChannelCreateComplex_Call) Return(channel *discordgo.Channel, err error) *MockSummaryChannelWriter_GuildChannelCreateComplex_Call {
+	_c.Call.Return(channel, err)
+	return _c
+}
+
+func (_c *MockSummaryChannelWriter_GuildChannelCreateComplex_Call) RunAndReturn(run func(guildID string, data discordgo.GuildChannelCreateData, options ...discordgo.RequestOption) (*discordgo.Channel, error)) *MockSummaryChannelWriter_GuildChannelCreateComplex_Call {
 	_c.Call.Return(run)
 	return _c
 }

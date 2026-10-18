@@ -109,6 +109,9 @@ type InteractionGateway interface {
 // one place.
 type SummaryChannelWriter interface {
 	GuildChannels(guildID string, options ...discordgo.RequestOption) ([]*discordgo.Channel, error)
+	GuildChannelCreateComplex(guildID string, data discordgo.GuildChannelCreateData, options ...discordgo.RequestOption) (*discordgo.Channel, error)
+	ChannelDelete(channelID string, options ...discordgo.RequestOption) (*discordgo.Channel, error)
+	ChannelMessageEditComplex(m *discordgo.MessageEdit, options ...discordgo.RequestOption) (*discordgo.Message, error)
 	ChannelMessages(channelID string, limit int, beforeID, afterID, aroundID string, options ...discordgo.RequestOption) ([]*discordgo.Message, error)
 	ChannelMessagesBulkDelete(channelID string, messages []string, options ...discordgo.RequestOption) error
 	ChannelMessageDelete(channelID, messageID string, options ...discordgo.RequestOption) error
@@ -170,6 +173,9 @@ type Bot struct {
 	spots              ports.SpotRepository
 	onlineCheckService ports.OnlineCheckService
 	guildConfigs       ports.GuildConfigRepository
+	layouts            ports.SummaryLayoutRepository
+	passHooks          []SummaryPassHook
+	now                func() time.Time
 	syncer             *GuildSyncer
 	summaries          *summaryWorker
 	legacyHashes       cmap.ConcurrentMap[string, string]
@@ -205,12 +211,13 @@ func NewManager(mgr *shards.Manager, webBaseURL string, summarySrv ports.Summary
 		channelLocks:       cmap.New[*sync.RWMutex](),
 		legacyHashes:       cmap.New[string](),
 		pacer:              newPacer(),
+		now:                time.Now,
 		summarySrv:         summarySrv,
 		reservationRepo:    reservationRepo,
 		onlineCheckService: checkOnlineSrv,
 		log:                zap.NewNop().Sugar(),
 	}
-	bot.summaries = newSummaryWorker(bot.reconcileLegacy, summaryRefreshDelay)
+	bot.summaries = newSummaryWorker(bot.reconcileSummaries, summaryRefreshDelay)
 
 	bot.mgr.AddHandler(bot.GuildCreate)
 	bot.mgr.AddHandler(bot.GuildUpdate)
@@ -264,6 +271,26 @@ func (b *Bot) WithReservationForms(forms ports.ReservationFormService) *Bot {
 func (b *Bot) WithSpots(spots ports.SpotRepository) *Bot {
 	b.spots = spots
 	return b
+}
+
+// WithSummaryLayouts turns on the region summaries: without the store every
+// guild keeps the single summary.
+func (b *Bot) WithSummaryLayouts(layouts ports.SummaryLayoutRepository) *Bot {
+	b.layouts = layouts
+	return b
+}
+
+// WithSummaryPassHook adds a step to the start of each summary pass.
+func (b *Bot) WithSummaryPassHook(h SummaryPassHook) *Bot {
+	b.passHooks = append(b.passHooks, h)
+	return b
+}
+
+func (b *Bot) clock() time.Time {
+	if b.now == nil {
+		return time.Now()
+	}
+	return b.now()
 }
 
 // WithBookingFulfiller sets what is told about every new booking. It is optional.

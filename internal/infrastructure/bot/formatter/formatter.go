@@ -238,17 +238,23 @@ func (f *DiscordFormatter) FormatCancelled(r *reservation.ReservationWithSpot) s
 
 // FormatRespawnStep is the text of step 1 of the booking wizard. status, when
 // set, goes first.
-func (f *DiscordFormatter) FormatRespawnStep(editing, empty bool, status string) string {
+func (f *DiscordFormatter) FormatRespawnStep(editing, empty bool, regionName, status string) string {
 	var msg strings.Builder
 	if status != "" {
 		msg.WriteString(status + "\n\n")
 	}
-	if editing {
+	switch {
+	case editing:
 		msg.WriteString("**Change the respawn.** Pick it from a list, or search by name.")
-	} else {
+	case regionName != "":
+		fmt.Fprintf(&msg, "**Book a respawn in %s.** Pick it from a list, or search all respawns by name.", regionName)
+	default:
 		msg.WriteString("**Book a respawn.** Pick it from a list, or search by name.")
 	}
-	if empty {
+	switch {
+	case empty && regionName != "":
+		msg.WriteString("\nThis region has no respawns. Show all respawns with the button below.")
+	case empty:
 		msg.WriteString("\nThis server has no respawns yet. A manager can add them in the web panel.")
 	}
 	return msg.String()

@@ -61,6 +61,9 @@ templ Channels(baseURL string, guild guildconfig.Config, channels []*discord.Cha
 								Class:    "max-w-sm",
 							})
 							<p class="text-xs leading-relaxed text-zone-500">{ i18n.T(ctx, "channels.summary.hint") }</p>
+							if guild.RegionSummaries {
+								<p class="text-xs leading-relaxed text-zone-300">{ i18n.T(ctx, "channels.summary.regions_note") }</p>
+							}
 							if missing(channels, guild.SummaryChannelID) {
 								<p class="text-xs leading-relaxed text-amber-400">{ i18n.T(ctx, "channels.summary.missing") }</p>
 							}

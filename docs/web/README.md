@@ -57,6 +57,9 @@ premium server.
     `letter_guild_resync`. The bot then copies the channels and roles again. One
     request per server every 5 minutes (kept in the memory of the web process).
   - **Tibia world**: the same value as `/world-set`. Saving sends `letter_guild_config`.
+  - **Summary per region** (on by default): one channel per region in the
+    category "Letter respawns", and an index in the summary channel. Saving
+    sends `letter_summary_refresh`. See decisions 94 to 104.
   - Four rank lists: manage, view, reserve, overbook. With no reserve rank, everyone
     can reserve. With no overbook rank, the `Postman` role can overbook. The lists
     apply on the next request or command, so no signal is sent.
@@ -71,15 +74,18 @@ premium server.
 `/servers/{id}/spots` needs premium. Members with view access see the list.
 Managers can change it.
 
-- **Add** and **rename**: the name is trimmed and has 1 to 120 characters. Names
-  are unique among the active respawns of the server, not case-sensitive.
+- **Add** and **edit**: the name is trimmed and has 1 to 120 characters. Names
+  are unique among the active respawns of the server, not case-sensitive. The
+  region is optional (none = "Other"). The image link is optional: http or
+  https, at most 2048 characters. The image shows in the region channel.
 - **Remove**: a respawn that no reservation points at is deleted. Any other
   respawn is archived, so its history and stats stay. The button says which one
   happens ("Delete" or "Archive"), and the confirm dialog says why.
 - **Restore** moves an archived respawn back to the active list. It is refused
   when an active respawn has the same name.
 - **Import the default list** shows only on a server without respawns. It adds
-  the 208 names from `seeds/spots.sql` and skips names that exist.
+  the 208 names from `seeds/spots.sql`, with their regions, and skips names
+  that exist.
 - Every change sends `letter_summary_refresh`.
 - The upcoming count (and the name, for members who cannot rename) links to the respawn's own page,
   `/servers/{id}/spots/{spot}`: its reservations and counts.
@@ -413,6 +419,17 @@ back, so it must be safe to run again.
 
 ### Rollout order
 
+**Region summaries (migrations `20261018120000` and `20261018120100`): any
+order.** The migrations only add nullable columns, a column with a default and
+two tables. The previous bot ignores them and the previous web never writes
+them. The new bot turns the summary per region on for every premium server:
+on the first start it makes about 19 channels per server, one every 5 seconds,
+so about 2 minutes per server, one server at a time. A server whose bot lacks
+Manage Channels or Manage Roles keeps the single summary (decision 97); the
+"Re-invite bot" button in Settings fixes it.
+
+The notes below are for the first release of the web panel.
+
 **For this release, deploy the bot first.** Migration
 `20260926100100_spots_per_guild.sql` adds `web_spot.guild_id`. Three queries of
 the bot that runs in production today join `web_spot` and use an unqualified
@@ -572,8 +589,8 @@ The web's "Add Letter to Discord" button asks for the scopes
 | Embed Links | The summary embeds. |
 | Attach Files | The summary chart image. |
 | Read Message History | Find the previous summary messages. |
-| Manage Channels | Create `#letter` and `#letter-summary` when no channel is set. |
-| Manage Roles | Create the `Postman` role when no overbook rank is set. |
+| Manage Channels | Create `#letter` and `#letter-summary` when no channel is set, and the region channels. |
+| Manage Roles | Create the `Postman` role when no overbook rank is set, and set the overwrites of the region channels. |
 
 A server that added the bot before keeps its old permissions. Settings has a
 "Re-invite the bot" button that asks for the missing ones.

@@ -683,8 +683,8 @@ func (_c *MockReservationFormService_Mine_Call) RunAndReturn(run func(ctx contex
 }
 
 // RespawnPicker provides a mock function for the type MockReservationFormService
-func (_mock *MockReservationFormService) RespawnPicker(ctx context.Context, guildID string, actor reservation.Actor, page int) (*reservation.RespawnPicker, error) {
-	ret := _mock.Called(ctx, guildID, actor, page)
+func (_mock *MockReservationFormService) RespawnPicker(ctx context.Context, guildID string, actor reservation.Actor, regionKey string, page int) (*reservation.RespawnPicker, error) {
+	ret := _mock.Called(ctx, guildID, actor, regionKey, page)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RespawnPicker")
@@ -692,18 +692,18 @@ func (_mock *MockReservationFormService) RespawnPicker(ctx context.Context, guil
 
 	var r0 *reservation.RespawnPicker
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, reservation.Actor, int) (*reservation.RespawnPicker, error)); ok {
-		return returnFunc(ctx, guildID, actor, page)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, reservation.Actor, string, int) (*reservation.RespawnPicker, error)); ok {
+		return returnFunc(ctx, guildID, actor, regionKey, page)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, reservation.Actor, int) *reservation.RespawnPicker); ok {
-		r0 = returnFunc(ctx, guildID, actor, page)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, reservation.Actor, string, int) *reservation.RespawnPicker); ok {
+		r0 = returnFunc(ctx, guildID, actor, regionKey, page)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*reservation.RespawnPicker)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, reservation.Actor, int) error); ok {
-		r1 = returnFunc(ctx, guildID, actor, page)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, reservation.Actor, string, int) error); ok {
+		r1 = returnFunc(ctx, guildID, actor, regionKey, page)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -719,12 +719,13 @@ type MockReservationFormService_RespawnPicker_Call struct {
 //   - ctx context.Context
 //   - guildID string
 //   - actor reservation.Actor
+//   - regionKey string
 //   - page int
-func (_e *MockReservationFormService_Expecter) RespawnPicker(ctx any, guildID any, actor any, page any) *MockReservationFormService_RespawnPicker_Call {
-	return &MockReservationFormService_RespawnPicker_Call{Call: _e.mock.On("RespawnPicker", ctx, guildID, actor, page)}
+func (_e *MockReservationFormService_Expecter) RespawnPicker(ctx any, guildID any, actor any, regionKey any, page any) *MockReservationFormService_RespawnPicker_Call {
+	return &MockReservationFormService_RespawnPicker_Call{Call: _e.mock.On("RespawnPicker", ctx, guildID, actor, regionKey, page)}
 }
 
-func (_c *MockReservationFormService_RespawnPicker_Call) Run(run func(ctx context.Context, guildID string, actor reservation.Actor, page int)) *MockReservationFormService_RespawnPicker_Call {
+func (_c *MockReservationFormService_RespawnPicker_Call) Run(run func(ctx context.Context, guildID string, actor reservation.Actor, regionKey string, page int)) *MockReservationFormService_RespawnPicker_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -738,15 +739,20 @@ func (_c *MockReservationFormService_RespawnPicker_Call) Run(run func(ctx contex
 		if args[2] != nil {
 			arg2 = args[2].(reservation.Actor)
 		}
-		var arg3 int
+		var arg3 string
 		if args[3] != nil {
-			arg3 = args[3].(int)
+			arg3 = args[3].(string)
+		}
+		var arg4 int
+		if args[4] != nil {
+			arg4 = args[4].(int)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
+			arg4,
 		)
 	})
 	return _c
@@ -757,7 +763,7 @@ func (_c *MockReservationFormService_RespawnPicker_Call) Return(respawnPicker *r
 	return _c
 }
 
-func (_c *MockReservationFormService_RespawnPicker_Call) RunAndReturn(run func(ctx context.Context, guildID string, actor reservation.Actor, page int) (*reservation.RespawnPicker, error)) *MockReservationFormService_RespawnPicker_Call {
+func (_c *MockReservationFormService_RespawnPicker_Call) RunAndReturn(run func(ctx context.Context, guildID string, actor reservation.Actor, regionKey string, page int) (*reservation.RespawnPicker, error)) *MockReservationFormService_RespawnPicker_Call {
 	_c.Call.Return(run)
 	return _c
 }

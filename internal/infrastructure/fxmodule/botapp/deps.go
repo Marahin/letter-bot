@@ -25,6 +25,7 @@ import (
 	notifypg "spot-assistant/internal/infrastructure/notify/postgresql"
 	reservationsqlc "spot-assistant/internal/infrastructure/reservation/postgresql/sqlc"
 	spotsqlc "spot-assistant/internal/infrastructure/spot/postgresql/sqlc"
+	summarylayoutsqlc "spot-assistant/internal/infrastructure/summarylayout/postgresql/sqlc"
 	"spot-assistant/internal/infrastructure/worldapi"
 	worldnamesqlc "spot-assistant/internal/infrastructure/worldname/postgresql/sqlc"
 )
@@ -56,6 +57,7 @@ type botParams struct {
 	Spots        *spotsqlc.SpotRepository
 	Online       *onlinecheck.Adapter
 	Configs      *guildsqlc.GuildConfigRepository
+	Layouts      *summarylayoutsqlc.SummaryLayoutRepository
 	Channels     *guildsqlc.GuildChannelRepository
 	Roles        *guildsqlc.GuildRoleRepository
 	Formatter    *formatter.DiscordFormatter
@@ -66,6 +68,7 @@ func newBot(p botParams) *bot.Bot {
 	return bot.NewManager(p.Shards, p.Cfg.WebBaseURL, p.Summary, p.Reservations, p.Online).
 		WithGuildRepositories(p.Configs, p.Channels, p.Roles).
 		WithSpots(p.Spots).
+		WithSummaryLayouts(p.Layouts).
 		WithFormatter(p.Formatter).
 		WithLogger(p.Log)
 }
