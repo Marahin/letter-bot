@@ -1,3 +1,5 @@
+Moved to Gitlab: https://gitlab.com/electric-sheep-studio/tibialoot
+
 # Letter, Tibia's booking bot
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/marahin/letter-bot)](https://goreportcard.com/report/github.com/marahin/letter-bot)
