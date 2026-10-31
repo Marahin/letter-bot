@@ -1,0 +1,290 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+# Thresholds are deliberately lenient: the gate exists to catch genuine
+# offenders (giant/deeply-nested functions, copy-paste, real bugs), not to
+# nitpick code we write for ourselves. Tune up if a check turns noisy.
+linters:
+  default: none
+  enable:
+    - govet          # + nilness below; already the current gate
+    - staticcheck    # folds gosimple + stylecheck in v2
+    - ineffassign    # assignments never read
+    - unused         # unused unexported identifiers (per-package)
+    - unconvert      # redundant type conversions
+    - errcheck       # unchecked error returns
+    - errorlint      # Go 1.13+ error-wrapping mistakes
+    - gocognit       # cognitive complexity (how hard to read)
+    - cyclop         # cyclomatic complexity
+    - funlen         # over-long functions
+    - nestif         # deeply nested if blocks
+    - dupl           # copy-paste detection
+    - misspell       # typos in comments/strings
+
+    # uber-go/guide. Trailing names are the guide's own headings. There is no
+    # single "uber-go linter"; this is the curated subset of its rules that a
+    # machine can actually check. Rejected checks are listed at the bottom of
+    # this file: don't re-litigate them per-review. govet already covers
+    # copylocks (zero-value mutexes) and composites (keyed struct literals).
+    - recvcheck                  # Receivers and Interfaces
+    - gochecknoinits             # Avoid init()
+    - predeclared                # Avoid Using Built-In Names
+    - errname                    # Error Naming
+    - nilnil                     # Error Types
+    - nilerr
+    - nilnesserr
+    - errchkjson
+    - durationcheck              # Use "time" to Handle Time
+    - makezero                   # Prefer Specifying Container Capacity
+    - prealloc
+    - perfsprint                 # Prefer strconv over fmt
+    - musttag                    # Use Field Tags in Marshaled Structs
+    - loggercheck                # zap key/value pairing
+    - nakedret                   # Avoid Naked Returns
+    - iface                      # interface pollution
+    - ireturn                    # Accept Interfaces, Return Structs
+    - embeddedstructfieldcheck   # Embedding in Structs
+    - funcorder                  # Function Grouping and Ordering
+    - exhaustive                 # switch completeness over enums
+    - forbidigo                  # Don't Panic; Exit in Main
+    - gocritic                   # Unnecessary Else, raw strings, ...
+    - revive                     # golint's successor; curated ruleset below
+    - goprintffuncname           # Naming Printf-style Functions
+    - usestdlibvars
+    - copyloopvar
+    - fatcontext
+    - wastedassign
+    - asasalint
+    - bodyclose
+    - reassign
+    - sqlclosecheck
+    - rowserrcheck
+    - mirror
+    - exptostd
+    - dupword
+    - gocheckcompilerdirectives
+    - nolintlint
+  settings:
+    govet:
+      enable:
+        - nilness
+    cyclop:
+      max-complexity: 40
+    gocognit:
+      min-complexity: 60
+    funlen:
+      lines: 150
+      statements: 100
+      ignore-comments: true
+    nestif:
+      min-complexity: 12
+    dupl:
+      # dupl's own default. golangci runs dupl per package, so it only sees
+      # duplication inside one package.
+      threshold: 100
+    errcheck:
+      # Deferred cleanup whose error is intentionally discarded by convention.
+      exclude-functions:
+        - (github.com/jackc/pgx/v5.Tx).Rollback
+        - (*database/sql.DB).Close
+        - (*database/sql.Conn).Close
+        - (*compress/gzip.Reader).Close
+        - (io.ReadCloser).Close
+    exhaustive:
+      # A default case is a deliberate "the rest are equivalent" statement.
+      default-signifies-exhaustive: true
+    funcorder:
+      # struct-method (exported before unexported) would reshuffle ~63 methods
+      # for no behavioural gain. Constructor placement only.
+      struct-method: false
+    ireturn:
+      allow:
+        - anon
+        - error
+        - empty
+        - stdlib
+        - generic
+        - github.com/a-h/templ.Component
+        # x/text hands these back itself (catalog.Set takes a Message,
+        # language.NewMatcher returns a Matcher) and exports no concrete
+        # alternative to name.
+        - golang.org/x/text/message/catalog.Message
+        - golang.org/x/text/language.Matcher
+    misspell:
+      # Victoris is a Tibia world.
+      ignore-rules:
+        - victoris
+    forbidigo:
+      analyze-types: true
+      forbid:
+        - pattern: ^panic$
+          msg: do not panic outside a composition root
+        - pattern: ^os\.Exit$
+          msg: exit only from main
+        - pattern: ^log\.(Fatal|Fatalf|Fatalln|Panic|Panicf|Panicln)$
+          msg: exit only from main
+    gocritic:
+      # diagnostic+style only: the performance tag's hugeParam/rangeValCopy add
+      # 341 findings asking for pointer receivers on value types.
+      enabled-tags:
+        - diagnostic
+        - style
+      disabled-checks:
+        - httpNoBody        # 72 cosmetic nil-body rewrites, 69 of them in tests
+        - builtinShadow     # predeclared owns this guide section
+        - paramTypeCombine
+        - unnamedResult     # contradicts revive's confusing-results
+        # Not a guide rule. Its only hit is a test helper that hands back one mock
+        # per collaborator so each test names only the ones it drives.
+        - tooManyResultsChecker
+    revive:
+      # Rules are listed explicitly: enable-all-rules pulls in checks that
+      # contradict AGENTS.md (exported wants godoc everywhere) or each other.
+      # An unknown name here makes revive report NOTHING while logging one
+      # error line, so a typo looks like success. Verify after editing.
+      rules:
+        # Error Types / Error Naming / Error Wrapping
+        - name: use-errors-new
+        - name: error-return
+        - name: error-naming
+        - name: error-strings
+        - name: errorf
+        - name: if-return
+        # Handle Type Assertion Failures. The guide's rule is "don't panic on a
+        # bad assertion"; `v, _ :=` with a zero-value fallback satisfies it, and
+        # is how the ctx.Value accessors read.
+        - name: unchecked-type-assertion
+          arguments:
+            - acceptIgnoredAssertionResult: true
+        # Unnecessary Else / Reduce Nesting
+        - name: indent-error-flow
+        - name: early-return
+        - name: superfluous-else
+        # Avoid Naked Returns
+        - name: bare-return
+        # Naming
+        - name: var-naming
+        - name: receiver-naming
+        - name: unexported-naming
+        - name: confusing-naming
+        - name: time-naming
+        - name: filename-format
+        # Concurrency
+        - name: use-waitgroup-go
+        - name: waitgroup-by-value
+        - name: datarace
+        - name: atomic
+        - name: range-val-address
+        - name: range-val-in-closure
+        # Context
+        - name: context-as-argument
+        - name: context-keys-type
+        # Correctness
+        - name: time-equal
+        - name: modifies-value-receiver
+        - name: modifies-parameter
+        - name: constant-logical-expr
+        - name: identical-ifelseif-branches
+        - name: bool-literal-in-expr
+        - name: string-of-int
+        - name: unreachable-code
+        - name: unconditional-recursion
+        - name: defer
+        - name: struct-tag
+        - name: empty-block
+        - name: unnecessary-stmt
+        # Readability / modern Go
+        - name: use-any
+        - name: nested-structs
+        - name: unexported-return
+        - name: var-declaration
+        - name: increment-decrement
+        - name: get-return
+        # Imports
+        - name: dot-imports
+        - name: blank-imports
+        - name: duplicated-imports
+        - name: import-shadowing
+        - name: redundant-import-alias
+        - name: redundant-build-tag
+  exclusions:
+    generated: lax
+    paths:
+      - '.*_templ\.go$'
+      - '.*/sqlc/.*'
+      - '.*/mocks/.*'
+    rules:
+      # "could use tagged switch": a stylistic quickfix, not worth enforcing.
+      - linters:
+          - staticcheck
+        text: QF1003
+      # "could remove embedded field from selector": r.Spot.Name names the struct
+      # the field comes from; r.Name on a ReservationWithSpot reads as the
+      # reservation's own name.
+      - linters:
+          - staticcheck
+        text: QF1008
+      # Tests may be long, repetitive and skip error checks by design: sibling
+      # subtests and table fixtures are deliberately parallel. forbidigo:
+      # TestMain exits, and a fixture panics instead of threading an error nobody reads.
+      - path: _test\.go
+        linters:
+          - funlen
+          - dupl
+          - gocognit
+          - cyclop
+          - nestif
+          - errcheck
+          - errchkjson
+          - forbidigo
+      # Ago and Until walk the same unit ladder in opposite directions. Folding
+      # them needs the message keys in a table instead of literal T/N arguments,
+      # and catalog_coverage_test.go reads exactly those call sites to prove every
+      # key is referenced. Excluded from dupl on purpose.
+      - path: internal/infrastructure/i18n/relative\.go
+        linters:
+          - dupl
+        source: 'func (Ago|Until)\('
+      # Fail-fast panics over a static //go:embed subtree and build-time-constant
+      # JSON: unreachable by construction, with no caller to return an error to.
+      - path: internal/infrastructure/(web/assets|i18n/i18n)\.go$
+        linters:
+          - forbidigo
+      # Composition roots wire concrete adapters behind ports and are the one
+      # place allowed to terminate the process.
+      - path: ^cmd/
+        linters:
+          - ireturn
+          - forbidigo
+      # The fx apps return an optional dependency as a nil interface on purpose.
+      - path: ^internal/infrastructure/fxmodule/
+        linters:
+          - ireturn
+
+formatters:
+  enable:
+    - gofmt
+
+# Rejected checks, with the violation count each measured on the tree that
+# introduced this config. Settled; re-open only with a reason, not a preference.
+#
+#   exhaustruct              1980  wants every field initialized
+#   paralleltest             1955  not a guide rule; breaks shared-fixture tests
+#   varnamelen               1434  the guide's naming advice is not length-based
+#   gocritic perf tag         341  wants pointer receivers on value types
+#   noctx                      79  tests only
+#   gosec                      63  security, not style
+#   funcorder struct-method    63  reshuffles methods for no behavioural gain
+#   gochecknoglobals           49  the guide bans mutable globals; all 49 are not
+#   canonicalheader            36  would rewrite every HX-* htmx literal
+#   revive unhandled-error     31  all strings.Builder.Write*, which cannot fail
+#   nonamedreturns             16  not banned; revive's confusing-results wants them
+#   interfacebloat              7  ports are deliberate aggregates
+#
+# Prose-only guide rules, unlintable by anything: Pointers to Interfaces · Verify
+# Interface Compliance · Copy Slices and Maps at Boundaries · Channel Size is One
+# or None · Start Enums at One · Don't fire-and-forget goroutines · Prefix
+# Unexported Globals with _ · Reduce Scope of Variables · Omit Zero-Value Fields ·
+# Package/Function Names · Import Group Ordering · Test Tables · Functional Options.

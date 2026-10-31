@@ -1,0 +1,51 @@
+# The browser e2e stack (scripts/e2e.sh, make e2e-stack), over docker-compose.yml.
+# It runs under its own project name (letter_bot_e2e), so it has its own database
+# volume, and it publishes other host ports than the dev stack, so both can run.
+# The web and the seed use the code built into the image (no source mount), with
+# the devauth build tag and the fixed seed servers (internal/infrastructure/devauth).
+x-database: &database
+  DATABASE_HOST: db
+  DATABASE_PORT: "5432"
+  DATABASE_USER: postgres
+  DATABASE_PASSWORD: postgres
+  DATABASE_NAME: postgres
+  DATABASE_SSL: disable
+  TZ: Europe/Berlin
+  # The image carries a worktree's .git file without its git directory.
+  GOFLAGS: -buildvcs=false
+
+services:
+  db:
+    ports: !reset []
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+  seed:
+    volumes: !reset []
+    environment:
+      <<: *database
+  web:
+    volumes: !reset []
+    ports: !override
+      - "${E2E_WEB_PORT:-18080}:8080"
+      - "${E2E_METRICS_PORT:-13005}:3005"
+    depends_on:
+      db:
+        condition: service_healthy
+      seed:
+        condition: service_completed_successfully
+    environment:
+      <<: *database
+      WEB_BASE_URL: "http://localhost:${E2E_WEB_PORT:-18080}"
+      WEB_ADDR: ":8080"
+      WEB_METRICS_ADDR: ":3005"
+      WEB_DEV_AUTH: "true"
+      # dev-siteadmin drives the site-admin tests.
+      WEB_ADMIN_DISCORD_IDS: "700000000000000004"
+      WEB_EXPERIENCE_JOB_ENABLED: "false"
+      DISCORD_CLIENT_ID: e2e
+      DISCORD_CLIENT_SECRET: e2e
+      # Pinned, so the support-link assertions have a fixed href.
+      DISCORD_INVITE_LINK: "https://discord.gg/b7Qq8V2XFR"
+    entrypoint: ["sh", "-c", "make css build-only WEB_BUILD_TAGS=devauth && exec ./bin/letter-web"]

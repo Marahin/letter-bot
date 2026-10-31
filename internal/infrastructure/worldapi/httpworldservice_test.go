@@ -30,7 +30,7 @@ func TestGetOnlinePlayerNames_Success(t *testing.T) {
 	}))
 	defer server.Close()
 
-	service := NewHttpWorldService(server.URL)
+	service := NewHTTPWorldService(server.URL)
 
 	// when
 	names, err := service.GetOnlinePlayerNames("Celesta")
@@ -54,7 +54,7 @@ func TestGetOnlinePlayerNames_EmptyList(t *testing.T) {
 	}))
 	defer server.Close()
 
-	service := NewHttpWorldService(server.URL)
+	service := NewHTTPWorldService(server.URL)
 	// when
 	names, err := service.GetOnlinePlayerNames("Celesta")
 	// then
@@ -69,7 +69,7 @@ func TestGetOnlinePlayerNames_Non200Status(t *testing.T) {
 	}))
 	defer server.Close()
 
-	service := NewHttpWorldService(server.URL)
+	service := NewHTTPWorldService(server.URL)
 	// when
 	names, err := service.GetOnlinePlayerNames("Celesta")
 	// then
@@ -85,7 +85,7 @@ func TestGetOnlinePlayerNames_InvalidJSON(t *testing.T) {
 	}))
 	defer server.Close()
 
-	service := NewHttpWorldService(server.URL)
+	service := NewHTTPWorldService(server.URL)
 	// when
 	names, err := service.GetOnlinePlayerNames("Celesta")
 	// then
@@ -95,7 +95,7 @@ func TestGetOnlinePlayerNames_InvalidJSON(t *testing.T) {
 
 func TestGetOnlinePlayerNames_HttpRequestFails(t *testing.T) {
 	// given
-	service := &HttpWorldService{
+	service := &HTTPWorldService{
 		BaseURL: "http://tibiacomnodot",
 		Client:  &http.Client{},
 	}
@@ -116,7 +116,7 @@ func TestGetOnlinePlayerNames_Timeout(t *testing.T) {
 	}))
 	defer server.Close()
 
-	service := NewHttpWorldService(server.URL)
+	service := NewHTTPWorldService(server.URL)
 	// set a short timeout for this test
 	service.Client.Timeout = 50 * time.Millisecond
 

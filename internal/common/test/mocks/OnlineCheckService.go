@@ -16,10 +16,19 @@ func NewMockOnlineCheckService(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockOnlineCheckService {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockOnlineCheckService{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -51,7 +60,7 @@ type MockOnlineCheckService_ConfigureWorldName_Call struct {
 // ConfigureWorldName is a helper method to define mock.On call
 //   - guildID string
 //   - world string
-func (_e *MockOnlineCheckService_Expecter) ConfigureWorldName(guildID interface{}, world interface{}) *MockOnlineCheckService_ConfigureWorldName_Call {
+func (_e *MockOnlineCheckService_Expecter) ConfigureWorldName(guildID any, world any) *MockOnlineCheckService_ConfigureWorldName_Call {
 	return &MockOnlineCheckService_ConfigureWorldName_Call{Call: _e.mock.On("ConfigureWorldName", guildID, world)}
 }
 
@@ -107,7 +116,7 @@ type MockOnlineCheckService_ConfigureWorldNameForGuild_Call struct {
 
 // ConfigureWorldNameForGuild is a helper method to define mock.On call
 //   - guildID string
-func (_e *MockOnlineCheckService_Expecter) ConfigureWorldNameForGuild(guildID interface{}) *MockOnlineCheckService_ConfigureWorldNameForGuild_Call {
+func (_e *MockOnlineCheckService_Expecter) ConfigureWorldNameForGuild(guildID any) *MockOnlineCheckService_ConfigureWorldNameForGuild_Call {
 	return &MockOnlineCheckService_ConfigureWorldNameForGuild_Call{Call: _e.mock.On("ConfigureWorldNameForGuild", guildID)}
 }
 
@@ -203,7 +212,7 @@ type MockOnlineCheckService_IsOnline_Call struct {
 // IsOnline is a helper method to define mock.On call
 //   - guildID string
 //   - characterName string
-func (_e *MockOnlineCheckService_Expecter) IsOnline(guildID interface{}, characterName interface{}) *MockOnlineCheckService_IsOnline_Call {
+func (_e *MockOnlineCheckService_Expecter) IsOnline(guildID any, characterName any) *MockOnlineCheckService_IsOnline_Call {
 	return &MockOnlineCheckService_IsOnline_Call{Call: _e.mock.On("IsOnline", guildID, characterName)}
 }
 
@@ -260,7 +269,7 @@ type MockOnlineCheckService_PlayerStatus_Call struct {
 // PlayerStatus is a helper method to define mock.On call
 //   - guildID string
 //   - characterName string
-func (_e *MockOnlineCheckService_Expecter) PlayerStatus(guildID interface{}, characterName interface{}) *MockOnlineCheckService_PlayerStatus_Call {
+func (_e *MockOnlineCheckService_Expecter) PlayerStatus(guildID any, characterName any) *MockOnlineCheckService_PlayerStatus_Call {
 	return &MockOnlineCheckService_PlayerStatus_Call{Call: _e.mock.On("PlayerStatus", guildID, characterName)}
 }
 
@@ -316,7 +325,7 @@ type MockOnlineCheckService_RefreshOnlinePlayers_Call struct {
 
 // RefreshOnlinePlayers is a helper method to define mock.On call
 //   - guildID string
-func (_e *MockOnlineCheckService_Expecter) RefreshOnlinePlayers(guildID interface{}) *MockOnlineCheckService_RefreshOnlinePlayers_Call {
+func (_e *MockOnlineCheckService_Expecter) RefreshOnlinePlayers(guildID any) *MockOnlineCheckService_RefreshOnlinePlayers_Call {
 	return &MockOnlineCheckService_RefreshOnlinePlayers_Call{Call: _e.mock.On("RefreshOnlinePlayers", guildID)}
 }
 
@@ -368,7 +377,7 @@ type MockOnlineCheckService_SetGuildWorld_Call struct {
 // SetGuildWorld is a helper method to define mock.On call
 //   - guildID string
 //   - world string
-func (_e *MockOnlineCheckService_Expecter) SetGuildWorld(guildID interface{}, world interface{}) *MockOnlineCheckService_SetGuildWorld_Call {
+func (_e *MockOnlineCheckService_Expecter) SetGuildWorld(guildID any, world any) *MockOnlineCheckService_SetGuildWorld_Call {
 	return &MockOnlineCheckService_SetGuildWorld_Call{Call: _e.mock.On("SetGuildWorld", guildID, world)}
 }
 
@@ -413,7 +422,7 @@ type MockOnlineCheckService_TryRefresh_Call struct {
 
 // TryRefresh is a helper method to define mock.On call
 //   - guildID string
-func (_e *MockOnlineCheckService_Expecter) TryRefresh(guildID interface{}) *MockOnlineCheckService_TryRefresh_Call {
+func (_e *MockOnlineCheckService_Expecter) TryRefresh(guildID any) *MockOnlineCheckService_TryRefresh_Call {
 	return &MockOnlineCheckService_TryRefresh_Call{Call: _e.mock.On("TryRefresh", guildID)}
 }
 

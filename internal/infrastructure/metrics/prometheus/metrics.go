@@ -1,10 +1,20 @@
 package prommetrics
 
 import (
-	"strconv"
-
 	prom "github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 )
+
+// NewRegistry returns a registry with the Go and process collectors. Each binary
+// has its own registry, so nothing registers on the global default.
+func NewRegistry() *prom.Registry {
+	reg := prom.NewRegistry()
+	reg.MustRegister(
+		collectors.NewGoCollector(),
+		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+	)
+	return reg
+}
 
 // PromMetrics implements ports.MetricsPort via Prometheus client.
 // It registers counters/gauges with a guild label to enable per-guild and global totals.
@@ -18,8 +28,8 @@ type PromMetrics struct {
 	messagesDeleted      *prom.CounterVec
 }
 
-// New creates and registers Prometheus metrics using the default registry.
-func New() *PromMetrics {
+// New creates the metrics and registers them on reg.
+func New(reg prom.Registerer) (*PromMetrics, error) {
 	m := &PromMetrics{
 		slashCommands: prom.NewCounterVec(prom.CounterOpts{
 			Namespace: "letter_bot",
@@ -65,9 +75,13 @@ func New() *PromMetrics {
 		}, []string{"channel_id", "channel_name"}),
 	}
 
-	prom.MustRegister(m.slashCommands, m.overbookInvocations, m.commandErrors, m.upcomingReservations, m.ticks, m.messagesSent, m.messagesDeleted)
+	for _, c := range []prom.Collector{m.slashCommands, m.overbookInvocations, m.commandErrors, m.upcomingReservations, m.ticks, m.messagesSent, m.messagesDeleted} {
+		if err := reg.Register(c); err != nil {
+			return nil, err
+		}
+	}
 
-	return m
+	return m, nil
 }
 
 // IncSlashCommand increments counter of slash command invocations.
@@ -109,6 +123,3 @@ func (m *PromMetrics) IncMessagesSent(channelID, channelName string) {
 func (m *PromMetrics) AddMessagesDeleted(channelID, channelName string, count int) {
 	m.messagesDeleted.WithLabelValues(channelID, channelName).Add(float64(count))
 }
-
-// helper to quiet import usage in some contexts
-var _ = strconv.Itoa

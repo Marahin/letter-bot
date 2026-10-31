@@ -25,18 +25,12 @@ func (a *Adapter) BaseSummary() *dto.Summary {
 
 func (a *Adapter) PrepareSummary(reservations []*reservation.ReservationWithSpot) (*dto.Summary, error) {
 	sum := a.BaseSummary()
+	sum.Ledger = a.Ledger(reservations)
 
-	spotsToReservations := a.mapToSpotsToReservations(reservations)
-
-	spotsToCounts := make(map[string]float64, len(spotsToReservations))
-	spotNamesAlphabetically := make([]string, 0, len(spotsToReservations))
-
-	for spotName, resList := range spotsToReservations {
-		spotsToCounts[spotName] = float64(len(resList))
-		spotNamesAlphabetically = append(spotNamesAlphabetically, spotName)
+	spotsToCounts := make(map[string]float64, len(sum.Ledger))
+	for _, entry := range sum.Ledger {
+		spotsToCounts[entry.Spot] = float64(len(entry.Bookings))
 	}
-
-	// Chart generation
 	sum.LegendValues = a.mapToLegendValues(spotsToCounts)
 	img, err := a.newChart(sum.LegendValues)
 	if err != nil {
@@ -44,17 +38,32 @@ func (a *Adapter) PrepareSummary(reservations []*reservation.ReservationWithSpot
 	}
 	sum.Chart = img
 
-	slices.Sort(spotNamesAlphabetically)
-	ledger := make(dto.Ledger, len(spotNamesAlphabetically))
-	for i, spotName := range spotNamesAlphabetically {
+	return sum, nil
+}
+
+// Ledger groups the reservations by spot, in spot name order, each spot's by start time.
+func (a *Adapter) Ledger(reservations []*reservation.ReservationWithSpot) dto.Ledger {
+	spotsToReservations := a.mapToSpotsToReservations(reservations)
+	spotNames := make([]string, 0, len(spotsToReservations))
+	for spotName := range spotsToReservations {
+		spotNames = append(spotNames, spotName)
+	}
+	slices.Sort(spotNames)
+
+	images := make(map[string]string, len(spotNames))
+	for _, r := range reservations {
+		images[r.Spot.Name] = r.Spot.ImageURL
+	}
+
+	ledger := make(dto.Ledger, len(spotNames))
+	for i, spotName := range spotNames {
 		ledger[i] = dto.LedgerEntry{
 			Spot:     spotName,
+			ImageURL: images[spotName],
 			Bookings: a.MapReservations(spotsToReservations[spotName]),
 		}
 	}
-	sum.Ledger = ledger
-
-	return sum, nil
+	return ledger
 }
 
 func (a *Adapter) mapToSpotsToReservations(reservations []*reservation.ReservationWithSpot) map[string][]*reservation.Reservation {

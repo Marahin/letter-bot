@@ -11,11 +11,11 @@ import (
 func BenchmarkIsOnline(b *testing.B) {
 	log := zap.NewNop().Sugar()
 	adapter := &Adapter{
-		guildIdToWorld: cmap.New[string](),
+		guildIDToWorld: cmap.New[string](),
 		players:        cmap.New[map[string]struct{}](),
 		log:            log,
 	}
-	adapter.guildIdToWorld.Set("guild1", "Celesta")
+	adapter.guildIDToWorld.Set("guild1", "Celesta")
 
 	// Populate with 1000 players
 	players := make(map[string]struct{})
@@ -38,11 +38,11 @@ func BenchmarkIsOnline(b *testing.B) {
 func BenchmarkIsOnline_MultiName(b *testing.B) {
 	log := zap.NewNop().Sugar()
 	adapter := &Adapter{
-		guildIdToWorld: cmap.New[string](),
+		guildIDToWorld: cmap.New[string](),
 		players:        cmap.New[map[string]struct{}](),
 		log:            log,
 	}
-	adapter.guildIdToWorld.Set("guild1", "Celesta")
+	adapter.guildIDToWorld.Set("guild1", "Celesta")
 	players := map[string]struct{}{
 		"Mariysz": {},
 	}

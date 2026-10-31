@@ -1,0 +1,145 @@
+.flatpickr-wrapper {
+  display: block;
+  width: 100%;
+}
+.flatpickr-wrapper > input {
+  width: 100%;
+}
+
+.flatpickr-calendar {
+  background: rgba(11, 13, 17, 0.97);
+  border: 1px solid hsla(0, 0%, 100%, 0.1);
+  border-radius: 0.5rem;
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 hsla(0, 0%, 100%, 0.07);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  color: #eef2f6;
+}
+
+.flatpickr-calendar.arrowTop:before,
+.flatpickr-calendar.arrowBottom:before {
+  border-bottom-color: hsla(0, 0%, 100%, 0.1);
+  border-top-color: hsla(0, 0%, 100%, 0.1);
+}
+.flatpickr-calendar.arrowTop:after {
+  border-bottom-color: rgba(11, 13, 17, 0.97);
+}
+.flatpickr-calendar.arrowBottom:after {
+  border-top-color: rgba(11, 13, 17, 0.97);
+}
+
+.flatpickr-months,
+.flatpickr-months .flatpickr-month,
+.flatpickr-current-month,
+.flatpickr-current-month input.cur-year {
+  background: transparent;
+  color: #eef2f6;
+  fill: #eef2f6;
+}
+.flatpickr-current-month .flatpickr-monthDropdown-months {
+  background: transparent;
+  color: #eef2f6;
+  font-weight: 600;
+}
+.flatpickr-current-month .flatpickr-monthDropdown-months .flatpickr-monthDropdown-month {
+  background-color: #0b0d11;
+  color: #eef2f6;
+}
+
+.flatpickr-months .flatpickr-prev-month,
+.flatpickr-months .flatpickr-next-month {
+  color: #7f8998;
+  fill: #7f8998;
+}
+.flatpickr-months .flatpickr-prev-month:hover svg,
+.flatpickr-months .flatpickr-next-month:hover svg {
+  fill: #ff7a18;
+}
+
+span.flatpickr-weekday {
+  background: transparent;
+  color: #7f8998;
+  font-weight: 600;
+}
+
+.flatpickr-day {
+  color: #adb7c4;
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+}
+.flatpickr-day:hover,
+.flatpickr-day:focus {
+  background: hsla(0, 0%, 100%, 0.1);
+  border-color: transparent;
+  color: #eef2f6;
+}
+.flatpickr-day.today {
+  border-color: #ff7a18;
+  color: #eef2f6;
+}
+.flatpickr-day.today:hover {
+  background: hsla(0, 0%, 100%, 0.1);
+  color: #eef2f6;
+}
+.flatpickr-day.selected,
+.flatpickr-day.selected:hover,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange,
+.flatpickr-day.selected.startRange,
+.flatpickr-day.selected.endRange {
+  background: #ff7a18;
+  border-color: #ff7a18;
+  color: #020204;
+  font-weight: 600;
+}
+.flatpickr-day.inRange {
+  background: rgba(255, 122, 24, 0.15);
+  border-color: transparent;
+  box-shadow: none;
+}
+.flatpickr-day.flatpickr-disabled,
+.flatpickr-day.flatpickr-disabled:hover,
+.flatpickr-day.prevMonthDay,
+.flatpickr-day.nextMonthDay {
+  color: #414750;
+}
+
+.flatpickr-time {
+  border-top: 1px solid hsla(0, 0%, 100%, 0.1);
+}
+.flatpickr-time input,
+.flatpickr-time .flatpickr-am-pm {
+  color: #eef2f6;
+  background: transparent;
+}
+.flatpickr-time input:hover,
+.flatpickr-time input:focus,
+.flatpickr-time .flatpickr-am-pm:hover,
+.flatpickr-time .flatpickr-am-pm:focus,
+.flatpickr-time .numInputWrapper:hover,
+.flatpickr-time .numInputWrapper:hover input {
+  background: hsla(0, 0%, 100%, 0.05);
+}
+
+.numInputWrapper span.arrowUp:after {
+  border-bottom-color: #7f8998;
+}
+.numInputWrapper span.arrowDown:after {
+  border-top-color: #7f8998;
+}
+.numInputWrapper span:hover {
+  background: hsla(0, 0%, 100%, 0.05);
+}
+
+/* A dialog's calendar is position:fixed (datepicker.js). The <dialog> must not get
+   transform, filter, contain or will-change: any of them makes it the containing
+   block of fixed children, and the calendar would be clipped again. */
+dialog .flatpickr-calendar {
+  z-index: 50;
+}
+dialog .flatpickr-calendar:before,
+dialog .flatpickr-calendar:after {
+  display: none;
+}

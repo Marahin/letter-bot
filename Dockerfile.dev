@@ -1,11 +1,22 @@
-FROM golang:1.25-alpine
+FROM golang:1.27-bookworm
+ENV GOTOOLCHAIN=auto
+ARG TAILWIND_VERSION=v3.4.17
+ARG TEMPL_VERSION=v0.3.1020
 WORKDIR /app
 COPY ./ /app
 
-RUN apk update && apk add ca-certificates tzdata git make curl
-RUN curl -sSf https://atlasgo.sh | sh
-RUN git config --global --add safe.directory /app
-RUN go install github.com/githubnemo/CompileDaemon@latest && go mod download
-ENV TZ Europe/Berlin
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates tzdata git make curl \
+    && rm -rf /var/lib/apt/lists/*
+RUN curl -fsSL -o /usr/local/bin/tailwindcss \
+        https://github.com/tailwindlabs/tailwindcss/releases/download/${TAILWIND_VERSION}/tailwindcss-linux-x64 \
+    && chmod +x /usr/local/bin/tailwindcss
+# From /: in a git worktree /app/.git points outside the image, and git refuses to start there.
+RUN cd / && git config --global --add safe.directory /app
+RUN go install github.com/githubnemo/CompileDaemon@latest \
+    && go install github.com/a-h/templ/cmd/templ@${TEMPL_VERSION} \
+    && go mod download
+ENV TZ=Europe/Berlin
+ENV TAILWIND=/usr/local/bin/tailwindcss
 
 ENTRYPOINT CompileDaemon -include=Makefile -build='make build-only' -command=./bin/spot-assistant-bot

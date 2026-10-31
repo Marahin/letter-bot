@@ -4,5 +4,5 @@ import (
 	"spot-assistant/internal/core/dto/guild"
 )
 
-func (a *Handler) OnGuildCreate(guild *guild.Guild) {
+func (h *Handler) OnGuildCreate(g *guild.Guild) {
 }

@@ -1,23 +1,21 @@
 package summary
 
 import (
+	"time"
+
 	"spot-assistant/internal/ports"
 )
 
 type Adapter struct {
 	service     ports.ChartAdapter
 	onlineCheck ports.OnlineCheckService
-	//log     *zap.SugaredLogger
+	now         func() time.Time
 }
 
 func NewAdapter(srv ports.ChartAdapter, onlineCheck ports.OnlineCheckService) *Adapter {
 	return &Adapter{
 		service:     srv,
 		onlineCheck: onlineCheck,
+		now:         time.Now,
 	}
 }
-
-//func (a *Adapter) WithLogger(log *zap.SugaredLogger) *Adapter {
-//	a.log = log.With("layer", "infrastructure", "name", "summaryService")
-//	return a
-//}

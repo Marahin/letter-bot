@@ -14,10 +14,19 @@ func NewMockMetricsPort(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockMetricsPort {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockMetricsPort{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -50,7 +59,7 @@ type MockMetricsPort_AddMessagesDeleted_Call struct {
 //   - channelID string
 //   - channelName string
 //   - count int
-func (_e *MockMetricsPort_Expecter) AddMessagesDeleted(channelID interface{}, channelName interface{}, count interface{}) *MockMetricsPort_AddMessagesDeleted_Call {
+func (_e *MockMetricsPort_Expecter) AddMessagesDeleted(channelID any, channelName any, count any) *MockMetricsPort_AddMessagesDeleted_Call {
 	return &MockMetricsPort_AddMessagesDeleted_Call{Call: _e.mock.On("AddMessagesDeleted", channelID, channelName, count)}
 }
 
@@ -102,7 +111,7 @@ type MockMetricsPort_AddMessagesSent_Call struct {
 //   - channelID string
 //   - channelName string
 //   - count int
-func (_e *MockMetricsPort_Expecter) AddMessagesSent(channelID interface{}, channelName interface{}, count interface{}) *MockMetricsPort_AddMessagesSent_Call {
+func (_e *MockMetricsPort_Expecter) AddMessagesSent(channelID any, channelName any, count any) *MockMetricsPort_AddMessagesSent_Call {
 	return &MockMetricsPort_AddMessagesSent_Call{Call: _e.mock.On("AddMessagesSent", channelID, channelName, count)}
 }
 
@@ -154,7 +163,7 @@ type MockMetricsPort_IncCommandError_Call struct {
 //   - guildID string
 //   - guildName string
 //   - command string
-func (_e *MockMetricsPort_Expecter) IncCommandError(guildID interface{}, guildName interface{}, command interface{}) *MockMetricsPort_IncCommandError_Call {
+func (_e *MockMetricsPort_Expecter) IncCommandError(guildID any, guildName any, command any) *MockMetricsPort_IncCommandError_Call {
 	return &MockMetricsPort_IncCommandError_Call{Call: _e.mock.On("IncCommandError", guildID, guildName, command)}
 }
 
@@ -205,7 +214,7 @@ type MockMetricsPort_IncMessagesSent_Call struct {
 // IncMessagesSent is a helper method to define mock.On call
 //   - channelID string
 //   - channelName string
-func (_e *MockMetricsPort_Expecter) IncMessagesSent(channelID interface{}, channelName interface{}) *MockMetricsPort_IncMessagesSent_Call {
+func (_e *MockMetricsPort_Expecter) IncMessagesSent(channelID any, channelName any) *MockMetricsPort_IncMessagesSent_Call {
 	return &MockMetricsPort_IncMessagesSent_Call{Call: _e.mock.On("IncMessagesSent", channelID, channelName)}
 }
 
@@ -251,7 +260,7 @@ type MockMetricsPort_IncOverbook_Call struct {
 // IncOverbook is a helper method to define mock.On call
 //   - guildID string
 //   - guildName string
-func (_e *MockMetricsPort_Expecter) IncOverbook(guildID interface{}, guildName interface{}) *MockMetricsPort_IncOverbook_Call {
+func (_e *MockMetricsPort_Expecter) IncOverbook(guildID any, guildName any) *MockMetricsPort_IncOverbook_Call {
 	return &MockMetricsPort_IncOverbook_Call{Call: _e.mock.On("IncOverbook", guildID, guildName)}
 }
 
@@ -298,7 +307,7 @@ type MockMetricsPort_IncSlashCommand_Call struct {
 //   - guildID string
 //   - guildName string
 //   - command string
-func (_e *MockMetricsPort_Expecter) IncSlashCommand(guildID interface{}, guildName interface{}, command interface{}) *MockMetricsPort_IncSlashCommand_Call {
+func (_e *MockMetricsPort_Expecter) IncSlashCommand(guildID any, guildName any, command any) *MockMetricsPort_IncSlashCommand_Call {
 	return &MockMetricsPort_IncSlashCommand_Call{Call: _e.mock.On("IncSlashCommand", guildID, guildName, command)}
 }
 
@@ -383,7 +392,7 @@ type MockMetricsPort_SetUpcomingReservations_Call struct {
 //   - guildID string
 //   - guildName string
 //   - count int
-func (_e *MockMetricsPort_Expecter) SetUpcomingReservations(guildID interface{}, guildName interface{}, count interface{}) *MockMetricsPort_SetUpcomingReservations_Call {
+func (_e *MockMetricsPort_Expecter) SetUpcomingReservations(guildID any, guildName any, count any) *MockMetricsPort_SetUpcomingReservations_Call {
 	return &MockMetricsPort_SetUpcomingReservations_Call{Call: _e.mock.On("SetUpcomingReservations", guildID, guildName, count)}
 }
 

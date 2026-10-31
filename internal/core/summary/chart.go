@@ -8,22 +8,22 @@ import (
 	dto "spot-assistant/internal/core/dto/summary"
 )
 
-// MAX_CHART_RESPAWNS defines the amount of respawns isolated on the chart.
-// Any n-th where n is > MAX_CHART_RESPAWNS will be aggregated into the
-const MAX_CHART_RESPAWNS = 14
+// maxChartRespawns defines the amount of respawns isolated on the chart.
+// Any n-th where n is > maxChartRespawns is aggregated into "Other".
+const maxChartRespawns = 14
 
 // Image file binary
 type ChartImage []byte
 
 // MapToLegendValues maps any string-keyed float64-valued map to []dto.LegendValue,
 // where each element holds legend (key) and amount of elements of the map for this
-// given key. If there are many results, it will truncate to MAX_CHART_RESPAWNS.
+// given key. If there are many results, it will truncate to maxChartRespawns.
 func (a *Adapter) mapToLegendValues(m map[string]float64) []dto.LegendValue {
 	result := make([]dto.LegendValue, len(m))
 	index := 0
 	for key, val := range m {
 		result[index] = dto.LegendValue{Legend: key, Value: val}
-		index += 1
+		index++
 	}
 
 	sort.Slice(result, func(i, j int) bool {
@@ -31,17 +31,17 @@ func (a *Adapter) mapToLegendValues(m map[string]float64) []dto.LegendValue {
 	})
 
 	truncatedResultLength := int(math.Min(
-		float64(len(m)), float64(MAX_CHART_RESPAWNS),
+		float64(len(m)), float64(maxChartRespawns),
 	))
-	truncatedResult := make([]dto.LegendValue, truncatedResultLength)
+	truncatedResult := make([]dto.LegendValue, 0, truncatedResultLength+1)
 
 	// Container for optional "Other" results, if any
 	var otherResults *dto.LegendValue
 	for i, res := range result {
-		// Top MAX_CHART_RESPAWNS results go in. Any results that would
+		// Top maxChartRespawns results go in. Any results that would
 		// exceed the limit will be aggregated into "Other" results container
 		if i < truncatedResultLength {
-			truncatedResult[i] = res
+			truncatedResult = append(truncatedResult, res)
 
 			continue
 		}

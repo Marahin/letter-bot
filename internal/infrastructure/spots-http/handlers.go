@@ -1,0 +1,234 @@
+package spotshttp
+
+import (
+	"errors"
+	"net/http"
+	"strings"
+
+	"spot-assistant/internal/core/dto/access"
+	"spot-assistant/internal/core/dto/spot"
+	"spot-assistant/internal/core/spots"
+	"spot-assistant/internal/infrastructure/i18n"
+	"spot-assistant/internal/infrastructure/web"
+)
+
+// regionID is the element every htmx request of the page swaps.
+const regionID = "spots-region"
+
+type Handlers struct {
+	D *web.Deps
+}
+
+func New(d *web.Deps) *Handlers { return &Handlers{D: d} }
+
+func (h *Handlers) HandleList(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	h.respond(w, r, pageView{Filter: filterFrom(q.Get("tab"), q.Get("q"))})
+}
+
+func (h *Handlers) HandleCreate(w http.ResponseWriter, r *http.Request) {
+	if !web.ParseForm(w, r) {
+		return
+	}
+	v := viewFromForm(r)
+	f := fieldsFromForm(r)
+	created, err := h.D.Spots.Create(r.Context(), r.PathValue("id"), f)
+	if errs := formErrors(r, err); errs.any() {
+		v.Create, v.CreateErrors = f, errs
+		h.respond(w, r, v)
+		return
+	}
+	if err != nil {
+		h.D.ServerError(w, r, "create spot", err)
+		return
+	}
+	v.Flash = okFlash(i18n.T(r.Context(), "spots.flash.created", created.Name))
+	v.FocusCreate = true
+	h.done(w, r, v)
+}
+
+// HandleEditForm answers the editor of an active spot, which a row loads when it
+// opens. Without htmx it goes back to the list.
+func (h *Handlers) HandleEditForm(w http.ResponseWriter, r *http.Request) {
+	id, ok := h.D.PathInt64(w, r, "spot")
+	if !ok {
+		return
+	}
+	current, ok := h.D.MustAccess(w, r)
+	if !ok {
+		return
+	}
+	q := r.URL.Query()
+	v := pageView{GuildID: current.Config.GuildID, CanManage: current.Caps.Manage, Filter: filterFrom(q.Get("tab"), q.Get("q"))}
+	if !web.IsHTMX(r) {
+		http.Redirect(w, r, listURL(v.GuildID, v.Filter), http.StatusSeeOther)
+		return
+	}
+	sp, err := h.D.Spots.Get(r.Context(), v.GuildID, id)
+	if errors.Is(err, spots.ErrNotFound) {
+		// As HandleUpdate: the row is stale, so the whole list is refreshed.
+		w.Header().Set("HX-Retarget", "#"+regionID)
+		w.Header().Set("HX-Reswap", "outerHTML")
+		v.Flash = warnFlash(i18n.T(r.Context(), "spots.flash.not_found"))
+		if v, ok = h.withList(w, r, current, v); ok {
+			h.D.Render(w, r, Region(v))
+		}
+		return
+	}
+	if err != nil {
+		h.D.ServerError(w, r, "get spot", err)
+		return
+	}
+	h.D.Render(w, r, editForm(v, spot.Listed{Spot: *sp}))
+}
+
+func (h *Handlers) HandleUpdate(w http.ResponseWriter, r *http.Request) {
+	id, ok := h.D.PathInt64(w, r, "spot")
+	if !ok || !web.ParseForm(w, r) {
+		return
+	}
+	v := viewFromForm(r)
+	f := fieldsFromForm(r)
+	err := h.D.Spots.Update(r.Context(), r.PathValue("id"), id, f)
+	if errs := formErrors(r, err); errs.any() {
+		v.EditID, v.Edit, v.EditErrors = id, f, errs
+		h.respond(w, r, v)
+		return
+	}
+	switch {
+	case errors.Is(err, spots.ErrNotFound):
+		v.Flash = warnFlash(i18n.T(r.Context(), "spots.flash.not_found"))
+	case err != nil:
+		h.D.ServerError(w, r, "update spot", err)
+		return
+	default:
+		v.Flash = okFlash(i18n.T(r.Context(), "spots.flash.updated", strings.TrimSpace(f.Name)))
+	}
+	h.done(w, r, v)
+}
+
+func (h *Handlers) HandleRemove(w http.ResponseWriter, r *http.Request) {
+	id, ok := h.D.PathInt64(w, r, "spot")
+	if !ok || !web.ParseForm(w, r) {
+		return
+	}
+	v := viewFromForm(r)
+	outcome, err := h.D.Spots.Remove(r.Context(), r.PathValue("id"), id)
+	switch {
+	case errors.Is(err, spots.ErrNotFound):
+		v.Flash = warnFlash(i18n.T(r.Context(), "spots.flash.not_found"))
+	case err != nil:
+		h.D.ServerError(w, r, "remove spot", err)
+		return
+	case outcome == spot.RemoveArchived:
+		v.Flash = okFlash(i18n.T(r.Context(), "spots.flash.archived"))
+	default:
+		v.Flash = okFlash(i18n.T(r.Context(), "spots.flash.deleted"))
+	}
+	h.done(w, r, v)
+}
+
+func (h *Handlers) HandleRestore(w http.ResponseWriter, r *http.Request) {
+	id, ok := h.D.PathInt64(w, r, "spot")
+	if !ok || !web.ParseForm(w, r) {
+		return
+	}
+	v := viewFromForm(r)
+	err := h.D.Spots.Restore(r.Context(), r.PathValue("id"), id)
+	switch {
+	case errors.Is(err, spots.ErrDuplicateName):
+		v.Flash = warnFlash(i18n.T(r.Context(), "spots.flash.restore_clash"))
+		h.respond(w, r, v)
+		return
+	case errors.Is(err, spots.ErrNotFound):
+		v.Flash = warnFlash(i18n.T(r.Context(), "spots.flash.not_found"))
+	case err != nil:
+		h.D.ServerError(w, r, "restore spot", err)
+		return
+	default:
+		v.Flash = okFlash(i18n.T(r.Context(), "spots.flash.restored"))
+	}
+	h.done(w, r, v)
+}
+
+func (h *Handlers) HandleImport(w http.ResponseWriter, r *http.Request) {
+	if !web.ParseForm(w, r) {
+		return
+	}
+	v := viewFromForm(r)
+	added, err := h.D.Spots.ImportDefaults(r.Context(), r.PathValue("id"))
+	if err != nil {
+		h.D.ServerError(w, r, "import default spots", err)
+		return
+	}
+	v.Flash = okFlash(i18n.N(r.Context(), "spots.flash.imported", int(added)))
+	h.done(w, r, v)
+}
+
+// done answers a finished change: htmx gets the refreshed region with the flash,
+// a plain form post a redirect back to the list it came from.
+func (h *Handlers) done(w http.ResponseWriter, r *http.Request, v pageView) {
+	if web.IsHTMX(r) {
+		h.respond(w, r, v)
+		return
+	}
+	http.Redirect(w, r, listURL(r.PathValue("id"), v.Filter), http.StatusSeeOther)
+}
+
+// respond renders the region for htmx and the full page otherwise. A refusal
+// also answers 200: htmx does not swap a 4xx body.
+func (h *Handlers) respond(w http.ResponseWriter, r *http.Request, v pageView) {
+	current, ok := h.D.MustAccess(w, r)
+	if !ok {
+		return
+	}
+	if v, ok = h.withList(w, r, current, v); !ok {
+		return
+	}
+	guildID := v.GuildID
+	if web.IsHTMX(r) && (r.Method == http.MethodPost || r.Header.Get("HX-Target") == regionID) {
+		h.D.Render(w, r, Region(v))
+		return
+	}
+	nav := h.D.Nav(r, guildID)
+	nav.Active = "spots"
+	nav.ReturnTo = listURL(guildID, v.Filter)
+	h.D.Render(w, r, Page(h.D.Cfg.BaseURL, v, nav))
+}
+
+// withList fills in the guild and its list for the filter of v.
+func (h *Handlers) withList(w http.ResponseWriter, r *http.Request, current access.GuildAccess, v pageView) (pageView, bool) {
+	list, err := h.D.Spots.List(r.Context(), current.Config.GuildID, v.Filter)
+	if err != nil {
+		h.D.ServerError(w, r, "list spots", err)
+		return v, false
+	}
+	v.GuildID, v.GuildName = current.Config.GuildID, current.Config.Name
+	v.CanManage = current.Caps.Manage
+	v.List = list
+	return v, true
+}
+
+func fieldsFromForm(r *http.Request) spot.Fields {
+	return spot.Fields{Name: r.PostFormValue("name"), Region: r.PostFormValue("region"), ImageURL: r.PostFormValue("image_url")}
+}
+
+// formErrors are the inline messages for a refused field, none for any other outcome.
+func formErrors(r *http.Request, err error) fieldErrors {
+	ctx := r.Context()
+	switch {
+	case errors.Is(err, spots.ErrNameEmpty):
+		return fieldErrors{Name: i18n.T(ctx, "spots.form.error_empty")}
+	case errors.Is(err, spots.ErrNameTooLong):
+		return fieldErrors{Name: i18n.T(ctx, "spots.form.error_too_long", spots.MaxNameLength)}
+	case errors.Is(err, spots.ErrDuplicateName):
+		return fieldErrors{Name: i18n.T(ctx, "spots.form.error_duplicate", strings.TrimSpace(r.PostFormValue("name")))}
+	case errors.Is(err, spots.ErrUnknownRegion):
+		return fieldErrors{Region: i18n.T(ctx, "spots.form.error_region")}
+	case errors.Is(err, spots.ErrImageURLTooLong):
+		return fieldErrors{Image: i18n.T(ctx, "spots.form.error_too_long", spots.MaxImageURLLength)}
+	case errors.Is(err, spots.ErrImageURLInvalid):
+		return fieldErrors{Image: i18n.T(ctx, "spots.form.error_image")}
+	}
+	return fieldErrors{}
+}

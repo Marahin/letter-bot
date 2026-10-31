@@ -1,5 +1,8 @@
 spot-assistant-bot
 bin/spot-assistant-bot
+bin/letter-web
+bin/tailwindcss
+internal/infrastructure/web/dist/app.css
 
 coverage.out
 

@@ -1,0 +1,155 @@
+package statshttp
+
+import (
+	"strconv"
+
+	"spot-assistant/internal/core/dto/stats"
+	corestats "spot-assistant/internal/core/stats"
+	"spot-assistant/internal/infrastructure/i18n"
+	"spot-assistant/internal/infrastructure/web"
+)
+
+// WorldsPage lists the worlds where public servers book with Letter, one card each
+// (docs/web/design/stats/Worlds.dc.html).
+templ WorldsPage(baseURL string, v worldsView, nav web.Nav) {
+	@web.Layout(i18n.T(ctx, "worlds.list.title"), i18n.T(ctx, "worlds.list.description"), baseURL, web.WorldsPath, nav) {
+		@heading("", i18n.T(ctx, "worlds.list.heading"), i18n.T(ctx, "worlds.list.lede"))
+		@toolbar(v.Picker)
+		if len(v.Rows) == 0 {
+			@empty(i18n.T(ctx, "worlds.list.empty"))
+		} else {
+			<ul class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+				for _, w := range v.Rows {
+					<li>
+						<a href={ templ.SafeURL(worldHref(w.Name)) } class={ cardClass, "flex h-full flex-col gap-4 p-5 transition hover:border-signal/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal/40" }>
+							<span class="flex items-baseline justify-between gap-3">
+								<span class="min-w-0 truncate font-display text-xl font-bold text-zone-50">{ w.Name }</span>
+								<span class="shrink-0 text-xs text-zone-400">{ i18n.N(ctx, "worlds.list.guilds", w.Guilds) }</span>
+							</span>
+							<dl class="grid grid-cols-3 gap-2">
+								@cardCount(i18n.T(ctx, "stats.kpi.reservations"), formatInt(ctx, w.Reservations))
+								{{ expH, hasExpH := formatExpPerHour(ctx, w.Totals) }}
+								@cardFigure(i18n.T(ctx, "stats.table.exp_per_hour"), expH, hasExpH, expSource, signNone)
+								{{ profitH, hasProfitH := formatProfitPerHour(ctx, w.Totals) }}
+								@cardFigure(i18n.T(ctx, "stats.table.profit_per_hour"), profitH, hasProfitH, lootSource, profitSign(stats.SortProfitPerHour, w.Totals))
+							</dl>
+							<span class="mt-auto text-sm font-semibold text-signal-bright">{ i18n.T(ctx, "worlds.list.open") } <span aria-hidden="true">→</span></span>
+						</a>
+					</li>
+				}
+			</ul>
+		}
+		<p class="mt-6 text-xs text-zone-400">{ i18n.T(ctx, "worlds.list.note") }</p>
+		@noDataNote()
+	}
+}
+
+// cardFigure is a world card figure that may have no data; src picks the tooltip that says why.
+templ cardFigure(label, value string, ok bool, src source, s sign) {
+	<div class="min-w-0">
+		<dt class="text-xs text-zone-400">{ label }</dt>
+		<dd class={ "mt-1 truncate font-mono text-base font-semibold tabular-nums", signClass(s, "text-zone-50") }>
+			if ok {
+				{ value }
+			} else {
+				@noData(src)
+			}
+		</dd>
+	</div>
+}
+
+templ cardCount(label, value string) {
+	<div class="min-w-0">
+		<dt class="text-xs text-zone-400">{ label }</dt>
+		<dd class="mt-1 truncate font-mono text-base font-semibold tabular-nums text-zone-50">{ value }</dd>
+	</div>
+}
+
+// WorldPage is one world: its totals, its best spawns and characters, and its servers
+// (docs/web/design/stats/World.dc.html).
+templ WorldPage(baseURL string, v worldView, nav web.Nav) {
+	@web.Layout(i18n.T(ctx, "worlds.world.title", v.D.Name), i18n.T(ctx, "worlds.world.description", v.D.Name), baseURL, worldHref(v.D.Name), nav) {
+		@heading(web.WorldsPath, v.D.Name, i18n.N(ctx, "worlds.world.lede", len(v.D.Guilds)))
+		@toolbar(v.Picker)
+		@kpis(v.D.Totals, nil)
+		if v.D.Totals.Reservations == 0 {
+			@empty(i18n.T(ctx, "stats.empty.range"))
+		} else {
+			<div class="mt-6 grid gap-6 lg:grid-cols-2">
+				@leaderboard("lb-spawns-exph", i18n.T(ctx, "worlds.world.spawns_exp_hour"), i18n.T(ctx, "worlds.world.spawns_exp_hint", strconv.Itoa(int(corestats.MinExpPerHourHours))), spawnRows(v.D.SpawnsByExpPerHour), stats.SortExpPerHour, spawnsMore(v.D.Key, stats.SortExpPerHour))
+				@leaderboard("lb-spawns-profith", i18n.T(ctx, "worlds.world.spawns_profit_hour"), i18n.T(ctx, "worlds.world.spawns_profit_hint", strconv.Itoa(int(corestats.MinProfitPerHourHours))), spawnRows(v.D.SpawnsByProfitPerHour), stats.SortProfitPerHour, spawnsMore(v.D.Key, stats.SortProfitPerHour))
+				@leaderboard("lb-characters-exp", i18n.T(ctx, "stats.leaderboard.characters_exp"), i18n.T(ctx, "stats.leaderboard.characters_exp_hint"), worldCharacterRows(v.D.CharactersByExp), stats.SortExp, "")
+				@leaderboard("lb-characters-profit", i18n.T(ctx, "stats.leaderboard.characters_profit"), i18n.T(ctx, "stats.leaderboard.characters_profit_hint"), worldCharacterRows(v.D.CharactersByProfit), stats.SortProfit, "")
+			</div>
+		}
+		@tableSection("world-guilds", i18n.T(ctx, "worlds.world.guilds", v.D.Name)) {
+			@statsTable(worldGuildRows(v.D.Guilds), i18n.T(ctx, "worlds.table.guild"), worldColumns(ctx), nil)
+		}
+		@noDataNote()
+	}
+}
+
+// SpawnsPage is the spawn directory: every respawn name of the public servers, sortable and
+// narrowed to one world (docs/web/design/stats/Spawns.dc.html).
+templ SpawnsPage(baseURL string, v spawnsView, nav web.Nav) {
+	@web.Layout(worldTitle(ctx, v), i18n.T(ctx, "spawns.list.description"), baseURL, web.SpawnsPath, nav) {
+		@heading("", i18n.T(ctx, "spawns.list.heading"), i18n.T(ctx, "spawns.list.lede"))
+		@toolbar(v.Picker) {
+			if len(v.Worlds) > 0 {
+				<form method="get" action={ templ.SafeURL(web.SpawnsPath) } class="flex flex-wrap items-center gap-2">
+					<input type="hidden" name="sort" value={ string(v.Sort.Key) }/>
+					<input type="hidden" name="dir" value={ sortDir(v.Sort) }/>
+					<label for="spawns-world" class="text-sm text-zone-300">{ i18n.T(ctx, "spawns.filter.world") }</label>
+					<select id="spawns-world" name="world" class="min-h-11 rounded-md border border-zone-700 bg-zone-900 px-3 text-sm text-zone-100 focus:border-signal focus:outline-none focus:ring-2 focus:ring-signal/30 sm:min-h-9">
+						<option value="">{ i18n.T(ctx, "spawns.filter.all") }</option>
+						for _, w := range v.Worlds {
+							<option value={ w.Key } selected?={ w.Key == v.World }>{ w.Name }</option>
+						}
+					</select>
+					<button type="submit" class="inline-flex min-h-11 items-center rounded-md border border-zone-700 px-3 text-sm font-semibold text-zone-300 transition hover:border-signal hover:text-signal sm:min-h-9">{ i18n.T(ctx, "spawns.filter.apply") }</button>
+				</form>
+			}
+			if v.Total > 0 {
+				<a href={ templ.SafeURL(v.csvHref()) } download class="ml-auto inline-flex min-h-11 items-center rounded-md border border-zone-700 px-3 text-sm text-zone-300 transition hover:border-signal hover:text-signal sm:min-h-9">{ i18n.T(ctx, "stats.table.export_csv") }</a>
+			}
+		}
+		if v.Total == 0 {
+			@empty(i18n.T(ctx, "spawns.list.empty"))
+		} else {
+			@statsTable(v.Rows, i18n.T(ctx, "stats.table.spot"), spawnColumns(ctx), v.sortState())
+			if v.Total > len(v.Rows) {
+				<p class="mt-2 text-xs text-zone-400">{ i18n.T(ctx, "stats.table.truncated", formatInt(ctx, int64(len(v.Rows))), formatInt(ctx, int64(v.Total))) }</p>
+			}
+		}
+		@noDataNote()
+	}
+}
+
+// SpawnPage is one respawn name across servers: its totals, per world and per server
+// (docs/web/design/stats/Spawn.dc.html).
+templ SpawnPage(baseURL string, v spawnView, nav web.Nav) {
+	@web.Layout(i18n.T(ctx, "spawns.spawn.title", v.D.Name), i18n.T(ctx, "spawns.spawn.description", v.D.Name), baseURL, spawnHref(v.D.Key), nav) {
+		@heading(web.SpawnsPath, v.D.Name, i18n.N(ctx, "spawns.spawn.lede", len(v.D.Worlds)))
+		@toolbar(v.Picker)
+		@kpis(v.D.Totals, nil)
+		@lootTiles(v.D.Totals)
+		if v.D.Totals.Reservations == 0 {
+			@empty(i18n.T(ctx, "stats.empty.range"))
+		} else {
+			@tableSection("spawn-worlds", i18n.T(ctx, "spawns.spawn.worlds")) {
+				@statsTable(worldRows(v.D.Worlds), i18n.T(ctx, "worlds.table.world"), worldColumns(ctx), nil)
+			}
+			@tableSection("spawn-guilds", i18n.T(ctx, "spawns.spawn.guilds")) {
+				@statsTable(spawnSpotRows(v.D.Spots), i18n.T(ctx, "worlds.table.guild"), worldColumns(ctx), nil)
+			}
+		}
+		@noDataNote()
+	}
+}
+
+templ tableSection(id, title string) {
+	<section class="mt-8" aria-labelledby={ id }>
+		<h2 id={ id } class="font-display text-lg font-semibold text-zone-50">{ title }</h2>
+		{ children... }
+	</section>
+}

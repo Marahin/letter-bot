@@ -21,10 +21,19 @@ func NewMockBotPort(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockBotPort {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockBotPort{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -40,6 +49,74 @@ type MockBotPort_Expecter struct {
 
 func (_m *MockBotPort) EXPECT() *MockBotPort_Expecter {
 	return &MockBotPort_Expecter{mock: &_m.Mock}
+}
+
+// FindChannelByID provides a mock function for the type MockBotPort
+func (_mock *MockBotPort) FindChannelByID(g *guild.Guild, channelID string) (*discord.Channel, error) {
+	ret := _mock.Called(g, channelID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindChannelByID")
+	}
+
+	var r0 *discord.Channel
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(*guild.Guild, string) (*discord.Channel, error)); ok {
+		return returnFunc(g, channelID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(*guild.Guild, string) *discord.Channel); ok {
+		r0 = returnFunc(g, channelID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*discord.Channel)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(*guild.Guild, string) error); ok {
+		r1 = returnFunc(g, channelID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockBotPort_FindChannelByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindChannelByID'
+type MockBotPort_FindChannelByID_Call struct {
+	*mock.Call
+}
+
+// FindChannelByID is a helper method to define mock.On call
+//   - g *guild.Guild
+//   - channelID string
+func (_e *MockBotPort_Expecter) FindChannelByID(g any, channelID any) *MockBotPort_FindChannelByID_Call {
+	return &MockBotPort_FindChannelByID_Call{Call: _e.mock.On("FindChannelByID", g, channelID)}
+}
+
+func (_c *MockBotPort_FindChannelByID_Call) Run(run func(g *guild.Guild, channelID string)) *MockBotPort_FindChannelByID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *guild.Guild
+		if args[0] != nil {
+			arg0 = args[0].(*guild.Guild)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockBotPort_FindChannelByID_Call) Return(channel *discord.Channel, err error) *MockBotPort_FindChannelByID_Call {
+	_c.Call.Return(channel, err)
+	return _c
+}
+
+func (_c *MockBotPort_FindChannelByID_Call) RunAndReturn(run func(g *guild.Guild, channelID string) (*discord.Channel, error)) *MockBotPort_FindChannelByID_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // FindChannelByName provides a mock function for the type MockBotPort
@@ -78,7 +155,7 @@ type MockBotPort_FindChannelByName_Call struct {
 // FindChannelByName is a helper method to define mock.On call
 //   - g *guild.Guild
 //   - channelName string
-func (_e *MockBotPort_Expecter) FindChannelByName(g interface{}, channelName interface{}) *MockBotPort_FindChannelByName_Call {
+func (_e *MockBotPort_Expecter) FindChannelByName(g any, channelName any) *MockBotPort_FindChannelByName_Call {
 	return &MockBotPort_FindChannelByName_Call{Call: _e.mock.On("FindChannelByName", g, channelName)}
 }
 
@@ -145,7 +222,7 @@ type MockBotPort_OpenDM_Call struct {
 
 // OpenDM is a helper method to define mock.On call
 //   - m *member.Member
-func (_e *MockBotPort_Expecter) OpenDM(m interface{}) *MockBotPort_OpenDM_Call {
+func (_e *MockBotPort_Expecter) OpenDM(m any) *MockBotPort_OpenDM_Call {
 	return &MockBotPort_OpenDM_Call{Call: _e.mock.On("OpenDM", m)}
 }
 
@@ -172,53 +249,9 @@ func (_c *MockBotPort_OpenDM_Call) RunAndReturn(run func(m *member.Member) (*dis
 	return _c
 }
 
-// Run provides a mock function for the type MockBotPort
-func (_mock *MockBotPort) Run() error {
-	ret := _mock.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for Run")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func() error); ok {
-		r0 = returnFunc()
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// MockBotPort_Run_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Run'
-type MockBotPort_Run_Call struct {
-	*mock.Call
-}
-
-// Run is a helper method to define mock.On call
-func (_e *MockBotPort_Expecter) Run() *MockBotPort_Run_Call {
-	return &MockBotPort_Run_Call{Call: _e.mock.On("Run")}
-}
-
-func (_c *MockBotPort_Run_Call) Run(run func()) *MockBotPort_Run_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *MockBotPort_Run_Call) Return(err error) *MockBotPort_Run_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *MockBotPort_Run_Call) RunAndReturn(run func() error) *MockBotPort_Run_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // SendDMOverbookedNotification provides a mock function for the type MockBotPort
-func (_mock *MockBotPort) SendDMOverbookedNotification(member1 *member.Member, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) error {
-	ret := _mock.Called(member1, request, res)
+func (_mock *MockBotPort) SendDMOverbookedNotification(m *member.Member, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) error {
+	ret := _mock.Called(m, request, res)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SendDMOverbookedNotification")
@@ -226,7 +259,7 @@ func (_mock *MockBotPort) SendDMOverbookedNotification(member1 *member.Member, r
 
 	var r0 error
 	if returnFunc, ok := ret.Get(0).(func(*member.Member, book.BookRequest, *reservation.ClippedOrRemovedReservation) error); ok {
-		r0 = returnFunc(member1, request, res)
+		r0 = returnFunc(m, request, res)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -239,14 +272,14 @@ type MockBotPort_SendDMOverbookedNotification_Call struct {
 }
 
 // SendDMOverbookedNotification is a helper method to define mock.On call
-//   - member1 *member.Member
+//   - m *member.Member
 //   - request book.BookRequest
 //   - res *reservation.ClippedOrRemovedReservation
-func (_e *MockBotPort_Expecter) SendDMOverbookedNotification(member1 interface{}, request interface{}, res interface{}) *MockBotPort_SendDMOverbookedNotification_Call {
-	return &MockBotPort_SendDMOverbookedNotification_Call{Call: _e.mock.On("SendDMOverbookedNotification", member1, request, res)}
+func (_e *MockBotPort_Expecter) SendDMOverbookedNotification(m any, request any, res any) *MockBotPort_SendDMOverbookedNotification_Call {
+	return &MockBotPort_SendDMOverbookedNotification_Call{Call: _e.mock.On("SendDMOverbookedNotification", m, request, res)}
 }
 
-func (_c *MockBotPort_SendDMOverbookedNotification_Call) Run(run func(member1 *member.Member, request book.BookRequest, res *reservation.ClippedOrRemovedReservation)) *MockBotPort_SendDMOverbookedNotification_Call {
+func (_c *MockBotPort_SendDMOverbookedNotification_Call) Run(run func(m *member.Member, request book.BookRequest, res *reservation.ClippedOrRemovedReservation)) *MockBotPort_SendDMOverbookedNotification_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 *member.Member
 		if args[0] != nil {
@@ -274,7 +307,7 @@ func (_c *MockBotPort_SendDMOverbookedNotification_Call) Return(err error) *Mock
 	return _c
 }
 
-func (_c *MockBotPort_SendDMOverbookedNotification_Call) RunAndReturn(run func(member1 *member.Member, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) error) *MockBotPort_SendDMOverbookedNotification_Call {
+func (_c *MockBotPort_SendDMOverbookedNotification_Call) RunAndReturn(run func(m *member.Member, request book.BookRequest, res *reservation.ClippedOrRemovedReservation) error) *MockBotPort_SendDMOverbookedNotification_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -305,7 +338,7 @@ type MockBotPort_SendLetterMessage_Call struct {
 //   - g *guild.Guild
 //   - ch *discord.Channel
 //   - sum *summary.Summary
-func (_e *MockBotPort_Expecter) SendLetterMessage(g interface{}, ch interface{}, sum interface{}) *MockBotPort_SendLetterMessage_Call {
+func (_e *MockBotPort_Expecter) SendLetterMessage(g any, ch any, sum any) *MockBotPort_SendLetterMessage_Call {
 	return &MockBotPort_SendLetterMessage_Call{Call: _e.mock.On("SendLetterMessage", g, ch, sum)}
 }
 
